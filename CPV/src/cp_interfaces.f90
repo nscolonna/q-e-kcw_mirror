@@ -37,6 +37,7 @@
    PUBLIC :: readfile
 
    PUBLIC :: runcp_uspp
+   PUBLIC :: runcp_uspp_sp
    PUBLIC :: runcp_uspp_force_pairing
 
    PUBLIC :: eigs
@@ -127,6 +128,21 @@
          INTEGER,     INTENT(IN)    :: n, nspin
          REAL(DP),    OPTIONAL      :: v1( ldv, * )
       END SUBROUTINE dforce_x
+      SUBROUTINE dforce_sp( i, bec, vkb, c, df, da, v, ldv, ispin, f, n, nspin, v1 )
+         USE kinds,              ONLY: DP, SP
+         IMPLICIT NONE
+         INTEGER,     INTENT(IN)    :: i
+         REAL(DP)                   :: bec(:,:)
+         COMPLEX(DP)                :: vkb(:,:)
+         COMPLEX(DP)                :: c(:,:)
+         COMPLEX(DP)                :: df(:), da(:)
+         INTEGER,     INTENT(IN)    :: ldv
+         REAL(SP)                   :: v( ldv, * )
+         INTEGER                    :: ispin( : )
+         REAL(DP)                   :: f( : )
+         INTEGER,     INTENT(IN)    :: n, nspin
+         REAL(DP),    OPTIONAL      :: v1( ldv, * )
+      END SUBROUTINE dforce_sp
    END INTERFACE
 
 
@@ -325,6 +341,21 @@
       END SUBROUTINE
    END INTERFACE
 
+   INTERFACE runcp_uspp_sp
+      SUBROUTINE runcp_uspp_sp_x &
+         ( nfi, fccc, ccc, ema0bg, dt2bye, rhos, bec_bgrp, c0_bgrp, cm_bgrp, fromscra, restart )
+         USE kinds,             ONLY: DP
+         IMPLICIT NONE
+         integer, intent(in) :: nfi
+         real(DP) :: fccc, ccc
+         real(DP) :: ema0bg(:), dt2bye
+         real(DP) :: rhos(:,:)
+         real(DP) :: bec_bgrp(:,:)
+         complex(DP) :: c0_bgrp(:,:), cm_bgrp(:,:)
+         logical, optional, intent(in) :: fromscra
+         logical, optional, intent(in) :: restart
+      END SUBROUTINE
+   END INTERFACE
 
 
    INTERFACE runcp_uspp_force_pairing

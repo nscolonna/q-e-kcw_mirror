@@ -26,6 +26,7 @@ MODULE fft_param
   !!Max allowed fft dimension
 
   INTEGER, PARAMETER :: DP = selected_real_kind(14,200)
+  INTEGER, PARAMETER :: SP = selected_real_kind(5,20)
   INTEGER, PARAMETER :: stdout = 6    ! unit connected to standard output
 
   REAL(DP), PARAMETER :: eps8  = 1.0E-8_DP

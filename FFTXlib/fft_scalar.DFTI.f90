@@ -25,6 +25,10 @@
            TYPE(DFTI_DESCRIPTOR), POINTER :: desc
         END TYPE
 
+        INTERFACE cft_1z
+          MODULE PROCEDURE cft_1z_dp, cft_1z_sp
+        END INTERFACE
+
 !=----------------------------------------------------------------------=!
    CONTAINS
 !=----------------------------------------------------------------------=!
@@ -41,7 +45,7 @@
 !=----------------------------------------------------------------------=!
 !
 
-   SUBROUTINE cft_1z(c, nsl, nz, ldz, isign, cout)
+   SUBROUTINE cft_1z_dp(c, nsl, nz, ldz, isign, cout)
 
 !     driver routine for nsl 1d complex fft's of length nz
 !     ldz >= nz is the distance between sequences to be transformed
@@ -191,7 +195,160 @@
      END SUBROUTINE init_dfti
 
 
-   END SUBROUTINE cft_1z
+   END SUBROUTINE cft_1z_dp
+
+
+
+   SUBROUTINE cft_1z_sp(c, nsl, nz, ldz, isign, cout)
+
+!     driver routine for nsl 1d complex fft's of length nz
+!     ldz >= nz is the distance between sequences to be transformed
+!     (ldz>nz is used on some architectures to reduce memory conflicts)
+!     input  :  c(ldz*nsl)   (complex)
+!     output : cout(ldz*nsl) (complex - NOTA BENE: transform is not in-place!)
+!     isign > 0 : forward (f(G)=>f(R)), isign <0 backward (f(R) => f(G))
+!     Up to "ndims" initializations (for different combinations of input
+!     parameters nz, nsl, ldz) are stored and re-used if available
+
+     INTEGER, INTENT(IN) :: isign
+     INTEGER, INTENT(IN) :: nsl, nz, ldz
+
+     COMPLEX (SP) :: c(:), cout(:)
+
+     REAL (SP)  :: tscale
+     INTEGER    :: i, err, idir, ip, void
+     INTEGER, SAVE :: zdims( 3, ndims ) = -1
+     INTEGER, SAVE :: icurrent = 1
+     LOGICAL :: found
+
+     INTEGER :: tid
+
+#if defined(_OPENMP)
+     INTEGER :: offset, ldz_t
+     INTEGER :: omp_get_max_threads
+     EXTERNAL :: omp_get_max_threads
+#endif
+
+     !   Intel MKL native FFT driver
+
+     TYPE(DFTI_DESCRIPTOR_ARRAY), SAVE :: hand( ndims )
+     LOGICAL, SAVE :: dfti_first = .TRUE.
+     INTEGER :: dfti_status = 0
+     !
+     CALL check_dims()
+     !
+     !   Here initialize table only if necessary
+     !
+     CALL lookup()
+
+     IF( .NOT. found ) THEN
+
+       !   no table exist for these parameters
+       !   initialize a new one
+
+       CALL init_dfti()
+
+     END IF
+
+     !
+     !   Now perform the FFTs using machine specific drivers
+     !
+
+#if defined(__FFT_CLOCKS)
+     CALL start_clock( 'cft_1z' )
+#endif
+
+     IF (isign < 0) THEN
+        dfti_status = DftiComputeForward(hand(ip)%desc, c, cout )
+        IF(dfti_status /= 0) &
+           CALL fftx_error__(' cft_1z ',' stopped in DftiComputeForward ', dfti_status )
+     ELSE IF (isign > 0) THEN
+        dfti_status = DftiComputeBackward(hand(ip)%desc, c, cout )
+        IF(dfti_status /= 0) &
+           CALL fftx_error__(' cft_1z ',' stopped in DftiComputeBackward ', dfti_status )
+     END IF
+
+#if defined(__FFT_CLOCKS)
+     CALL stop_clock( 'cft_1z' )
+#endif
+
+     RETURN
+
+   CONTAINS !=------------------------------------------------=!
+
+     SUBROUTINE check_dims()
+     IF( nsl < 0 ) THEN
+       CALL fftx_error__(" fft_scalar: cft_1z ", " nsl out of range ", nsl)
+     END IF
+     END SUBROUTINE check_dims
+
+     SUBROUTINE lookup()
+     IF( dfti_first ) THEN
+        DO ip = 1, ndims
+           hand(ip)%desc => NULL()
+        END DO
+        dfti_first = .FALSE.
+     END IF
+     DO ip = 1, ndims
+        !   first check if there is already a table initialized
+        !   for this combination of parameters
+        found = ( nz == zdims(1,ip) )
+        !   The initialization in ESSL and FFTW v.3 depends on all three parameters
+        found = found .AND. ( nsl == zdims(2,ip) ) .AND. ( ldz == zdims(3,ip) )
+        IF (found) EXIT
+     END DO
+     END SUBROUTINE lookup
+
+     SUBROUTINE init_dfti()
+
+       if( ASSOCIATED( hand( icurrent )%desc ) ) THEN
+          dfti_status = DftiFreeDescriptor( hand( icurrent )%desc )
+          IF( dfti_status /= 0) THEN
+             WRITE(*,*) "stopped in DftiFreeDescriptor", dfti_status
+             STOP
+          ENDIF
+       END IF
+
+       dfti_status = DftiCreateDescriptor(hand( icurrent )%desc, DFTI_SINGLE, DFTI_COMPLEX, 1,nz)
+       IF(dfti_status /= 0)  &
+         CALL fftx_error__(' cft_1z ',' stopped in DftiCreateDescriptor ', dfti_status )
+
+       dfti_status = DftiSetValue(hand( icurrent )%desc, DFTI_NUMBER_OF_TRANSFORMS,nsl)
+       IF(dfti_status /= 0) &
+         CALL fftx_error__(' cft_1z ',' stopped in DFTI_NUMBER_OF_TRANSFORMS ', dfti_status )
+
+       dfti_status = DftiSetValue(hand( icurrent )%desc,DFTI_INPUT_DISTANCE, ldz )
+       IF(dfti_status /= 0) &
+         CALL fftx_error__(' cft_1z ',' stopped in DFTI_INPUT_DISTANCE ', dfti_status )
+
+       dfti_status = DftiSetValue(hand( icurrent )%desc, DFTI_PLACEMENT, DFTI_NOT_INPLACE)
+       IF(dfti_status /= 0) &
+         CALL fftx_error__(' cft_1z ',' stopped in DFTI_PLACEMENT ', dfti_status )
+
+       dfti_status = DftiSetValue(hand( icurrent )%desc,DFTI_OUTPUT_DISTANCE, ldz )
+       IF(dfti_status /= 0) &
+         CALL fftx_error__(' cft_1z ',' stopped in DFTI_OUTPUT_DISTANCE ', dfti_status )
+
+       tscale = 1.0_SP/nz
+       dfti_status = DftiSetValue( hand( icurrent )%desc, DFTI_FORWARD_SCALE, tscale);
+       IF(dfti_status /= 0) &
+         CALL fftx_error__(' cft_1z ',' stopped in DFTI_FORWARD_SCALE ', dfti_status )
+
+       dfti_status = DftiSetValue( hand( icurrent )%desc, DFTI_BACKWARD_SCALE, DBLE(1) );
+       IF(dfti_status /= 0) &
+         CALL fftx_error__(' cft_1z ',' stopped in DFTI_BACKWARD_SCALE ', dfti_status )
+
+       dfti_status = DftiCommitDescriptor(hand( icurrent )%desc)
+       IF(dfti_status /= 0) &
+         CALL fftx_error__(' cft_1z ',' stopped in DftiCommitDescriptor ', dfti_status )
+
+       zdims(1,icurrent) = nz; zdims(2,icurrent) = nsl; zdims(3,icurrent) = ldz;
+       ip = icurrent
+       icurrent = MOD( icurrent, ndims ) + 1
+
+     END SUBROUTINE init_dfti
+   END SUBROUTINE cft_1z_sp
+
 
 !
 !

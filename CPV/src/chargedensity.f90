@@ -40,7 +40,7 @@
 !
 !     e_v = sum_i,ij rho_i,ij d^ion_is,ji
 !
-      USE kinds,              ONLY: DP
+      USE kinds,              ONLY: DP, SP
       USE control_flags,      ONLY: iprint, iverbosity, thdyn, tpre, trhor, ndr
       USE ions_base,          ONLY: nat
       USE gvect,              ONLY: gstart, ig_l2g
@@ -103,7 +103,7 @@
 !dir$ attributes align: 4096 :: psis, drhovan
 #endif
 #endif
-      COMPLEX(DP), ALLOCATABLE :: psis(:)
+      COMPLEX(SP), ALLOCATABLE :: psis(:)
       REAL(DP), ALLOCATABLE :: drhovan(:,:,:,:,:)
       CHARACTER(LEN=256) :: dirname
 

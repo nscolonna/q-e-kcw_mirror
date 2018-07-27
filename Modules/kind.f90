@@ -13,10 +13,11 @@
       SAVE
 ! ... kind definitions
       INTEGER, PARAMETER :: DP = selected_real_kind(14,200)
+      INTEGER, PARAMETER :: SP = selected_real_kind(5,20)
       INTEGER, PARAMETER :: sgl = selected_real_kind(6,30)
       INTEGER, PARAMETER :: i4b = selected_int_kind(9)
       PRIVATE
-      PUBLIC :: i4b, sgl, DP, print_kind_info
+      PUBLIC :: i4b, sgl, DP, SP, print_kind_info
 !
 !------------------------------------------------------------------------------!
 !

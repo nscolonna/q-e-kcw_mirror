@@ -39,9 +39,30 @@ MODULE fft_interfaces
        TYPE(fft_box_descriptor), INTENT(IN) :: dfft
        COMPLEX(DP) :: f(:)
      END SUBROUTINE invfft_b
+     !
+     SUBROUTINE invfft_y_sp( fft_kind, f, dfft, howmany )
+       USE fft_types,  ONLY: fft_type_descriptor
+       USE fft_param,  ONLY :SP
+       IMPLICIT NONE
+       CHARACTER(LEN=*),  INTENT(IN) :: fft_kind
+       TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+       INTEGER, OPTIONAL, INTENT(IN) :: howmany
+       COMPLEX(SP) :: f(:)
+     END SUBROUTINE invfft_y_sp
+     !
+     SUBROUTINE invfft_b_sp( f, dfft, ia )
+       USE fft_smallbox_type,  ONLY: fft_box_descriptor
+       USE fft_param,  ONLY :SP
+       IMPLICIT NONE
+       INTEGER, INTENT(IN) :: ia
+       TYPE(fft_box_descriptor), INTENT(IN) :: dfft
+       COMPLEX(SP) :: f(:)
+     END SUBROUTINE invfft_b_sp
+     !
   END INTERFACE
 
   INTERFACE fwfft
+     !
      SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
@@ -51,6 +72,17 @@ MODULE fft_interfaces
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
      END SUBROUTINE fwfft_y
+     !
+     SUBROUTINE fwfft_y_sp( fft_kind, f, dfft, howmany )
+       USE fft_types,  ONLY: fft_type_descriptor
+       USE fft_param,  ONLY :SP
+       IMPLICIT NONE
+       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
+       TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+       INTEGER, OPTIONAL, INTENT(IN) :: howmany
+       COMPLEX(SP) :: f(:)
+     END SUBROUTINE fwfft_y_sp
+     !
   END INTERFACE
 
   INTERFACE fft_interpolate
