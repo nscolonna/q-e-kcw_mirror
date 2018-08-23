@@ -13,7 +13,7 @@ SUBROUTINE vloc_psi_gamma(lda, n, m, psi, v, hpsi)
   ! Calculation of Vloc*psi using dual-space technique - Gamma point
   !
   USE parallel_include
-  USE kinds,   ONLY : DP
+  USE kinds,   ONLY : DP, SP
   USE mp_bands,      ONLY : me_bgrp
   USE fft_base,      ONLY : dffts
   USE fft_interfaces,ONLY : fwfft, invfft
@@ -33,7 +33,7 @@ SUBROUTINE vloc_psi_gamma(lda, n, m, psi, v, hpsi)
   LOGICAL :: use_tg
   ! Variables for task groups
   REAL(DP),    ALLOCATABLE :: tg_v(:)
-  COMPLEX(DP), ALLOCATABLE :: tg_psic(:)
+  COMPLEX(SP), ALLOCATABLE :: tg_psic(:)
   INTEGER :: v_siz, idx, ioff
   !
   CALL start_clock ('vloc_psi')
