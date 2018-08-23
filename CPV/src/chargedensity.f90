@@ -368,8 +368,6 @@
          !
          ALLOCATE( tmp_rhos ( dffts%nr1x * dffts%nr2x * tg_nr3, nspin ) )
          !
-         tmp_rhos = 0_DP
-
          do i = 1, nbsp_bgrp, 2 * fftx_ntgrp(dffts)
 
 #if defined(__MPI)
@@ -430,10 +428,17 @@
             !to each processor. In the original code this is nnr. In the task-groups
             !code this should be equal to the total number of planes
             !
-            do ir = 1, dffts%nr1x*dffts%nr2x*tg_nr3
-               tmp_rhos(ir,iss1) = tmp_rhos(ir,iss1) + sa1*( real(psis(ir)))**2
-               tmp_rhos(ir,iss2) = tmp_rhos(ir,iss2) + sa2*(aimag(psis(ir)))**2
-            end do
+            IF( i .EQ. 1 ) THEN
+               do ir = 1, dffts%nr1x*dffts%nr2x*tg_nr3
+                  tmp_rhos(ir,iss1) = sa1*( real(psis(ir)))**2
+                  tmp_rhos(ir,iss2) = sa2*(aimag(psis(ir)))**2
+               end do
+            ELSE
+               do ir = 1, dffts%nr1x*dffts%nr2x*tg_nr3
+                  tmp_rhos(ir,iss1) = tmp_rhos(ir,iss1) + sa1*( real(psis(ir)))**2
+                  tmp_rhos(ir,iss2) = tmp_rhos(ir,iss2) + sa2*(aimag(psis(ir)))**2
+               end do
+            END IF
             !
          END DO
 
