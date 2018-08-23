@@ -2003,6 +2003,303 @@ CONTAINS
 
 END SUBROUTINE sqr_mm_cannon
 
+!=----------------------------------------------------------------------------=!
+
+SUBROUTINE sqr_smm_cannon( transa, transb, n, alpha, a, lda, b, ldb, beta, c, ldc, desc )
+   !
+   !  Parallel square matrix multiplication with Cannon's algorithm
+   !
+   USE descriptors
+   USE la_param
+   !
+   IMPLICIT NONE
+   !
+   CHARACTER(LEN=1), INTENT(IN) :: transa, transb
+   INTEGER, INTENT(IN) :: n
+   REAL(SP), INTENT(IN) :: alpha, beta
+   INTEGER, INTENT(IN) :: lda, ldb, ldc
+   REAL(SP) :: a(lda,*), b(ldb,*), c(ldc,*)
+   TYPE(la_descriptor), INTENT(IN) :: desc
+   !
+   !  performs one of the matrix-matrix operations
+   !
+   !     C := ALPHA*OP( A )*OP( B ) + BETA*C,
+   !
+   !  where  op( x ) is one of
+   !
+   !     OP( X ) = X   OR   OP( X ) = X',
+   !
+   !  alpha and beta are scalars, and a, b and c are square matrices
+   !
+   integer :: ierr
+   integer :: np
+   integer :: i, j, nr, nc, nb, iter, rowid, colid
+   logical :: ta, tb
+   INTEGER :: comm
+   !
+   !
+   real(SP), allocatable :: bblk(:,:), ablk(:,:)
+   !
+#if defined (__MPI)
+   !
+   integer :: istatus( MPI_STATUS_SIZE )
+   !
+#endif
+   !
+   IF( desc%active_node < 0 ) THEN
+      !
+      !  processors not interested in this computation return quickly
+      !
+      RETURN
+      !
+   END IF
+
+   IF( n < 1 ) THEN
+      RETURN
+   END IF
+
+   IF( desc%npr == 1 ) THEN 
+      !
+      !  quick return if only one processor is used 
+      !
+      CALL sgemm( TRANSA, TRANSB, n, n, n, alpha, a, lda, b, ldb, beta, c, ldc)
+      !
+      RETURN
+      !
+   END IF
+
+   IF( desc%npr /= desc%npc ) &
+      CALL lax_error__( ' sqr_smm_cannon ', ' works only with square processor mesh ', 1 )
+   !
+   !  Retrieve communicator and mesh geometry
+   !
+   np    = desc%npr
+   comm  = desc%comm
+   rowid = desc%myr
+   colid = desc%myc
+   !
+   !  Retrieve the size of the local block
+   !
+   nr    = desc%nr 
+   nc    = desc%nc 
+   nb    = desc%nrcx
+   !
+#if defined (__MPI)
+   CALL MPI_BARRIER( comm, ierr )
+   IF( ierr /= 0 ) &
+      CALL lax_error__( " sqr_smm_cannon ", " in MPI_BARRIER ", ABS( ierr ) )
+#endif
+   !
+   allocate( ablk( nb, nb ) )
+   DO j = 1, nc
+      DO i = 1, nr
+         ablk( i, j ) = a( i, j )
+      END DO
+   END DO
+   !
+   !  Clear memory outside the matrix block
+   !
+   DO j = nc+1, nb
+      DO i = 1, nb
+         ablk( i, j ) = 0.0_SP
+      END DO
+   END DO
+   DO j = 1, nb
+      DO i = nr+1, nb
+         ablk( i, j ) = 0.0_SP
+      END DO
+   END DO
+   !
+   !
+   allocate( bblk( nb, nb ) )
+   DO j = 1, nc
+      DO i = 1, nr
+         bblk( i, j ) = b( i, j )
+      END DO
+   END DO
+   !
+   !  Clear memory outside the matrix block
+   !
+   DO j = nc+1, nb
+      DO i = 1, nb
+         bblk( i, j ) = 0.0_SP
+      END DO
+   END DO
+   DO j = 1, nb
+      DO i = nr+1, nb
+         bblk( i, j ) = 0.0_SP
+      END DO
+   END DO
+   !
+   !
+   ta = ( TRANSA == 'T' .OR. TRANSA == 't' )
+   tb = ( TRANSB == 'T' .OR. TRANSB == 't' )
+   !
+   !  Shift A rowid+1 places to the west
+   ! 
+   IF( ta ) THEN
+      CALL shift_exch_block( ablk, 'W', 1 )
+   ELSE
+      CALL shift_block( ablk, 'W', rowid+1, 1 )
+   END IF
+   !
+   !  Shift B colid+1 places to the north
+   ! 
+   IF( tb ) THEN
+      CALL shift_exch_block( bblk, 'N', np+1 )
+   ELSE
+      CALL shift_block( bblk, 'N', colid+1, np+1 )
+   END IF
+   !
+   !  Accumulate on C
+   !
+   CALL sgemm( TRANSA, TRANSB, nr, nc, nb, alpha, ablk, nb, bblk, nb, beta, c, ldc)
+   !
+   DO iter = 2, np
+      !
+      !  Shift A 1 places to the east
+      ! 
+      CALL shift_block( ablk, 'E', 1, iter )
+      !
+      !  Shift B 1 places to the south
+      ! 
+      CALL shift_block( bblk, 'S', 1, np+iter )
+      !
+      !  Accumulate on C
+      !
+      CALL sgemm( TRANSA, TRANSB, nr, nc, nb, alpha, ablk, nb, bblk, nb, 1.0_SP, c, ldc)
+      !
+   END DO
+
+   deallocate( ablk, bblk )
+   
+   RETURN
+
+CONTAINS
+
+   SUBROUTINE shift_block( blk, dir, ln, tag )
+      !
+      !   Block shift 
+      !
+      IMPLICIT NONE
+      REAL(SP) :: blk( :, : )
+      CHARACTER(LEN=1), INTENT(IN) :: dir      ! shift direction
+      INTEGER,          INTENT(IN) :: ln       ! shift length
+      INTEGER,          INTENT(IN) :: tag      ! communication tag
+      !
+      INTEGER :: icdst, irdst, icsrc, irsrc, idest, isour
+      !
+      IF( dir == 'W' ) THEN
+         !
+         irdst = rowid
+         irsrc = rowid
+         icdst = MOD( colid - ln + np, np )
+         icsrc = MOD( colid + ln + np, np )
+         !
+      ELSE IF( dir == 'E' ) THEN
+         !
+         irdst = rowid
+         irsrc = rowid
+         icdst = MOD( colid + ln + np, np )
+         icsrc = MOD( colid - ln + np, np )
+         !
+      ELSE IF( dir == 'N' ) THEN
+
+         irdst = MOD( rowid - ln + np, np )
+         irsrc = MOD( rowid + ln + np, np )
+         icdst = colid
+         icsrc = colid
+
+      ELSE IF( dir == 'S' ) THEN
+
+         irdst = MOD( rowid + ln + np, np )
+         irsrc = MOD( rowid - ln + np, np )
+         icdst = colid
+         icsrc = colid
+
+      ELSE
+
+         CALL lax_error__( ' sqr_smm_cannon ', ' unknown shift direction ', 1 )
+
+      END IF
+      !
+      CALL GRID2D_RANK( 'R', np, np, irdst, icdst, idest )
+      CALL GRID2D_RANK( 'R', np, np, irsrc, icsrc, isour )
+      !
+#if defined (__MPI)
+      !
+      CALL MPI_SENDRECV_REPLACE(blk, nb*nb, MPI_REAL, &
+           idest, tag, isour, tag, comm, istatus, ierr)
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " sqr_smm_cannon ", " in MPI_SENDRECV_REPLACE ", ABS( ierr ) )
+      !
+#endif
+      RETURN
+   END SUBROUTINE shift_block
+
+   SUBROUTINE shift_exch_block( blk, dir, tag )
+      !
+      !   Combined block shift and exchange
+      !   only used for the first step
+      !
+      IMPLICIT NONE
+      REAL(SP) :: blk( :, : )
+      CHARACTER(LEN=1), INTENT(IN) :: dir
+      INTEGER,          INTENT(IN) :: tag
+      !
+      INTEGER :: icdst, irdst, icsrc, irsrc, idest, isour
+      INTEGER :: icol, irow
+      !
+      IF( dir == 'W' ) THEN
+         !
+         icol = rowid
+         irow = colid
+         !
+         irdst = irow
+         icdst = MOD( icol - irow-1 + np, np )
+         !
+         irow = rowid
+         icol = MOD( colid + rowid+1 + np, np )
+         !
+         irsrc = icol
+         icsrc = irow
+         !
+      ELSE IF( dir == 'N' ) THEN
+         !
+         icol = rowid
+         irow = colid
+         !
+         icdst = icol
+         irdst = MOD( irow - icol-1 + np, np )
+         !
+         irow = MOD( rowid + colid+1 + np, np )
+         icol = colid
+         !
+         irsrc = icol
+         icsrc = irow
+
+      ELSE
+
+         CALL lax_error__( ' sqr_smm_cannon ', ' unknown shift_exch direction ', 1 )
+
+      END IF
+      !
+      CALL GRID2D_RANK( 'R', np, np, irdst, icdst, idest )
+      CALL GRID2D_RANK( 'R', np, np, irsrc, icsrc, isour )
+      !
+#if defined (__MPI)
+      !
+      CALL MPI_SENDRECV_REPLACE(blk, nb*nb, MPI_REAL, &
+           idest, tag, isour, tag, comm, istatus, ierr)
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " sqr_smm_cannon ", " in MPI_SENDRECV_REPLACE 2 ", ABS( ierr ) )
+      !
+#endif
+      RETURN
+   END SUBROUTINE shift_exch_block
+
+END SUBROUTINE sqr_smm_cannon
+
 
 !=----------------------------------------------------------------------------=!
 
@@ -2439,6 +2736,138 @@ CONTAINS
 END SUBROUTINE
 
 !
+
+SUBROUTINE sqr_tr_cannon_sp( n, a, lda, b, ldb, desc )
+   !
+   !  Parallel square matrix transposition with Cannon's algorithm
+   !
+   USE descriptors
+   USE la_param
+   !
+   IMPLICIT NONE
+   !
+   INTEGER, INTENT(IN) :: n
+   INTEGER, INTENT(IN) :: lda, ldb
+   REAL(SP)            :: a(lda,*), b(ldb,*)
+   TYPE(la_descriptor), INTENT(IN) :: desc
+   !
+   INTEGER :: ierr
+   INTEGER :: np, rowid, colid
+   INTEGER :: i, j, nr, nc, nb
+   INTEGER :: comm
+   !
+   REAL(SP), ALLOCATABLE :: ablk(:,:)
+   !
+#if defined (__MPI)
+   !
+   INTEGER :: istatus( MPI_STATUS_SIZE )
+   !
+#endif
+   !
+   IF( desc%active_node < 0 ) THEN
+      RETURN
+   END IF
+
+   IF( n < 1 ) THEN
+     RETURN
+   END IF
+
+   IF( desc%npr == 1 ) THEN
+      CALL mytranspose_sp( a, lda, b, ldb, n, n )
+      RETURN
+   END IF
+
+   IF( desc%npr /= desc%npc ) &
+      CALL lax_error__( ' sqr_tr_cannon_sp ', ' works only with square processor mesh ', 1 )
+   IF( n /= desc%n ) &
+      CALL lax_error__( ' sqr_tr_cannon_sp ', ' inconsistent size n  ', 1 )
+   IF( lda /= desc%nrcx ) &
+      CALL lax_error__( ' sqr_tr_cannon_sp ', ' inconsistent size lda  ', 1 )
+   IF( ldb /= desc%nrcx ) &
+      CALL lax_error__( ' sqr_tr_cannon_sp ', ' inconsistent size ldb  ', 1 )
+
+   comm = desc%comm
+
+   rowid = desc%myr
+   colid = desc%myc
+   np    = desc%npr
+   !
+   !  Compute the size of the local block
+   !
+   nr = desc%nr 
+   nc = desc%nc 
+   nb = desc%nrcx
+   !
+   allocate( ablk( nb, nb ) )
+   DO j = 1, nc
+      DO i = 1, nr
+         ablk( i, j ) = a( i, j )
+      END DO
+   END DO
+   DO j = nc+1, nb
+      DO i = 1, nb
+         ablk( i, j ) = 0.0_SP
+      END DO
+   END DO
+   DO j = 1, nb
+      DO i = nr+1, nb
+         ablk( i, j ) = 0.0_SP
+      END DO
+   END DO
+   !
+   CALL exchange_block( ablk )
+   !
+#if defined (__MPI)
+   CALL MPI_BARRIER( comm, ierr )
+   IF( ierr /= 0 ) &
+      CALL lax_error__( " sqr_tr_cannon_sp ", " in MPI_BARRIER ", ABS( ierr ) )
+#endif
+   !
+   DO j = 1, nr
+      DO i = 1, nc
+         b( j, i ) = ablk( i, j )
+      END DO
+   END DO
+   !
+   deallocate( ablk )
+   
+   RETURN
+
+CONTAINS
+
+   SUBROUTINE exchange_block( blk )
+      !
+      !   Block exchange ( transpose )
+      !
+      IMPLICIT NONE
+      REAL(SP) :: blk( :, : )
+      !
+      INTEGER :: icdst, irdst, icsrc, irsrc, idest, isour
+      !
+      irdst = colid
+      icdst = rowid
+      irsrc = colid
+      icsrc = rowid
+      !
+      CALL GRID2D_RANK( 'R', np, np, irdst, icdst, idest )
+      CALL GRID2D_RANK( 'R', np, np, irsrc, icsrc, isour )
+      !
+#if defined (__MPI)
+      !
+      CALL MPI_SENDRECV_REPLACE(blk, nb*nb, MPI_REAL, &
+           idest, np+np+1, isour, np+np+1, comm, istatus, ierr)
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " sqr_tr_cannon_sp ", " in MPI_SENDRECV_REPLACE ", ABS( ierr ) )
+      !
+#endif
+
+      RETURN
+   END SUBROUTINE
+
+
+END SUBROUTINE
+
+
 
 SUBROUTINE redist_row2col( n, a, b, ldx, nx, desc )
    !
