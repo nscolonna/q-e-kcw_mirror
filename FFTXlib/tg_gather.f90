@@ -120,3 +120,39 @@ SUBROUTINE tg_gather_sp( dffts, v, tg_v )
   !write (6,'(20f12.7)') (tg_v(i+dffts%nr1x*(i-1)), i=1,dffts%nr1x)
   RETURN
 END SUBROUTINE tg_gather_sp
+
+!----------------------------------------------------------------------------------------------------------------
+!-double to single version 
+SUBROUTINE tg_gather_dsp( dffts, v, tg_v )
+  !
+  USE fft_param
+  USE fft_types,      ONLY : fft_type_descriptor
+
+  IMPLICIT NONE
+
+  TYPE(fft_type_descriptor), INTENT(in) :: dffts
+  REAL(DP), INTENT(IN)  :: v(dffts%nnr)
+  REAL(SP), INTENT(OUT) :: tg_v(dffts%nnr_tg)
+
+  INTEGER :: nxyp, ir3, off, tg_off
+  INTEGER :: i, nsiz, ierr
+
+  nxyp   = dffts%nr1x*dffts%my_nr2p
+  !
+  !  The potential in v is distributed so that each Z-plane is shared among nproc2 processors.
+  !  We collect the data of whole planes in tg_v to be used with task group distributed wfcs.
+  !
+  tg_v(:) = (0.d0,0.d0)
+  do ir3 =1, dffts%my_nr3p
+     off    = dffts%nr1x*dffts%my_nr2p*(ir3-1)
+     tg_off = dffts%nr1x*dffts%nr2x   *(ir3-1) + dffts%nr1x*dffts%my_i0r2p
+     tg_v(tg_off+1:tg_off+nxyp) = v(off+1:off+nxyp)
+  end do
+#if defined(__MPI)
+  nsiz =dffts%nnr_tg
+  CALL MPI_ALLREDUCE( MPI_IN_PLACE, tg_v, nsiz, MPI_REAL, MPI_SUM, dffts%comm2, ierr )
+  IF( ierr /= 0 ) CALL fftx_error__( ' tg_gather ', ' MPI_ALLREDUCE ', abs( ierr ) )
+#endif
+  !write (6,'(20f12.7)') (tg_v(i+dffts%nr1x*(i-1)), i=1,dffts%nr1x)
+  RETURN
+END SUBROUTINE tg_gather_dsp

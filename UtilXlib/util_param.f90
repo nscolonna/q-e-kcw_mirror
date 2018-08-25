@@ -17,6 +17,7 @@ MODULE util_param
 #endif
   
   INTEGER, PARAMETER :: DP = selected_real_kind(14,200)
+  INTEGER, PARAMETER :: SP = selected_real_kind(5,20)
   INTEGER, PARAMETER :: stdout = 6    ! unit connected to standard output
   CHARACTER(LEN=5 ), PARAMETER :: crash_file  = 'CRASH'
 

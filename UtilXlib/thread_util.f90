@@ -120,6 +120,28 @@ SUBROUTINE threaded_barrier_memset(array, val, length)
   !
 END SUBROUTINE threaded_barrier_memset
 
+SUBROUTINE threaded_barrier_memset_sp(array, val, length)
+  !
+  USE util_param,   ONLY : SP
+  !
+  IMPLICIT NONE
+  !
+  REAL(SP), INTENT(OUT) :: array(length)
+  REAL(SP), INTENT(IN) :: val
+  INTEGER, INTENT(IN) :: length
+  !
+  INTEGER :: i
+  !
+  IF (length<=0) RETURN
+  !
+  !$omp do
+  DO i=1, length
+     array(i) = val
+  ENDDO
+  !$omp end do
+  !
+END SUBROUTINE threaded_barrier_memset_sp
+
 SUBROUTINE threaded_nowait_memset(array, val, length)
   !
   USE util_param,   ONLY : DP

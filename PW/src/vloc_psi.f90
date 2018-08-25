@@ -32,7 +32,7 @@ SUBROUTINE vloc_psi_gamma(lda, n, m, psi, v, hpsi)
   !
   LOGICAL :: use_tg
   ! Variables for task groups
-  REAL(DP),    ALLOCATABLE :: tg_v(:)
+  REAL(SP),    ALLOCATABLE :: tg_v(:)
   COMPLEX(SP), ALLOCATABLE :: tg_psic(:)
   INTEGER :: v_siz, idx, ioff
   !
@@ -49,7 +49,7 @@ SUBROUTINE vloc_psi_gamma(lda, n, m, psi, v, hpsi)
      ALLOCATE( tg_v   ( v_siz ) )
      ALLOCATE( tg_psic( v_siz ) )
      !
-     CALL tg_gather( dffts, v, tg_v )
+     CALL tg_gather_dsp( dffts, v, tg_v )
      CALL stop_clock ('vloc_psi:tg_gather')
      !
      incr = 2 * fftx_ntgrp(dffts)
@@ -207,7 +207,7 @@ SUBROUTINE vloc_psi_k(lda, n, m, psi, v, hpsi)
   !   addition to the hpsi
   !
   USE parallel_include
-  USE kinds, ONLY : DP
+  USE kinds, ONLY : DP, SP
   USE wvfct, ONLY : current_k
   USE klist, ONLY : igk_k
   USE mp_bands,      ONLY : me_bgrp
@@ -232,8 +232,8 @@ SUBROUTINE vloc_psi_k(lda, n, m, psi, v, hpsi)
   !
   ! Task Groups
   LOGICAL :: use_tg
-  REAL(DP),    ALLOCATABLE :: tg_v(:)
-  COMPLEX(DP), ALLOCATABLE :: tg_psic(:)
+  REAL(SP),    ALLOCATABLE :: tg_v(:)
+  COMPLEX(SP), ALLOCATABLE :: tg_psic(:)
   INTEGER :: v_siz, idx
   !
   CALL start_clock ('vloc_psi')
@@ -247,7 +247,7 @@ SUBROUTINE vloc_psi_k(lda, n, m, psi, v, hpsi)
      ALLOCATE( tg_v   ( v_siz ) )
      ALLOCATE( tg_psic( v_siz ) )
      !
-     CALL tg_gather( dffts, v, tg_v )
+     CALL tg_gather_dsp( dffts, v, tg_v )
      CALL stop_clock ('vloc_psi:tg_gather')
 
   ENDIF
@@ -262,7 +262,7 @@ SUBROUTINE vloc_psi_k(lda, n, m, psi, v, hpsi)
      DO ibnd = 1, m, fftx_ntgrp(dffts)
         !
 !$omp parallel
-        CALL threaded_barrier_memset(tg_psic, 0.D0, fftx_ntgrp(dffts)*right_nnr*2)
+        CALL threaded_barrier_memset_sp(tg_psic, 0.D0, fftx_ntgrp(dffts)*right_nnr*2)
         !$omp do collapse(2)
         DO idx = 0, MIN(fftx_ntgrp(dffts)-1, m-ibnd)
            DO j = 1, numblock
@@ -308,7 +308,7 @@ SUBROUTINE vloc_psi_k(lda, n, m, psi, v, hpsi)
      DO ibnd = 1, m
         !
 !$omp parallel
-        CALL threaded_barrier_memset(psic, 0.D0, dffts%nnr*2)
+        CALL threaded_barrier_memset_sp(psic, 0.D0, dffts%nnr*2)
         !$omp do
         DO j = 1, n
            psic (dffts%nl (igk_k(j,current_k))) = psi(j, ibnd)

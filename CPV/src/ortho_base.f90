@@ -412,7 +412,7 @@ CONTAINS
       END DO ITERATIVE_LOOP
 
       DEALLOCATE( tmp1, tmp2, dd, x1, con, tr1, tr2 )
-            
+
 100   CONTINUE
             
       CALL mp_max( iter, intra_bgrp_comm ) 
@@ -458,6 +458,14 @@ CONTAINS
       REAL(DP), ALLOCATABLE :: sigd(:)
       REAL(DP) :: den, dx
       !
+      REAL(SP), ALLOCATABLE :: xloc_sp(:,:)
+      REAL(SP), ALLOCATABLE :: x1_sp(:,:)
+      REAL(SP), ALLOCATABLE :: rhor_sp(:,:)
+      REAL(SP), ALLOCATABLE :: tau_sp(:,:)
+      REAL(SP), ALLOCATABLE :: sig_sp(:,:)
+      REAL(SP), ALLOCATABLE :: tmp1_sp(:,:)
+      REAL(SP), ALLOCATABLE :: tmp2_sp(:,:)
+      !
       IF( nss < 1 ) RETURN
 
       IF( ldx/= nx0 ) &
@@ -480,6 +488,12 @@ CONTAINS
          CALL errore( " ortho_alt_iterate ", " inconsistent dimensions ldx ", ldx )
 
       ALLOCATE( tmp1(ldx,ldx), tmp2(ldx,ldx), x1(ldx,ldx), sigd(nss) )
+
+      ALLOCATE( xloc_sp( SIZE( xloc, 1 ), SIZE( xloc, 2 ) ) )
+      ALLOCATE( rhor_sp( SIZE( rhor, 1 ), SIZE( rhor, 2 ) ) )
+      ALLOCATE( tau_sp( SIZE( tau, 1 ), SIZE( tau, 2 ) ) )
+      ALLOCATE( sig_sp( SIZE( sig, 1 ), SIZE( sig, 2 ) ) )
+      ALLOCATE( tmp1_sp(ldx,ldx), tmp2_sp(ldx,ldx), x1_sp(ldx,ldx) )
 
       !  Clear elements not involved in the orthogonalization
       !
@@ -518,33 +532,37 @@ CONTAINS
       !
       ! ...   Starting iteration
       !
+      xloc_sp = xloc
+      rhor_sp = rhor
+      tau_sp  = tau
+      sig_sp  = sig
 
       ITERATIVE_LOOP: DO iter = 0, ortho_max
 
-        CALL sqr_mm_cannon( 'N', 'N', nss, 1.0d0, xloc, nx0, rhor, ldx, 0.0d0, tmp2, ldx, desc)
+        CALL sqr_smm_cannon( 'N', 'N', nss, 1.0, xloc_sp, nx0, rhor_sp, ldx, 0.0, tmp2_sp, ldx, desc)
 
-        CALL sqr_tr_cannon( nss, tmp2, ldx, tmp1, ldx, desc )
+        CALL sqr_tr_cannon_sp( nss, tmp2_sp, ldx, tmp1_sp, ldx, desc )
 
         DO J=1,nc
           DO I=1,nr
-            tmp2(I,J) = tmp2(I,J) + tmp1(I,J)
+            tmp2_sp(I,J) = tmp2_sp(I,J) + tmp1_sp(I,J)
           ENDDO
         ENDDO
 !
-        CALL sqr_mm_cannon( 'T', 'N', nss, 1.0d0, tau, ldx, xloc, nx0, 0.0d0, tmp1, ldx, desc)
+        CALL sqr_smm_cannon( 'T', 'N', nss, 1.0, tau_sp, ldx, xloc_sp, nx0, 0.0, tmp1_sp, ldx, desc)
         !
         sigd = 0.0d0
         IF( desc%myr == desc%myc ) THEN
            DO i = 1, nr
-              SIGD( i + ir - 1 )   =  tmp1(i,i)
-              tmp1(i,i) = -SIGD( i + ir - 1 )
+              SIGD( i + ir - 1 )   =  tmp1_sp(i,i)
+              tmp1_sp(i,i) = -SIGD( i + ir - 1 )
            ENDDO
         END IF
         CALL mp_sum( sigd, desc%comm )
 
-        CALL sqr_mm_cannon( 'T', 'N', nss, 1.0d0, xloc, nx0, tmp1, ldx, 0.0d0, x1, ldx, desc)
+        CALL sqr_smm_cannon( 'T', 'N', nss, 1.0, xloc_sp, nx0, tmp1_sp, ldx, 0.0, x1_sp, ldx, desc)
         !
-        CALL sqr_tr_cannon( nss, x1, ldx, tmp1, ldx, desc )
+        CALL sqr_tr_cannon_sp( nss, x1_sp, ldx, tmp1_sp, ldx, desc )
 
         ! ...     X1   = SIG - tmp2 - 0.5d0 * ( X1 + X1^t )
 
@@ -555,10 +573,10 @@ CONTAINS
             !
             den = ( diag(i+ir-1) + sigd(i+ir-1) + diag(j+ic-1) + sigd(j+ic-1) )
             IF( ABS( den ) <= small ) den = SIGN( small, den )
-            x1(i,j) = sig(i,j) - tmp2(i,j) - 0.5d0 * (x1(i,j)+tmp1(i,j))
-            x1(i,j) = x1(i,j) / den
-            diff = MAX( ABS( x1(i,j) - xloc(i,j) ), diff )
-            xloc(i,j) = x1(i,j)
+            x1_sp(i,j) = sig_sp(i,j) - tmp2_sp(i,j) - 0.5 * (x1_sp(i,j)+tmp1_sp(i,j))
+            x1_sp(i,j) = x1_sp(i,j) / den
+            diff = MAX( ABS( x1_sp(i,j) - xloc_sp(i,j) ), diff )
+            xloc_sp(i,j) = x1_sp(i,j)
             !
           END DO
         END DO
@@ -571,10 +589,15 @@ CONTAINS
       !
       ! ...   Transform x0 back to the original basis
 
+      xloc = xloc_sp
+
       CALL sqr_mm_cannon( 'N', 'N', nss, 1.0d0, u, ldx, xloc, nx0, 0.0d0, tmp1, ldx, desc)
       CALL sqr_mm_cannon( 'N', 'T', nss, 1.0d0, u, ldx, tmp1, ldx, 0.0d0, xloc, nx0, desc)
 
       DEALLOCATE( tmp1, tmp2, x1, sigd )
+
+      DEALLOCATE( xloc_sp, rhor_sp,  tau_sp, sig_sp, tmp1_sp, tmp2_sp, x1_sp )
+
 
 100   CONTINUE
 

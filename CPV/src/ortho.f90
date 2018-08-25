@@ -428,7 +428,7 @@
 
          IF( descla( iss )%active_node > 0 ) xloc = x0(:,:,iss) * ccc
 
-         CALL ortho_gamma( 0, cp_bgrp, ngwx, phi_bgrp, becp_dist(:,(iss-1)*nrcx+1:iss*nrcx), qbecp(:,:,iss), nkbx, &
+         CALL ortho_gamma( 1, cp_bgrp, ngwx, phi_bgrp, becp_dist(:,(iss-1)*nrcx+1:iss*nrcx), qbecp(:,:,iss), nkbx, &
                            bephi(:,((iss-1)*nrcx+1):iss*nrcx), &
                            qbephi(:,:,iss), xloc, nx0, descla(iss), diff, iter, nbsp, nupdwn(iss), iupdwn(iss) )
 
