@@ -40,10 +40,17 @@ MODULE pw_restart_new
   !
   CONTAINS
     !------------------------------------------------------------------------
-    SUBROUTINE pw_write_schema( )
+    SUBROUTINE pw_write_schema( what, wf_collect )
       !------------------------------------------------------------------------
       !
-      USE control_flags,        ONLY : istep, twfcollect, conv_ions, &
+      ! what = 'init-config': write only variables that are known after the 
+      !                       initial steps of initialization (e.g. structure)
+      ! wf_collect = T  if final wavefunctions in portable format are written,
+      !              F  if wavefunctions are either not written or are written
+      !                 in binary non-portable form (for checkpointing)
+      !                 NB: wavefunctions are not written here in any case
+      !
+      USE control_flags,        ONLY : istep, conv_ions, &
                                        lscf, gamma_only, &
                                        tqr, tq_smoothing, tbeta_smoothing, &
                                        noinv, smallmem, &
@@ -89,7 +96,6 @@ MODULE pw_restart_new
                                        lambda
       USE ions_base,            ONLY : amass
       USE funct,                ONLY : get_dft_short, get_inlc, get_nonlocc_name, dft_is_nonlocc
-      USE kernel_table,         ONLY : vdw_table_name
       USE scf,                  ONLY : rho
       USE force_mod,            ONLY : lforce, sumfor, force, sigma, lstres
       USE extfield,             ONLY : tefield, dipfield, edir, etotefield, &
@@ -116,14 +122,17 @@ MODULE pw_restart_new
       USE rap_point_group_so,   ONLY : elem_so, nelem_so, name_class_so
       USE bfgs_module,          ONLY : bfgs_get_n_iter
       USE qexsd_module,         ONLY : qexsd_bp_obj, qexsd_start_k_obj
-      USE qexsd_input,          ONLY : qexsd_init_k_points_ibz, qexsd_init_occupations, qexsd_init_smearing
+      USE qexsd_input,          ONLY : qexsd_init_k_points_ibz, &
+              qexsd_init_occupations, qexsd_init_smearing
       USE fcp_variables,        ONLY : lfcpopt, lfcpdyn, fcp_mu  
       USE io_files,             ONLY : pseudo_dir
       USE control_flags,        ONLY : conv_elec, conv_ions 
       !
       IMPLICIT NONE
       !
-      CHARACTER(15)         :: subname="pw_write_schema"
+      CHARACTER(LEN=*), INTENT(IN) :: what
+      LOGICAL, INTENT(IN) :: wf_collect
+      !
       CHARACTER(LEN=20)     :: dft_name
       CHARACTER(LEN=256)    :: dirname
       INTEGER               :: i, ig, ngg, ipol
@@ -153,15 +162,16 @@ MODULE pw_restart_new
       INTEGER             :: itemp = 1
       NULLIFY( degauss_, demet_, efield_corr, potstat_corr, gatefield_corr, bp_el_pol, bp_ion_pol)
       !
-      ! PW dimensions need to be properly computed 
-      ! reducing across MPI tasks
+      ! Global PW dimensions need to be properly computed, reducing across MPI tasks
+      ! If local PW dimensions are not available, set to 0
       !
       ALLOCATE( ngk_g( nkstot ) )
-      !
-      ngk_g(1:nks) = ngk(:)
-      CALL mp_sum( ngk_g(1:nks), intra_bgrp_comm )
-      ngk_g(nks+1:nkstot) = 0
-      CALL ipoolrecover( ngk_g, 1, nkstot, nks )
+      ngk_g(:) = 0
+      IF ( ALLOCATED (ngk) ) THEN
+         ngk_g(1:nks) = ngk(:)
+         CALL mp_sum( ngk_g(1:nks), intra_bgrp_comm )
+         CALL ipoolrecover( ngk_g, 1, nkstot, nks )
+      END IF
       ! BEWARE: only the first pool has ngk_g for all k-points
       !
       ! ... compute the maximum number of G vector among all k points
@@ -345,13 +355,17 @@ MODULE pw_restart_new
 ! ... BAND STRUCTURE
 !-------------------------------------------------------------------------------------
          !
+         ! skip if not yet computed
+         !
+         IF ( TRIM(what) == "init-config" ) GO TO 10
+         !
          IF (TRIM(input_parameters_occupations) == 'fixed') THEN 
             occupations_are_fixed = .TRUE. 
             IF ( noncolin ) THEN 
                h_band = NINT ( nelec ) 
             ELSE 
                h_band = NINT ( nelec/2.d0 ) 
-            END IF  
+            END IF
             h_energy =MAXVAL (et(h_band, 1:nkstot))
          ELSE 
             occupations_are_fixed = .FALSE. 
@@ -381,14 +395,14 @@ MODULE pw_restart_new
             CALL qexsd_init_band_structure(  output%band_structure,lsda,noncolin,lspinorb, nbnd, nbnd,      &
                    nelec, natomwfc, occupations_are_fixed, h_energy,two_fermi_energies, [ef_up,ef_dw],      &
                    et,wg,nkstot,xk,ngk_g,wk, STARTING_KPOINTS = qexsd_start_k_obj,                          &
-                   OCCUPATION_KIND = qexsd_occ_obj, WF_COLLECTED = twfcollect, SMEARING = qexsd_smear_obj )
+                   OCCUPATION_KIND = qexsd_occ_obj, WF_COLLECTED = wf_collect , SMEARING = qexsd_smear_obj )
 
             CALL qes_reset_smearing(qexsd_smear_obj)
          ELSE     
             CALL  qexsd_init_band_structure(output%band_structure,lsda,noncolin,lspinorb, nbnd, nbnd, nelec,& 
                                 natomwfc, occupations_are_fixed, h_energy,two_fermi_energies, [ef_up,ef_dw],&
                                 et,wg,nkstot,xk,ngk_g,wk, STARTING_KPOINTS = qexsd_start_k_obj,             &
-                                OCCUPATION_KIND = qexsd_occ_obj, WF_COLLECTED = twfcollect)
+                                OCCUPATION_KIND = qexsd_occ_obj, WF_COLLECTED = wf_collect )
          END IF 
          CALL qes_reset_k_points_ibz(qexsd_start_k_obj)
          CALL qes_reset_occupations(qexsd_occ_obj)
@@ -497,10 +511,10 @@ MODULE pw_restart_new
             NULLIFY(dipol_ptr)
          ENDIF
          NULLIFY ( bp_obj_ptr) 
-
 !------------------------------------------------------------------------------------------------
 ! ... ACTUAL WRITING
 !-------------------------------------------------------------------------------
+ 10      CONTINUE
          !
          CALL qes_write_output(qexsd_xf,output)
          CALL qes_reset_output(output) 
@@ -840,7 +854,6 @@ MODULE pw_restart_new
     SUBROUTINE init_vars_from_schema( what, ierr, output_obj, par_info, gen_info, input_obj )
       !------------------------------------------------------------------------
       !
-      USE control_flags,        ONLY : twfcollect
       USE io_rho_xml,           ONLY : read_scf
       USE scf,                  ONLY : rho
       USE lsda_mod,             ONLY : nspin
@@ -860,9 +873,9 @@ MODULE pw_restart_new
       LOGICAL            :: lcell, lpw, lions, lspin, linit_mag, &
                             lxc, locc, lbz, lbs, lwfc, lheader,          &
                             lsymm, lrho, lefield, ldim, &
-                            lef, lexx, lesm, lpbc, lvalid_input
+                            lef, lexx, lesm, lpbc, lvalid_input, lalgo, lsymflags 
       !
-      LOGICAL            :: need_qexml, found, electric_field_ispresent
+      LOGICAL            :: found, electric_field_ispresent
       INTEGER            :: tmp
       
       !    
@@ -897,6 +910,8 @@ MODULE pw_restart_new
       lesm    = .FALSE.
       lheader = .FALSE.
       lpbc    = .FALSE.  
+      lalgo   = .FALSE. 
+      lsymflags =.FALSE. 
       !
      
          
@@ -904,27 +919,19 @@ MODULE pw_restart_new
       CASE( 'header' )
          !
          lheader = .TRUE.
-         need_qexml = .TRUE.
-         !
-      CASE ( 'wf_collect' ) 
-         ! 
-         twfcollect = output_obj%band_structure%wf_collected 
          !
       CASE( 'dim' )
          !
          ldim =       .TRUE.
-         need_qexml = .TRUE.
          !
       CASE( 'pseudo' )
          !
          lions = .TRUE.
-         need_qexml = .TRUE.
          !
       CASE( 'config' )
          !
          lcell = .TRUE.
          lions = .TRUE.
-         need_qexml = .TRUE.
          !
       CASE( 'rho' )
          !
@@ -934,7 +941,6 @@ MODULE pw_restart_new
          !
          lpw   = .TRUE.
          lwfc  = .TRUE.
-         need_qexml = .TRUE.
          !
       CASE( 'nowave' )
          !
@@ -950,7 +956,8 @@ MODULE pw_restart_new
          lbs     = .TRUE.
          lsymm   = .TRUE.
          lefield = .TRUE.
-         need_qexml = .TRUE.
+         lalgo   = .TRUE.
+         lsymflags = .TRUE.
          !
       CASE( 'all' )
          !
@@ -968,28 +975,25 @@ MODULE pw_restart_new
          lsymm   = .TRUE.
          lefield = .TRUE.
          lrho    = .TRUE.
-         lpbc    = .TRUE. 
-         need_qexml = .TRUE.
+         lpbc    = .TRUE.
+         lalgo   = .TRUE. 
+         lsymflags = .TRUE. 
          !
       CASE( 'ef' )
          !
          lef        = .TRUE.
-         need_qexml = .TRUE.
          !
       CASE( 'exx' )
          !
          lexx       = .TRUE.
-         need_qexml = .TRUE.
          !
       CASE( 'esm' )
          !
          lesm       = .TRUE.
-         need_qexml = .TRUE.
          !
       CASE( 'boundary_conditions' )  
          !
          lpbc       = .TRUE.
-         need_qexml = .TRUE.
       END SELECT
       !
       !
@@ -1010,7 +1014,6 @@ MODULE pw_restart_new
       END IF
       !
       IF ( lpw ) THEN
-         twfcollect = output_obj%band_structure%wf_collected
          CALL readschema_planewaves( output_obj%basis_set) 
       END IF
       IF ( lions ) THEN
@@ -1037,12 +1040,10 @@ MODULE pw_restart_new
          CALL readschema_band_structure( output_obj%band_structure )
       END IF
       IF ( lwfc ) THEN
-         !
-         twfcollect = output_obj%band_structure%wf_collected
          IF (output_obj%band_structure%wf_collected)  CALL read_collected_to_evc(dirname ) 
       END IF
       IF ( lsymm ) THEN
-         IF ( lvalid_input ) THEN 
+         IF ( lvalid_input .and. lsymflags ) THEN 
             CALL readschema_symmetry (  output_obj%symmetries, output_obj%basis_set, input_obj%symmetry_flags )
          ELSE 
             CALL readschema_symmetry( output_obj%symmetries,output_obj%basis_set) 
@@ -1069,15 +1070,9 @@ MODULE pw_restart_new
       IF ( lefield .AND. lvalid_input ) CALL readschema_efield ( input_obj%electric_field ) 
       !
       IF ( lexx .AND. output_obj%dft%hybrid_ispresent  ) CALL readschema_exx ( output_obj%dft%hybrid )
+      IF ( lalgo ) CALL readschema_algo(output_obj%algorithmic_info ) 
       !
       RETURN
-      !
-      ! uncomment to continue execution after an error occurs
-      ! 100 IF (ionode .AND. need_qexml) THEN
-      !        CALL qexml_closefile( 'read', IERR=tmp)
-      !     ENDIF
-      !     RETURN
-      ! comment to continue execution after an error occurs
       !
     END SUBROUTINE init_vars_from_schema
     !-------------------------------------------------------------------------------
@@ -1200,16 +1195,16 @@ MODULE pw_restart_new
     at(:,1) =  atomic_structure%cell%a1
     at(:,2) =  atomic_structure%cell%a2
     at(:,3) =  atomic_structure%cell%a3
+    !! crystal axis are brought into "alat" units
+    at = at / alat
     !
     !! if ibrav is present, cell parameters were computed by subroutine
     !! "latgen" using ibrav and celldm parameters: recalculate celldm
     !
-    CALL at2celldm (ibrav,1.0_dp,at(:,1),at(:,2),at(:,3),celldm)
+    CALL at2celldm (ibrav,alat,at(:,1),at(:,2),at(:,3),celldm)
     !
     tpiba = tpi/alat
     tpiba2= tpiba**2
-    !! crystal axis are brought into "alat" units
-    at = at / alat
     CALL volume (alat,at(:,1),at(:,2),at(:,3),omega)
     CALL recips( at(1,1), at(1,2), at(1,3), bg(1,1), bg(1,2), bg(1,3) )
 
@@ -1259,12 +1254,17 @@ MODULE pw_restart_new
     IF ( atomic_structure%alat_ispresent ) alat = atomic_structure%alat 
     tau(:,1:nat) = tau(:,1:nat)/alat  
     ! 
+    ! ... this is where PP files used in the calculation were stored
+    !
+    pseudo_dir_cur = TRIM(dirname)
+    ! 
+    ! ... this is where PP files were originally found (if available)
+    !
     IF ( atomic_species%pseudo_dir_ispresent) THEN 
        pseudo_dir = TRIM(atomic_species%pseudo_dir)
     ELSE 
-       pseudo_dir = TRIM (dirname)
+       pseudo_dir = pseudo_dir_cur
     END IF
-      pseudo_dir_cur = TRIM(pseudo_dir)
     ! 
     END SUBROUTINE readschema_ions
     !  
@@ -1274,8 +1274,8 @@ MODULE pw_restart_new
       ! 
       USE symm_base,       ONLY : nrot, nsym, invsym, s, ft,ftau, irt, t_rev, &
                                  sname, sr, invs, inverse_s, s_axis_to_cart, &
-                                 time_reversal, no_t_rev
-      USE control_flags,   ONLY : noinv
+                                 time_reversal, no_t_rev, nosym
+      USE control_flags,   ONLY : noinv  
       USE fft_base,        ONLY : dfftp
       USE qes_types_module,ONLY : symmetries_type, symmetry_type, basis_type
       ! 
@@ -1288,7 +1288,9 @@ MODULE pw_restart_new
       ! 
       IF ( PRESENT(flags_obj) ) THEN 
          noinv = flags_obj%noinv
+         nosym = flags_obj%nosym
          no_t_rev = flags_obj%no_t_rev
+         time_reversal = time_reversal .AND. .NOT. noinv 
       ENDIF
       !
       nrot = symms_obj%nrot 
@@ -1640,6 +1642,10 @@ MODULE pw_restart_new
                 lxdm   = .FALSE.
                 !
            END SELECT
+          ! the following lines set vdw_table_name, if not already set before
+          ! (the latter option, added by Yang Jiao, is useful for postprocessing)
+          ! NOTA BENE: inlc is not used - this part should be simplified and maybe
+          ! moved to somewhere else (e.g. a routine setting the default file name) 
            SELECT CASE ( TRIM (dft_obj%vdW%non_local_term))
              CASE ('vdw1')  
                 inlc = 1
@@ -1656,13 +1662,16 @@ MODULE pw_restart_new
              CASE default 
                 inlc = 0 
           END SELECT
-          IF (inlc == 0 ) THEN 
-             vdw_table_name = ' '
-          ELSE IF ( inlc == 3 ) THEN 
-             vdw_table_name = 'rVV10_kernel_table'
-          ELSE
-             vdw_table_name = 'vdW_kernel_table'
-          END IF 
+          IF ( vdw_table_name == ' ' ) THEN 
+             IF (inlc == 0 ) THEN 
+                vdw_table_name = ''
+             ELSE IF ( inlc == 3 ) THEN 
+                vdw_table_name = 'rVV10_kernel_table'
+             ELSE
+                vdw_table_name = 'vdW_kernel_table'
+             END IF 
+          END IF
+          !
           IF (dft_obj%vdW%london_s6_ispresent ) THEN 
              scal6 = dft_obj%vdW%london_s6
           END IF 
@@ -1886,7 +1895,6 @@ MODULE pw_restart_new
     SUBROUTINE readschema_band_structure( band_struct_obj )
       !------------------------------------------------------------------------
       !
-      USE control_flags, ONLY : lkpoint_dir
       USE constants,     ONLY : e2
       USE basis,    ONLY : natomwfc
       USE lsda_mod, ONLY : lsda, isk
@@ -1899,7 +1907,6 @@ MODULE pw_restart_new
       TYPE ( band_structure_type)         :: band_struct_obj
       INTEGER                             :: ik, nbnd_, nbnd_up_, nbnd_dw_
       ! 
-      lkpoint_dir = .FALSE.
       lsda = band_struct_obj%lsda
       nbnd  = band_struct_obj%nbnd 
       nkstot = band_struct_obj%nks 
@@ -1956,6 +1963,17 @@ MODULE pw_restart_new
          END IF  
       END DO 
     END SUBROUTINE readschema_band_structure 
+    !
+    !--------------------------------------------------------------------------
+    SUBROUTINE readschema_algo(algo_obj) 
+       USE control_flags, ONLY: tqr 
+       USE realus,        ONLY: real_space 
+       IMPLICIT NONE 
+       TYPE(algorithmic_info_type),INTENT(IN)   :: algo_obj
+       tqr = algo_obj%real_space_q 
+       real_space = algo_obj%real_space_beta 
+    END SUBROUTINE readschema_algo 
+
     ! 
     !------------------------------------------------------------------------
     SUBROUTINE read_collected_to_evc( dirname )
@@ -1964,7 +1982,7 @@ MODULE pw_restart_new
       ! ... This routines reads wavefunctions from the new file format and
       ! ... writes them into the old format
       !
-      USE control_flags,        ONLY : twfcollect, gamma_only
+      USE control_flags,        ONLY : gamma_only
       USE lsda_mod,             ONLY : nspin, isk
       USE klist,                ONLY : nkstot, wk, nks, xk, ngk, igk_k
       USE wvfct,                ONLY : npwx, g2kin, et, wg, nbnd
@@ -1994,8 +2012,6 @@ MODULE pw_restart_new
       LOGICAL              :: opnd, ionode_k
       REAL(DP)             :: scalef, xk_(3), b1(3), b2(3), b3(3)
 
-      !
-      IF ( .NOT. twfcollect ) RETURN 
       !
       iks = global_kpoint_index (nkstot, 1)
       ike = iks + nks - 1

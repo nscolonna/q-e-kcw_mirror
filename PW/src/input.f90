@@ -18,7 +18,7 @@ SUBROUTINE iosys()
   USE funct,         ONLY : dft_is_hybrid, dft_has_finite_size_correction, &
                             set_finite_size_volume, get_inlc, get_dft_short
   USE funct,         ONLY: set_exx_fraction, set_screening_parameter
-  USE control_flags, ONLY: adapt_thr, tr2_init, tr2_multi
+  USE control_flags, ONLY: adapt_thr, tr2_init, tr2_multi  
   USE constants,     ONLY : autoev, eV_to_kelvin, pi, rytoev, &
                             ry_kbar, amu_ry, bohr_radius_angs, eps8
   USE mp_pools,      ONLY : npool
@@ -150,7 +150,7 @@ SUBROUTINE iosys()
   USE control_flags, ONLY : isolve, max_cg_iter, max_ppcg_iter, david, tr2, imix, gamma_only,&
                             nmix, iverbosity, smallmem, niter, &
                             io_level, ethr, lscf, lbfgs, lmd, &
-                            lbands, lconstrain, restart, twfcollect, &
+                            lbands, lconstrain, restart, &
                             llondon, ldftd3, do_makov_payne, lxdm, &
                             remove_rigid_rot_ => remove_rigid_rot, &
                             diago_full_acc_   => diago_full_acc, &
@@ -160,13 +160,13 @@ SUBROUTINE iosys()
                             nstep_            => nstep, &
                             iprint_           => iprint, &
                             noinv_            => noinv, &
-                            lkpoint_dir_      => lkpoint_dir, &
                             tqr_              => tqr, &
                             tq_smoothing_     => tq_smoothing, &
                             tbeta_smoothing_  => tbeta_smoothing, &
                             ts_vdw_           => ts_vdw, &
                             lecrpa_           => lecrpa, &
-                            scf_must_converge_=> scf_must_converge
+                            scf_must_converge_=> scf_must_converge, & 
+                            treinit_gvecs_    => treinit_gvecs 
   USE check_stop,    ONLY : max_seconds_ => max_seconds
   !
   USE wvfct,         ONLY : nbnd_ => nbnd
@@ -218,7 +218,7 @@ SUBROUTINE iosys()
                                wfcdir, prefix, etot_conv_thr, forc_conv_thr,   &
                                pseudo_dir, disk_io, tefield, dipfield, lberry, &
                                gdir, nppstr, wf_collect,lelfield,lorbm,efield, &
-                               nberrycyc, lkpoint_dir, efield_cart, lecrpa,    &
+                               nberrycyc, efield_cart, lecrpa,                 &
                                vdw_table_name, memory, max_seconds, tqmmm,     &
                                efield_phase, gate
 
@@ -285,7 +285,7 @@ SUBROUTINE iosys()
   !
   USE input_parameters, ONLY : cell_parameters, cell_dynamics, press, wmass,  &
                                cell_temperature, cell_factor, press_conv_thr, &
-                               cell_dofree
+                               cell_dofree, treinit_gvecs 
   !
   ! ... WANNIER_NEW namelist
   !
@@ -417,6 +417,7 @@ SUBROUTINE iosys()
      lmd       = .true.
      lmovecell = .true.
      lforce    = .true.
+     treinit_gvecs_ = treinit_gvecs 
      !
      epse =  etot_conv_thr
      epsf =  forc_conv_thr
@@ -546,7 +547,6 @@ SUBROUTINE iosys()
   ! ... define memory- and disk-related internal switches
   !
   smallmem = ( TRIM( memory ) == 'small' )
-  twfcollect = wf_collect
   !
   ! ... Set Values for electron and bands
   !
@@ -872,10 +872,6 @@ SUBROUTINE iosys()
   CASE ( 'none' )
      !
      io_level = -1
-     IF ( twfcollect ) THEN
-        CALL infomsg('iosys', 'minimal I/O required, wf_collect reset to FALSE')
-        twfcollect= .false.
-     ENDIF
      !
   CASE DEFAULT
      !
@@ -1152,7 +1148,6 @@ SUBROUTINE iosys()
   tbeta_smoothing_ = tbeta_smoothing
   !
   title_      = title
-  lkpoint_dir_=lkpoint_dir
   dt_         = dt
   tefield_    = tefield
   dipfield_   = dipfield
@@ -1178,15 +1173,9 @@ SUBROUTINE iosys()
   emaxpos_ = emaxpos
   eopreg_  = eopreg
   eamp_    = eamp
-  dfftp%nr1     = nr1
-  dfftp%nr2     = nr2
-  dfftp%nr3     = nr3
   ecfixed_ = ecfixed
   qcutz_   = qcutz
   q2sigma_ = q2sigma
-  dffts%nr1    = nr1s
-  dffts%nr2    = nr2s
-  dffts%nr3    = nr3s
   degauss_ = degauss
   !
   tot_charge_        = tot_charge
@@ -1577,6 +1566,24 @@ SUBROUTINE iosys()
   !
   CALL readpp ( input_dft, .FALSE., ecutwfc_pp, ecutrho_pp )
   CALL set_cutoff ( ecutwfc, ecutrho, ecutwfc_pp, ecutrho_pp )
+  !
+  ! ... ensure that smooth and dense grid coincide when ecutrho=4*ecutwfc
+  ! ... even when the dense grid is set from input and the smooth grid is not
+  !
+  dfftp%nr1    = nr1
+  dfftp%nr2    = nr2
+  dfftp%nr3    = nr3
+  IF ( ( nr1 /= 0 .AND. nr2 /= 0 .AND. nr3 /= 0 ) .AND. &
+       ( nr1s== 0 .AND. nr2s== 0 .AND. nr3s== 0 ) .AND. &
+       ( ABS(ecutrho -4*ecutwfc)<eps8) ) THEN
+     dffts%nr1 = nr1
+     dffts%nr2 = nr2
+     dffts%nr3 = nr3
+  ELSE
+     dffts%nr1 = nr1s
+     dffts%nr2 = nr2s
+     dffts%nr3 = nr3s
+  END IF
   !
   ! ... set parameters of hybrid functionals
   !

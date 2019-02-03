@@ -164,7 +164,8 @@ input_description -distribution {Quantum Espresso} -package PWscf -program pw.x 
                         The resulting format is portable to a different number
                         of processor, or different kind of parallelization
 
-                .FALSE. do not collect wavefunctions, leave them in temporary
+                .FALSE. OBSOLETE - NO LONGER IMPLEMENTED
+                        do not collect wavefunctions, leave them in temporary
                         local files (one per processor). The resulting format
                         is readable only on the same number of processors and
                         with the same kind of parallelization used to write it.
@@ -854,13 +855,16 @@ input_description -distribution {Quantum Espresso} -package PWscf -program pw.x 
        var use_all_frac -type LOGICAL { 
            default { .FALSE. }
            info {
-               if (.TRUE.) do not discard symmetry operations with an
-               associated fractionary translation that does not send the
-               real-space FFT grid into itself. These operations are 
-               incompatible with real-space symmetrization but not with the
-               new G-space symmetrization. BEWARE: do not use for phonons
-               and for hybrid functionals! Both still use symmetrization
-               in real space.
+               if (.FALSE.) force real-space FFT grids to be commensurate with
+               fractionary translations of non-symmorphic symmetry operations,
+               if present (e.g.: if a fractional translation (0,0,c/4) exists, 
+               the FFT dimension along the c axis must be multiple of 4).
+               if (.TRUE.) do not impose any constraints to FFT grids, even in
+               the presence of non-symmorphic symmetry operations. 
+               BEWARE: use_all_frac=.TRUE. may lead to wrong results for
+               hybrid functionals and phonon calculations. Both cases use 
+               symmetrization in real space that works for non-symmorphic 
+               operations only if the real-space FFT grids are commensurate.
           }
       }
 
@@ -1646,9 +1650,13 @@ input_description -distribution {Quantum Espresso} -package PWscf -program pw.x 
          var dftd3_version -type integer {
            default { 3 }
            info {
-               Version of Grimme implementation of Grimme-D3. Version=3 is Grimme-D3. Version=2
-               is the original Grimme-D2 parametrization. NOTE: not all functionals are
-               parametrized.
+               Version of Grimme implementation of Grimme-D3:
+                  Version=2 is the original Grimme-D2 parametrization
+                  Version=3 is Grimme-D3 (zero damping) 
+                  Version=4 is Grimme-D3 (BJ damping) 
+                  Version=5 is Grimme-D3M (zero damping) 
+                  Version=6 is Grimme-D3M (BJ damping)
+               NOTE: not all functionals are parametrized.
            }
          }
          var dftd3_threebody -type LOGICAL {
@@ -2530,6 +2538,7 @@ input_description -distribution {Quantum Espresso} -package PWscf -program pw.x 
 		    Select which of the cell parameters should be moved:
 		}                
                 opt -val 'all'          { all axis and angles are moved }
+                opt -val 'ibrav'        { all axis and angles are moved, but the lattice but be representable with the initial ibrav choice }
                 opt -val 'x'            { only the x component of axis 1 (v1_x) is moved }
                 opt -val 'y'            { only the y component of axis 2 (v2_y) is moved }
                 opt -val 'z'            { only the z component of axis 3 (v3_z) is moved }

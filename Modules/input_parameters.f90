@@ -231,13 +231,12 @@ MODULE input_parameters
         INTEGER  :: nberrycyc = 1
           !number of covergence cycles on electric field
 
-        LOGICAL :: wf_collect = .false.
+        LOGICAL :: wf_collect = .true.
           ! This flag controls the way wavefunctions are stored to disk:
           !  .TRUE.  collect wavefunctions from all processors, store them
           !          into a single restart file on a single processors
           !  .FALSE. do not collect wavefunctions, store them into distributed
-          !          files
-          ! Only for PW and only in the parallel case
+          !          files - NO LONGER IMPLEMENTED SINCE v.6.3
 
         LOGICAL :: saverho = .true.
           ! This flag controls the saving of charge density in CP codes:
@@ -247,7 +246,7 @@ MODULE input_parameters
         LOGICAL :: tabps = .false. ! for ab-initio pressure and/or surface
                                    ! calculations
 
-        LOGICAL :: lkpoint_dir = .true. ! opens a directory for each k point
+        LOGICAL :: lkpoint_dir = .false. ! obsolete, for compatibility
 
         LOGICAL :: use_wannier = .false. ! use or not Wannier functions
 
@@ -269,8 +268,6 @@ MODULE input_parameters
           !                     even if they are slower than the default
           ! if memory = 'large' then QE tries to use (when implemented) algorithms using more memory
           !                     to enhance performance.
-
-          ! if .TRUE., perform exact exchange calculation using Wannier functions (X. Wu et al., Phys. Rev. B. 79, 085102 (2009))
 
         LOGICAL  :: lfcpopt = .FALSE. ! FCP optimisation switch
         LOGICAL  :: lfcpdyn = .FALSE. ! FCP thermostat enabled if .true.
@@ -1013,7 +1010,7 @@ MODULE input_parameters
 !=----------------------------------------------------------------------------=!
 !  IONS Namelist Input Parameters
 !=----------------------------------------------------------------------------=!
-!
+
 
         CHARACTER(len=80) :: ion_dynamics = 'none'
           ! set how ions should be moved
@@ -1262,11 +1259,15 @@ MODULE input_parameters
           ! in a ionic steepest descent simulation
 
         REAL(DP) :: press_conv_thr = 0.5_DP
+        
+        LOGICAL :: treinit_gvecs  = .FALSE. 
+          ! if true all the quantities related to fft g vectors are updated at 
+          ! step of variable cell structural optimization 
 
         NAMELIST / cell / cell_parameters, cell_dynamics, cell_velocities, &
                           press, wmass, cell_temperature, temph, fnoseh,   &
                           cell_dofree, greash, cell_factor, cell_nstepe,   &
-                          cell_damping, press_conv_thr
+                          cell_damping, press_conv_thr, treinit_gvecs 
 
 !
 !=----------------------------------------------------------------------------=!!

@@ -4,17 +4,19 @@ PROGRAM open_grid
   !
   USE kinds, ONLY : DP
   USE io_global,  ONLY : stdout, ionode, ionode_id
-  USE mp_global,  ONLY : mp_startup, npool, nproc_pool, nproc_pool_file
+  USE mp_global,  ONLY : mp_startup
+  USE mp_images,  ONLY : intra_image_comm
+  USE mp_pools,   ONLY : npool
   USE mp,         ONLY : mp_bcast
-  USE mp_world,   ONLY : world_comm
   USE cell_base,  ONLY : at, bg, tpiba2, alat
-  USE lsda_mod,   ONLY : nspin, isk
   USE klist,      ONLY : nks, nkstot, xk, wk, igk_k, ngk, qnorm
   USE io_files,   ONLY : prefix, tmp_dir, nwordwfc, iunwfc, diropn
-  USE noncollin_module,   ONLY : noncolin
-  USE control_flags,      ONLY : gamma_only, twfcollect
+  USE noncollin_module,   ONLY : noncolin, m_loc, angle1, angle2, nspin_lsda
+  USE spin_orb,           ONLY : domag
+  USE control_flags,      ONLY : gamma_only
   USE environment,        ONLY : environment_start, environment_end
-  USE symm_base,          ONLY : nrot, nsym, s, t_rev
+  USE ions_base,          ONLY : nat, tau, ityp
+  USE symm_base,          ONLY : nrot, nsym, s, t_rev, fft_fact, find_sym
   USE parameters,         ONLY : npk
   USE exx_base,           ONLY : nq1,nq2,nq3, xkq_collect, &
                                  nkqs, exx_mp_init, index_xk, exx_grid_init 
@@ -26,7 +28,7 @@ PROGRAM open_grid
   USE wavefunctions, ONLY : evc
   USE buffers,            ONLY : save_buffer, open_buffer, close_buffer
   USE scf,                ONLY : rho
-  USE lsda_mod,           ONLY : nspin, lsda
+  USE lsda_mod,           ONLY : nspin, isk, lsda, starting_magnetization
   USE io_rho_xml,         ONLY : write_scf
   USE input_parameters,   ONLY : nk1, nk2, nk3, k1, k2, k3, k_points, &
                               occupations, calculation !, nkstot,
@@ -39,6 +41,7 @@ PROGRAM open_grid
   !USE qexsd_input,        ONLY : qexsd_init_k_points_ibz
   USE control_flags,      ONLY : gamma_only, io_level
   USE start_k, ONLY : init_start_k
+  USE extfield,           ONLY : gate
   ! 
   IMPLICIT NONE
   !
@@ -52,11 +55,11 @@ PROGRAM open_grid
   !
   CHARACTER(LEN=256), EXTERNAL :: trimcheck
   !
-  INTEGER :: ios, ik, ibnd, ik_idx, ik_idx_kpt, ik_idx_exx, is
+  INTEGER :: ios, ik, ibnd, ik_idx, ik_idx_kpt, ik_idx_exx, is, na
   CHARACTER(len=4) :: spin_component
   CHARACTER(len=256) :: outdir
   !INTEGER :: nq(3)
-  LOGICAL :: exst, opnd, exst_mem
+  LOGICAL :: exst, opnd, exst_mem, magnetic_sym
   REAL(DP),ALLOCATABLE :: et0(:,:), wg0(:,:), yk(:,:), wk0(:)
   INTEGER, EXTERNAL  :: n_plane_waves
   COMPLEX(DP),ALLOCATABLE :: psic(:), evx(:,:)
@@ -95,18 +98,16 @@ PROGRAM open_grid
   ENDIF
   !
   !
-  CALL mp_bcast(outdir,ionode_id, world_comm)
-  CALL mp_bcast(tmp_dir,ionode_id, world_comm)
-  CALL mp_bcast(prefix,ionode_id, world_comm)
-  !CALL mp_bcast(nq,ionode_id, world_comm)
+  CALL mp_bcast(outdir,ionode_id, intra_image_comm)
+  CALL mp_bcast(tmp_dir,ionode_id, intra_image_comm)
+  CALL mp_bcast(prefix,ionode_id, intra_image_comm)
+  !CALL mp_bcast(nq,ionode_id, intra_image_comm)
   !
   WRITE(stdout,*)
   WRITE(stdout,*) ' Reading nscf_save data'
   CALL read_file
   !print*, "initial", nks, nkstot
   CALL open_buffer(iunwfc, 'wfc', nwordwfc, io_level, exst_mem, exst)
-  !
-!  twfcollect = .false.
   !
   WRITE(stdout,*)
   IF ( npool > 1 .and. nspin_mag>1) CALL errore( 'open_grid', &
@@ -115,21 +116,27 @@ PROGRAM open_grid
   IF(gamma_only) CALL errore("open_grid", &
       "not implemented, and pointless, for gamma-only",1)
   !
-  ! Here we trap restarts from a different number of nodes.
-  !
-  IF (nproc_pool /= nproc_pool_file .and. .not. twfcollect)  &
-     CALL errore('open_grid', &
-     'pw.x run on a different number of procs/pools. Use wf_collect=.true.',1)
-  !
-!  CALL openfil_pp()
-  !
   ! Store some variables related to exx to be put back before writing
   use_ace_back = use_ace
   ecutfock_back = ecutfock
   nq_back = (/ nq1, nq2, nq3 /)
   exx_status_back = .true.
   CALL dft_force_hybrid(exx_status_back)
-  !
+
+  magnetic_sym = noncolin .AND. domag 
+  ALLOCATE(m_loc(3,nat))
+  IF (noncolin.and.domag) THEN
+     DO na = 1, nat
+        m_loc(1,na) = starting_magnetization(ityp(na)) * &
+                      SIN( angle1(ityp(na)) ) * COS( angle2(ityp(na)) )
+        m_loc(2,na) = starting_magnetization(ityp(na)) * &
+                      SIN( angle1(ityp(na)) ) * SIN( angle2(ityp(na)) )
+        m_loc(3,na) = starting_magnetization(ityp(na)) * &
+                      COS( angle1(ityp(na)) )
+     ENDDO
+  ENDIF
+  CALL find_sym ( nat, tau, ityp, magnetic_sym, m_loc, gate )
+
   nq1 = -1
   nq2 = -1
   nq3 = -1
@@ -156,24 +163,27 @@ PROGRAM open_grid
   xk(:,1:nks) = xkq_collect(:,1:nks)
   wk(1:nks) = 1._dp/DBLE(nks) !/DBLE(nspin_mag)
   npwx = n_plane_waves(gcutw, nks, xk, g, ngm)
+  IF (nspin==2) THEN
+    isk(1:nks/2) = 1
+    isk(nks/2+1:nks) = 2
+  ENDIF
   !
-  DEALLOCATE(igk_k, ngk, et, wg)
-  ALLOCATE(igk_k(npwx,nks), ngk(nks))
+  DEALLOCATE(igk_k, ngk, et, wg, g2kin)
+  ALLOCATE(igk_k(npwx,nks), ngk(nks), g2kin(npwx))
   ALLOCATE(et(nbnd,nks), wg(nbnd,nks))
   !
   DEALLOCATE(evc)
-  ALLOCATE(evc(npwx,nbnd))
+  ALLOCATE(evc(npwx*npol,nbnd))
   !
   prefix = TRIM(prefix)//"_open"
   nwordwfc = nbnd * npwx * npol
   !WRITE(stdout,*) ' Nwordwfc:', nwordwfc, nbnd, npwx, npol
   CALL open_buffer(iunwfc, 'wfc', nwordwfc, +1, exst_mem, exst)
   !
-  ! Set the next to true to force non-collected wfcs on output
-!  twfcollect = .false.
   CALL write_scf(rho, nspin)
   !
   ALLOCATE(psic(dffts%nnr), evx(npol*npwx, nbnd))
+ 
   DO ik = 1, nks !/nspin_mag
   !DO is = 1, nspin_mag
     ik_idx_kpt = ik !+ (is-1)*(nks/nspin_mag) !(ik-1)*nspin_mag + is
@@ -188,6 +198,8 @@ PROGRAM open_grid
 !     print*, size(exxbuff,1), size(exxbuff,2), nwordwfc, npwx, &
 !             dffts%nnr
     DO ibnd = 1, nbnd
+      evx = 0._dp
+      psic = 0._dp
       psic(1:dffts%nnr) = exxbuff(1:dffts%nnr,ibnd,ik_idx_exx)
       CALL fwfft('Wave', psic, dffts)
       evx(1:ngk(ik_idx_kpt),ibnd) = psic(dffts%nl(igk_k(1:ngk(ik_idx_kpt),ik_idx_kpt)))
@@ -234,8 +246,8 @@ PROGRAM open_grid
   WRITE(stdout,'(5x,a,3i4)') "Shift:     ", k1,k2,k3
   WRITE(stdout,'(5x,a)') "List to be put in the .win file of wannier90: &
                           &(already in crystal/fractionary coordinates):"
-    
-  DO ik = 1, nks/nspin_mag
+
+  DO ik = 1, nks/nspin_lsda
     WRITE(stdout,'(3f21.15,3x,f13.10)') yk(:,ik), wk(ik)
   ENDDO
   DEALLOCATE(yk)

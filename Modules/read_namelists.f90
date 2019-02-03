@@ -120,7 +120,6 @@ MODULE read_namelists_module
        lelfield = .FALSE.
        lorbm = .FALSE.
        nberrycyc  = 1
-       lkpoint_dir = .TRUE.
        lecrpa   = .FALSE.   
        tqmmm = .FALSE.
        !
@@ -573,6 +572,7 @@ MODULE read_namelists_module
        cell_nstepe = 1
        cell_damping = 0.1_DP
        press_conv_thr = 0.5_DP
+       treinit_gvecs = .FALSE.
        !
        RETURN
        !
@@ -727,7 +727,6 @@ MODULE read_namelists_module
        CALL mp_bcast( gdir,          ionode_id, intra_image_comm )
        CALL mp_bcast( nppstr,        ionode_id, intra_image_comm )
        CALL mp_bcast( point_label_type,   ionode_id, intra_image_comm )
-       CALL mp_bcast( lkpoint_dir,   ionode_id, intra_image_comm )
        CALL mp_bcast( wf_collect,    ionode_id, intra_image_comm )
        CALL mp_bcast( lelfield,      ionode_id, intra_image_comm )
        CALL mp_bcast( lorbm,         ionode_id, intra_image_comm )
@@ -1131,6 +1130,7 @@ MODULE read_namelists_module
        CALL mp_bcast( cell_nstepe,      ionode_id, intra_image_comm )
        CALL mp_bcast( cell_damping,     ionode_id, intra_image_comm )
        CALL mp_bcast( press_conv_thr,   ionode_id, intra_image_comm )
+       CALL mp_bcast( treinit_gvecs,    ionode_id, intra_image_comm )
        !
        RETURN
        !
