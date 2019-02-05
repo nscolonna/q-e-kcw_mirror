@@ -57,7 +57,7 @@ SUBROUTINE setup()
   USE symm_base,          ONLY : s, t_rev, irt, nrot, nsym, invsym, nosym, &
                                  d1,d2,d3, time_reversal, sname, set_sym_bl, &
                                  find_sym, inverse_s, no_t_rev, fft_fact,  &
-                                 allfrac
+                                 allfrac, nrot_c
   USE wvfct,              ONLY : nbnd, nbndx
   USE control_flags,      ONLY : tr2, ethr, lscf, lmd, david, lecrpa,  &
                                  isolve, niter, noinv, ts_vdw, &
@@ -441,6 +441,29 @@ SUBROUTINE setup()
   magnetic_sym = noncolin .AND. domag 
   time_reversal = .NOT. noinv .AND. .NOT. magnetic_sym
   !
+  IF ( nat==0 ) THEN
+     !
+     nsym=nrot
+     nrot_c=nsym
+     invsym=.true.
+     CALL inverse_s ( ) 
+     !
+  ELSE
+     !
+     ! ... eliminate rotations that are not symmetry operations
+     !
+     CALL find_sym ( nat, tau, ityp, magnetic_sym, m_loc, gate )
+     !
+     ! ... do not force FFT grid to be commensurate with fractional translations
+     !
+     IF ( allfrac ) fft_fact(:) = 1 
+     !
+  END IF
+  !
+  ! ... nosym: do not use any point-group symmetry (s(:,:,1) is the identity)
+  !
+  IF ( nosym ) nsym = 1
+  !
   ! ... Automatic generation of k-points (if required)
   !
   IF ( nks_start == 0 ) THEN
@@ -450,18 +473,22 @@ SUBROUTINE setup()
         CALL kpoint_grid_efield (at,bg, npk, &
              k1,k2,k3, nk1,nk2,nk3, nkstot, xk, wk, nspin)
         nosym = .TRUE.
+        nsym = 1
+        nrot_c = 1
         nrot_ = 1
         !
      ELSE IF (lberry ) THEN
         !
-        CALL kp_strings( nppstr, gdir, nrot_, s, bg, npk, &
+        CALL kp_strings( nppstr, gdir, nrot_c, s, bg, npk, &
                          k1, k2, k3, nk1, nk2, nk3, nkstot, xk, wk )
         nosym = .TRUE.
+        nsym = 1
+        nrot_c = 1
         nrot_ = 1
         !
      ELSE
         !
-        CALL kpoint_grid ( nrot_,time_reversal, skip_equivalence, s, t_rev, bg,&
+        CALL kpoint_grid ( nrot_c,time_reversal, skip_equivalence, s, t_rev, bg,&
                            npk, k1,k2,k3, nk1,nk2,nk3, nkstot, xk, wk)
         !
      END IF
@@ -491,40 +518,19 @@ SUBROUTINE setup()
         nppstr_3d(gdir)=nppstr
         l3dstring=.false.
         nosym = .TRUE.
+        nsym = 1
+        nrot_c = 1
         nrot_ = 1
         !
      END IF
   END IF
   !
-  IF ( nat==0 ) THEN
-     !
-     nsym=nrot
-     invsym=.true.
-     CALL inverse_s ( ) 
-     !
-  ELSE
-     !
-     ! ... eliminate rotations that are not symmetry operations
-     !
-     CALL find_sym ( nat, tau, ityp, magnetic_sym, m_loc, gate )
-     !
-     ! ... do not force FFT grid to be commensurate with fractional translations
-     !
-     IF ( allfrac ) fft_fact(:) = 1 
-     !
-  END IF
-  !
-  ! ... nosym: do not use any point-group symmetry (s(:,:,1) is the identity)
-  !
-  IF ( nosym ) nsym = 1
-  !
-  ! ... Input k-points are assumed to be  given in the IBZ of the Bravais
-  ! ... lattice, with the full point symmetry of the lattice.
-  ! ... If some symmetries of the lattice are missing in the crystal,
-  ! ... "irreducible_BZ" computes the missing k-points.
+  ! ... Input k-points are assumed to be  given in the IBZ of the crystal,
+  ! ... with the full point symmetry of the laue class of the crystal, since
+  ! ... k = -k is always present for a uniform k-point grid.
   !
   IF ( .NOT. lbands ) THEN
-     CALL irreducible_BZ (nrot_, s, nsym, time_reversal, &
+     CALL irreducible_BZ (nrot_c, s, nsym, time_reversal, &
                           magnetic_sym, at, bg, npk, nkstot, xk, wk, t_rev)
   ELSE
      one = SUM (wk(1:nkstot))

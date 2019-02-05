@@ -28,7 +28,7 @@ MODULE symm_base
   !
   PUBLIC :: s, sr, sname, ft, ftau, nrot, nsym, nsym_ns, nsym_na, t_rev, &
             no_t_rev, time_reversal, irt, invs, invsym, d1, d2, d3, &
-            allfrac, nofrac, nosym, nosym_evc, fft_fact, spacegroup
+            allfrac, nofrac, nosym, nosym_evc, fft_fact, spacegroup, nrot_c
   INTEGER :: &
        s(3,3,48),            &! symmetry matrices, in crystal axis
        invs(48),             &! index of inverse operation: S^{-1}_i=S(invs(i))
@@ -38,8 +38,10 @@ MODULE symm_base
        spacegroup = 0,       &! space group index, as read from input
        nsym = 1,             &! total number of crystal symmetries
        nsym_ns = 0,          &! nonsymmorphic (fractional translation) symms
-       nsym_na = 0            ! excluded nonsymmorphic symmetries because
+       nsym_na = 0,          &! excluded nonsymmorphic symmetries because
                               ! fract. transl. is noncommensurate with FFT grid
+       nrot_c = 1             ! number of elements in the laue class of the
+                              ! crystal
   REAL (DP) :: &
        ft (3,48),            &! fractional translations, in crystal axis
        sr (3,3,48),          &! symmetry matrices, in cartesian axis
@@ -363,17 +365,24 @@ SUBROUTINE find_sym ( nat, tau, ityp, magnetic_sym, m_loc, no_z_inv )
     !
     IF ( magnetic_sym ) CALL sgam_at_mag ( nat, m_loc, sym )
     !
-    !  If nosym_evc is true from now on we do not use the symmetry any more
-    !
-    IF (nosym_evc) THEN
-       sym=.false.
-       sym(1)=.true.
+    IF (nosym) THEN
+      sym = .false.
+      sym(1) = .true.
     ENDIF
     !
     !    Here we re-order all rotations in such a way that true sym.ops
     !    are the first nsym; rotations that are not sym.ops. follow
     !
     nsym = copy_sym ( nrot, sym )
+    !
+    !  If nosym_evc is true from now on we do not use the symmetry any more
+    !  But the laue class is still correctly found.
+    !
+    IF (nosym_evc) THEN
+       sym=.false.
+       sym(1)=.true.
+       nsym=1
+    ENDIF
     !
     IF ( .not. is_group ( nsym ) ) THEN
        IF (i == 1) CALL infomsg ('find_sym', &
@@ -693,7 +702,7 @@ INTEGER FUNCTION copy_sym ( nrot_, sym )
   INTEGER, INTENT(in) :: nrot_
   LOGICAL, INTENT(inout) :: sym(48)
   !
-  INTEGER :: stemp(3,3), ftemp(3), ttemp, irot, jrot
+  INTEGER :: stemp(3,3), ftemp(3), ttemp, irot, jrot, crot
   REAL(dp) :: ft_(3)
   INTEGER, ALLOCATABLE :: irtemp(:)
   CHARACTER(len=45) :: nametemp
@@ -732,6 +741,52 @@ INTEGER FUNCTION copy_sym ( nrot_, sym )
   ENDDO
   sym (1:jrot) = .true.
   sym (jrot+1:nrot_) = .false.
+
+  ! Change the sequence to let the other sym ops of the crystal's 
+  ! Laue class follow directly after jrot (nsym). Only perform this
+  ! when crystal symmetry is initialized for the first time.
+  ! (Hence, "nrot == nrot_" )
+  ! Note: non-crystal sym ops doesn't have fractional translation, 
+  ! nor irt(:,:). Hence, we don't need to swap these.
+  IF ( .not. all( s(:,:,jrot/2+1) == -s(:,:,1) ) .AND. &
+       nrot == nrot_ .AND. .not. nosym) THEN
+    ! The crystal point group is not already a centrosymmetric group.
+    DO irot = 1, jrot
+      DO crot = jrot+1, nrot_
+        IF ( all( s(:,:,crot) == -s(:,:,irot) ) ) THEN
+          stemp = s(:,:,crot)
+          s(:,:,crot) = s(:,:,jrot+irot)
+          s(:,:,jrot+irot) = stemp
+
+          nametemp = sname(crot)
+          sname(crot) = sname(jrot+irot)
+          sname(jrot+irot) = nametemp
+
+          ttemp = t_rev(crot)
+          t_rev(crot) = t_rev(jrot+irot)
+          t_rev(jrot+irot) = ttemp
+          
+          GOTO 10
+        ENDIF
+      ENDDO
+      ! If not found the inversed one, report an error.
+      ! set_sym_bl has problem, though rear.
+      CALL errore ('copy_sym', 'cannot find laue class from &
+      &lattice point group', irot)
+    10 CONTINUE
+    ENDDO
+    nrot_c = 2 * jrot
+    ! check whether nrot_c is a correct order for a laue class
+    IF ( nrot_c /= 2 .AND. nrot_c /= 4 .AND. nrot_c /= 6 .AND. &
+         nrot_c /= 8 .AND. nrot_c /= 12 .AND. nrot_c /= 16 .AND. &
+         nrot_c /= 24 .AND. nrot_c /= 48 ) THEN
+       CALL errore ('copy_sym', 'laue group has wrong number', nrot_c)
+    ENDIF
+  ELSE
+    ! ... when nosym = .true., nrot_c = 1. 
+    nrot_c = jrot
+  ENDIF
+
   DEALLOCATE ( irtemp )
   !
   copy_sym = jrot
