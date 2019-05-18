@@ -17,8 +17,8 @@
   CONTAINS
     ! 
     !-----------------------------------------------------------------------
-    SUBROUTINE ibte( nind, etf_all, vkk_all, wkf_all, trans_prob, ef0, &
-                     sparse_q, sparse_k, sparse_i, sparse_j, sparse_t ) 
+    SUBROUTINE ibte (nind, etf_all, vkk_all, wkf_all, trans_prob, ef0, &
+                     sparse_q, sparse_k, sparse_i, sparse_j, sparse_t) 
     !-----------------------------------------------------------------------
     !!
     !!  This subroutine computes the scattering rate with the iterative BTE
@@ -122,7 +122,7 @@
     !! BZ to IBZ mapping
     INTEGER :: s_BZtoIBZ(3,3,nkf1*nkf2*nkf3)
     !! symmetry matrix for each k-point from the full BZ
-    INTEGER :: BZtoIBZ_mat(nrot,nkqtotf/2)
+    INTEGER, ALLOCATABLE :: BZtoIBZ_mat(:, :)
     !! For a given k-point in the IBZ gives the k-point index
     !! of all the k-point in the full BZ that are connected to the current 
     !! one by symmetry. nrot is the max number of symmetry 
@@ -163,12 +163,17 @@
     !! Used for the averaging
     REAL(kind=DP) :: ekk2
     !! Use for averaging
-  
-    !
     REAL(kind=DP) :: xkf_tmp (3, nkqtotf)
     !! Temporary k-point coordinate (dummy variable)
     REAL(kind=DP) :: wkf_tmp(nkqtotf)
     !! Temporary k-weights (dummy variable)
+    REAL(kind=DP) :: dfnk
+    !! df/de
+    REAL(kind=DP) :: etemp
+    !! Temperature
+    REAL(KIND=DP), EXTERNAL :: w0gauss
+    !! The derivative of wgauss:  an approximation to the delta function
+    ! Gather all the k-point coordinate from all the pools
     ! 
     ! Gather all the k-point coordinate from all the pools
     xkf_all(:,:) = zero
@@ -186,8 +191,8 @@
    ! print*,'allocated s_BZtoIBZ_full',ALLOCATED(s_BZtoIBZ_full)
     ! Deal with symmetries
     IF (mp_mesh_k) THEN
-      ALLOCATE(ixkqf_tr(nind), STAT=ierr)
-      ALLOCATE(s_BZtoIBZ_full(3,3,nind), STAT=ierr)
+      ALLOCATE (ixkqf_tr(nind), STAT=ierr)
+      ALLOCATE (s_BZtoIBZ_full(3, 3, nind), STAT=ierr)
       ! For a given k-point in the IBZ gives the k-point index
       ! of all the k-point in the full BZ that are connected to the current 
       ! one by symmetry. nrot is the max number of symmetry 
@@ -196,12 +201,15 @@
       ixkqf_tr(:) = 0
       !call move_alloc(test1, s_BZtoIBZ_full)
       s_BZtoIBZ_full(:,:,:) = 0
-      BZtoIBZ_mat(:,:) = 0 
       nsym(:) = 0
       ! 
-      IF ( mpime .eq. ionode_id ) THEN
-        ! 
+      IF ( mpime == ionode_id ) THEN
+        !  
+        ! Computes nrot
         CALL set_sym_bl( )
+        !
+        ALLOCATE (BZtoIBZ_mat(nrot, nkqtotf/2))   
+        BZtoIBZ_mat(:, :) = 0 
         !
         ! What we get from this call is BZtoIBZ
         CALL kpoint_grid_epw ( nrot, time_reversal, .false., s, t_rev, bg, nkf1*nkf2*nkf3, &
@@ -222,8 +230,10 @@
         ! 
       ENDIF ! mpime
       ! 
+      CALL mp_bcast( nrot,        ionode_id, inter_pool_comm )
       CALL mp_bcast( s_BZtoIBZ,   ionode_id, inter_pool_comm )
       CALL mp_bcast( BZtoIBZ,     ionode_id, inter_pool_comm )
+      IF (mpime /= ionode_id) ALLOCATE (BZtoIBZ_mat(nrot, nkqtotf/2))
       CALL mp_bcast( BZtoIBZ_mat, ionode_id, inter_pool_comm )
       !
       WRITE(stdout,'(5x,"Symmetry mapping finished")')
@@ -236,15 +246,13 @@
         CALL kpmq_map( xkf_all(:, 2*ik-1 ), xqf (:, iq), +1, nkq_abs )
         s_BZtoIBZ_full(:,:,ind) = s_BZtoIBZ(:,:,nkq_abs)
         ixkqf_tr(ind) = BZtoIBZ(nkq_abs)
-        !print*,'ind iq ik ixkqf_tr ',ind, iq, ik, ixkqf_tr(ind), s_BZtoIBZ_full(1,1,ind)
       ENDDO
       ! 
-    ENDIF
+    ENDIF ! mp_mesh_k
     !
     ! First computes the SERTA solution as the first step of the IBTE
     F_SERTA(:,:,:,:) = zero
     tmp(:,:,:) = zero
-    !tmp2(:,:,:,:,:) = zero
     ! 
     DO ind=1, nind
       iq    = sparse_q( ind )
@@ -254,15 +262,7 @@
       itemp = sparse_t( ind )
       ! 
       tmp(ibnd, ik, itemp) = tmp(ibnd, ik, itemp)  + trans_prob(ind)
-      !tmp2(jbnd, ibnd, itemp, ik, iq)  = trans_prob(ind)
-  
-      !IF (ik==2 .and. ibnd ==2 .and. itemp ==2) print*,'ind tmp ', ind, tmp(ibnd, ik, itemp)
-  
-      !IF (ik==2) print*,ind, trans_prob(ind)
-      !print*,'ind iq ik ibnd jbnd itemp ',ind, iq, ik, ibnd, jbnd, itemp
-      !print*,'tmp ',tmp(ibnd, ik, itemp)
     ENDDO
-    !print*,'ind=10, iq==1, ik==2, ibnd=2, jbnd=2, itemp==1 ', trans_prob(10)
     ! 
     CALL mp_sum(tmp, world_comm)
     ! 
@@ -274,11 +274,11 @@
       DO ik = 1, nkqtotf/2
         ! 
         DO ibnd = 1, ibndmax-ibndmin+1
-          ekk = etf_all (ibndmin-1+ibnd, ik)
+          ekk = etf_all (ibnd, ik)
           n = 0
           tmp2 = 0.0_DP
           DO jbnd = 1, ibndmax-ibndmin+1
-            ekk2 = etf_all (ibndmin-1+jbnd, ik)
+            ekk2 = etf_all (jbnd, ik)
             IF ( ABS(ekk2-ekk) < eps6 ) THEN
               n = n + 1
               tmp2 =  tmp2 + tmp(ibnd,ik,itemp)
@@ -293,12 +293,15 @@
       ENDDO ! nkqtotf  
     ENDDO ! itemp
     ! 
-    !
-    DO itemp=1, nstemp 
+    DO itemp=1, nstemp
+      etemp = transp_temp(itemp)
       DO ik=1, nkqtotf/2
         DO ibnd=1, ibndmax-ibndmin+1
           IF ( ABS(tmp(ibnd, ik, itemp)) > eps160 ) THEN
-            F_SERTA(:, ibnd, ik, itemp) = vkk_all(:,ibnd,ik) / ( two * tmp(ibnd,ik,itemp) )  
+            ekk = etf_all (ibnd, ik) - ef0(itemp)
+            dfnk = w0gauss( ekk / etemp, -99 ) / etemp
+            F_SERTA(:, ibnd, ik, itemp) = dfnk * vkk_all(:,ibnd,ik) / ( two * tmp(ibnd,ik,itemp) )
+            !F_SERTA(:, ibnd, ik, itemp) =  vkk_all(:,ibnd,ik) / ( two * tmp(ibnd,ik,itemp) )
           ENDIF
         ENDDO
         !IF (itemp==2) print*,'ik ',ik, SUM(F_SERTA(:,:,ik,2)), SUM(vkk_all(:,:,ik))
@@ -447,6 +450,12 @@
       ! 
     ENDDO ! end of while loop
     ! 
+    IF ((mp_mesh_k)) THEN
+      DEALLOCATE (ixkqf_tr)
+      DEALLOCATE (s_BZtoIBZ_full)
+    ENDIF
+
+    ! 
     RETURN
     !
     ! ---------------------------------------------------------------------------
@@ -586,9 +595,9 @@
     ! SP - The implementation only works with MPI so far
 #ifdef __MPI
     ! Read velocities
-    IF (mpime.eq.ionode_id) THEN
+    IF (mpime == ionode_id) THEN
       !
-      OPEN(unit=iufilibtev_sup,file='IBTEvel_sup.fmt',status='old',iostat=ios)
+      OPEN(UNIT=iufilibtev_sup,FILE='IBTEvel_sup.fmt',status='old',iostat=ios)
       READ(iufilibtev_sup,'(a)')
       READ(iufilibtev_sup,*) ind_tot, ind_totcb
       READ(iufilibtev_sup,'(a)')
@@ -625,7 +634,7 @@
       ! Allocate the local size 
       nind = upper_bnd - lower_bnd + 1
       WRITE(stdout,'(5x,a,i10)') 'Number of elements per core ',nind
-      ALLOCATE ( trans_prob ( nind ) )
+      ALLOCATE (trans_prob(nind))
       trans_prob(:) = 0.0d0
       ! 
       ! Open file containing trans_prob 
@@ -705,12 +714,12 @@
       IF( ierr /= 0 ) CALL errore( 'iter_restart', 'error in MPI_FILE_CLOSE',1)
       CALL MPI_FILE_CLOSE(iunsparset,ierr)
       IF( ierr /= 0 ) CALL errore( 'iter_restart', 'error in MPI_FILE_CLOSE',1)
-      DEALLOCATE(trans_prob)
-      DEALLOCATE(sparse_q)
-      DEALLOCATE(sparse_k)
-      DEALLOCATE(sparse_i)
-      DEALLOCATE(sparse_j)
-      DEALLOCATE(sparse_t) 
+      DEALLOCATE (trans_prob)
+      DEALLOCATE (sparse_q)
+      DEALLOCATE (sparse_k)
+      DEALLOCATE (sparse_i)
+      DEALLOCATE (sparse_j)
+      DEALLOCATE (sparse_t) 
       ! 
     ENDIF
     ! Electrons
@@ -800,12 +809,12 @@
       IF( ierr /= 0 ) CALL errore( 'iter_restart', 'error in MPI_FILE_CLOSE',1)
       CALL MPI_FILE_CLOSE(iunsparsetcb,ierr)
       IF( ierr /= 0 ) CALL errore( 'iter_restart', 'error in MPI_FILE_CLOSE',1)
-      DEALLOCATE(trans_probcb)
-      DEALLOCATE(sparsecb_q)
-      DEALLOCATE(sparsecb_k)
-      DEALLOCATE(sparsecb_i)
-      DEALLOCATE(sparsecb_j)
-      DEALLOCATE(sparsecb_t)
+      DEALLOCATE (trans_probcb)
+      DEALLOCATE (sparsecb_q)
+      DEALLOCATE (sparsecb_k)
+      DEALLOCATE (sparsecb_i)
+      DEALLOCATE (sparsecb_j)
+      DEALLOCATE (sparsecb_t)
       ! 
     ENDIF
 #endif  

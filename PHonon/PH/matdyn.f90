@@ -615,7 +615,10 @@ PROGRAM matdyn
         !
         END IF 
 
-        if(iout_dyn.ne.0) call write_dyn_on_file(q(1,n),dyn,nat, iout_dyn)
+        if(iout_dyn.ne.0) THEN
+           call write_dyn_on_file(q(1,n),dyn,nat, iout_dyn)
+           if(sum(abs(q(:,n)))==0._dp) call  write_epsilon_and_zeu (zeu, epsil, nat, iout_dyn)
+        endif
         
 
         CALL dyndiag(nat,ntyp,amass,ityp,dyn,w2(1,n),z)
@@ -2530,7 +2533,7 @@ SUBROUTINE find_representations_mode_q ( nat, ntyp, xq, w2, u, tau, ityp, &
 
   USE kinds,      ONLY : DP
   USE cell_base,  ONLY : at, bg
-  USE symm_base,  ONLY : s, sr, ftau, irt, nsym, nrot, t_rev, time_reversal,&
+  USE symm_base,  ONLY : s, sr, ft, irt, nsym, nrot, t_rev, time_reversal,&
                          sname, copy_sym, s_axis_to_cart
 
   IMPLICIT NONE
@@ -2550,7 +2553,7 @@ SUBROUTINE find_representations_mode_q ( nat, ntyp, xq, w2, u, tau, ityp, &
   IF (.NOT.time_reversal) minus_q=.FALSE.
 
   sym(1:nsym)=.true.
-  call smallg_q (xq, 0, at, bg, nsym, s, ftau, sym, minus_q)
+  call smallg_q (xq, 0, at, bg, nsym, s, sym, minus_q)
   nsymq=copy_sym(nsym,sym )
   call s_axis_to_cart ()
   CALL set_giq (xq,s,nsymq,nsym,irotmq,minus_q,gi,gimq)
@@ -2559,7 +2562,7 @@ SUBROUTINE find_representations_mode_q ( nat, ntyp, xq, w2, u, tau, ityp, &
 !  search the symmetries only if there are no G such that Sq -> q+G
 !
   search_sym=.TRUE.
-  IF ( ANY ( ftau(:,1:nsymq) /= 0 ) ) THEN
+  IF ( ANY ( ABS(ft(:,1:nsymq)) > 1.0d-8 ) ) THEN
      DO isym=1,nsymq
         search_sym=( search_sym.and.(abs(gi(1,isym))<1.d-8).and.  &
                                     (abs(gi(2,isym))<1.d-8).and.  &

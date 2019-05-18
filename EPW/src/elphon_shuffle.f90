@@ -13,8 +13,6 @@
   !! Electron-phonon calculation from data saved in fildvscf
   !! Shuffle2 mode (shuffle on electrons + load all phonon q's)
   !!
-  !! No ultrasoft yet
-  !!
   !! RM - Nov/Dec 2014
   !! Imported the noncolinear case implemented by xlzhang
   !!
@@ -24,9 +22,7 @@
   !
   USE kinds,     ONLY : DP
   USE mp,        ONLY : mp_barrier, mp_sum
-  USE mp_global, ONLY : my_pool_id, nproc_pool, npool, kunit, &
-                        inter_pool_comm
-  USE mp_images, ONLY : nproc_image
+  USE mp_pools,  ONLY : my_pool_id, npool, inter_pool_comm
   USE ions_base, ONLY : nat
   USE pwcom,     ONLY : nbnd, nks, nkstot
   USE gvect,     ONLY : ngm
@@ -79,62 +75,31 @@
   !! Counter on bands
   INTEGER :: jbnd
   !! Counter on bands
-  INTEGER :: tmp_pool_id
-  !! temporary pool id
-  INTEGER :: iks
-  !! Index of the first k-point block in this pool
-  INTEGER :: ik0
-  !! Index of iks - 1
-  INTEGER :: nkl
-  !! 
-  INTEGER :: nkr
-  !!
   !
-  COMPLEX(DP), POINTER :: dvscfin(:,:,:)
+  COMPLEX(kind=DP), POINTER :: dvscfin(:,:,:)
   !! Change of the scf potential 
-  COMPLEX(DP), POINTER :: dvscfins(:,:,:)
+  COMPLEX(kind=DP), POINTER :: dvscfins(:,:,:)
   !! Change of the scf potential (smooth)
   !
   CALL start_clock('elphon_shuffle')
   !
-  ik0 = 0
-  tmp_pool_id = 0
-  !
-  npool =  nproc_image / nproc_pool
-  IF (npool.gt.1) THEN
-    !
-    ! number of kpoint blocks, kpoints per pool and reminder
-    kunit = 1
-    nkl   = kunit * ( nkstot / npool )
-    nkr   = ( nkstot - nkl * npool ) / kunit
-    ! the reminder goes to the first nkr pools
-    IF ( my_pool_id < nkr ) nkl = nkl + kunit
-    !
-    iks = nkl * my_pool_id + 1
-    IF ( my_pool_id >= nkr ) iks = iks + nkr * kunit
-    !
-    !  the index of the first k point block in this pool - 1
-    !  (I will need the index of ik, not ikk)
-    !
-    ik0 = ( iks - 1 ) / kunit
-    !
-  ENDIF
-  !
   ! read Delta Vscf and calculate electron-phonon coefficients
   !
+  ALLOCATE (el_ph_mat(nbnd, nbnd, nks, 3 * nat))
+  ! 
   imode0 = 0
   DO irr = 1, nirr
      npe = npert(irr)
-     ALLOCATE( dvscfin(dfftp%nnr, nspin_mag, npe) )
+     ALLOCATE ( dvscfin(dfftp%nnr, nspin_mag, npe) )
      IF (okvan) THEN
-        ALLOCATE( int3(nhm, nhm, nat, nspin_mag, npe) )
-        IF (noncolin) ALLOCATE( int3_nc(nhm, nhm, nat, nspin, npe) )
+        ALLOCATE ( int3(nhm, nhm, nat, nspin_mag, npe) )
+        IF (noncolin) ALLOCATE ( int3_nc(nhm, nhm, nat, nspin, npe) )
      ENDIF
      !
      !   read the <prefix>.dvscf_q[iq] files
      !
      dvscfin = czero
-     IF ( my_pool_id.eq.0 ) THEN
+     IF ( my_pool_id == 0 ) THEN
         DO ipert = 1, npe
            CALL readdvscf( dvscfin(1,1,ipert), imode0 + ipert, iq_irr, nqc_irr )
         ENDDO
@@ -142,7 +107,7 @@
      CALL mp_sum(dvscfin,inter_pool_comm)
      !
      IF (doublegrid) THEN
-       ALLOCATE( dvscfins(dffts%nnr, nspin_mag, npe) )
+       ALLOCATE ( dvscfins(dffts%nnr, nspin_mag, npe) )
        DO is = 1, nspin_mag
          DO ipert = 1, npe
            CALL fft_interpolate(dfftp, dvscfin(:,is,ipert), dffts, dvscfins(:,is,ipert))
@@ -152,15 +117,15 @@
        dvscfins => dvscfin
      ENDIF
      !
-     CALL newdq2( dvscfin, npe )
+     CALL newdq2( dvscfin, npe, xq0, timerev )
      CALL elphel2_shuffle( npe, imode0, dvscfins, gmapsym, eigv, isym, xq0, timerev )
      !
      imode0 = imode0 + npe
-     IF (doublegrid) DEALLOCATE(dvscfins)
-     DEALLOCATE(dvscfin)
+     IF (doublegrid) DEALLOCATE (dvscfins)
+     DEALLOCATE (dvscfin)
      IF (okvan) THEN
-        DEALLOCATE(int3)
-        IF (noncolin) DEALLOCATE(int3_nc)
+        DEALLOCATE (int3)
+        IF (noncolin) DEALLOCATE (int3_nc)
      ENDIF
   ENDDO
   !
@@ -170,8 +135,8 @@
   !  must be transformed in the cartesian basis
   !  epmat_{CART} = conjg ( U ) * epmat_{PATTERN}
   !
-  !  note it is not U^\dagger ! Have a look to symdyn_munu.f90 
-  !  for comparison
+  !  note it is not U^\dagger but u_pattern! 
+  !  Have a look to symdyn_munu.f90 for comparison
   !
   DO ibnd = 1, nbnd
     DO jbnd = 1, nbnd
@@ -190,6 +155,7 @@
       ENDDO
     ENDDO
   ENDDO
+  DEALLOCATE (el_ph_mat)
   !DBSP
   !write(*,*)'epmatq(:,:,215,:,iq)**2',SUM((REAL(REAL(epmatq(:,:,215,:,iq))))**2)+&
   !        SUM((REAL(AIMAG(epmatq(:,:,215,:,iq))))**2)

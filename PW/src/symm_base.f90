@@ -26,14 +26,13 @@ MODULE symm_base
   !
   ! ... Exported variables
   !
-  PUBLIC :: s, sr, sname, ft, ftau, nrot, nsym, nsym_ns, nsym_na, t_rev, &
+  PUBLIC :: s, sr, sname, ft, nrot, nsym, nsym_ns, nsym_na, t_rev, &
             no_t_rev, time_reversal, irt, invs, invsym, d1, d2, d3, &
             allfrac, nofrac, nosym, nosym_evc, fft_fact, spacegroup
   INTEGER :: &
        s(3,3,48),            &! symmetry matrices, in crystal axis
        invs(48),             &! index of inverse operation: S^{-1}_i=S(invs(i))
-       ftau(3,48),           &! fractional translations, in FFT coordinates
-       fft_fact(3),          &! FFT dimensions must be multiple of fft_fact
+       fft_fact(3) = 1,      &! FFT dimensions must be multiple of fft_fact
        nrot,                 &! number of bravais lattice symmetries
        spacegroup = 0,       &! space group index, as read from input
        nsym = 1,             &! total number of crystal symmetries
@@ -494,7 +493,6 @@ SUBROUTINE sgam_at ( nat, tau, ityp, sym, no_z_inv)
      !
      !      first attempt: no fractional translation
      !
-     ftau (:, irot) = 0
      ft (:, irot) = 0
      ft_(:) = 0.d0
      !
@@ -511,11 +509,14 @@ SUBROUTINE sgam_at ( nat, tau, ityp, sym, no_z_inv)
               !
               !    ft_ is in crystal axis and is a valid fractional translation
               !    only if ft_(i)=0 or ft_(i)=1/n, with n=2,3,4,6
-              !    The check below is less strict: n must be integer
               !
               DO i=1,3
                  IF ( ABS (ft_(i)) > eps2 ) THEN
-                    ftaux(i) = ABS (1.0_dp/ft_(i) - NINT(1.0_dp/ft_(i)) ) 
+                    ftaux(i) = ABS (1.0_dp/ft_(i) - NINT(1.0_dp/ft_(i)) )
+                    nfrac = NINT(1.0_dp/ABS(ft_(i)))
+                    IF ( ftaux(i) < eps2 .AND. nfrac /= 2 .AND. &
+                         nfrac /= 3 .AND. nfrac /= 4 .AND. nfrac /= 6 ) &
+                         ftaux(i) = 2*eps2
                  ELSE
                     ftaux(i) = 0.0_dp
                  END IF
@@ -647,8 +648,10 @@ SUBROUTINE sgam_at_mag ( nat, m_loc, sym )
               t_rev(irot) = 1
            ENDIF
         ENDIF
-        IF ((.NOT. sym(irot)) .AND. (ftau(1,irot) /= 0 .OR. ftau(2,irot) /=0 &
-                     .OR. ftau(3,irot) /=0)) nsym_ns=nsym_ns-1
+        IF ( (.NOT. sym(irot) ) .AND. &
+             ( abs (ft(1,irot)) > eps2 .OR. &
+               abs (ft(2,irot)) > eps2 .OR. &
+               abs (ft(3,irot)) > eps2 ) ) nsym_ns = nsym_ns - 1
         !
      ENDIF
      !
@@ -667,7 +670,7 @@ SUBROUTINE set_sym(nat, tau, ityp, nspin_mag, m_loc)
   ! is noncollinear magnetism and the initial magnetic moments;
   ! it sets the symmetry elements of this module.
   ! Note that at and bg are those in cell_base. It sets nrot, nsym, s,
-  ! sname, sr, invs, ftau, irt, t_rev,  time_reversal, and invsym
+  ! sname, sr, invs, ft, irt, t_rev,  time_reversal, and invsym
   !
   !-----------------------------------------------------------------------
   !
@@ -712,9 +715,6 @@ INTEGER FUNCTION copy_sym ( nrot_, sym )
            stemp = s(:,:,jrot)
            s (:,:, jrot) = s (:,:, irot)
            s (:,:, irot) = stemp
-           ftemp(:) = ftau(:,jrot)
-           ftau (:, jrot) = ftau (:, irot)
-           ftau (:, irot) = ftemp(:)
            ft_(:) = ft(:,jrot)
            ft (:, jrot) = ft (:, irot)
            ft (:, irot) = ft_(:)
@@ -1067,7 +1067,6 @@ SUBROUTINE sgam_at_ifc ( nat, tau, ityp, sym )
      !
      !      first attempt: no fractional translation
      !
-     ftau (:, irot) = 0
      ft (:, irot) = 0
      ft_(:) = 0.d0
      !
@@ -1105,8 +1104,8 @@ END SUBROUTINE sgam_at_ifc
 !-----------------------------------------------------------------------
 SUBROUTINE remove_sym ( nr1, nr2, nr3 )
   !
-  ! ... ensure that ftau used for symmetrization in real space (phonon, exx)
-  ! ... are commensurated with the FFT grid
+  ! ... compute ftau used for symmetrization in real space (phonon, exx)
+  ! ... ensure that they are commensurated with the FFT grid
   !
   IMPLICIT NONE
   !
@@ -1160,7 +1159,6 @@ SUBROUTINE remove_sym ( nr1, nr2, nr3 )
         nsym_na = nsym_na + 1
         nsym_ns = nsym_ns - 1
      ENDIF
-     ftau (:, isym) = nint (ftaux(:))
      !
   ENDDO
   !

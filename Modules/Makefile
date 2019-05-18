@@ -23,10 +23,13 @@ compute_dipole.o \
 constants.o \
 constraints_module.o \
 control_flags.o \
+correlation_lda_lsda.o \
 coulomb_vcut.o \
 dist.o \
+dmxc_drivers.o \
 electrons_base.o \
 environment.o \
+exchange_lda_lsda.o \
 fcp_variables.o \
 fd_gradient.o \
 fft_base.o \
@@ -101,11 +104,16 @@ write_upf_schema.o \
 ws_base.o \
 xc_vdW_DF.o \
 xc_rVV10.o \
+xc_lda_lsda_drivers.o \
 io_base.o \
-qes_types.o \
-qes_libs.o  \
+qes_types_module.o \
+qes_libs_module.o  \
+qes_write_module.o \
 qes_read_module.o \
-bcast_qes_module.o \
+qes_reset_module.o \
+qes_init_module.o \
+qes_read_module.o \
+qes_bcast_module.o \
 qexsd.o   \
 qexsd_input.o \
 hdf5_qe.o\
@@ -158,7 +166,7 @@ w0gauss.o \
 w1gauss.o \
 deviatoric.o
 
-TLDEPS=libfft
+TLDEPS=libiotk libfox libutil libla libfft
 
 all : libqemod.a
 

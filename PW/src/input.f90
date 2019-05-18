@@ -136,7 +136,7 @@ SUBROUTINE iosys()
                             ecutvcut_         => ecutvcut
   USE exx,          ONLY:   ecutfock_         => ecutfock, &
                             use_ace, nbndproj, local_thr 
-  USE loc_scdm,      ONLY : use_scdm, scdm_den, scdm_grd 
+  USE loc_scdm,      ONLY : use_scdm, scdm_den, scdm_grd, n_scdm
   !
   USE lsda_mod,      ONLY : nspin_                  => nspin, &
                             starting_magnetization_ => starting_magnetization, &
@@ -166,7 +166,8 @@ SUBROUTINE iosys()
                             ts_vdw_           => ts_vdw, &
                             lecrpa_           => lecrpa, &
                             scf_must_converge_=> scf_must_converge, & 
-                            treinit_gvecs_    => treinit_gvecs 
+                            treinit_gvecs_    => treinit_gvecs, &  
+                            max_xml_steps_    => max_xml_steps 
   USE check_stop,    ONLY : max_seconds_ => max_seconds
   !
   USE wvfct,         ONLY : nbnd_ => nbnd
@@ -220,7 +221,7 @@ SUBROUTINE iosys()
                                gdir, nppstr, wf_collect,lelfield,lorbm,efield, &
                                nberrycyc, efield_cart, lecrpa,                 &
                                vdw_table_name, memory, max_seconds, tqmmm,     &
-                               efield_phase, gate
+                               efield_phase, gate, max_xml_steps
 
   !
   ! ... SYSTEM namelist
@@ -241,7 +242,7 @@ SUBROUTINE iosys()
                                exxdiv_treatment, yukawa, ecutvcut,          &
                                exx_fraction, screening_parameter, ecutfock, &
                                gau_parameter, localization_thr, scdm, ace,    &
-                               scdmden, scdmgrd, n_proj,                      & 
+                               scdmden, scdmgrd, nscdm, n_proj,                & 
                                edir, emaxpos, eopreg, eamp, noncolin, lambda, &
                                angle1, angle2, constrained_magnetization,     &
                                B_field, fixed_magnetization, report, lspinorb,&
@@ -1164,6 +1165,7 @@ SUBROUTINE iosys()
   pseudo_dir_ = trimcheck( pseudo_dir )
   nstep_      = nstep
   iprint_     = iprint
+  max_xml_steps_ = max_xml_steps
   lecrpa_     = lecrpa
   scf_must_converge_ = scf_must_converge
   !
@@ -1602,12 +1604,9 @@ SUBROUTINE iosys()
   use_scdm  = scdm
   scdm_den = scdmden
   scdm_grd = scdmgrd
-  IF ( local_thr > 0.0_dp .AND. .NOT. gamma_only) &
-     CALL errore('input','localization for k-points not implemented',1)
+  n_scdm   = nscdm   
   IF ( local_thr > 0.0_dp .AND. .NOT. use_ace ) &
      CALL errore('input','localization without ACE not implemented',1)
-! IF ( local_thr > 0.0_dp .AND. nspin > 1 ) &
-!    CALL errore('input','spin-polarized localization not implemented',1)
   IF ( use_scdm ) CALL errore('input','use_scdm not yet implemented',1)
   !
   IF(ecutfock <= 0.0_DP) THEN
@@ -1690,7 +1689,9 @@ SUBROUTINE iosys()
   !
   ! ... End of reading input parameters
   !
+#if ! defined (__INTEL_COMPILER) || (__INTEL_COMPILER >= 1300) 
   CALL pw_init_qexsd_input(qexsd_input_obj, obj_tagname="input")
+#endif
   CALL deallocate_input_parameters ()  
   !
   max_seconds_ = max_seconds

@@ -30,7 +30,6 @@ generate_dynamical_matrix.o \
 generate_effective_charges.o \
 h_h.o \
 macro.o \
-phcg.o \
 rhod2vkb.o \
 solve_e.o \
 solve_ph.o \
@@ -42,11 +41,11 @@ QEMODS = ../../Modules/libqemod.a ../../KS_Solvers/libks_solvers.a \
 
 TLDEPS= pwlibs
 
-all : tldeps phcg.x libcg.a
+all : tldeps phcg.x
 
-phcg.x : $(PWOBJS) $(CGOBJS) $(QEMODS) $(LIBOBJS)
-	$(LD) $(LDFLAGS) -o phcg.x \
-		$(CGOBJS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(QELIBS)
+phcg.x : phcg.o libphcg.a $(PWOBJS) $(QEMODS) $(LIBOBJS)
+	$(LD) $(LDFLAGS) -o $@ \
+		phcg.o libphcg.a $(PWOBJS) $(QEMODS) $(LIBOBJS) $(QELIBS)
 	- ( cd ../../bin ; ln -fs ../PHonon/Gamma/phcg.x . )
 tldeps :
 	if test -n "$(TLDEPS)" ; then \
@@ -56,7 +55,7 @@ clean :
 	- /bin/rm -f *.x *.o *.d *.i *~ *_tmp.f90 *.mod *.L *.a
 	- /bin/rm -f ../../bin/phcg.x
 
-libcg.a : $(CGOBJS)
+libphcg.a : $(CGOBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 

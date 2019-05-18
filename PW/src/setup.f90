@@ -37,7 +37,7 @@ SUBROUTINE setup()
   USE parameters,         ONLY : npk
   USE io_global,          ONLY : stdout
   USE io_files,           ONLY : tmp_dir, prefix
-  USE cell_base,          ONLY : at, bg, alat, tpiba, tpiba2, ibrav, omega
+  USE cell_base,          ONLY : at, bg, alat, tpiba, tpiba2, ibrav
   USE ions_base,          ONLY : nat, tau, ntyp => nsp, ityp, zv
   USE basis,              ONLY : starting_pot, natomwfc
   USE gvect,              ONLY : gcutm, ecutrho
@@ -59,7 +59,7 @@ SUBROUTINE setup()
                                  find_sym, inverse_s, no_t_rev, fft_fact,  &
                                  allfrac
   USE wvfct,              ONLY : nbnd, nbndx
-  USE control_flags,      ONLY : tr2, ethr, lscf, lmd, david, lecrpa,  &
+  USE control_flags,      ONLY : tr2, ethr, lscf, lbfgs, lmd, david, lecrpa,  &
                                  isolve, niter, noinv, ts_vdw, &
                                  lbands, use_para_diag, gamma_only, &
                                  restart
@@ -77,8 +77,8 @@ SUBROUTINE setup()
   USE noncollin_module,   ONLY : noncolin, npol, m_loc, i_cons, &
                                  angle1, angle2, bfield, ux, nspin_lsda, &
                                  nspin_gga, nspin_mag
-  USE pw_restart_new,     ONLY : pw_readschema_file, init_vars_from_schema 
-  USE qes_libs_module,    ONLY : qes_reset_output, qes_reset_parallel_info, qes_reset_general_info
+  USE pw_restart_new,     ONLY : pw_read_schema, readschema_ef
+  USE qes_libs_module,    ONLY : qes_reset
   USE qes_types_module,   ONLY : output_type, parallel_info_type, general_info_type 
   USE exx,                ONLY : ecutfock, nbndproj
   USE exx_base,           ONLY : exx_grid_init, exx_mp_init, exx_div_check
@@ -125,16 +125,19 @@ SUBROUTINE setup()
   END IF
 
   IF ( dft_is_hybrid() ) THEN
+     IF ( lberry ) CALL errore( 'setup ', &
+                         'hybrid XC not allowed in Berry-phase calculations',1 )
      IF ( allfrac ) CALL errore( 'setup ', &
                          'option use_all_frac incompatible with hybrid XC', 1 )
      IF (.NOT. lscf) CALL errore( 'setup ', &
                          'hybrid XC not allowed in non-scf calculations', 1 )
      IF ( ANY (upf(1:ntyp)%nlcc) ) CALL infomsg( 'setup ', 'BEWARE:' // &
                & ' nonlinear core correction is not consistent with hybrid XC')
-     !IF (okpaw) CALL errore('setup','PAW and hybrid XC not tested',1)
      IF (okvan) THEN
         IF (ecutfock /= 4*ecutwfc) CALL infomsg &
            ('setup','Warning: US/PAW use ecutfock=4*ecutwfc, ecutfock ignored')
+        IF ( lmd .OR. lbfgs ) CALL errore &
+           ('setup','forces for hybrid functionals + US/PAW not implemented',1)
         IF ( noncolin ) CALL errore &
            ('setup','Noncolinear hybrid XC for USPP not implemented',1)
      END IF
@@ -159,12 +162,19 @@ SUBROUTINE setup()
   nelec = ionic_charge - tot_charge
   !
   IF ( lbands .OR. ( (lfcpopt .OR. lfcpdyn ) .AND. restart )) THEN 
-     CALL pw_readschema_file( ierr , output_obj, parinfo_obj, geninfo_obj )
-  END IF
-  !
-  ! 
+     !
+     ! ... in these cases, we need to read the Fermi energy
+     !
+     CALL pw_read_schema( ierr , output_obj, parinfo_obj, geninfo_obj )
+     CALL errore( 'setup ', 'problem reading ef from file ' // &
+             & TRIM( tmp_dir ) // TRIM( prefix ) // '.save', ierr )
+     CALL readschema_ef ( output_obj%band_structure) 
+     CALL qes_reset  ( output_obj )
+     CALL qes_reset  ( parinfo_obj )
+     CALL qes_reset  ( geninfo_obj )
+     !
+  END IF 
   IF ( (lfcpopt .OR. lfcpdyn) .AND. restart ) THEN  
-     CALL init_vars_from_schema( 'ef', ierr,  output_obj, parinfo_obj, geninfo_obj)
      tot_charge = ionic_charge - nelec
   END IF 
   !
@@ -516,7 +526,14 @@ SUBROUTINE setup()
   !
   ! ... nosym: do not use any point-group symmetry (s(:,:,1) is the identity)
   !
-  IF ( nosym ) nsym = 1
+  IF ( nosym ) THEN
+     nsym = 1
+     invsym = .FALSE.
+     fft_fact(:) = 1
+  END IF
+  !
+  IF ( nsym > 1 .AND. ibrav == 0 ) CALL infomsg('setup', &
+       'using ibrav=0 with symmetry is DISCOURAGED, use correct ibrav instead')
   !
   ! ... Input k-points are assumed to be  given in the IBZ of the Bravais
   ! ... lattice, with the full point symmetry of the lattice.
@@ -538,15 +555,7 @@ SUBROUTINE setup()
            .AND. .NOT. ( calc == 'mm' .OR. calc == 'nm' ) ) &
        CALL infomsg( 'setup', 'Dynamics, you should have no symmetries' )
   !
-  IF ( lbands ) THEN
-     !
-     ! ... if calculating bands, we read the Fermi energy
-     !
-     CALL init_vars_from_schema( 'ef',   ierr , output_obj, parinfo_obj, geninfo_obj)
-     CALL errore( 'setup ', 'problem reading ef from file ' // &
-             & TRIM( tmp_dir ) // TRIM( prefix ) // '.save', ierr )
-     !
-  ELSE IF ( ltetra ) THEN
+  IF ( ltetra ) THEN
      !
      ! ... Calculate quantities used in tetrahedra method
      !
@@ -561,12 +570,6 @@ SUBROUTINE setup()
      END IF
      !
   END IF
-  IF ( lbands .OR. ( (lfcpopt .OR. lfcpdyn ) .AND. restart ) ) THEN 
-     CALL qes_reset_output ( output_obj ) 
-     CALL qes_reset_parallel_info ( parinfo_obj ) 
-     CALL qes_reset_general_info ( geninfo_obj ) 
-  END IF 
-  !
   !
   IF ( lsda ) THEN
      !

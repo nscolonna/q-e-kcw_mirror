@@ -121,7 +121,9 @@ MODULE input_parameters
         INTEGER :: iprint = 10
           ! number of steps/scf iterations between successive writings
           ! of relevant physical quantities to standard output
-
+        INTEGER :: max_xml_steps = 0 
+          ! max number of steps between successive appending of an xml step 
+          ! in the xml data file, default 0 means all steps are printed. 
         INTEGER :: isave = 100
           ! number of steps between successive savings of
           ! information needed to restart the run (see "ndr", "ndw")
@@ -439,6 +441,7 @@ MODULE input_parameters
         REAL(DP) :: ecutfock = -1.d0
           ! variables used in Lin Lin's ACE and SCDM
         REAL(DP) :: localization_thr = 0.0_dp, scdmden=1.0d0, scdmgrd=1.0d0
+        INTEGER  :: nscdm = 1        
         INTEGER  :: n_proj  = 0
         LOGICAL  :: scdm=.FALSE.
         LOGICAL  :: ace=.TRUE.
@@ -508,7 +511,7 @@ MODULE input_parameters
           ! london_s6 = default global scaling parameter for PBE
           ! london_c6 = user specified atomic C6 coefficients
           ! london_rvdw = user specified atomic vdw radii
-        REAL ( DP ) :: london_s6   =   0.75_DP , &
+        REAL ( DP ) :: london_s6   =   0.75_DP ,&
                        london_rcut = 200.00_DP , &
                        london_c6( nsx ) = -1.0_DP, &
                        london_rvdw( nsx ) = -1.0_DP
@@ -621,7 +624,7 @@ MODULE input_parameters
              edir, emaxpos, eopreg, eamp, smearing, starting_ns_eigenvalue,   &
              U_projection_type, input_dft, la2F, assume_isolated,             &
              nqx1, nqx2, nqx3, ecutfock, localization_thr, scdm, ace,         &
-             scdmden, scdmgrd, n_proj,                                        &
+             scdmden, scdmgrd, nscdm, n_proj,                                        &
              exxdiv_treatment, x_gamma_extrapolation, yukawa, ecutvcut,       &
              exx_fraction, screening_parameter, ref_alat,                     &
              noncolin, lspinorb, starting_spin_angle, lambda, angle1, angle2, &
