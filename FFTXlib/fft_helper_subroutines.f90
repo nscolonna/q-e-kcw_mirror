@@ -5,7 +5,7 @@ MODULE fft_helper_subroutines
 
   INTERFACE tg_reduce_rho
     MODULE PROCEDURE tg_reduce_rho_1,tg_reduce_rho_2,tg_reduce_rho_3,tg_reduce_rho_4, &
-&                    tg_reduce_rho_5
+&                    tg_reduce_rho_5,tg_reduce_rho_3_sp
   END INTERFACE
   INTERFACE c2psi_gamma
     MODULE PROCEDURE c2psi_gamma_sp, c2psi_gamma_dp
@@ -100,20 +100,62 @@ CONTAINS
  
   END SUBROUTINE
 
-  SUBROUTINE tg_reduce_rho_3( rhos, tmp_rhos, desc )
+  SUBROUTINE tg_reduce_rho_3( rhos, tmp_rhos, nbgrp, inter_bgrp_comm, desc )
      USE fft_param
      USE fft_types,      ONLY : fft_type_descriptor
 
      TYPE(fft_type_descriptor), INTENT(in) :: desc
      REAL(DP), INTENT(INOUT)  :: tmp_rhos(:,:)
      REAL(DP), INTENT(OUT) :: rhos(:,:)
+     INTEGER, INTENT(IN) :: nbgrp, inter_bgrp_comm
 
      INTEGER :: ierr, from, ir3, ioff, nxyp, ioff_tg
-!     write (*,*) ' enter tg_reduce_rho_3'
+
+     IF( nbgrp > 1 ) THEN
+#if defined(__MPI)
+        CALL MPI_ALLREDUCE( MPI_IN_PLACE, tmp_rhos, SIZE(tmp_rhos), MPI_DOUBLE_PRECISION, MPI_SUM, inter_bgrp_comm, ierr )
+#endif
+     END IF
 
      IF ( desc%nproc2 > 1 ) THEN
 #if defined(__MPI)
         CALL MPI_ALLREDUCE( MPI_IN_PLACE, tmp_rhos, SIZE(tmp_rhos), MPI_DOUBLE_PRECISION, MPI_SUM, desc%comm2, ierr )
+#endif
+     ENDIF
+     !
+     !BRING CHARGE DENSITY BACK TO ITS ORIGINAL POSITION
+     !
+     !If the current processor is not the "first" processor in its
+     !orbital group then does a local copy (reshuffling) of its data
+     !
+     nxyp = desc%nr1x * desc%my_nr2p
+     DO ir3 = 1, desc%my_nr3p
+        ioff    = desc%nr1x * desc%my_nr2p * (ir3-1)
+        ioff_tg = desc%nr1x * desc%nr2x    * (ir3-1) + desc%nr1x * desc%my_i0r2p
+        rhos(ioff+1:ioff+nxyp,:) = rhos(ioff+1:ioff+nxyp,:) + tmp_rhos(ioff_tg+1:ioff_tg+nxyp,:)
+     END DO
+  END SUBROUTINE
+
+  SUBROUTINE tg_reduce_rho_3_sp( rhos, tmp_rhos, nbgrp, inter_bgrp_comm, desc )
+     USE fft_param
+     USE fft_types,      ONLY : fft_type_descriptor
+
+     TYPE(fft_type_descriptor), INTENT(in) :: desc
+     REAL(SP), INTENT(INOUT)  :: tmp_rhos(:,:)
+     REAL(DP), INTENT(OUT) :: rhos(:,:)
+     INTEGER, INTENT(IN) :: nbgrp, inter_bgrp_comm
+
+     INTEGER :: ierr, from, ir3, ioff, nxyp, ioff_tg
+
+     IF( nbgrp > 1 ) THEN
+#if defined(__MPI)
+        CALL MPI_ALLREDUCE( MPI_IN_PLACE, tmp_rhos, SIZE(tmp_rhos), MPI_REAL, MPI_SUM, inter_bgrp_comm, ierr )
+#endif
+     END IF
+
+     IF ( desc%nproc2 > 1 ) THEN
+#if defined(__MPI)
+        CALL MPI_ALLREDUCE( MPI_IN_PLACE, tmp_rhos, SIZE(tmp_rhos), MPI_REAL, MPI_SUM, desc%comm2, ierr )
 #endif
      ENDIF
      !

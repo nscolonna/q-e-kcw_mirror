@@ -90,14 +90,16 @@
       ! local variables
 
       INTEGER  :: iss, isup, isdw, iss1, iss2, i, ir, ig, k
-      REAL(DP) :: rsumr(2), rsumg(2), sa1, sa2, detmp(6), mtmp(3,3)
+      REAL(DP) :: rsumr(2), rsumg(2), detmp(6), mtmp(3,3)
       REAL(DP) :: rnegsum, rmin, rmax, rsum
       COMPLEX(DP) :: ci,fp,fm
+      REAL(SP) :: sa1, sa2
 #if defined(__INTEL_COMPILER)
 #if __INTEL_COMPILER  >= 1300
-!dir$ attributes align: 4096 :: psis, drhovan
+!dir$ attributes align: 4096 :: psis, drhovan, tmp_rhos
 #endif
 #endif
+      REAL(SP), ALLOCATABLE :: tmp_rhos(:,:)
       COMPLEX(SP), ALLOCATABLE :: psis(:)
       REAL(DP), ALLOCATABLE :: drhovan(:,:,:,:,:)
       CHARACTER(LEN=320) :: filename
@@ -353,13 +355,6 @@
          !
          INTEGER :: from, i, eig_index, eig_offset, ii, tg_nr3
          !
-#if defined(__INTEL_COMPILER)
-#if __INTEL_COMPILER  >= 1300
-!dir$ attributes align: 4096 :: tmp_rhos
-#endif
-#endif
-         REAL(DP), ALLOCATABLE :: tmp_rhos(:,:)
-
          ALLOCATE( psis( dffts%nnr_tg ) ) 
          !
          CALL tg_get_group_nr3( dffts, tg_nr3 )
@@ -440,11 +435,7 @@
             !
          END DO
 
-         IF( nbgrp > 1 ) THEN
-            CALL mp_sum( tmp_rhos, inter_bgrp_comm )
-         END IF
-
-         CALL tg_reduce_rho( rhos, tmp_rhos, dffts )
+         CALL tg_reduce_rho( rhos, tmp_rhos, nbgrp, inter_bgrp_comm, dffts )
 
          DEALLOCATE( tmp_rhos )
          DEALLOCATE( psis ) 

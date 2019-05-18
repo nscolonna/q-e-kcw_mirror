@@ -13,7 +13,7 @@
 !=----------------------------------------------------------------------------=!
       !
       USE kinds,              ONLY: DP
-      USE orthogonalize_base, ONLY: rhoset, sigset, tauset, ortho_iterate,   &
+      USE orthogonalize_base, ONLY: rhoset, sigset, tauset, ortho_iterate, ortho_iterate_sp,  &
                                     ortho_alt_iterate, use_parallel_diag
       USE dspev_module,       ONLY: diagonalize_serial, diagonalize_parallel
       USE descriptors,        ONLY: la_descriptor
@@ -182,7 +182,7 @@
          !
          IF( iopt == 0 ) THEN
             !
-            CALL ortho_iterate( iter, diff, s, nx0, rhod, x0, nx0, sig, rhoa, rhos, tau, nss, descla)
+            CALL ortho_iterate_sp( iter, diff, s, nx0, rhod, x0, nx0, sig, rhoa, rhos, tau, nss, descla)
             !
          ELSE
             !

@@ -32,6 +32,7 @@ MODULE orthogonalize_base
       PUBLIC :: tauset
       PUBLIC :: rhoset
       PUBLIC :: ortho_iterate
+      PUBLIC :: ortho_iterate_sp
       PUBLIC :: ortho_alt_iterate
       PUBLIC :: updatc, calphi_bgrp
       PUBLIC :: mesure_diag_perf, mesure_mmul_perf
@@ -419,6 +420,170 @@ CONTAINS
 
       RETURN
    END SUBROUTINE ortho_iterate
+
+
+
+   SUBROUTINE ortho_iterate_sp( iter, diff, u_in, ldx, diag, xloc_in, nx0, sig, rhor_in, rhos_in, tau_in, nss, desc )
+
+      !  this iterative loop uses Cannon's parallel matrix multiplication
+      !  matrix are distributed over a square processor grid: 1x1 2x2 3x3 ...
+      !  But the subroutine work with any number of processors, when
+      !  nproc is not a square, some procs are left idle
+
+      USE kinds,             ONLY: DP, SP
+      USE io_global,         ONLY: stdout
+      USE control_flags,     ONLY: ortho_eps, ortho_max
+      USE mp_bands,          ONLY: intra_bgrp_comm, me_bgrp, nproc_bgrp
+      USE mp,                ONLY: mp_sum, mp_max
+      USE descriptors,       ONLY: la_descriptor
+
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN) :: nss, ldx, nx0
+      TYPE(la_descriptor), INTENT(IN) :: desc
+      REAL(DP) :: u_in   ( ldx, ldx )
+      REAL(DP) :: diag( nss )
+      REAL(DP) :: xloc_in( nx0, nx0 )
+      REAL(DP) :: rhor_in( ldx, ldx )
+      REAL(DP) :: rhos_in( ldx, ldx )
+      REAL(DP) :: tau_in ( ldx, ldx )
+      REAL(DP) :: sig ( ldx, ldx )
+      INTEGER, INTENT(OUT) :: iter
+      REAL(DP), INTENT(OUT) :: diff 
+
+      INTEGER :: i, j
+      INTEGER :: nr, nc, ir, ic
+      REAL(SP), ALLOCATABLE :: tmp1(:,:), tmp2(:,:), dd(:,:), tr1(:,:), tr2(:,:)
+      REAL(SP), ALLOCATABLE :: con(:,:), x1(:,:), xloc(:,:), rhor(:,:), rhos(:,:)
+      REAL(SP), ALLOCATABLE :: tau(:,:), u(:,:)
+      !
+      IF( nss < 1 ) RETURN
+
+      !
+      !  all processors not involved in the parallel orthogonalization
+      !  jump at the end of the subroutine
+      !
+
+      IF( ldx/= nx0 ) &
+         CALL errore( " ortho_iterate ", " inconsistent dimensions ldx, nx0 ", nx0 )
+
+      ALLOCATE( xloc( SIZE(xloc_in,1), SIZE(xloc_in,2) ) )
+      xloc = xloc_in
+      ALLOCATE( rhor( SIZE(rhor_in,1), SIZE(rhor_in,2) ) )
+      rhor = rhor_in
+      ALLOCATE( rhos( SIZE(rhos_in,1), SIZE(rhos_in,2) ) )
+      rhos = rhos_in
+      ALLOCATE( tau( SIZE(tau_in,1), SIZE(tau_in,2) ) )
+      tau = tau_in
+      ALLOCATE( u( SIZE(u_in,1), SIZE(u_in,2) ) )
+      u = u_in
+
+      IF( desc%active_node < 0 ) then
+         xloc = 0.0d0
+         iter = 0
+         go to 100
+      endif
+      !
+      !  Compute the size of the local block
+      !
+      nr = desc%nr
+      nc = desc%nc
+      ir = desc%ir
+      ic = desc%ic
+
+      IF( ldx/= desc%nrcx ) &
+         CALL errore( " ortho_iterate ", " inconsistent dimensions ldx ", ldx )
+
+      ALLOCATE( tr1(ldx,ldx), tr2(ldx,ldx) )
+      ALLOCATE( tmp1(ldx,ldx), tmp2(ldx,ldx), dd(ldx,ldx), x1(ldx,ldx), con(ldx,ldx) )
+
+      !  Clear elements not involved in the orthogonalization
+      !
+      do j = nc + 1, nx0
+         do i = 1, nx0
+            xloc( i, j ) = 0.0
+         end do
+      end do
+      do j = 1, nx0
+         do i = nr + 1, nx0
+            xloc( i, j ) = 0.0
+         end do
+      end do
+
+
+      ITERATIVE_LOOP: DO iter = 1, ortho_max
+         !
+         !       the following calls do the following matrix multiplications:
+         !                       tmp1 = x0*rhor    (1st call)
+         !                       dd   = x0*tau*x0  (2nd and 3rd call)
+         !                       tmp2 = x0*rhos    (4th call)
+         !
+         CALL sqr_smm_cannon( 'N', 'N', nss, 1.0, xloc, nx0, rhor, ldx, 0.0, tmp1, ldx, desc)
+         CALL sqr_smm_cannon( 'N', 'N', nss, 1.0, tau, ldx, xloc, nx0, 0.0, tmp2, ldx, desc)
+         CALL sqr_smm_cannon( 'N', 'N', nss, 1.0, xloc, nx0, tmp2, ldx, 0.0, dd, ldx, desc)
+         CALL sqr_smm_cannon( 'N', 'N', nss, 1.0, xloc, nx0, rhos, ldx, 0.0, tmp2, ldx, desc)
+         !
+         CALL sqr_tr_cannon_sp( nss, tmp1, ldx, tr1, ldx, desc )
+         CALL sqr_tr_cannon_sp( nss, tmp2, ldx, tr2, ldx, desc )
+         !
+!$omp parallel do default(shared), private(j)
+         DO i=1,nr
+            DO j=1,nc
+               x1(i,j) = sig(i,j)-tmp1(i,j)-tr1(i,j)-dd(i,j)
+               con(i,j)= x1(i,j)-tmp2(i,j)-tr2(i,j)
+            END DO
+         END DO
+         !
+         !         x1      = sig      -x0*rho    -x0*rho^t  -x0*tau*x0
+         !
+         diff = 0.d0
+         DO i=1,nr
+            DO j=1,nc
+               IF(ABS(con(i,j)).GT.diff) diff=ABS(con(i,j))
+            END DO
+         END DO
+
+         CALL mp_max( diff, desc%comm )
+
+
+         IF( diff < ortho_eps ) EXIT ITERATIVE_LOOP
+
+         !
+         !     the following calls do:
+         !                       tmp1 = x1*u
+         !                       tmp2 = ut*x1*u
+         !
+         CALL sqr_smm_cannon( 'N', 'N', nss, 1.0, x1, ldx,  u,    ldx, 0.0, tmp1, ldx, desc )
+         CALL sqr_smm_cannon( 'T', 'N', nss, 1.0, u,  ldx, tmp1, ldx,  0.0, tmp2, ldx, desc )
+         !
+         !       g=ut*x1*u/d  (g is stored in tmp1)
+         !
+!$omp parallel do default(shared), private(j)
+         DO i=1,nr
+            DO j=1,nc
+               tmp1(i,j)=tmp2(i,j)/(diag(i+ir-1)+diag(j+ic-1))
+            END DO
+         END DO
+         !
+         !       the following calls do:
+         !                       tmp2 = g*ut
+         !                       x0 = u*g*ut
+         !
+         CALL sqr_smm_cannon( 'N', 'T', nss, 1.0, tmp1, ldx,  u,    ldx, 0.0, tmp2, ldx, desc )
+         CALL sqr_smm_cannon( 'N', 'N', nss, 1.0, u,    ldx, tmp2, ldx,  0.0, xloc, nx0, desc) 
+         !
+      END DO ITERATIVE_LOOP
+
+      xloc_in = xloc
+
+      DEALLOCATE( tmp1, tmp2, dd, x1, con, tr1, tr2, xloc, rhor, rhos, tau, u )
+
+100   CONTINUE
+            
+      CALL mp_max( iter, intra_bgrp_comm ) 
+
+      RETURN
+   END SUBROUTINE ortho_iterate_sp
 
 
 !=----------------------------------------------------------------------------=!
