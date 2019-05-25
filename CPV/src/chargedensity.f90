@@ -94,6 +94,7 @@
       REAL(DP) :: rnegsum, rmin, rmax, rsum
       COMPLEX(DP) :: ci,fp,fm
       REAL(SP) :: sa1, sa2
+      !REAL(DP) :: sa1, sa2
 #if defined(__INTEL_COMPILER)
 #if __INTEL_COMPILER  >= 1300
 !dir$ attributes align: 4096 :: psis, drhovan, tmp_rhos
@@ -101,6 +102,8 @@
 #endif
       REAL(SP), ALLOCATABLE :: tmp_rhos(:,:)
       COMPLEX(SP), ALLOCATABLE :: psis(:)
+      !REAL(DP), ALLOCATABLE :: tmp_rhos(:,:)
+      !COMPLEX(DP), ALLOCATABLE :: psis(:)
       REAL(DP), ALLOCATABLE :: drhovan(:,:,:,:,:)
       CHARACTER(LEN=320) :: filename
 
@@ -361,6 +364,8 @@
          !
          ALLOCATE( tmp_rhos ( dffts%nr1x * dffts%nr2x * tg_nr3, nspin ) )
          !
+         tmp_rhos = 0.0
+         !
          do i = 1, nbsp_bgrp, 2 * fftx_ntgrp(dffts)
 
 #if defined(__MPI)
@@ -368,6 +373,7 @@
             CALL c2psi_gamma_tg(dffts, psis, c_bgrp, i, nbsp_bgrp )
 
             CALL invfft ('tgWave', psis, dffts )
+
 #else
             CALL c2psi_gamma( dffts, psis, c_bgrp(:,i), c_bgrp(:,i+1) )
 
@@ -421,17 +427,10 @@
             !to each processor. In the original code this is nnr. In the task-groups
             !code this should be equal to the total number of planes
             !
-            IF( i .EQ. 1 ) THEN
-               do ir = 1, dffts%nr1x*dffts%nr2x*tg_nr3
-                  tmp_rhos(ir,iss1) = sa1*( real(psis(ir)))**2
-                  tmp_rhos(ir,iss2) = sa2*(aimag(psis(ir)))**2
-               end do
-            ELSE
-               do ir = 1, dffts%nr1x*dffts%nr2x*tg_nr3
-                  tmp_rhos(ir,iss1) = tmp_rhos(ir,iss1) + sa1*( real(psis(ir)))**2
-                  tmp_rhos(ir,iss2) = tmp_rhos(ir,iss2) + sa2*(aimag(psis(ir)))**2
-               end do
-            END IF
+            do ir = 1, dffts%nr1x*dffts%nr2x*tg_nr3
+               tmp_rhos(ir,iss1) = tmp_rhos(ir,iss1) + sa1*( real(psis(ir)))**2
+               tmp_rhos(ir,iss2) = tmp_rhos(ir,iss2) + sa2*(aimag(psis(ir)))**2
+            end do
             !
          END DO
 

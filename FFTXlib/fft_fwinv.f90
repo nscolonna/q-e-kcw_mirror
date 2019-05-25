@@ -259,6 +259,9 @@ SUBROUTINE invfft_b( f, dfft, ia )
 END SUBROUTINE invfft_b
 !=---------------------------------------------------------------------------=!
 
+! *** SINGLE PRECISION SUBROUTINES BELOW THIS LINE ***
+
+!=---------------------------------------------------------------------------=!
 SUBROUTINE invfft_y_sp( fft_kind, f, dfft, howmany )
   !! Compute G-space to R-space for a specific grid type
   !! 
@@ -324,6 +327,7 @@ SUBROUTINE invfft_y_sp( fft_kind, f, dfft, howmany )
 
   ELSE
 
+     CALL fftx_error__( ' invfft ', ' single precision serial 3D driver, not yet implemented ', 1 )
 !     IF( fft_kind == 'Rho' ) THEN
 !        CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
 !                        dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1)
@@ -404,6 +408,7 @@ SUBROUTINE fwfft_y_sp( fft_kind, f, dfft, howmany )
 
   ELSE
 
+     CALL fftx_error__( ' fwfft ', ' single precision serial 3D driver, not yet implemented ', 1 )
 !     IF( fft_kind == 'Rho' ) THEN
 !        CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
 !                        dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1)
@@ -475,12 +480,14 @@ SUBROUTINE invfft_b_sp( f, dfft, ia )
 
 #if defined(_OPENMP)
 
+     CALL fftx_error__( ' invfft_b ', ' single precision driver, not yet implemented ', 1 )
 !     CALL cft_b_omp( f, dfft%nr1, dfft%nr2, dfft%nr3, &
 !                        dfft%nr1x,dfft%nr2x,dfft%nr3x, &
 !                        dfft%imin2( ia ), dfft%imax2( ia ), &
 !                        dfft%imin3( ia ), dfft%imax3( ia ), 1 )
 
 #else
+     CALL fftx_error__( ' invfft_b ', ' single precision driver, not yet implemented ', 1 )
 !     CALL cft_b( f, dfft%nr1, dfft%nr2, dfft%nr3, &
 !                    dfft%nr1x,dfft%nr2x,dfft%nr3x, &
 !                    dfft%imin2( ia ), dfft%imax2( ia ), &
@@ -492,11 +499,13 @@ SUBROUTINE invfft_b_sp( f, dfft, ia )
 #else
 
 #if defined(_OPENMP)
+     CALL fftx_error__( ' invfft_b ', ' single precision driver, not yet implemented ', 1 )
 !  CALL cft_b_omp( f, dfft%nr1, dfft%nr2, dfft%nr3, &
 !                     dfft%nr1x,dfft%nr2x,dfft%nr3x, &
 !                     dfft%imin2( ia ), dfft%imax2( ia ), &
 !                     dfft%imin3( ia ), dfft%imax3( ia ), 1 )
 #else
+     CALL fftx_error__( ' invfft_b ', ' single precision driver, not yet implemented ', 1 )
 !  CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
 !                  dfft%nr1x,dfft%nr2x,dfft%nr3x, 1, 1)
 #endif
