@@ -176,143 +176,6 @@
 
    END SUBROUTINE cft_1z_dp
 
-
-   SUBROUTINE cft_1z_sp(c, nsl, nz, ldz, isign, cout)
-
-!     driver routine for nsl 1d complex fft's of length nz
-!     ldz >= nz is the distance between sequences to be transformed
-!     (ldz>nz is used on some architectures to reduce memory conflicts)
-!     input  :  c(ldz*nsl)   (complex)
-!     output : cout(ldz*nsl) (complex - NOTA BENE: transform is not in-place!)
-!     isign > 0 : forward (f(G)=>f(R)), isign <0 backward (f(R) => f(G))
-!     Up to "ndims" initializations (for different combinations of input
-!     parameters nz, nsl, ldz) are stored and re-used if available
-
-     INTEGER, INTENT(IN) :: isign
-     INTEGER, INTENT(IN) :: nsl, nz, ldz
-
-     COMPLEX (SP) :: c(:), cout(:)
-
-     REAL (SP)  :: tscale
-     INTEGER    :: i, err, idir, ip, void
-     INTEGER, SAVE :: zdims( 3, ndims ) = -1
-     INTEGER, SAVE :: icurrent = 1
-     LOGICAL :: found
-
-     INTEGER :: tid
-
-#if defined(_OPENMP)
-     INTEGER :: offset, ldz_t
-     INTEGER :: omp_get_max_threads
-     EXTERNAL :: omp_get_max_threads
-#endif
-
-     !   Pointers to the "C" structures containing FFT factors ( PLAN )
-
-     TYPE(C_PTR), SAVE :: fw_planz( ndims ) = C_NULL_PTR
-     TYPE(C_PTR), SAVE :: bw_planz( ndims ) = C_NULL_PTR
-
-     IF( nsl < 0 ) THEN
-       CALL fftx_error__(" fft_scalar: cft_1z ", " nsl out of range ", nsl)
-     END IF
-
-     !
-     !   Here initialize table only if necessary
-     !
-     CALL lookup()
-
-     IF( .NOT. found ) THEN
-
-       !   no table exist for these parameters
-       !   initialize a new one
-
-       CALL init_plan()
-
-     END IF
-
-     !
-     !   Now perform the FFTs using machine specific drivers
-     !
-
-#if defined(__FFT_CLOCKS)
-     CALL start_clock( 'cft_1z' )
-#endif
-
-
-#if defined(_OPENMP)
-
-     ldz_t = ldz
-     !
-     IF (isign < 0) THEN
-!$omp parallel default(none) private(tid,offset,i,tscale) shared(c,isign,nsl,fw_planz,ip,nz,cout,ldz) &
-!$omp &        firstprivate(ldz_t)
-!$omp do
-       DO i=1, nsl
-          offset = 1 + ((i-1)*ldz_t)
-          CALL FLOAT_FFT_Z_STICK_SINGLE(fw_planz( ip), c(offset), ldz_t)
-       END DO
-!$omp end do
-!$omp end parallel
-       tscale = 1.0_DP / nz
-       cout( 1 : ldz * nsl ) = c( 1 : ldz * nsl ) * tscale
-     ELSE IF (isign > 0) THEN
-!$omp parallel default(none) private(tid,offset,i) shared(c,isign,nsl,bw_planz,ip,cout,ldz) &
-!$omp &        firstprivate(ldz_t)
-!$omp do
-       DO i=1, nsl
-          offset =  1 + ((i-1)* ldz_t)
-          CALL FLOAT_FFT_Z_STICK_SINGLE(bw_planz( ip), c(offset), ldz_t)
-       END DO
-!$omp end do
-!$omp workshare
-       cout( 1 : ldz * nsl ) = c( 1 : ldz * nsl )
-!$omp end workshare
-!$omp end parallel
-     END IF
-
-
-#else
-
-     IF (isign < 0) THEN
-        CALL FLOAT_FFT_Z_STICK(fw_planz( ip), c(1), ldz, nsl)
-        tscale = 1.0_DP / nz
-        cout( 1 : ldz * nsl ) = c( 1 : ldz * nsl ) * tscale
-     ELSE IF (isign > 0) THEN
-        CALL FLOAT_FFT_Z_STICK(bw_planz( ip), c(1), ldz, nsl)
-        cout( 1 : ldz * nsl ) = c( 1 : ldz * nsl )
-     END IF
-
-#endif
-
-#if defined(__FFT_CLOCKS)
-     CALL stop_clock( 'cft_1z' )
-#endif
-
-     RETURN
-
-   CONTAINS
-
-     SUBROUTINE lookup()
-     DO ip = 1, ndims
-        !   first check if there is already a table initialized
-        !   for this combination of parameters
-        found = ( nz == zdims(1,ip) )
-        IF (found) EXIT
-     END DO
-     END SUBROUTINE lookup
-
-     SUBROUTINE init_plan()
-       IF( C_ASSOCIATED(fw_planz( icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( fw_planz( icurrent) )
-       IF( C_ASSOCIATED(bw_planz( icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( bw_planz( icurrent) )
-       idir = -1; CALL FLOAT_CREATE_PLAN_1D( fw_planz( icurrent), nz, idir)
-       idir =  1; CALL FLOAT_CREATE_PLAN_1D( bw_planz( icurrent), nz, idir)
-       zdims(1,icurrent) = nz; zdims(2,icurrent) = nsl; zdims(3,icurrent) = ldz;
-       ip = icurrent
-       icurrent = MOD( icurrent, ndims ) + 1
-     END SUBROUTINE init_plan
-
-   END SUBROUTINE cft_1z_sp
-
 !
 !
 !=----------------------------------------------------------------------=!
@@ -867,6 +730,154 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
      END SUBROUTINE init_plan
 
    END SUBROUTINE cfft3ds
+!
+!=----------------------------------------------------------------------=!
+!
+!
+!
+!         NOW Single precision drivers
+!
+!
+!
+!=----------------------------------------------------------------------=!
+!
+
+   SUBROUTINE cft_1z_sp(c, nsl, nz, ldz, isign, cout)
+
+!     driver routine for nsl 1d complex fft's of length nz
+!     ldz >= nz is the distance between sequences to be transformed
+!     (ldz>nz is used on some architectures to reduce memory conflicts)
+!     input  :  c(ldz*nsl)   (complex)
+!     output : cout(ldz*nsl) (complex - NOTA BENE: transform is not in-place!)
+!     isign > 0 : forward (f(G)=>f(R)), isign <0 backward (f(R) => f(G))
+!     Up to "ndims" initializations (for different combinations of input
+!     parameters nz, nsl, ldz) are stored and re-used if available
+
+     INTEGER, INTENT(IN) :: isign
+     INTEGER, INTENT(IN) :: nsl, nz, ldz
+
+     COMPLEX (SP) :: c(:), cout(:)
+
+     REAL (SP)  :: tscale
+     INTEGER    :: i, err, idir, ip, void
+     INTEGER, SAVE :: zdims( 3, ndims ) = -1
+     INTEGER, SAVE :: icurrent = 1
+     LOGICAL :: found
+
+     INTEGER :: tid
+
+#if defined(_OPENMP)
+     INTEGER :: offset, ldz_t
+     INTEGER :: omp_get_max_threads
+     EXTERNAL :: omp_get_max_threads
+#endif
+
+     !   Pointers to the "C" structures containing FFT factors ( PLAN )
+
+     TYPE(C_PTR), SAVE :: fw_planz( ndims ) = C_NULL_PTR
+     TYPE(C_PTR), SAVE :: bw_planz( ndims ) = C_NULL_PTR
+
+     IF( nsl < 0 ) THEN
+       CALL fftx_error__(" fft_scalar: cft_1z ", " nsl out of range ", nsl)
+     END IF
+
+     !
+     !   Here initialize table only if necessary
+     !
+     CALL lookup()
+
+     IF( .NOT. found ) THEN
+
+       !   no table exist for these parameters
+       !   initialize a new one
+
+       CALL init_plan()
+
+     END IF
+
+     !
+     !   Now perform the FFTs using machine specific drivers
+     !
+
+#if defined(__FFT_CLOCKS)
+     CALL start_clock( 'cft_1z' )
+#endif
+
+
+#if defined(_OPENMP)
+
+     ldz_t = ldz
+     !
+     IF (isign < 0) THEN
+!$omp parallel default(none) private(tid,offset,i,tscale) shared(c,isign,nsl,fw_planz,ip,nz,cout,ldz) &
+!$omp &        firstprivate(ldz_t)
+!$omp do
+       DO i=1, nsl
+          offset = 1 + ((i-1)*ldz_t)
+          CALL FLOAT_FFT_Z_STICK_SINGLE(fw_planz( ip), c(offset), ldz_t)
+       END DO
+!$omp end do
+!$omp end parallel
+       tscale = 1.0_DP / nz
+       cout( 1 : ldz * nsl ) = c( 1 : ldz * nsl ) * tscale
+     ELSE IF (isign > 0) THEN
+!$omp parallel default(none) private(tid,offset,i) shared(c,isign,nsl,bw_planz,ip,cout,ldz) &
+!$omp &        firstprivate(ldz_t)
+!$omp do
+       DO i=1, nsl
+          offset =  1 + ((i-1)* ldz_t)
+          CALL FLOAT_FFT_Z_STICK_SINGLE(bw_planz( ip), c(offset), ldz_t)
+       END DO
+!$omp end do
+!$omp workshare
+       cout( 1 : ldz * nsl ) = c( 1 : ldz * nsl )
+!$omp end workshare
+!$omp end parallel
+     END IF
+
+
+#else
+
+     IF (isign < 0) THEN
+        CALL FLOAT_FFT_Z_STICK(fw_planz( ip), c(1), ldz, nsl)
+        tscale = 1.0_DP / nz
+        cout( 1 : ldz * nsl ) = c( 1 : ldz * nsl ) * tscale
+     ELSE IF (isign > 0) THEN
+        CALL FLOAT_FFT_Z_STICK(bw_planz( ip), c(1), ldz, nsl)
+        cout( 1 : ldz * nsl ) = c( 1 : ldz * nsl )
+     END IF
+
+#endif
+
+#if defined(__FFT_CLOCKS)
+     CALL stop_clock( 'cft_1z' )
+#endif
+
+     RETURN
+
+   CONTAINS
+
+     SUBROUTINE lookup()
+     DO ip = 1, ndims
+        !   first check if there is already a table initialized
+        !   for this combination of parameters
+        found = ( nz == zdims(1,ip) )
+        IF (found) EXIT
+     END DO
+     END SUBROUTINE lookup
+
+     SUBROUTINE init_plan()
+       IF( C_ASSOCIATED(fw_planz( icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( fw_planz( icurrent) )
+       IF( C_ASSOCIATED(bw_planz( icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( bw_planz( icurrent) )
+       idir = -1; CALL FLOAT_CREATE_PLAN_1D( fw_planz( icurrent), nz, idir)
+       idir =  1; CALL FLOAT_CREATE_PLAN_1D( bw_planz( icurrent), nz, idir)
+       zdims(1,icurrent) = nz; zdims(2,icurrent) = nsl; zdims(3,icurrent) = ldz;
+       ip = icurrent
+       icurrent = MOD( icurrent, ndims ) + 1
+     END SUBROUTINE init_plan
+
+   END SUBROUTINE cft_1z_sp
+
 
 !=----------------------------------------------------------------------=!
  END MODULE fft_scalar_FFTW
