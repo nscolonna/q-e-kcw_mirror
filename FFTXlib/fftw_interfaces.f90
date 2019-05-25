@@ -82,6 +82,33 @@ MODULE fftw_interfaces
        INTEGER(KIND=C_INT) :: m, inc1, inc2
        COMPLEX(KIND=C_DOUBLE) :: z
      END SUBROUTINE fftw_inplace_drv_3d
+
+!= Now single precision functions
+
+     SUBROUTINE float_create_plan_1d( plan, nz, i ) BIND(C,name="float_create_plan_1d")
+       USE iso_c_binding
+       TYPE(C_PTR) :: plan
+       INTEGER(KIND=C_INT) :: nz, i
+     END SUBROUTINE float_create_plan_1d
+     SUBROUTINE float_destroy_plan_1d( plan ) BIND(C,name="float_destroy_plan_1d") 
+       USE iso_c_binding
+       TYPE(C_PTR) :: plan
+     END SUBROUTINE float_destroy_plan_1d
+
+     SUBROUTINE float_fft_z_stick( plan, z, ldz, nzl ) BIND(C,name="float_fft_z_stick")
+       USE iso_c_binding
+       TYPE(C_PTR) :: plan
+       INTEGER(KIND=C_INT) :: ldz, nzl
+       COMPLEX(KIND=C_FLOAT) :: z
+     END SUBROUTINE float_fft_z_stick
+     
+     SUBROUTINE float_fft_z_stick_single( plan, z, ldz ) BIND(C,name="float_fft_z_stick_single")
+       USE iso_c_binding
+       TYPE(C_PTR) :: plan
+       INTEGER(KIND=C_INT) :: ldz
+       COMPLEX(KIND=C_FLOAT) :: z
+     END SUBROUTINE float_fft_z_stick_single
+
   END INTERFACE
 
 END MODULE fftw_interfaces

@@ -124,6 +124,16 @@ int fft_z_stick
    return 0;
 }
 
+int float_fft_z_stick
+   (float_fftw_plan *p, FFTW_FLOAT_COMPLEX *zstick, int *ldz, int *nstick_l)
+{
+   int howmany, idist;
+   howmany = (*nstick_l) ;
+   idist   = (*ldz);
+   float_fftw(*p, howmany, zstick, 1, idist, 0, 0, 0);
+   return 0;
+}
+
 int fftw_inplace_drv_1d
    (fftw_plan *p, int *nfft, FFTW_COMPLEX *a, int *inca, int *idist)
 {
