@@ -21,7 +21,7 @@ SUBROUTINE wf( clwf, c, bec, eigr, eigrb, taub, irb, &
   !
   ! ... routine makes use of c(-g)=c*(g)  and  beta(-g)=beta*(g)
   !
-  USE kinds,                    ONLY : DP
+  USE kinds,                    ONLY : DP, SP
   USE constants,                ONLY : pi, tpi
   USE ions_base,                ONLY : nsp, na, nax, nat
   USE uspp_param,               ONLY : nvb, ish
@@ -71,7 +71,8 @@ SUBROUTINE wf( clwf, c, bec, eigr, eigrb, taub, irb, &
   REAL(DP),    ALLOCATABLE :: Uspin(:,:)
   COMPLEX(DP), ALLOCATABLE :: X(:,:), Xsp(:,:), X2(:,:), X3(:,:)
   COMPLEX(DP), ALLOCATABLE :: O(:,:,:), Ospin(:,:,:), Oa(:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: qv(:), fg1(:)
+  COMPLEX(SP), ALLOCATABLE :: fg1(:)
+  COMPLEX(SP), ALLOCATABLE :: qv(:)
   REAL(DP),    ALLOCATABLE :: gr(:,:), mt(:), mt0(:), wr(:), W(:,:), EW(:,:)
   INTEGER,     ALLOCATABLE :: f3(:), f4(:)
   COMPLEX(DP), ALLOCATABLE :: U2(:,:)
@@ -90,7 +91,7 @@ SUBROUTINE wf( clwf, c, bec, eigr, eigrb, taub, irb, &
   REAL(DP)    :: te(6)
   INTEGER     :: iunit
   
-  COMPLEX(DP), EXTERNAL :: boxdotgridcplx
+  COMPLEX(DP), EXTERNAL :: boxdotgridcplx_sp
   !
 #if defined (__MPI)
   !
@@ -331,7 +332,7 @@ SUBROUTINE wf( clwf, c, bec, eigr, eigrb, taub, irb, &
               CALL invfft(qv,dfftb,isa)
               iqv=1
               qvt=(0.D0,0.D0)
-              qvt=boxdotgridcplx(irb(1,isa),qv,expo(1,inw))
+              qvt=boxdotgridcplx_sp(irb(1,isa),qv,expo(1,inw))
 
 #if defined(__MPI)
               CALL mp_sum( qvt, intra_bgrp_comm )
@@ -369,7 +370,7 @@ SUBROUTINE wf( clwf, c, bec, eigr, eigrb, taub, irb, &
                  CALL invfft(qv,dfftb,isa)
                  iqv=1
                  qvt=0.D0
-                 qvt=boxdotgridcplx(irb(1,isa),qv,expo(1,inw))
+                 qvt=boxdotgridcplx_sp(irb(1,isa),qv,expo(1,inw))
 #if defined(__MPI)
                  CALL mp_sum( qvt, intra_bgrp_comm )
 #endif
@@ -1958,7 +1959,7 @@ SUBROUTINE small_box_wf( i_1, j_1, k_1, nw1 )
 END SUBROUTINE small_box_wf
 !
 !-----------------------------------------------------------------------
-FUNCTION boxdotgridcplx(irb,qv,vr)
+FUNCTION boxdotgridcplx_sp(irb,qv,vr)
   !-----------------------------------------------------------------------
   !
   ! Calculate \sum_i qv(r_i)*vr(r_i)  with r_i on box grid
@@ -1968,21 +1969,22 @@ FUNCTION boxdotgridcplx(irb,qv,vr)
   !
   !      use ion_parameters
   !
-  USE kinds,           ONLY : DP
+  USE kinds,           ONLY : DP, SP
   USE fft_base,        ONLY : dfftp, dfftb
   USE mp_global,       ONLY : me_bgrp
   !
   IMPLICIT NONE
   !
   INTEGER,           INTENT(IN):: irb(3)
-  COMPLEX(DP), INTENT(IN):: qv(dfftb%nnr), vr(dfftp%nnr)
-  COMPLEX(DP)            :: boxdotgridcplx
+  COMPLEX(SP), INTENT(IN):: qv(dfftb%nnr)
+  COMPLEX(DP), INTENT(IN):: vr(dfftp%nnr)
+  COMPLEX(DP)            :: boxdotgridcplx_sp
   !
   INTEGER :: ir1, ir2, ir3, ir, ibig1, ibig2, ibig3, ibig, me
   !
   me = me_bgrp + 1
   !
-  boxdotgridcplx = ZERO
+  boxdotgridcplx_sp = 0.0
 
   DO ir3=1,dfftb%nr3
      ibig3=irb(3)+ir3-1
@@ -2003,7 +2005,7 @@ FUNCTION boxdotgridcplx(irb,qv,vr)
                  ibig1=1+MOD(ibig1-1,dfftp%nr1)
                  ibig=ibig1 + (ibig2-1)*dfftp%nr1x + (ibig3-1)*dfftp%nr1x*dfftp%my_nr2p
                  ir  =ir1 + (ir2-1)*dfftb%nr1x + (ir3-1)*dfftb%nr1x*dfftb%nr2x
-                 boxdotgridcplx = boxdotgridcplx + qv(ir)*vr(ibig)
+                 boxdotgridcplx_sp = boxdotgridcplx_sp + qv(ir)*vr(ibig)
               END DO
 #if defined(__MPI)
            ENDIF
@@ -2016,7 +2018,7 @@ FUNCTION boxdotgridcplx(irb,qv,vr)
   !
   RETURN
   !
-END FUNCTION boxdotgridcplx
+END FUNCTION boxdotgridcplx_sp
 !
 !----------------------------------------------------------------------------
 SUBROUTINE write_rho_g( rhog )

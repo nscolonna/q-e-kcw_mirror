@@ -73,10 +73,29 @@ int create_plan_3d (fftwnd_plan *p, int *n, int *m, int *l, int *idir)
    return 0;
 }
 
-int destroy_plan_3d (fftwnd_plan *p)
+int float_create_plan_3d (float_fftwnd_plan *p, int *n, int *m, int *l, int *idir)
+{
+   fftw_direction dir = ( (*idir < 0) ? FFTW_FORWARD : FFTW_BACKWARD );
+   *p = qe_float_fftw3d_create_plan(*l, *m, *n, dir, FFTW_ESTIMATE | FFTW_IN_PLACE);
+   if( *p == NULL ) {
+	fprintf(stderr," *** CREATE_PLAN_3D: warning empty plan ***\n");
+	fprintf(stderr," *** input was (n,m,l,dir): %d %d %d %d ***\n", *l, *m, *n, *idir);
+   }
+/*   printf(" pointer size = %d, value = %d\n", sizeof ( *p ), *p ); */
+   return 0;
+}
 
+
+int destroy_plan_3d (fftwnd_plan *p)
 {
    if ( *p != NULL ) qe_fftwnd_destroy_plan(*p);
+   else fprintf(stderr," *** DESTROY_PLAN_3D: warning empty plan ***\n");
+   return 0;
+}
+
+int float_destroy_plan_3d (float_fftwnd_plan *p)
+{
+   if ( *p != NULL ) qe_float_fftwnd_destroy_plan(*p);
    else fprintf(stderr," *** DESTROY_PLAN_3D: warning empty plan ***\n");
    return 0;
 }
@@ -141,6 +160,13 @@ int fftw_inplace_drv_1d
    return 0;
 }
 
+int float_fftw_inplace_drv_1d
+   (float_fftw_plan *p, int *nfft, FFTW_FLOAT_COMPLEX *a, int *inca, int *idist)
+{
+   float_fftw(*p, (*nfft), a, (*inca), (*idist), 0, 0, 0);
+   return 0;
+}
+
 int fftw_inplace_drv_2d
   ( fftwnd_plan *p, int *nfft, FFTW_COMPLEX *a, int *inca, int *idist)
 {
@@ -152,6 +178,13 @@ int fftw_inplace_drv_3d
    ( fftwnd_plan *p, int *nfft, FFTW_COMPLEX *a, int *inca, int *idist)
 {
    fftwnd( *p, (*nfft), a, (*inca), (*idist), 0, 0, 0 );
+   return 0;
+}
+
+int float_fftw_inplace_drv_3d
+   ( float_fftwnd_plan *p, int *nfft, FFTW_FLOAT_COMPLEX *a, int *inca, int *idist)
+{
+   float_fftwnd( *p, (*nfft), a, (*inca), (*idist), 0, 0, 0 );
    return 0;
 }
 

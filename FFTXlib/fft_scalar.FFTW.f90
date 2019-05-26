@@ -23,6 +23,12 @@
        INTERFACE cft_1z
           MODULE PROCEDURE cft_1z_dp, cft_1z_sp
        END INTERFACE
+       INTERFACE cfft3d
+          MODULE PROCEDURE cfft3d_dp, cfft3d_sp
+       END INTERFACE
+       INTERFACE cfft3ds
+          MODULE PROCEDURE cfft3ds_dp, cfft3ds_sp
+       END INTERFACE
 
 !=----------------------------------------------------------------------=!
    CONTAINS
@@ -451,7 +457,7 @@
 !=----------------------------------------------------------------------=!
 !
 
-   SUBROUTINE cfft3d( f, nx, ny, nz, ldx, ldy, ldz, howmany, isign )
+   SUBROUTINE cfft3d_dp( f, nx, ny, nz, ldx, ldy, ldz, howmany, isign )
 
   !     driver routine for 3d complex fft of lengths nx, ny, nz
   !     input  :  f(ldx*ldy*ldz)  complex, transform is in-place
@@ -544,7 +550,7 @@
        icurrent = MOD( icurrent, ndims ) + 1
      END SUBROUTINE init_plan
 
-   END SUBROUTINE cfft3d
+   END SUBROUTINE cfft3d_dp
 
 !
 !=----------------------------------------------------------------------=!
@@ -558,7 +564,7 @@
 !=----------------------------------------------------------------------=!
 !
 
-SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
+SUBROUTINE cfft3ds_dp (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
      do_fft_z, do_fft_y)
   !
   !     driver routine for 3d complex "reduced" fft - see cfft3d
@@ -729,7 +735,7 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
        icurrent = MOD( icurrent, ndims ) + 1
      END SUBROUTINE init_plan
 
-   END SUBROUTINE cfft3ds
+   END SUBROUTINE cfft3ds_dp
 !
 !=----------------------------------------------------------------------=!
 !
@@ -879,6 +885,274 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
    END SUBROUTINE cft_1z_sp
 
 
+
+   SUBROUTINE cfft3d_sp( f, nx, ny, nz, ldx, ldy, ldz, howmany, isign )
+
+  !     driver routine for 3d complex fft of lengths nx, ny, nz
+  !     input  :  f(ldx*ldy*ldz)  complex, transform is in-place
+  !     ldx >= nx, ldy >= ny, ldz >= nz are the physical dimensions
+  !     of the equivalent 3d array: f3d(ldx,ldy,ldz)
+  !     (ldx>nx, ldy>ny, ldz>nz may be used on some architectures
+  !      to reduce memory conflicts - not implemented for FFTW)
+  !     isign > 0 : f(G) => f(R)   ; isign < 0 : f(R) => f(G)
+  !
+  !     Up to "ndims" initializations (for different combinations of input
+  !     parameters nx,ny,nz) are stored and re-used if available
+
+     IMPLICIT NONE
+
+     INTEGER, INTENT(IN) :: nx, ny, nz, ldx, ldy, ldz, howmany, isign
+     COMPLEX (SP) :: f(:)
+     INTEGER :: i, k, j, err, idir, ip
+     REAL(SP) :: tscale
+     INTEGER, SAVE :: icurrent = 1
+     INTEGER, SAVE :: dims(3,ndims) = -1
+
+     TYPE(C_PTR), save :: fw_plan(ndims) = C_NULL_PTR
+     TYPE(C_PTR), save :: bw_plan(ndims) = C_NULL_PTR
+
+     IF ( nx < 1 ) &
+         call fftx_error__('cfft3d',' nx is less than 1 ', 1)
+     IF ( ny < 1 ) &
+         call fftx_error__('cfft3d',' ny is less than 1 ', 1)
+     IF ( nz < 1 ) &
+         call fftx_error__('cfft3',' nz is less than 1 ', 1)
+
+     !
+     !   Here initialize table only if necessary
+     !
+     CALL lookup()
+
+     IF( ip == -1 ) THEN
+
+       !   no table exist for these parameters
+       !   initialize a new one
+
+       CALL init_plan()
+
+     END IF
+
+     !
+     !   Now perform the 3D FFT using the machine specific driver
+     !
+
+     IF( isign < 0 ) THEN
+
+       call FLOAT_FFTW_INPLACE_DRV_3D( fw_plan(ip), 1, f(1), 1, 1 )
+
+       tscale = 1.0 / REAL( nx * ny * nz )
+       call CSSCAL( nx * ny * nz, tscale, f(1), 1)
+
+     ELSE IF( isign > 0 ) THEN
+
+       call FLOAT_FFTW_INPLACE_DRV_3D( bw_plan(ip), 1, f(1), 1, 1 )
+
+     END IF
+
+     RETURN
+
+   CONTAINS 
+
+     SUBROUTINE lookup()
+     ip = -1
+     DO i = 1, ndims
+       !   first check if there is already a table initialized
+       !   for this combination of parameters
+       IF ( ( nx == dims(1,i) ) .and. &
+            ( ny == dims(2,i) ) .and. &
+            ( nz == dims(3,i) ) ) THEN
+         ip = i
+         EXIT
+       END IF
+     END DO
+     END SUBROUTINE lookup
+
+     SUBROUTINE init_plan()
+       IF ( nx /= ldx .or. ny /= ldy .or. nz /= ldz ) &
+         call fftx_error__('cfft3','not implemented',1)
+       IF( C_ASSOCIATED (fw_plan(icurrent)) ) CALL FLOAT_DESTROY_PLAN_3D( fw_plan(icurrent) )
+       IF( C_ASSOCIATED (bw_plan(icurrent)) ) CALL FLOAT_DESTROY_PLAN_3D( bw_plan(icurrent) )
+       idir = -1; CALL FLOAT_CREATE_PLAN_3D( fw_plan(icurrent), nx, ny, nz, idir)
+       idir =  1; CALL FLOAT_CREATE_PLAN_3D( bw_plan(icurrent), nx, ny, nz, idir)
+       dims(1,icurrent) = nx; dims(2,icurrent) = ny; dims(3,icurrent) = nz
+       ip = icurrent
+       icurrent = MOD( icurrent, ndims ) + 1
+     END SUBROUTINE init_plan
+
+   END SUBROUTINE cfft3d_sp
+
+SUBROUTINE cfft3ds_sp(f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
+     do_fft_z, do_fft_y)
+  !
+  !     driver routine for 3d complex "reduced" fft - see cfft3d
+  !     The 3D fft are computed only on lines and planes which have
+  !     non zero elements. These lines and planes are defined by
+  !     the two integer vectors do_fft_y(nx) and do_fft_z(ldx*ldy)
+  !     (1 = perform fft, 0 = do not perform fft)
+  !     This routine is implemented only for fftw, essl, acml
+  !     If not implemented, cfft3d is called instead
+  !
+  !----------------------------------------------------------------------
+  !
+  implicit none
+
+  integer :: nx, ny, nz, ldx, ldy, ldz, howmany, isign
+  !
+  !   logical dimensions of the fft
+  !   physical dimensions of the f array
+  !   sign of the transformation
+
+  complex(SP) :: f ( ldx * ldy * ldz * howmany )
+  integer :: do_fft_z(:), do_fft_y(:)
+  !
+  integer :: m, incx1, incx2
+  INTEGER :: i, k, j, err, idir, ip,  ii, jj, h, ldh
+  REAL(SP) :: tscale
+  INTEGER, SAVE :: icurrent = 1
+  INTEGER, SAVE :: dims(3,ndims) = -1
+
+  TYPE(C_PTR), SAVE :: fw_plan ( 3, ndims ) = C_NULL_PTR
+  TYPE(C_PTR), SAVE :: bw_plan ( 3, ndims ) = C_NULL_PTR
+
+  ldh = ldx * ldy * ldz
+
+  IF( ny /= ldy ) &
+    CALL fftx_error__(' cfft3ds ', ' wrong dimensions: ny /= ldy ', 1 )
+  IF( howmany < 1 ) &
+    CALL fftx_error__(' cfft3ds ', ' howmany less than one ', 1 )
+
+     CALL lookup()
+
+     IF( ip == -1 ) THEN
+
+       !   no table exist for these parameters
+       !   initialize a new one
+
+       CALL init_plan()
+
+     END IF
+
+
+     IF ( isign > 0 ) THEN
+
+        DO h = 0, howmany - 1
+           !
+           !  k-direction ...
+           !
+
+           incx1 = ldx * ldy;  incx2 = 1;  m = 1
+
+           do i =1, nx
+              do j = 1, ny
+                 ii = i + ldx * (j-1)
+                 if ( do_fft_z(ii) > 0 ) then
+                    call FLOAT_FFTW_INPLACE_DRV_1D( bw_plan( 3, ip), m, f( ii + h*ldh ), incx1, incx2 )
+                 end if
+              end do
+           end do
+
+           !
+           !  ... j-direction ...
+           !
+
+           incx1 = ldx;  incx2 = ldx*ldy;  m = nz
+   
+           do i = 1, nx
+              if ( do_fft_y( i ) == 1 ) then
+                call FLOAT_FFTW_INPLACE_DRV_1D( bw_plan( 2, ip), m, f( i + h*ldh ), incx1, incx2 )
+              endif
+           enddo
+
+           !
+           !  ... i - direction
+           !
+
+           incx1 = 1;  incx2 = ldx;  m = ldy*nz
+
+           call FLOAT_FFTW_INPLACE_DRV_1D( bw_plan( 1, ip), m, f( 1 + h*ldh ), incx1, incx2 )
+
+        END DO
+
+     ELSE
+
+        DO h = 0, howmany - 1
+           !
+           !  i - direction ...
+           !
+
+           incx1 = 1;  incx2 = ldx;  m = ldy*nz
+
+           call FLOAT_FFTW_INPLACE_DRV_1D( fw_plan( 1, ip), m, f( 1 + h*howmany ), incx1, incx2 )
+
+           !
+           !  ... j-direction ...
+           !
+
+           incx1 = ldx;  incx2 = ldx*ldy;  m = nz
+
+           do i = 1, nx
+              if ( do_fft_y ( i ) == 1 ) then
+                call FLOAT_FFTW_INPLACE_DRV_1D( fw_plan( 2, ip), m, f( i + h*howmany ), incx1, incx2 )
+              endif
+           enddo
+
+           !
+           !  ... k-direction
+           !
+
+           incx1 = ldx * ny;  incx2 = 1;  m = 1
+ 
+           do i = 1, nx
+              do j = 1, ny
+                 ii = i + ldx * (j -1)
+                 if ( do_fft_z ( ii ) > 0 ) then
+                    call FLOAT_FFTW_INPLACE_DRV_1D( fw_plan( 3, ip), m, f( ii + h*howmany ), incx1, incx2 )
+                 end if
+              end do
+           end do
+
+           tscale = 1.0 / REAL( nx * ny * nz )
+           call CSSCAL (ldx * ldy * nz, tscale, f(1+ h*howmany ), 1)
+        END DO
+
+     END IF
+     RETURN
+
+   CONTAINS
+
+     SUBROUTINE lookup()
+     ip = -1
+     DO i = 1, ndims
+       !   first check if there is already a table initialized
+       !   for this combination of parameters
+       IF( ( nx == dims(1,i) ) .and. ( ny == dims(2,i) ) .and. &
+           ( nz == dims(3,i) ) ) THEN
+         ip = i
+         EXIT
+       END IF
+     END DO
+     END SUBROUTINE lookup
+
+     SUBROUTINE init_plan()
+       IF( C_ASSOCIATED (fw_plan( 1, icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( fw_plan( 1, icurrent) )
+       IF( C_ASSOCIATED (bw_plan( 1, icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( bw_plan( 1, icurrent) )
+       IF( C_ASSOCIATED (fw_plan( 2, icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( fw_plan( 2, icurrent) )
+       IF( C_ASSOCIATED (bw_plan( 2, icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( bw_plan( 2, icurrent) )
+       IF( C_ASSOCIATED (fw_plan( 3, icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( fw_plan( 3, icurrent) )
+       IF( C_ASSOCIATED (bw_plan( 3, icurrent)) ) CALL FLOAT_DESTROY_PLAN_1D( bw_plan( 3, icurrent) )
+       idir = -1; CALL FLOAT_CREATE_PLAN_1D( fw_plan( 1, icurrent), nx, idir)
+       idir =  1; CALL FLOAT_CREATE_PLAN_1D( bw_plan( 1, icurrent), nx, idir)
+       idir = -1; CALL FLOAT_CREATE_PLAN_1D( fw_plan( 2, icurrent), ny, idir)
+       idir =  1; CALL FLOAT_CREATE_PLAN_1D( bw_plan( 2, icurrent), ny, idir)
+       idir = -1; CALL FLOAT_CREATE_PLAN_1D( fw_plan( 3, icurrent), nz, idir)
+       idir =  1; CALL FLOAT_CREATE_PLAN_1D( bw_plan( 3, icurrent), nz, idir)
+
+       dims(1,icurrent) = nx; dims(2,icurrent) = ny; dims(3,icurrent) = nz
+       ip = icurrent
+       icurrent = MOD( icurrent, ndims ) + 1
+     END SUBROUTINE init_plan
+
+   END SUBROUTINE cfft3ds_sp
 !=----------------------------------------------------------------------=!
  END MODULE fft_scalar_FFTW
 !=----------------------------------------------------------------------=!

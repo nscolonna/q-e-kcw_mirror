@@ -226,7 +226,7 @@
          CALL ggenb ( ecutrho, iverbosity )
          !
 #if defined _OPENMP
-         CALL cft_b_omp_init( dfftb%nr1, dfftb%nr2, dfftb%nr3 )
+         CALL cft_b_omp_init( dfftb%nr1, dfftb%nr2, dfftb%nr3, single_precision = .TRUE. )
 #endif
       ELSE IF( okvan .OR. nlcc_any ) THEN
 

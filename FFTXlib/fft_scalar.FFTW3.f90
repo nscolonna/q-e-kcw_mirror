@@ -31,6 +31,13 @@
        INTERFACE cft_1z
           MODULE PROCEDURE cft_1z_dp, cft_1z_sp
        END INTERFACE
+       INTERFACE cfft3d
+          MODULE PROCEDURE cfft3d_dp, cfft3d_sp
+       END INTERFACE
+       INTERFACE cfft3ds
+          MODULE PROCEDURE cfft3ds_dp, cfft3ds_sp
+       END INTERFACE
+
 
 
 ! ...   Local Parameter
@@ -368,7 +375,7 @@
 !=----------------------------------------------------------------------=!
 !
 
-   SUBROUTINE cfft3d( f, nx, ny, nz, ldx, ldy, ldz, howmany, isign )
+   SUBROUTINE cfft3d_dp( f, nx, ny, nz, ldx, ldy, ldz, howmany, isign )
 
   !     driver routine for 3d complex fft of lengths nx, ny, nz
   !     input  :  f(ldx*ldy*ldz)  complex, transform is in-place
@@ -466,7 +473,7 @@
        icurrent = MOD( icurrent, ndims ) + 1
      END SUBROUTINE init_plan
 
-   END SUBROUTINE cfft3d
+   END SUBROUTINE cfft3d_dp
 
 !
 !=----------------------------------------------------------------------=!
@@ -480,7 +487,7 @@
 !=----------------------------------------------------------------------=!
 !
 
-SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
+SUBROUTINE cfft3ds_dp (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
      do_fft_z, do_fft_y)
   !
   !     driver routine for 3d complex "reduced" fft - see cfft3d
@@ -672,7 +679,7 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
        icurrent = MOD( icurrent, ndims ) + 1
      END SUBROUTINE init_plan
 
-   END SUBROUTINE cfft3ds
+   END SUBROUTINE cfft3ds_dp
 !
 !=----------------------------------------------------------------------=!
 !
@@ -718,6 +725,13 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
      TYPE(C_PTR), SAVE :: fw_planz( ndims ) = C_NULL_PTR
      TYPE(C_PTR), SAVE :: bw_planz( ndims ) = C_NULL_PTR
 
+#if !defined(__HAVE_FLOAT_DRIVERS__)
+     WRITE(*,*) 'To use single precision driver with FFTW3, ensure that the external library'
+     WRITE(*,*) 'has been compiled with the support for single precision, then define'
+     WRITE(*,*) '__HAVE_FLOAT_DRIVERS__'
+     CALL fftx_error__(" fft_scalar: cft_1z "," define __HAVE_FLOAT_DRIVERS__", 1)
+#endif
+
      IF( nsl < 0 ) THEN
        CALL fftx_error__(" fft_scalar: cft_1z ", " nsl out of range ", nsl)
      END IF
@@ -745,13 +759,15 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
      CALL start_clock( 'cft_1z' )
 #endif
 
+#if defined(__HAVE_FLOAT_DRIVERS__)
      IF (isign < 0) THEN
         CALL sfftw_execute_dft( fw_planz( ip), c, cout)
-        tscale = 1.0_DP / nz
+        tscale = 1.0 / nz
         cout( 1 : ldz * nsl ) = cout( 1 : ldz * nsl ) * tscale
      ELSE IF (isign > 0) THEN
         CALL sfftw_execute_dft( bw_planz( ip), c, cout)
      END IF
+#endif
 
 #if defined(__FFT_CLOCKS)
      CALL stop_clock( 'cft_1z' )
@@ -775,11 +791,14 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
 
      SUBROUTINE init_plan()
 #if defined(_OPENMP)
+#if defined(__HAVE_FLOAT_DRIVERS__)
        CALL sfftw_cleanup_threads() 
        void = fftw_init_threads()
        CALL sfftw_plan_with_nthreads(omp_get_max_threads())      
 #endif
+#endif
 
+#if defined(__HAVE_FLOAT_DRIVERS__)
        IF( C_ASSOCIATED(fw_planz( icurrent)) ) CALL sfftw_destroy_plan( fw_planz( icurrent) )
        IF( C_ASSOCIATED(bw_planz( icurrent)) ) CALL sfftw_destroy_plan( bw_planz( icurrent) )
        idir = -1
@@ -788,6 +807,7 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
        idir = 1
        CALL sfftw_plan_many_dft( bw_planz( icurrent), 1, nz, nsl, c, &
             (/SIZE(c)/), 1, ldz, cout, (/SIZE(cout)/), 1, ldz, idir, FFTW_ESTIMATE)
+#endif
 
        zdims(1,icurrent) = nz; zdims(2,icurrent) = nsl; zdims(3,icurrent) = ldz;
        ip = icurrent
@@ -796,6 +816,341 @@ SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
 
    END SUBROUTINE cft_1z_sp
 !
+!=----------------------------------------------------------------------=!
+!
+!         3D scalar FFTs
+!
+!=----------------------------------------------------------------------=!
+!
+   SUBROUTINE cfft3d_sp( f, nx, ny, nz, ldx, ldy, ldz, howmany, isign )
+
+  !     driver routine for 3d complex fft of lengths nx, ny, nz
+  !     input  :  f(ldx*ldy*ldz)  complex, transform is in-place
+  !     ldx >= nx, ldy >= ny, ldz >= nz are the physical dimensions
+  !     of the equivalent 3d array: f3d(ldx,ldy,ldz)
+  !     (ldx>nx, ldy>ny, ldz>nz may be used on some architectures
+  !      to reduce memory conflicts - not implemented for FFTW)
+  !     isign > 0 : f(G) => f(R)   ; isign < 0 : f(R) => f(G)
+  !
+  !     Up to "ndims" initializations (for different combinations of input
+  !     parameters nx,ny,nz) are stored and re-used if available
+
+     IMPLICIT NONE
+
+     INTEGER, INTENT(IN) :: nx, ny, nz, ldx, ldy, ldz, howmany, isign
+     COMPLEX (SP) :: f(:)
+     INTEGER :: i, k, j, err, idir, ip
+     REAL(SP) :: tscale
+     INTEGER, SAVE :: icurrent = 1
+     INTEGER, SAVE :: dims(3,ndims) = -1
+
+     TYPE(C_PTR), save :: fw_plan(ndims) = C_NULL_PTR
+     TYPE(C_PTR), save :: bw_plan(ndims) = C_NULL_PTR
+
+#if !defined(__HAVE_FLOAT_DRIVERS__)
+     WRITE(*,*) 'To use single precision driver with FFTW3, ensure that the external library'
+     WRITE(*,*) 'has been compiled with the support for single precision, then define'
+     WRITE(*,*) '__HAVE_FLOAT_DRIVERS__'
+     CALL fftx_error__(" fft_scalar: cfft3d_sp "," define __HAVE_FLOAT_DRIVERS__", 1)
+#endif
+
+     IF ( nx < 1 ) &
+         call fftx_error__('cfft3d',' nx is less than 1 ', 1)
+     IF ( ny < 1 ) &
+         call fftx_error__('cfft3d',' ny is less than 1 ', 1)
+     IF ( nz < 1 ) &
+         call fftx_error__('cfft3d',' nz is less than 1 ', 1)
+     IF( howmany /= 1 ) &
+         CALL fftx_error__('cfft3d', ' howmany different from 1, not yet implemented for FFTW3 ', 1 )
+
+     !
+     !   Here initialize table only if necessary
+     !
+     CALL lookup()
+
+     IF( ip == -1 ) THEN
+
+       !   no table exist for these parameters
+       !   initialize a new one
+
+       CALL init_plan()
+
+     END IF
+
+     !
+     !   Now perform the 3D FFT using the machine specific driver
+     !
+
+#if defined(__HAVE_FLOAT_DRIVERS__)
+     IF( isign < 0 ) THEN
+        call sfftw_execute_dft( fw_plan(ip), f(1:), f(1:))
+        tscale = 1.0 / REAL( nx * ny * nz )
+        call CSSCAL( nx * ny * nz, tscale, f(1), 1)
+     ELSE IF( isign > 0 ) THEN
+        call sfftw_execute_dft( bw_plan(ip), f(1:), f(1:))
+     END IF
+#endif
+
+     RETURN
+
+   CONTAINS
+
+     SUBROUTINE lookup()
+     ip = -1
+     DO i = 1, ndims
+       !   first check if there is already a table initialized
+       !   for this combination of parameters
+       IF ( ( nx == dims(1,i) ) .and. &
+            ( ny == dims(2,i) ) .and. &
+            ( nz == dims(3,i) ) ) THEN
+         ip = i
+         EXIT
+       END IF
+     END DO
+     END SUBROUTINE lookup
+
+     SUBROUTINE init_plan()
+       IF ( nx /= ldx .or. ny /= ldy .or. nz /= ldz ) &
+            call fftx_error__('cfft3','not implemented',3)
+
+#if defined(__HAVE_FLOAT_DRIVERS__)
+       IF( C_ASSOCIATED(fw_plan(icurrent)) ) CALL sfftw_destroy_plan( fw_plan(icurrent) )
+       IF( C_ASSOCIATED(bw_plan(icurrent)) ) CALL sfftw_destroy_plan( bw_plan(icurrent) )
+       idir = -1
+       CALL sfftw_plan_dft_3d ( fw_plan(icurrent), nx, ny, nz, f(1:), f(1:), idir, FFTW_ESTIMATE)
+       idir =  1
+       CALL sfftw_plan_dft_3d ( bw_plan(icurrent), nx, ny, nz, f(1:), f(1:), idir, FFTW_ESTIMATE)
+#endif
+
+       dims(1,icurrent) = nx; dims(2,icurrent) = ny; dims(3,icurrent) = nz
+       ip = icurrent
+       icurrent = MOD( icurrent, ndims ) + 1
+     END SUBROUTINE init_plan
+
+   END SUBROUTINE cfft3d_sp
+
+!
+!=----------------------------------------------------------------------=!
+!
+!         3D scalar FFTs,  but using sticks!
+!
+!=----------------------------------------------------------------------=!
+!
+
+SUBROUTINE cfft3ds_sp (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, &
+     do_fft_z, do_fft_y)
+  !
+  !     driver routine for 3d complex "reduced" fft - see cfft3d
+  !     The 3D fft are computed only on lines and planes which have
+  !     non zero elements. These lines and planes are defined by
+  !     the two integer vectors do_fft_y(nx) and do_fft_z(ldx*ldy)
+  !     (1 = perform fft, 0 = do not perform fft)
+  !     This routine is implemented only for fftw, essl, acml
+  !     If not implemented, cfft3d is called instead
+  !
+  !----------------------------------------------------------------------
+  !
+  implicit none
+     INTEGER, PARAMETER  :: stdout = 6
+
+  integer :: nx, ny, nz, ldx, ldy, ldz, howmany, isign
+  !
+  !   logical dimensions of the fft
+  !   physical dimensions of the f array
+  !   sign of the transformation
+
+  complex(SP) :: f ( ldx * ldy * ldz )
+  integer :: do_fft_y(:), do_fft_z(:)
+  !
+  integer :: m, incx1, incx2
+  INTEGER :: i, k, j, err, idir, ip,  ii, jj
+  REAL(SP) :: tscale
+  INTEGER, SAVE :: icurrent = 1
+  INTEGER, SAVE :: dims(3,ndims) = -1
+
+
+  TYPE(C_PTR), SAVE :: fw_plan ( 3, ndims ) = C_NULL_PTR
+  TYPE(C_PTR), SAVE :: bw_plan ( 3, ndims ) = C_NULL_PTR
+
+#if !defined(__HAVE_FLOAT_DRIVERS__)
+     WRITE(*,*) 'To use single precision driver with FFTW3, ensure that the external library'
+     WRITE(*,*) 'has been compiled with the support for single precision, then define'
+     WRITE(*,*) '__HAVE_FLOAT_DRIVERS__'
+     CALL fftx_error__(" fft_scalar: cfft3ds_sp "," define __HAVE_FLOAT_DRIVERS__", 1)
+#endif
+
+
+     IF( ny /= ldy ) &
+       CALL fftx_error__(' cfft3ds ', ' wrong dimensions: ny /= ldy ', 1 )
+     IF( howmany /= 1 ) &
+       CALL fftx_error__(' cfft3ds ', ' howmany different from 1, not yet implemented for FFTW3 ', 1 )
+
+     CALL lookup()
+
+     IF( ip == -1 ) THEN
+
+       !   no table exist for these parameters
+       !   initialize a new one
+
+       CALL init_plan()
+
+     END IF
+
+
+     IF ( isign > 0 ) THEN
+
+        !
+        !  k-direction ...
+        !
+
+        incx1 = ldx * ldy;  incx2 = 1;  m = 1
+
+        do i =1, nx
+           do j =1, ny
+              ii = i + ldx * (j-1)
+              if ( do_fft_z(ii) > 0) then
+#if defined(__HAVE_FLOAT_DRIVERS__)
+                 call sfftw_execute_dft( bw_plan( 3, ip), f( ii:), f( ii:) )
+#endif
+              end if
+           end do
+        end do
+
+        !
+        !  ... j-direction ...
+        !
+
+        incx1 = ldx;  incx2 = ldx*ldy;  m = nz
+
+        do i = 1, nx
+           if ( do_fft_y( i ) == 1 ) then
+#if defined(__HAVE_FLOAT_DRIVERS__)
+             call sfftw_execute_dft( bw_plan( 2, ip), f( i: ), f( i: ) )
+#endif
+           endif
+        enddo
+
+        !
+        !  ... i - direction
+        !
+
+        incx1 = 1;  incx2 = ldx;  m = ldy*nz
+
+#if defined(__HAVE_FLOAT_DRIVERS__)
+        call sfftw_execute_dft( bw_plan( 1, ip), f( 1: ), f( 1: ) )
+#endif
+
+     ELSE
+
+        !
+        !  i - direction ...
+        !
+
+        incx1 = 1;  incx2 = ldx;  m = ldy*nz
+
+#if defined(__HAVE_FLOAT_DRIVERS__)
+        call sfftw_execute_dft( fw_plan( 1, ip), f( 1: ), f( 1: ) )
+#endif
+
+        !
+        !  ... j-direction ...
+        !
+
+        incx1 = ldx;  incx2 = ldx*ldy;  m = nz
+
+        do i = 1, nx
+           if ( do_fft_y ( i ) == 1 ) then
+#if defined(__HAVE_FLOAT_DRIVERS__)
+             call sfftw_execute_dft( fw_plan( 2, ip), f( i: ), f( i: ) )
+#endif
+           endif
+        enddo
+
+        !
+        !  ... k-direction
+        !
+
+        incx1 = ldx * ny;  incx2 = 1;  m = 1
+ 
+        do i = 1, nx
+           do j = 1, ny
+              ii = i + ldx * (j-1)
+              if ( do_fft_z ( ii) > 0) then
+#if defined(__HAVE_FLOAT_DRIVERS__)
+                 call sfftw_execute_dft( fw_plan( 3, ip), f(ii:), f(ii:) )
+#endif
+              end if
+           end do
+        end do
+
+        tscale = 1.0/(nx * ny * nz)
+        call CSSCAL (ldx * ldy * nz, tscale, f(1), 1)
+
+     END IF
+     RETURN
+
+   CONTAINS
+
+
+     SUBROUTINE lookup()
+     ip = -1
+     DO i = 1, ndims
+       !   first check if there is already a table initialized
+       !   for this combination of parameters
+       IF( ( nx == dims(1,i) ) .and. ( ny == dims(2,i) ) .and. &
+           ( nz == dims(3,i) ) ) THEN
+         ip = i
+         EXIT
+       END IF
+     END DO
+     END SUBROUTINE lookup
+
+     SUBROUTINE init_plan()
+#if defined (__HAVE_FLOAT_DRIVERS__)
+       IF( C_ASSOCIATED(fw_plan( 1, icurrent)) ) &
+            CALL sfftw_destroy_plan( fw_plan( 1, icurrent) )
+       IF( C_ASSOCIATED(bw_plan( 1, icurrent)) ) &
+            CALL sfftw_destroy_plan( bw_plan( 1, icurrent) )
+       IF( C_ASSOCIATED(fw_plan( 2, icurrent)) ) &
+            CALL sfftw_destroy_plan( fw_plan( 2, icurrent) )
+       IF( C_ASSOCIATED(bw_plan( 2, icurrent)) ) &
+            CALL sfftw_destroy_plan( bw_plan( 2, icurrent) )
+       IF( C_ASSOCIATED(fw_plan( 3, icurrent)) ) &
+            CALL sfftw_destroy_plan( fw_plan( 3, icurrent) )
+       IF( C_ASSOCIATED(bw_plan( 3, icurrent)) ) &
+            CALL sfftw_destroy_plan( bw_plan( 3, icurrent) )
+       idir = -1
+       CALL sfftw_plan_many_dft( fw_plan( 1, icurrent), &
+            1, nx, ny*nz, f(1:), (/ldx, ldy, ldz/), 1, ldx, &
+            f(1:), (/ldx, ldy, ldz/), 1, ldx, idir, FFTW_ESTIMATE)
+       idir = 1
+       CALL sfftw_plan_many_dft( bw_plan( 1, icurrent), &
+            1, nx, ny*nz, f(1:), (/ldx, ldy, ldz/), 1, ldx, &
+            f(1:), (/ldx, ldy, ldz/), 1, ldx, idir, FFTW_ESTIMATE)
+       idir = -1
+       CALL sfftw_plan_many_dft( fw_plan( 2, icurrent), &
+            1, ny, nz, f(1:), (/ldx, ldy, ldz/), ldx, ldx*ldy, &
+            f(1:), (/ldx, ldy, ldz/), ldx, ldx*ldy, idir, FFTW_ESTIMATE)
+       idir = 1
+       CALL sfftw_plan_many_dft( bw_plan( 2, icurrent), &
+            1, ny, nz, f(1:), (/ldx, ldy, ldz/), ldx, ldx*ldy, &
+            f(1:), (/ldx, ldy, ldz/), ldx, ldx*ldy, idir, FFTW_ESTIMATE)
+       idir = -1
+       CALL sfftw_plan_many_dft( fw_plan( 3, icurrent), &
+            1, nz, 1, f(1:), (/ldx, ldy, ldz/), ldx*ldy, 1, &
+            f(1:), (/ldx, ldy, ldz/), ldx*ldy, 1, idir, FFTW_ESTIMATE)
+       idir = 1
+       CALL sfftw_plan_many_dft( bw_plan( 3, icurrent), &
+            1, nz, 1, f(1:), (/ldx, ldy, ldz/), ldx*ldy, 1, &
+            f(1:), (/ldx, ldy, ldz/), ldx*ldy, 1, idir, FFTW_ESTIMATE)
+#endif
+
+       dims(1,icurrent) = nx; dims(2,icurrent) = ny; dims(3,icurrent) = nz
+       ip = icurrent
+       icurrent = MOD( icurrent, ndims ) + 1
+     END SUBROUTINE init_plan
+
+   END SUBROUTINE cfft3ds_sp
 
 #endif
 !=----------------------------------------------------------------------=!

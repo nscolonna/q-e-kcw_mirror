@@ -75,6 +75,7 @@ MODULE fftw_interfaces
        INTEGER(KIND=C_INT) :: m, inc1, inc2
        COMPLEX(KIND=C_DOUBLE) :: z
      END SUBROUTINE fftw_inplace_drv_1d
+
      SUBROUTINE fftw_inplace_drv_3d( plan, m, z, inc1, inc2 ) &
           BIND(C,name="fftw_inplace_drv_3d")
        USE iso_c_binding
@@ -108,6 +109,33 @@ MODULE fftw_interfaces
        INTEGER(KIND=C_INT) :: ldz
        COMPLEX(KIND=C_FLOAT) :: z
      END SUBROUTINE float_fft_z_stick_single
+
+     SUBROUTINE float_fftw_inplace_drv_1d( plan, m, z, inc1, inc2 ) &
+          BIND(C,name="float_fftw_inplace_drv_1d")
+       USE iso_c_binding
+       TYPE(C_PTR) :: plan
+       INTEGER(KIND=C_INT) :: m, inc1, inc2
+       COMPLEX(KIND=C_FLOAT) :: z
+     END SUBROUTINE float_fftw_inplace_drv_1d
+
+     SUBROUTINE float_fftw_inplace_drv_3d( plan, m, z, inc1, inc2 ) &
+          BIND(C,name="float_fftw_inplace_drv_3d")
+       USE iso_c_binding
+       TYPE(C_PTR) :: plan
+       INTEGER(KIND=C_INT) :: m, inc1, inc2
+       COMPLEX(KIND=C_FLOAT) :: z
+     END SUBROUTINE float_fftw_inplace_drv_3d
+
+     SUBROUTINE float_create_plan_3d( plan, nx, ny, nz, i ) BIND(C,name="float_create_plan_3d")
+       USE iso_c_binding
+       TYPE(C_PTR) :: plan
+       INTEGER(KIND=C_INT) :: nx, ny, nz, i
+     END SUBROUTINE float_create_plan_3d
+
+     SUBROUTINE float_destroy_plan_3d( plan ) BIND(C,name="float_destroy_plan_3d")
+       USE iso_c_binding
+       TYPE(C_PTR) :: plan
+     END SUBROUTINE float_destroy_plan_3d
 
   END INTERFACE
 

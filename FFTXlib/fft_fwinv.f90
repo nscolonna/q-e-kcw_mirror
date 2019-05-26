@@ -327,15 +327,14 @@ SUBROUTINE invfft_y_sp( fft_kind, f, dfft, howmany )
 
   ELSE
 
-     CALL fftx_error__( ' invfft ', ' single precision serial 3D driver, not yet implemented ', 1 )
-!     IF( fft_kind == 'Rho' ) THEN
-!        CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
-!                        dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1)
-!     ELSE 
-!        CALL cfft3ds( f, dfft%nr1, dfft%nr2, dfft%nr3, &
-!                        dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , 1, &
-!                        dfft%isind, dfft%iplw )
-!     END IF
+     IF( fft_kind == 'Rho' ) THEN
+        CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
+                        dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1)
+     ELSE 
+        CALL cfft3ds( f, dfft%nr1, dfft%nr2, dfft%nr3, &
+                        dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , 1, &
+                        dfft%isind, dfft%iplw )
+     END IF
 
   END IF
 
@@ -408,15 +407,14 @@ SUBROUTINE fwfft_y_sp( fft_kind, f, dfft, howmany )
 
   ELSE
 
-     CALL fftx_error__( ' fwfft ', ' single precision serial 3D driver, not yet implemented ', 1 )
-!     IF( fft_kind == 'Rho' ) THEN
-!        CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
-!                        dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1)
-!     ELSE 
-!        CALL cfft3ds( f, dfft%nr1, dfft%nr2, dfft%nr3, &
-!                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1, &
-!                         dfft%isind, dfft%iplw )
-!     END IF
+     IF( fft_kind == 'Rho' ) THEN
+        CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
+                        dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1)
+     ELSE 
+        CALL cfft3ds( f, dfft%nr1, dfft%nr2, dfft%nr3, &
+                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1, &
+                         dfft%isind, dfft%iplw )
+     END IF
 
   END IF
 
@@ -479,19 +477,16 @@ SUBROUTINE invfft_b_sp( f, dfft, ia )
   IF( (dfft%np3( ia ) > 0) .AND. (dfft%np2( ia ) > 0) ) THEN
 
 #if defined(_OPENMP)
-
-     CALL fftx_error__( ' invfft_b ', ' single precision driver, not yet implemented ', 1 )
-!     CALL cft_b_omp( f, dfft%nr1, dfft%nr2, dfft%nr3, &
-!                        dfft%nr1x,dfft%nr2x,dfft%nr3x, &
-!                        dfft%imin2( ia ), dfft%imax2( ia ), &
-!                        dfft%imin3( ia ), dfft%imax3( ia ), 1 )
+     CALL cft_b_omp( f, dfft%nr1, dfft%nr2, dfft%nr3, &
+                        dfft%nr1x,dfft%nr2x,dfft%nr3x, &
+                        dfft%imin2( ia ), dfft%imax2( ia ), &
+                        dfft%imin3( ia ), dfft%imax3( ia ), 1 )
 
 #else
-     CALL fftx_error__( ' invfft_b ', ' single precision driver, not yet implemented ', 1 )
-!     CALL cft_b( f, dfft%nr1, dfft%nr2, dfft%nr3, &
-!                    dfft%nr1x,dfft%nr2x,dfft%nr3x, &
-!                    dfft%imin2( ia ), dfft%imax2( ia ), &
-!                    dfft%imin3( ia ), dfft%imax3( ia ), 1 )
+     CALL cft_b( f, dfft%nr1, dfft%nr2, dfft%nr3, &
+                    dfft%nr1x,dfft%nr2x,dfft%nr3x, &
+                    dfft%imin2( ia ), dfft%imax2( ia ), &
+                    dfft%imin3( ia ), dfft%imax3( ia ), 1 )
 #endif
 
   END IF
@@ -499,15 +494,13 @@ SUBROUTINE invfft_b_sp( f, dfft, ia )
 #else
 
 #if defined(_OPENMP)
-     CALL fftx_error__( ' invfft_b ', ' single precision driver, not yet implemented ', 1 )
-!  CALL cft_b_omp( f, dfft%nr1, dfft%nr2, dfft%nr3, &
-!                     dfft%nr1x,dfft%nr2x,dfft%nr3x, &
-!                     dfft%imin2( ia ), dfft%imax2( ia ), &
-!                     dfft%imin3( ia ), dfft%imax3( ia ), 1 )
+  CALL cft_b_omp( f, dfft%nr1, dfft%nr2, dfft%nr3, &
+                     dfft%nr1x,dfft%nr2x,dfft%nr3x, &
+                     dfft%imin2( ia ), dfft%imax2( ia ), &
+                     dfft%imin3( ia ), dfft%imax3( ia ), 1 )
 #else
-     CALL fftx_error__( ' invfft_b ', ' single precision driver, not yet implemented ', 1 )
-!  CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
-!                  dfft%nr1x,dfft%nr2x,dfft%nr3x, 1, 1)
+  CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
+                  dfft%nr1x,dfft%nr2x,dfft%nr3x, 1, 1)
 #endif
 
 #endif
