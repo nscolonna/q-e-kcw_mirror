@@ -529,8 +529,8 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
 !dir$ attributes align: 4096 :: v, dqgbt,qv
 #endif
 #endif
-      COMPLEX(DP), ALLOCATABLE :: v(:)
-      COMPLEX(DP), ALLOCATABLE:: dqgbt(:,:)
+      COMPLEX(SP), ALLOCATABLE :: v(:)
+      COMPLEX(SP), ALLOCATABLE:: dqgbt(:,:)
       COMPLEX(SP), ALLOCATABLE :: qv(:)
       COMPLEX(SP), ALLOCATABLE :: fg1(:), fg2(:)
 !
@@ -817,11 +817,11 @@ SUBROUTINE rhov(irb,eigrb,rhovan,rhog,rhor)
       COMPLEX(DP) :: ci, fp, fm, ca
 #if defined(__INTEL_COMPILER)
 #if __INTEL_COMPILER  >= 1300
-!dir$ attributes align: 4096 :: qgbt, v, qv
+!dir$ attributes align: 4096 :: qgbt, v, qv, fg1, fg2
 #endif
 #endif
-      COMPLEX(DP), ALLOCATABLE :: qgbt(:,:)
-      COMPLEX(DP), ALLOCATABLE :: v(:)
+      COMPLEX(SP), ALLOCATABLE :: qgbt(:,:)
+      COMPLEX(SP), ALLOCATABLE :: v(:)
       COMPLEX(SP), ALLOCATABLE :: qv(:)
       COMPLEX(SP), ALLOCATABLE :: fg1(:), fg2(:)
 

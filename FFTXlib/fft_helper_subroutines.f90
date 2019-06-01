@@ -16,6 +16,9 @@ MODULE fft_helper_subroutines
   INTERFACE fftx_psi2c_gamma
     MODULE PROCEDURE fftx_psi2c_gamma_sp, fftx_psi2c_gamma_dp
   END INTERFACE
+  INTERFACE fftx_add_threed2oned_gamma
+    MODULE PROCEDURE fftx_add_threed2oned_gamma_dp, fftx_add_threed2oned_gamma_sp
+  END INTERFACE
 
 CONTAINS
 
@@ -458,7 +461,7 @@ CONTAINS
      END IF
   END SUBROUTINE
 
-  SUBROUTINE fftx_add_threed2oned_gamma( desc, vin, vout1, vout2 )
+  SUBROUTINE fftx_add_threed2oned_gamma_dp( desc, vin, vout1, vout2 )
      USE fft_param
      USE fft_types,      ONLY : fft_type_descriptor
      TYPE(fft_type_descriptor), INTENT(in) :: desc
@@ -480,6 +483,30 @@ CONTAINS
         END DO
      END IF
   END SUBROUTINE
+
+  SUBROUTINE fftx_add_threed2oned_gamma_sp( desc, vin, vout1, vout2 )
+     USE fft_param
+     USE fft_types,      ONLY : fft_type_descriptor
+     TYPE(fft_type_descriptor), INTENT(in) :: desc
+     complex(DP), INTENT(INOUT) :: vout1(:)
+     complex(DP), OPTIONAL, INTENT(INOUT) :: vout2(:)
+     complex(SP), INTENT(IN) :: vin(:)
+     COMPLEX(DP) :: fp, fm
+     INTEGER :: ig
+     IF( PRESENT( vout2 ) ) THEN
+        DO ig=1,desc%ngm
+           fp=vin(desc%nl(ig))+vin(desc%nlm(ig))
+           fm=vin(desc%nl(ig))-vin(desc%nlm(ig))
+           vout1(ig) = vout1(ig) + 0.5d0*CMPLX( DBLE(fp),AIMAG(fm),kind=DP)
+           vout2(ig) = vout2(ig) + 0.5d0*CMPLX(AIMAG(fp),-DBLE(fm),kind=DP)
+        END DO
+     ELSE
+        DO ig=1,desc%ngm
+           vout1(ig) = vout1(ig) + vin(desc%nl(ig))
+        END DO
+     END IF
+  END SUBROUTINE
+
 
   SUBROUTINE fftx_threed2oned( desc, vin, vout1, vout2 )
      USE fft_param

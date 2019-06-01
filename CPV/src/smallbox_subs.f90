@@ -445,7 +445,7 @@ CONTAINS
      &              CALL errore('box2grid','ibig2 wrong',ibig2)
                ibig2=ibig2-dfftp%my_i0r2p
                IF ( ibig2 .GT. 0 .AND. ibig2 .LE. ( dfftp%my_nr2p ) ) THEN
-
+!$omp critical
                   DO ir1=1,dfftb%nr1
                      ibig1=irb(1)+ir1-1
                      ibig1=1+MOD(ibig1-1,dfftp%nr1)
@@ -453,14 +453,13 @@ CONTAINS
      &                    CALL errore('box2grid','ibig1 wrong',ibig1)
                      ibig=ibig1+(ibig2-1)*dfftp%nr1x+(ibig3-1)*dfftp%nr1x*dfftp%my_nr2p
                      ir=ir1+(ir2-1)*dfftb%nr1x+(ir3-1)*dfftb%nr1x*dfftb%nr2x
-!$omp critical
                      IF( nfft == 1 ) THEN
                         vr(ibig) = vr(ibig)+REAL(qv(ir))
                      ELSE
                         vr(ibig) = vr(ibig)+AIMAG(qv(ir))
                      END IF
-!$omp end critical
                   END DO
+!$omp end critical
                END IF
             END DO
          END IF
@@ -486,7 +485,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER, INTENT(in):: nfft, irb(3)
       COMPLEX(sp), INTENT(in):: qv(dfftb%nnr)
-      COMPLEX(dp), INTENT(inout):: vr(dfftp%nnr)
+      COMPLEX(sp), INTENT(inout):: vr(dfftp%nnr)
 !
       INTEGER ir1, ir2, ir3, ir, ibig1, ibig2, ibig3, ibig
       INTEGER me
@@ -510,7 +509,7 @@ CONTAINS
      &              CALL errore('box2grid','ibig2 wrong',ibig2)
                ibig2=ibig2-dfftp%my_i0r2p
                IF ( ibig2 .GT. 0 .AND. ibig2 .LE. ( dfftp%my_nr2p ) ) THEN
-
+!$omp critical
                   DO ir1=1,dfftb%nr1
                      ibig1=irb(1)+ir1-1
                      ibig1=1+MOD(ibig1-1,dfftp%nr1)
@@ -518,14 +517,13 @@ CONTAINS
      &                    CALL errore('box2grid','ibig1 wrong',ibig1)
                      ibig=ibig1+(ibig2-1)*dfftp%nr1x+(ibig3-1)*dfftp%nr1x*dfftp%my_nr2p
                      ir=ir1+(ir2-1)*dfftb%nr1x+(ir3-1)*dfftb%nr1x*dfftb%nr2x
-!$omp critical
                      IF( nfft == 1 ) THEN
                         vr(ibig) = vr(ibig)+REAL(qv(ir))
                      ELSE
                         vr(ibig) = vr(ibig)+AIMAG(qv(ir))
                      END IF
-!$omp end critical
                   END DO
+!$omp end critical
                END IF
             END DO
          END IF
@@ -572,7 +570,7 @@ CONTAINS
      &              CALL errore('box2grid2','ibig2 wrong',ibig2)
                ibig2=ibig2-dfftp%my_i0r2p
                IF (ibig2.GT.0.AND.ibig2.LE. dfftp%my_nr2p ) THEN
-
+!$omp critical
                   DO ir1=1,dfftb%nr1
                      ibig1=irb(1)+ir1-1
                      ibig1=1+MOD(ibig1-1,dfftp%nr1)
@@ -582,6 +580,7 @@ CONTAINS
                      ir=ir1+(ir2-1)*dfftb%nr1x+(ir3-1)*dfftb%nr1x*dfftb%nr2x
                      v(ibig) = v(ibig)+qv(ir)
                   END DO
+!$omp end critical
                END IF
             END DO
          END IF
@@ -606,7 +605,7 @@ CONTAINS
       !
       INTEGER, INTENT(in):: irb(3)
       COMPLEX(sp), INTENT(in):: qv(dfftb%nnr)
-      COMPLEX(dp), INTENT(inout):: v(dfftp%nnr)
+      COMPLEX(sp), INTENT(inout):: v(dfftp%nnr)
 !
       INTEGER ir1, ir2, ir3, ir, ibig1, ibig2, ibig3, ibig
       INTEGER me
@@ -628,7 +627,7 @@ CONTAINS
      &              CALL errore('box2grid2','ibig2 wrong',ibig2)
                ibig2=ibig2-dfftp%my_i0r2p
                IF (ibig2.GT.0.AND.ibig2.LE. dfftp%my_nr2p ) THEN
-
+!$omp critical
                   DO ir1=1,dfftb%nr1
                      ibig1=irb(1)+ir1-1
                      ibig1=1+MOD(ibig1-1,dfftp%nr1)
@@ -638,6 +637,7 @@ CONTAINS
                      ir=ir1+(ir2-1)*dfftb%nr1x+(ir3-1)*dfftb%nr1x*dfftb%nr2x
                      v(ibig) = v(ibig)+qv(ir)
                   END DO
+!$omp end critical
                END IF
             END DO
          END IF

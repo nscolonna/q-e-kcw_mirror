@@ -195,7 +195,7 @@
 ! local
       integer :: iss, ix, ig, is, ia, nfft, isa
       real(dp) :: fac, res
-      complex(dp) ci, facg
+      complex(dp) facg
       complex(sp), allocatable :: qv(:)
       complex(sp), allocatable :: fg1(:), fg2(:)
       real(dp), allocatable :: fcc(:,:)
@@ -206,12 +206,11 @@
 #endif
 !
       call start_clock( 'forcecc' )
-      ci = (0.d0,1.d0)
 
       fac = omega/DBLE(dfftp%nr1*dfftp%nr2*dfftp%nr3*nspin)
 
 !$omp parallel default(none) &      
-!$omp          shared(nsp, na, ngb, eigrb, dfftb, irb, ci, rhocb, &
+!$omp          shared(nsp, na, ngb, eigrb, dfftb, irb, rhocb, &
 !$omp                 gxb, nat, fac, upf, vxc, nspin, tpibab, fion1 ) &
 !$omp          private(mytid, ntids, is, ia, nfft, ig, isa, qv, fg1, fg2, itid, res, ix, fcc, facg, iss )
 
@@ -342,8 +341,7 @@
       real(dp), intent(out)  :: rhoc(dfftp%nnr)
 ! local
       integer nfft, ig, is, ia, isa
-      complex(dp) ci
-      complex(dp), allocatable :: wrk1(:)
+      complex(sp), allocatable :: wrk1(:)
       complex(sp), allocatable :: qv(:)
       complex(sp), allocatable :: fg1(:), fg2(:)
 
@@ -353,13 +351,12 @@
 #endif
 !
       call start_clock( 'set_cc' )
-      ci=(0.d0,1.d0)
 
       allocate( wrk1 ( dfftp%nnr ) )
-      wrk1 (:) = (0.d0, 0.d0)
+      wrk1 (:) = (0.0, 0.0)
 !
 !$omp parallel default(none) &      
-!$omp          shared(nsp, na, ngb, eigrb, dfftb, irb, ci, rhocb, &
+!$omp          shared(nsp, na, ngb, eigrb, dfftb, irb, rhocb, &
 !$omp                 nat, upf, wrk1 ) &
 !$omp          private(mytid, ntids, is, ia, nfft, ig, isa, qv, fg1, fg2, itid )
 
@@ -428,12 +425,27 @@
 
 !$omp end parallel
 
-      call dcopy( dfftp%nnr, wrk1, 2, rhoc, 1 )
+      call copy( rhoc, wrk1 )
 
       deallocate( wrk1 )
 !
       call stop_clock( 'set_cc' )
 !
       return
+
+   contains
+
+      SUBROUTINE copy(rhoc,wsp,wdp)
+         real(dp) :: rhoc(:)
+         complex(dp), optional :: wdp(:)
+         complex(sp), optional :: wsp(:)
+         if(present(wdp)) then 
+            call dcopy( dfftp%nnr, wdp, 2, rhoc, 1 )
+         else if(present(wsp)) then
+            call scopy( dfftp%nnr, wsp, 2, rhoc, 1 )
+         endif
+         RETURN
+      END SUBROUTINE 
+
    end subroutine set_cc
 

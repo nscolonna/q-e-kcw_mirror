@@ -44,7 +44,7 @@
 ! local
       INTEGER isup,isdw,iss, iv,ijv,jv, ik, nfft, isa, ia, is, ig
       REAL(DP)  fvan(3,nat,nvb), fac, fac1, fac2, res
-      COMPLEX(DP) ci, facg1, facg2
+      COMPLEX(DP)  facg1, facg2
       COMPLEX(SP), ALLOCATABLE :: fg1(:), fg2(:)
       COMPLEX(SP), ALLOCATABLE :: qv(:)
       INTEGER :: na_bgrp, ia_bgrp
@@ -57,14 +57,13 @@
 !
       IF ( dfftb%nr1==0 .OR. dfftb%nr2==0 .OR. dfftb%nr3==0 ) RETURN
       CALL start_clock( 'newd' )
-      ci=(0.d0,1.d0)
       fac=omegab/DBLE(dfftb%nr1*dfftb%nr2*dfftb%nr3)
       deeq (:,:,:,:) = 0.d0
       fvan (:,:,:) = 0.d0
 
 
 !$omp parallel default(none) &
-!$omp          shared(nvb, na, ngb, nh, qgb, eigrb, dfftb, irb, vr, ci, deeq, &
+!$omp          shared(nvb, na, ngb, nh, qgb, eigrb, dfftb, irb, vr, deeq, &
 !$omp                 fac, nspin, my_bgrp_id, nbgrp ) &
 !$omp          private(mytid, ntids, is, ia, nfft, iv, jv, ijv, ig, isa, qv, fg1, fg2, itid, res, iss )
 
@@ -166,7 +165,7 @@
          !     -----------------------------------------------------------------
 
 !$omp parallel default(none) &
-!$omp          shared(nvb, na, ngb, nh, qgb, eigrb, dfftb, irb, vr, ci, deeq, &
+!$omp          shared(nvb, na, ngb, nh, qgb, eigrb, dfftb, irb, vr, deeq, &
 !$omp                 fac, nspin, rhovan, tpibab, gxb, fvan, my_bgrp_id, nbgrp ) &
 !$omp          private(mytid, ntids, is, ia, ik, nfft, iv, jv, ijv, ig, isa, qv, itid, res, iss, &
 !$omp                  fac1, fac2, facg1, facg2, fg1, fg2 )
