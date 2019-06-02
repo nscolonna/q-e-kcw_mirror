@@ -19,6 +19,9 @@ MODULE fft_helper_subroutines
   INTERFACE fftx_add_threed2oned_gamma
     MODULE PROCEDURE fftx_add_threed2oned_gamma_dp, fftx_add_threed2oned_gamma_sp
   END INTERFACE
+  INTERFACE fftx_copy
+    MODULE PROCEDURE fftx_copy_z2d, fftx_copy_c2d, fftx_copy_c2s
+  END INTERFACE
 
 CONTAINS
 
@@ -713,6 +716,37 @@ CONTAINS
          3(1X,I5),2X,3(1X,I5),2X,3(1X,I5) )
 1010  FORMAT(3X, 'Array leading dimensions ( nr1x, nr2x, nr3x )   = ', 3(1X,I5))
 1020  FORMAT(3X, 'Local number of cell to store the grid ( nrxx ) = ', 1X, I9 )
+     RETURN
+  END SUBROUTINE
+
+  SUBROUTINE fftx_copy_z2d( desc, z, d )
+     USE fft_param
+     USE fft_types,      ONLY : fft_type_descriptor
+     TYPE(fft_type_descriptor), INTENT(in) :: desc
+     REAL(DP)    :: d(:)
+     COMPLEX(DP) :: z(:)
+     CALL dcopy( desc%nnr, z, 2, d, 1 )
+     RETURN
+  END SUBROUTINE
+  SUBROUTINE fftx_copy_c2s( desc, c, s )
+     USE fft_param
+     USE fft_types,      ONLY : fft_type_descriptor
+     TYPE(fft_type_descriptor), INTENT(in) :: desc
+     REAL(SP)    :: s(:)
+     COMPLEX(SP) :: c(:)
+     CALL scopy( desc%nnr, c, 2, s, 1 )
+     RETURN
+  END SUBROUTINE
+  SUBROUTINE fftx_copy_c2d( desc, c, d )
+     USE fft_param
+     USE fft_types,      ONLY : fft_type_descriptor
+     TYPE(fft_type_descriptor), INTENT(in) :: desc
+     REAL(DP)    :: d(:)
+     COMPLEX(SP) :: c(:)
+     INTEGER :: i
+     DO i = 1, desc%nnr
+       d(i) = DBLE( REAL( c(i) ) )
+     END DO
      RETURN
   END SUBROUTINE
 

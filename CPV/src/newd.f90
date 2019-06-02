@@ -45,6 +45,8 @@
       INTEGER isup,isdw,iss, iv,ijv,jv, ik, nfft, isa, ia, is, ig
       REAL(DP)  fvan(3,nat,nvb), fac, fac1, fac2, res
       COMPLEX(DP)  facg1, facg2
+      !COMPLEX(DP), ALLOCATABLE :: fg1(:), fg2(:)
+      !COMPLEX(DP), ALLOCATABLE :: qv(:)
       COMPLEX(SP), ALLOCATABLE :: fg1(:), fg2(:)
       COMPLEX(SP), ALLOCATABLE :: qv(:)
       INTEGER :: na_bgrp, ia_bgrp

@@ -182,6 +182,7 @@
          !
          IF( iopt == 0 ) THEN
             !
+            !CALL ortho_iterate( iter, diff, s, nx0, rhod, x0, nx0, sig, rhoa, rhos, tau, nss, descla)
             CALL ortho_iterate_sp( iter, diff, s, nx0, rhod, x0, nx0, sig, rhoa, rhos, tau, nss, descla)
             !
          ELSE

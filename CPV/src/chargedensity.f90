@@ -529,6 +529,10 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
 !dir$ attributes align: 4096 :: v, dqgbt,qv
 #endif
 #endif
+      !COMPLEX(DP), ALLOCATABLE :: v(:)
+      !COMPLEX(DP), ALLOCATABLE:: dqgbt(:,:)
+      !COMPLEX(DP), ALLOCATABLE :: qv(:)
+      !COMPLEX(DP), ALLOCATABLE :: fg1(:), fg2(:)
       COMPLEX(SP), ALLOCATABLE :: v(:)
       COMPLEX(SP), ALLOCATABLE:: dqgbt(:,:)
       COMPLEX(SP), ALLOCATABLE :: qv(:)
@@ -820,6 +824,10 @@ SUBROUTINE rhov(irb,eigrb,rhovan,rhog,rhor)
 !dir$ attributes align: 4096 :: qgbt, v, qv, fg1, fg2
 #endif
 #endif
+      !COMPLEX(DP), ALLOCATABLE :: qgbt(:,:)
+      !COMPLEX(DP), ALLOCATABLE :: v(:)
+      !COMPLEX(DP), ALLOCATABLE :: qv(:)
+      !COMPLEX(DP), ALLOCATABLE :: fg1(:), fg2(:)
       COMPLEX(SP), ALLOCATABLE :: qgbt(:,:)
       COMPLEX(SP), ALLOCATABLE :: v(:)
       COMPLEX(SP), ALLOCATABLE :: qv(:)

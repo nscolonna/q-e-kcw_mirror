@@ -196,6 +196,8 @@
       integer :: iss, ix, ig, is, ia, nfft, isa
       real(dp) :: fac, res
       complex(dp) facg
+      !complex(dp), allocatable :: qv(:)
+      !complex(dp), allocatable :: fg1(:), fg2(:)
       complex(sp), allocatable :: qv(:)
       complex(sp), allocatable :: fg1(:), fg2(:)
       real(dp), allocatable :: fcc(:,:)
@@ -332,6 +334,7 @@
       use core,              only: rhocb
       use fft_interfaces,    only: invfft
       use fft_base,          only: dfftb, dfftp
+      use fft_helper_subroutines, only: fftx_copy
 
       implicit none
 ! input
@@ -341,6 +344,9 @@
       real(dp), intent(out)  :: rhoc(dfftp%nnr)
 ! local
       integer nfft, ig, is, ia, isa
+      !complex(dp), allocatable :: wrk1(:)
+      !complex(dp), allocatable :: qv(:)
+      !complex(dp), allocatable :: fg1(:), fg2(:)
       complex(sp), allocatable :: wrk1(:)
       complex(sp), allocatable :: qv(:)
       complex(sp), allocatable :: fg1(:), fg2(:)
@@ -425,7 +431,7 @@
 
 !$omp end parallel
 
-      call copy( rhoc, wrk1 )
+      call fftx_copy( dfftp, wrk1, rhoc )
 
       deallocate( wrk1 )
 !
@@ -433,19 +439,5 @@
 !
       return
 
-   contains
-
-      SUBROUTINE copy(rhoc,wsp,wdp)
-         real(dp) :: rhoc(:)
-         complex(dp), optional :: wdp(:)
-         complex(sp), optional :: wsp(:)
-         if(present(wdp)) then 
-            call dcopy( dfftp%nnr, wdp, 2, rhoc, 1 )
-         else if(present(wsp)) then
-            call scopy( dfftp%nnr, wsp, 2, rhoc, 1 )
-         endif
-         RETURN
-      END SUBROUTINE 
 
    end subroutine set_cc
-
