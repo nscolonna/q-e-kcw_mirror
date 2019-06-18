@@ -583,13 +583,18 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
          DO i=1,3
             DO j=1,3
 
-               v(:) = (0.d0, 0.d0)
 
 !$omp parallel default(none) &
 !$omp          shared(nvb, na, ngb, nh, eigrb, dfftb, irb, v, &
-!$omp                 ci, i, j, dqgb, qgb, nhm, rhovan, drhovan ) &
+!$omp                 ci, i, j, dqgb, qgb, nhm, rhovan, drhovan, drhor, dfftp ) &
 !$omp          private(mytid, ntids, is, ia, nfft, ifft, iv, jv, ijv, ig, iss, isa, &
-!$omp                  qv, fg1, fg2, itid, dqgbt, dsumt, asumt )
+!$omp                  qv, fg1, fg2, itid, dqgbt, dsumt, asumt, ir )
+
+!$omp do
+               DO ir = 1, SIZE(v)
+                  v(ir) = (0.0, 0.0)
+               END DO
+!$omp end do
 
                ALLOCATE( qv( dfftb%nnr ) )
                ALLOCATE( dqgbt( ngb, 2 ) )
@@ -683,14 +688,16 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
                DEALLOCATE( dqgbt )
                DEALLOCATE( qv )
 !
-!$omp end parallel
-
-
-               iss = 1
-
+!$omp barrier
+!$omp do
                DO ir=1,dfftp%nnr
                   drhor(ir,iss,i,j) = drhor(ir,iss,i,j) + DBLE(v(ir))
                END DO
+!$omp end do
+
+!$omp end parallel
+!
+               iss = 1
 !
                CALL fwfft( 'Rho', v, dfftp )
                CALL fftx_add_threed2oned_gamma( dfftp, v, drhog(:,iss,i,j) )
@@ -874,9 +881,11 @@ SUBROUTINE rhov(irb,eigrb,rhovan,rhog,rhor)
          iss=1
          isa=1
 
-!$omp workshare
-         v (:) = (0.d0, 0.d0)
-!$omp end workshare
+!$omp do
+         DO ir = 1, SIZE(v)
+            v(ir) = (0.0, 0.0)
+         END DO
+!$omp end do
 
 #if defined(_OPENMP)
          mytid = omp_get_thread_num()  ! take the thread ID
@@ -976,15 +985,17 @@ SUBROUTINE rhov(irb,eigrb,rhovan,rhog,rhor)
          !
          !  rhor(r) = total (smooth + US) charge density in real space
          !
-!$omp end parallel
-
-         iss = 1
-
+!$omp barrier
+!$omp do
          DO ir=1,dfftp%nnr
             rhor(ir,iss)=rhor(ir,iss)+DBLE(v(ir))        
          END DO
+!$omp end do
 
+!$omp end parallel
 !
+         iss = 1
+
          IF( iverbosity > 1 ) THEN
             ca = SUM(v)
 
