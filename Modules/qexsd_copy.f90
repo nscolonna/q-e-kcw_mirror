@@ -21,8 +21,9 @@ MODULE qexsd_copy
   !
   PUBLIC:: qexsd_copy_geninfo, qexsd_copy_parallel_info, qexsd_copy_dim, &
        qexsd_copy_atomic_species, qexsd_copy_atomic_structure, &
-       qexsd_copy_symmetry, &
-       qexsd_copy_basis_set, qexsd_copy_dft, qexsd_copy_band_structure
+       qexsd_copy_symmetry, qexsd_copy_algorithmic_info, &
+       qexsd_copy_basis_set, qexsd_copy_dft, qexsd_copy_band_structure, &
+       qexsd_copy_efield
   !
 CONTAINS
   !-------------------------------------------------------------------------------
@@ -87,8 +88,8 @@ CONTAINS
     ELSE IF ( band_structure%nbnd_up_ispresent .AND. band_structure%nbnd_dw_ispresent) THEN
        nbnd = ( band_structure%nbnd_up + band_structure%nbnd_dw )
     ELSE 
-       CALL errore('init_vars_from_schema: check xml file !!', &
-                   'nbnd or nbnd_up+nbnd_dw are missing in band_structure element', 1)
+       CALL errore('qexsd_copy_band_structure', &
+                   'nbnd or nbnd_up+nbnd_dw missing in xml file', 1)
     END IF     
     lsda  =    band_structure%lsda
     IF ( lsda ) THEN
@@ -100,7 +101,7 @@ CONTAINS
   !
   !--------------------------------------------------------------------------
   SUBROUTINE qexsd_copy_atomic_species (atomic_species, nsp, atm, amass, &
-       psfile, pseudo_dir)
+       starting_magnetization, angle1, angle2, psfile, pseudo_dir)
     !---------------------------------------------------------------------------    !
     USE qes_types_module, ONLY : atomic_species_type
     !
@@ -109,8 +110,10 @@ CONTAINS
     TYPE ( atomic_species_type ),INTENT(IN)    :: atomic_species
     INTEGER, INTENT(out) :: nsp
     CHARACTER(LEN=*), INTENT(out) :: atm(:)
-    CHARACTER(LEN=*), OPTIONAL, INTENT(out) :: psfile(:), pseudo_dir
     REAL(dp), INTENT(out) :: amass(:)
+    REAL(dp), OPTIONAL, INTENT(out) :: starting_magnetization(:), &
+         angle1(:), angle2(:)
+    CHARACTER(LEN=*), OPTIONAL, INTENT(out) :: psfile(:), pseudo_dir
     !
     INTEGER :: isp
     !
@@ -122,6 +125,21 @@ CONTAINS
        atm(isp) = TRIM ( atomic_species%species(isp)%name )
        IF ( PRESENT (psfile) ) THEN
           psfile(isp) = TRIM ( atomic_species%species(isp)%pseudo_file) 
+       END IF
+       IF ( PRESENT (starting_magnetization) ) THEN
+          IF ( atomic_species%species(isp)%starting_magnetization_ispresent) THEN
+             starting_magnetization(isp) = atomic_species%species(isp)%starting_magnetization
+          END IF
+       END IF
+       IF ( PRESENT (angle1) ) THEN
+          IF ( atomic_species%species(isp)%spin_teta_ispresent ) THEN 
+             angle1(isp) =  atomic_species%species(isp)%spin_teta 
+          END IF
+       END IF
+       IF ( PRESENT (angle2) ) THEN
+          IF ( atomic_species%species(isp)%spin_phi_ispresent ) THEN
+             angle2(isp) = atomic_species%species(isp)%spin_phi
+          END IF
        END IF
     END DO
     ! 
@@ -287,11 +305,10 @@ CONTAINS
   !-----------------------------------------------------------------------
   SUBROUTINE qexsd_copy_dft ( dft_obj, nsp, atm, &
        dft_name, nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter, &
-       exxdiv_treatment, x_gamma_extrapolation, ecutvcut, &
+       exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, &
        lda_plus_U, lda_plus_U_kind, U_projection, Hubbard_l, Hubbard_lmax, &
        Hubbard_U, Hubbard_J0, Hubbard_alpha, Hubbard_beta, Hubbard_J, &
-       vdw_corr,  llondon, ts_vdw, lxdm, inlc, vdw_table_name, scal6, &
-       lon_rcut, vdw_isolated)
+       vdw_corr, vdw_table_name, scal6, lon_rcut, vdw_isolated )
     !-------------------------------------------------------------------
     ! 
     USE qes_types_module, ONLY : dft_type
@@ -306,7 +323,7 @@ CONTAINS
     ! so that they do not forget their default value (if any)
     CHARACTER(LEN=*), INTENT(inout) :: exxdiv_treatment
     REAL(dp), INTENT(inout) :: ecutfock, exx_fraction, screening_parameter, &
-         ecutvcut
+         ecutvcut, local_thr
     INTEGER, INTENT(inout) :: nq1, nq2, nq3
     LOGICAL, INTENT(inout) :: x_gamma_extrapolation
     !
@@ -317,10 +334,8 @@ CONTAINS
     REAL(dp), INTENT(inout) :: Hubbard_U(:), Hubbard_J0(:), Hubbard_J(:,:), &
          Hubbard_alpha(:), Hubbard_beta(:)
     !
-    CHARACTER(LEN=256), INTENT(out) :: vdw_corr
     CHARACTER(LEN=256), INTENT(inout) :: vdw_table_name
-    LOGICAL, INTENT(out) :: llondon, ts_vdw, lxdm
-    INTEGER, INTENT(inout):: inlc
+    CHARACTER(LEN=*), INTENT(out) :: vdw_corr
     REAL(dp), INTENT(inout) :: scal6, lon_rcut
     LOGICAL, INTENT(inout) :: vdw_isolated
     !
@@ -339,6 +354,11 @@ CONTAINS
        exxdiv_treatment = dft_obj%hybrid%exxdiv_treatment
        x_gamma_extrapolation = dft_obj%hybrid%x_gamma_extrapolation
        ecutvcut = dft_obj%hybrid%ecutvcut
+       IF (dft_obj%hybrid%localization_threshold_ispresent) THEN
+          local_thr = dft_obj%hybrid%localization_threshold  
+       ELSE 
+          local_thr = 0._DP 
+      END IF 
     END IF
     !
     lda_plus_u = dft_obj%dftU_ispresent 
@@ -424,56 +444,18 @@ CONTAINS
       ELSE
          vdw_corr = ''
       END IF
-      SELECT CASE( TRIM( dft_obj%vdW%vdw_corr ) )
-         !
-      CASE( 'grimme-d2', 'Grimme-D2', 'DFT-D', 'dft-d' )
-         !
-         llondon= .TRUE.
-         ts_vdw= .FALSE.
-         lxdm   = .FALSE.
-         !
-      CASE( 'TS', 'ts', 'ts-vdw', 'ts-vdW', 'tkatchenko-scheffler' )
-         !
-         llondon= .FALSE.
-         ts_vdw= .TRUE.
-         lxdm   = .FALSE.
-         !
-      CASE( 'XDM', 'xdm' )
-         !
-         llondon= .FALSE.
-         ts_vdw= .FALSE.
-         lxdm   = .TRUE.
-         !
-      CASE DEFAULT
-         !
-         llondon= .FALSE.
-         ts_vdw = .FALSE.
-         lxdm   = .FALSE.
-         !
-      END SELECT
+      
+      ! the following lines set vdw_table_name, if not already set before
+      ! (the latter option, added by Yang Jiao, is useful for postprocessing)
       IF ( dft_obj%vdW_ispresent ) THEN 
-         SELECT CASE ( TRIM (dft_obj%vdW%non_local_term))
-         CASE ('vdw1')  
-            inlc = 1
-         CASE ('vdw2') 
-            inlc = 2
-         CASE ('vv10' ) 
-            inlc = 3 
-         CASE ( 'vdW-DF-x') 
-            inlc = 4
-         CASE ( 'vdW-DF-y')
-            inlc = 5
-         CASE ( 'vdW-DF-z')
-            inlc = 6
-         CASE default 
-            inlc = 0 
-         END SELECT
-         IF (inlc == 0 ) THEN 
-            vdw_table_name = ' '
-         ELSE IF ( inlc == 3 ) THEN 
-            vdw_table_name = 'rVV10_kernel_table'
-         ELSE
-            vdw_table_name = 'vdW_kernel_table'
+         IF ( vdw_table_name == ' ' ) THEN 
+            IF ( TRIM (dft_obj%vdW%non_local_term) == 'vv10') THEN
+               vdw_table_name = 'rVV10_kernel_table'
+            ELSE IF ( dft_obj%vdW%non_local_term(1:3) == 'vdw') THEN
+               vdw_table_name = 'vdW_kernel_table'
+            ELSE
+               vdw_table_name = ''
+            END IF
          END IF
          IF (dft_obj%vdW%london_s6_ispresent ) THEN 
             scal6 = dft_obj%vdW%london_s6
@@ -493,6 +475,8 @@ CONTAINS
          isk, natomwfc, nbnd_up, nbnd_dw, nelec, wk, wg, ef, ef_up, ef_dw, et )
       !------------------------------------------------------------------------
       !
+      ! IMPORTANT NOTICE: IN LSDA CASE CONVERTS TO "PWSCF" LOGIC for k-points
+      !
       USE qes_types_module, ONLY : band_structure_type
       !
       IMPLICIT NONE
@@ -507,6 +491,14 @@ CONTAINS
       lsda = band_struct_obj%lsda
       nkstot = band_struct_obj%nks 
       IF ( lsda) THEN 
+         ! FIXME: make this consistent with qexsd_copy_dim
+         IF (band_struct_obj%nbnd_ispresent) THEN 
+            nbnd  = band_struct_obj%nbnd / 2
+         ELSE IF ( band_struct_obj%nbnd_up_ispresent .AND. band_struct_obj%nbnd_dw_ispresent ) THEN 
+            nbnd = (band_struct_obj%nbnd_up + band_struct_obj%nbnd_dw)/2 
+         ELSE 
+            CALL errore ('qexsd_copy_band_structure: ','both nbnd and nbnd_up+nbnd_dw missing', 1)  
+         END IF 
          nkstot = nkstot * 2 
          isk(1:nkstot/2) = 1
          isk(nkstot/2+1:nkstot) = 2 
@@ -515,7 +507,6 @@ CONTAINS
       END IF
       ! 
       nelec = band_struct_obj%nelec
-      nbnd  = band_struct_obj%nbnd 
       natomwfc = band_struct_obj%num_of_atomic_wfc
       IF ( band_struct_obj%fermi_energy_ispresent) THEN 
          ef = band_struct_obj%fermi_energy
@@ -530,21 +521,25 @@ CONTAINS
          ef_up = 0.d0
          ef_dw = 0.d0
       END IF
+      
+      IF ( band_struct_obj%lsda) THEN
+         IF ( band_struct_obj%nbnd_up_ispresent .AND. band_struct_obj%nbnd_dw_ispresent) THEN
+            nbnd_up = band_struct_obj%nbnd_up
+            nbnd_dw = band_struct_obj%nbnd_dw 
+         ELSE IF ( band_struct_obj%nbnd_up_ispresent ) THEN 
+            nbnd_up = band_struct_obj%nbnd_up
+            nbnd_dw = band_struct_obj%ks_energies(ik)%eigenvalues%size - nbnd_up
+         ELSE IF ( band_struct_obj%nbnd_dw_ispresent ) THEN 
+            nbnd_dw = band_struct_obj%nbnd_dw
+            nbnd_up = band_struct_obj%ks_energies(ik)%eigenvalues%size - nbnd_dw
+         ELSE 
+            nbnd_up = band_struct_obj%ks_energies(ik)%eigenvalues%size/2  
+            nbnd_dw = band_struct_obj%ks_energies(ik)%eigenvalues%size/2
+         END IF
+      END IF
+      !
       DO ik =1, band_struct_obj%ndim_ks_energies
          IF ( band_struct_obj%lsda) THEN
-            IF ( band_struct_obj%nbnd_up_ispresent .AND. band_struct_obj%nbnd_dw_ispresent) THEN
-               nbnd_up = band_struct_obj%nbnd_up
-               nbnd_dw = band_struct_obj%nbnd_dw 
-            ELSE IF ( band_struct_obj%nbnd_up_ispresent ) THEN 
-               nbnd_up = band_struct_obj%nbnd_up
-               nbnd_dw = band_struct_obj%ks_energies(ik)%eigenvalues%size - nbnd_up
-            ELSE IF ( band_struct_obj%nbnd_dw_ispresent ) THEN 
-               nbnd_dw = band_struct_obj%nbnd_dw
-               nbnd_up = band_struct_obj%ks_energies(ik)%eigenvalues%size - nbnd_dw 
-            ELSE 
-               nbnd_up = band_struct_obj%ks_energies(ik)%eigenvalues%size/2  
-               nbnd_dw = band_struct_obj%ks_energies(ik)%eigenvalues%size/2
-            END IF
             wk(ik) = band_struct_obj%ks_energies(ik)%k_point%weight
             wk( ik + band_struct_obj%ndim_ks_energies ) = wk(ik) 
             et(1:nbnd_up,ik) = band_struct_obj%ks_energies(ik)%eigenvalues%vector(1:nbnd_up)
@@ -563,5 +558,86 @@ CONTAINS
          END IF
       END DO
     END SUBROUTINE qexsd_copy_band_structure
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE qexsd_copy_algorithmic_info ( algo_obj, &
+         real_space, tqr, okvan, okpaw )
+      USE qes_types_module, ONLY: algorithmic_info_type
+      IMPLICIT NONE 
+      TYPE(algorithmic_info_type),INTENT(IN)   :: algo_obj
+      LOGICAL, INTENT(OUT) :: real_space, tqr, okvan, okpaw
+      !
+      tqr = algo_obj%real_space_q 
+      real_space = algo_obj%real_space_beta
+      okvan = algo_obj%uspp
+      okpaw = algo_obj%paw
+      !
+    END SUBROUTINE qexsd_copy_algorithmic_info
+    !-----------------------------------------------------------------------
+    !
+    !---------------------------------------------------------------------------
+    SUBROUTINE qexsd_copy_efield ( efield_obj, tefield, dipfield, edir, &
+         emaxpos, eopreg, eamp, gate, zgate, &
+         block_, block_1, block_2, block_height, relaxz )
+      !---------------------------------------------------------------------------
+      USE qes_types_module,    ONLY: electric_field_type
+      IMPLICIT NONE 
+      ! 
+      TYPE ( electric_field_type),OPTIONAL, INTENT(IN)    :: efield_obj
+      LOGICAL, INTENT(OUT) :: tefield, dipfield
+      INTEGER, INTENT(INOUT) :: edir
+      LOGICAL, INTENT(INOUT) :: gate, block_, relaxz 
+      REAL(dp), INTENT(INOUT) :: emaxpos, eopreg, eamp, &
+              zgate, block_1, block_2, block_height
+      !
+      !
+      tefield = .FALSE. 
+      dipfield = .FALSE. 
+      IF ( .NOT. PRESENT( efield_obj) ) RETURN 
+      IF (TRIM(efield_obj%electric_potential) == 'sawtooth_potential') THEN 
+         tefield = .TRUE. 
+         IF ( efield_obj%dipole_correction_ispresent ) THEN 
+            dipfield = efield_obj%dipole_correction
+         ELSE 
+            dipfield = .FALSE. 
+         END IF
+         IF ( efield_obj%electric_field_direction_ispresent ) THEN 
+            edir = efield_obj%electric_field_direction
+         ELSE 
+            edir = 3 
+         END IF
+         IF ( efield_obj%potential_max_position_ispresent ) THEN 
+            emaxpos = efield_obj%potential_max_position
+         ELSE 
+            emaxpos = 5d-1
+         END IF
+         IF ( efield_obj%potential_decrease_width_ispresent ) THEN 
+            eopreg = efield_obj%potential_decrease_width
+         ELSE 
+            eopreg = 1.d-1
+         END IF
+         IF ( efield_obj%electric_field_amplitude_ispresent ) THEN 
+            eamp = efield_obj%electric_field_amplitude
+         ELSE 
+            eamp = 1.d-3
+         END IF
+         IF (efield_obj%gate_settings_ispresent) THEN 
+            gate = efield_obj%gate_settings%use_gate
+            IF (efield_obj%gate_settings%zgate_ispresent) &
+                 zgate     = efield_obj%gate_settings%zgate
+            IF (efield_obj%gate_settings%relaxz_ispresent) &
+                 relaxz   = efield_obj%gate_settings%relaxz
+            IF (efield_obj%gate_settings%block_ispresent) &
+                 block_    = efield_obj%gate_settings%block
+            IF (efield_obj%gate_settings%block_1_ispresent) &
+                 block_1 = efield_obj%gate_settings%block_1
+            IF (efield_obj%gate_settings%block_2_ispresent) &
+                 block_2 = efield_obj%gate_settings%block_2
+            IF (efield_obj%gate_settings%block_height_ispresent) &
+                 block_height = efield_obj%gate_settings%block_height
+         END IF
+      END IF
+      !
+    END SUBROUTINE qexsd_copy_efield
     !
   END MODULE qexsd_copy

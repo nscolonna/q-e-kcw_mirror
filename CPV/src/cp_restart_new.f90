@@ -170,7 +170,6 @@ MODULE cp_restart_new
       INTEGER               :: natomwfc, nbnd_, nb, ib
       REAL(DP), ALLOCATABLE :: mrepl(:,:)
       LOGICAL               :: exst
-      INTEGER               :: inlc
       TYPE(output_type) :: output_obj
       LOGICAL :: is_hubbard(ntypx), empirical_vdw  
       TYPE(occupations_type)       :: bands_occu 
@@ -513,8 +512,7 @@ MODULE cp_restart_new
            IF ( TRIM(sourcefile) /= TRIM(filename) ) &
                 ierr = f_copy(sourcefile, filename)
         END DO
-        inlc = get_inlc()
-        IF ( inlc > 0 ) THEN 
+        IF ( get_inlc() > 0 ) THEN 
            sourcefile= TRIM(kernel_file_name)
            filename = TRIM(dirname)//TRIM(vdw_table_name)
            IF ( TRIM(sourcefile) /= TRIM(filename) ) & 
@@ -689,11 +687,11 @@ MODULE cp_restart_new
       TYPE (parallel_info_type) :: parinfo_obj
       TYPE (general_info_type ) :: geninfo_obj 
       TYPE (Node),POINTER       :: root, nodePointer
-      CHARACTER(LEN=20) :: dft_name
+      CHARACTER(LEN=20) :: dft_name, vdw_corr
       CHARACTER(LEN=32) :: exxdiv_treatment, U_projection
-      CHARACTER(LEN=256):: vdw_corr
-      INTEGER :: nq1, nq2, nq3, lda_plus_U_kind, inlc
-      REAL(dp):: ecutfock, exx_fraction, screening_parameter, ecutvcut
+      LOGICAL :: ldftd3
+      INTEGER :: nq1, nq2, nq3, lda_plus_U_kind
+      REAL(dp):: exx_fraction, screening_parameter, ecutfock, ecutvcut,local_thr
       LOGICAL :: x_gamma_extrapolation
       REAL(dp):: hubbard_dum(3,nsp)
       CHARACTER(LEN=6), EXTERNAL :: int_to_char
@@ -794,12 +792,13 @@ MODULE cp_restart_new
 
       CALL qexsd_copy_dft ( output_obj%dft, nsp, atm, dft_name, &
            nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter, &
-           exxdiv_treatment, x_gamma_extrapolation, ecutvcut, &
+           exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, &
            lda_plus_U, lda_plus_U_kind, U_projection, Hubbard_l, Hubbard_lmax,&
            Hubbard_U, Hubbard_dum(1,:), Hubbard_dum(2,:), Hubbard_dum(3,:), &
            Hubbard_dum, &
-           vdw_corr,  llondon, ts_vdw, lxdm, inlc, vdw_table_name, scal6, &
-           lon_rcut, vdw_isolated)
+           vdw_corr, vdw_table_name, scal6, lon_rcut, vdw_isolated)
+      CALL set_vdw_corr (vdw_corr, llondon, ldftd3, ts_vdw, lxdm )
+      IF ( ldftd3 ) CALL errore('cp_readfile','DFT-D3 not implemented',1)
       !
       lsda_ = output_obj%magnetization%lsda
       IF ( lsda_ .AND. (nspin /= 2) ) CALL errore('cp_readfile','wrong spin',1)

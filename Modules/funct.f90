@@ -35,6 +35,10 @@ MODULE funct
   !
   USE io_global,   ONLY: stdout
   USE kinds,       ONLY: DP
+#if defined(__LIBXC)
+  USE xc_f90_types_m
+  USE xc_f90_lib_m
+#endif
   !
   IMPLICIT NONE
   !
@@ -107,12 +111,12 @@ MODULE funct
   !              "tb09"  = "sla+pw+tb09+tb09"  = TB09 Meta-GGA
   !              "pbe0"  = "pb0x+pw+pb0x+pbc"  = PBE0
   !              "b86bx" = "pb0x+pw+b86x+pbc"  = B86bPBE hybrid
-  !              "bhahlyp" = "pb0x+pw+b88x+blyp"  = Becke half-and-half LYP
+  !              "bhahlyp"="pb0x+pw+b88x+blyp" = Becke half-and-half LYP
   !              "hse"   = "sla+pw+hse+pbc"    = Heyd-Scuseria-Ernzerhof (HSE 06, see note below)
-  !              "b3lyp" = "b3lp+b3lp+b3lp+b3lp"= B3LYP
-  !              "b3lypv1r"    = "b3lp+b3lpv1r+b3lp+b3lp"= B3LYP-VWN1-RPA
-  !              "x3lyp" = "x3lp+x3lp+x3lp+x3lp"= X3LYP
-  !              "vwn-rpa"     = "sla+vwn-rpa" = VWN LDA using vwn1-rpa parametriz
+  !              "b3lyp"                        = B3LYP
+  !              "b3lyp-v1r"                    = B3LYP-VWN1-RPA
+  !              "x3lyp"                        = X3LYP
+  !              "vwn-rpa" = VWN LDA using vwn1-rpa parametrization
   !              "gaupbe"= "sla+pw+gaup+pbc"   = Gau-PBE (also "gaup")
   !              "vdw-df"       ="sla+pw+rpb +vdw1"   = vdW-DF1
   !              "vdw-df2"      ="sla+pw+rw86+vdw2"   = vdW-DF2
@@ -378,10 +382,6 @@ CONTAINS
     !-----------------------------------------------------------------------
     !! Translates a string containing the exchange-correlation name
     !! into internal indices iexch, icorr, igcx, igcc, inlc, imeta.
-#if defined(__LIBXC)
-    USE xc_f90_types_m
-    USE xc_f90_lib_m
-#endif
     !
     IMPLICIT NONE
     !
@@ -642,7 +642,7 @@ CONTAINS
          CALL xc_f90_func_end( xc_func )
        ENDIF
        !
-       IF (icorr/=notset .AND. fkind==XC_EXCHANGE_CORRELATION)  &
+       IF (icorr/=0 .AND. fkind==XC_EXCHANGE_CORRELATION)  &
           CALL errore( 'set_dft_from_name', 'An EXCHANGE+CORRELATION functional has &
                        &been found together with a correlation one', 2 )
        !
@@ -653,7 +653,7 @@ CONTAINS
          CALL xc_f90_func_end( xc_func )
        ENDIF
        !
-       IF (icorr/=notset .AND. fkind==XC_EXCHANGE_CORRELATION)  &
+       IF (icorr/=0 .AND. fkind==XC_EXCHANGE_CORRELATION)  &
           CALL errore( 'set_dft_from_name', 'An EXCHANGE+CORRELATION functional has &
                        &been found together with a correlation one', 3 )
        !
@@ -734,11 +734,6 @@ CONTAINS
   FUNCTION matching( fslot, dft, n, name, its_libxc )
     !------------------------------------------------------------
     !
-#if defined(__LIBXC)
-    USE xc_f90_types_m
-    USE xc_f90_lib_m
-#endif
-    !
     IMPLICIT NONE
     !
     INTEGER :: matching
@@ -765,10 +760,10 @@ CONTAINS
        !
        DO i = 1, length
           ii = ii+1
-          IF (ii == length) EXIT
+          IF (ii == length-1) EXIT
           !
           IF (dft(ii:ii+2) .EQ. 'XC_') THEN
-             DO j = 1, length-ii
+             DO j = 1, length-ii-2
                IF (dft(ii+2+j:ii+2+j) .EQ. ' ') EXIT
              ENDDO
              !
@@ -818,11 +813,6 @@ CONTAINS
   !----------------------------------------------------------------------------
   FUNCTION slot_match_libxc( fslot, family, fkind )
     !-------------------------------------------------------------------------
-    !
-#if defined(__LIBXC)
-    USE xc_f90_types_m
-    USE xc_f90_lib_m
-#endif
     !
     IMPLICIT NONE
     ! 
@@ -1107,7 +1097,18 @@ CONTAINS
   END FUNCTION dft_is_nonlocc
   !-----------------------------------------------------------------------
   FUNCTION get_exx_fraction()
-     REAL(DP):: get_exx_fraction
+     REAL(DP) :: get_exx_fraction
+#if defined(__LIBXC)
+     INTEGER :: family
+     TYPE(xc_f90_pointer_t) :: xc_func, xc_info
+     !
+     IF ( is_libxc(3) ) THEN
+        CALL xc_f90_func_init( xc_func, xc_info, igcx, 1 )  
+        family = xc_f90_info_family( xc_info )
+        IF (family == XC_FAMILY_HYB_GGA) CALL xc_f90_hyb_exx_coef( xc_func, exx_fraction )
+        CALL xc_f90_func_end( xc_func )
+     ENDIF
+#endif
      get_exx_fraction = exx_fraction
      RETURN
   END FUNCTION get_exx_fraction

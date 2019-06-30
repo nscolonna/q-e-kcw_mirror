@@ -89,6 +89,12 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   ! ... All quantities that are initialized in subroutine "setup" when
   ! ... starting from scratch should be initialized here when restarting
   !
+  USE kinds,           ONLY : dp
+  USE constants,       ONLY : e2
+  USE gvect,           ONLY : ngm_g, ecutrho
+  USE gvecs,           ONLY : ngms_g, dual
+  USE gvecw,           ONLY : ecutwfc
+  USE fft_base,        ONLY : dfftp, dffts
   USE io_global,       ONLY : stdout, ionode, ionode_id
   USE io_files,        ONLY : psfile, pseudo_dir, pseudo_dir_cur
   USE mp_global,       ONLY : nproc_file, nproc_pool_file, &
@@ -97,29 +103,52 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   USE ions_base,       ONLY : nat, nsp, ityp, amass, atm, tau, extfor
   USE cell_base,       ONLY : alat, at, bg, ibrav, celldm, omega
   USE force_mod,       ONLY : force
-  USE klist,           ONLY : nks, nkstot
-  USE wvfct,           ONLY : nbnd, et, wg
-  USE extfield,        ONLY : forcefield, tefield, gate, forcegate
+  USE klist,           ONLY : nks, nkstot, nelec, wk
+  USE ener,            ONLY : ef, ef_up, ef_dw
+  USE electrons_base,  ONLY : nupdwn 
+  USE wvfct,           ONLY : npwx, nbnd, et, wg
+  USE extfield,        ONLY : forcefield, forcegate, tefield, dipfield, &
+       edir, emaxpos, eopreg, eamp, el_dipole, ion_dipole, gate, zgate, &
+       relaxz, block, block_1, block_2, block_height
   USE io_files,        ONLY : tmp_dir, prefix, postfix
   USE symm_base,       ONLY : nrot, nsym, invsym, s, ft, irt, t_rev, &
                               sname, inverse_s, s_axis_to_cart, &
                               time_reversal, no_t_rev, nosym, checkallsym
-  USE control_flags,   ONLY : noinv
-  USE noncollin_module,ONLY : noncolin
+  USE ldaU,            ONLY : lda_plus_u, lda_plus_u_kind, Hubbard_lmax, &
+                              Hubbard_l, Hubbard_U, Hubbard_J, Hubbard_alpha, &
+                              Hubbard_J0, Hubbard_beta, U_projection
+  USE funct,           ONLY : set_exx_fraction, set_screening_parameter, &
+                              set_gau_parameter, enforce_input_dft,  &
+                              start_exx, dft_is_hybrid
+  USE london_module,   ONLY : scal6, lon_rcut, in_C6
+  USE tsvdw_module,    ONLY : vdw_isolated
+  USE kernel_table,    ONLY : vdw_table_name
+  USE exx_base,        ONLY : x_gamma_extrapolation, nq1, nq2, nq3, &
+                              exxdiv_treatment, yukawa, ecutvcut
+  USE exx,             ONLY : ecutfock, local_thr
+  USE control_flags,   ONLY : noinv, gamma_only, tqr, llondon, ldftd3, &
+       lxdm, ts_vdw
+  USE Coul_cut_2D,     ONLY : do_cutoff_2D
+  USE noncollin_module,ONLY : noncolin, angle1, angle2
   USE spin_orb,        ONLY : domag
+  USE lsda_mod,        ONLY : isk, lsda, starting_magnetization
+  USE realus,          ONLY : real_space
+  USE basis,           ONLY : natomwfc
+  USE uspp,            ONLY : okvan
+  USE paw_variables,   ONLY : okpaw
   !
   USE pw_restart_new,  ONLY : pw_read_schema, &
-       readschema_planewaves, &
-       readschema_spin, readschema_magnetization, readschema_xc, &
-       readschema_occupations, readschema_brillouin_zone, &
-       readschema_band_structure, readschema_efield, &
-       readschema_outputPBC, readschema_exx, readschema_algo
+       readschema_magnetization, &
+       readschema_occupations, readschema_brillouin_zone
   USE qes_types_module,ONLY : output_type, parallel_info_type, &
        general_info_type, input_type
   USE qes_libs_module, ONLY : qes_reset
   USE qexsd_copy,      ONLY : qexsd_copy_parallel_info, &
        qexsd_copy_dim, qexsd_copy_atomic_species, &
-       qexsd_copy_atomic_structure, qexsd_copy_symmetry
+       qexsd_copy_atomic_structure, qexsd_copy_symmetry, &
+       qexsd_copy_basis_set, qexsd_copy_algorithmic_info,&
+       qexsd_copy_dft, qexsd_copy_efield, qexsd_copy_band_structure
+       
 #if defined(__BEOWULF)
   USE qes_bcast_module,ONLY : qes_bcast
   USE mp_images,       ONLY : intra_image_comm
@@ -128,13 +157,15 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   !
   IMPLICIT NONE
   LOGICAL, INTENT(OUT) :: wfc_is_collected
-
-  INTEGER  :: i, is, ik, ibnd, nb, nt, ios, isym, ierr
+  !
+  INTEGER  :: i, is, ik, ierr, dum1,dum2,dum3
   LOGICAL  :: magnetic_sym, lvalid_input
-  TYPE ( output_type)                   :: output_obj 
-  TYPE (parallel_info_type)             :: parinfo_obj
-  TYPE (general_info_type )             :: geninfo_obj
-  TYPE (input_type)                     :: input_obj
+  CHARACTER(LEN=20) :: dft_name, vdw_corr
+  REAL(dp) :: exx_fraction, screening_parameter
+  TYPE (output_type)      :: output_obj 
+  TYPE (parallel_info_type) :: parinfo_obj
+  TYPE (general_info_type ) :: geninfo_obj
+  TYPE (input_type)         :: input_obj
   !
   !
 #if defined(__BEOWULF)
@@ -189,7 +220,8 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   !
   pseudo_dir_cur = TRIM( tmp_dir ) // TRIM( prefix ) // postfix
   CALL qexsd_copy_atomic_species ( output_obj%atomic_species, &
-       nsp, atm, amass, psfile, pseudo_dir ) 
+       nsp, atm, amass, angle1, angle2, starting_magnetization, &
+       psfile, pseudo_dir ) 
   IF ( pseudo_dir == ' ' ) pseudo_dir=pseudo_dir_cur
   !! Atomic structure section
   CALL qexsd_copy_atomic_structure (output_obj%atomic_structure, nsp, &
@@ -203,22 +235,56 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   tau(:,1:nat) = tau(:,1:nat)/alat  
   CALL at2celldm (ibrav,alat,at(:,1),at(:,2),at(:,3),celldm)
   CALL volume (alat,at(:,1),at(:,2),at(:,3),omega)
-  CALL recips( at(1,1), at(1,2), at(1,3), bg(1,1), bg(1,2), bg(1,3) )
-  !
-  CALL readschema_planewaves( output_obj%basis_set) 
-  CALL readschema_spin( output_obj%magnetization )
+  !!
+  !! Basis set section
+  CALL qexsd_copy_basis_set ( output_obj%basis_set, gamma_only, ecutwfc,&
+       ecutrho, dffts%nr1,dffts%nr2,dffts%nr3, dfftp%nr1,dfftp%nr2,dfftp%nr3, &
+       dum1,dum2,dum3, ngm_g, ngms_g, npwx, bg(:,1), bg(:,2), bg(:,3) )
+  ecutwfc = ecutwfc*e2
+  ecutrho = ecutrho*e2
+  dual = ecutrho/ecutwfc
+  !!
+  !! DFT section
+  CALL qexsd_copy_dft ( output_obj%dft, nsp, atm, &
+       dft_name, nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter, &
+       exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, &
+       lda_plus_U, lda_plus_U_kind, U_projection, Hubbard_l, Hubbard_lmax, &
+       Hubbard_U, Hubbard_J0, Hubbard_alpha, Hubbard_beta, Hubbard_J, &
+       vdw_corr, vdw_table_name, scal6, lon_rcut, vdw_isolated )
+  !! More DFT initializations
+  CALL set_vdw_corr ( vdw_corr, llondon, ldftd3, ts_vdw, lxdm )
+  CALL enforce_input_dft ( dft_name, .TRUE. )
+  IF ( dft_is_hybrid() ) THEN
+     ecutvcut=ecutvcut*e2
+     ecutfock=ecutfock*e2
+     CALL set_exx_fraction( exx_fraction ) 
+     CALL set_screening_parameter ( screening_parameter )
+     CALL start_exx ()
+  END IF
+  !! Band structure section
+  CALL qexsd_copy_band_structure( output_obj%band_structure, lsda, &
+       nkstot, isk, natomwfc, nupdwn(1), nupdwn(2), nelec, wk, wg, &
+       ef, ef_up, ef_dw, et )
+  ! convert to Ry
+  ef = ef*e2
+  ef_up = ef_up*e2
+  ef_dw = ef_dw*e2
+  et(:,:) = et(:,:)*e2
+  !!
   CALL readschema_magnetization (  output_obj%band_structure,  &
-       output_obj%atomic_species, output_obj%magnetization )
-  CALL readschema_xc (  output_obj%atomic_species, output_obj%dft )
+       output_obj%magnetization )
   CALL readschema_occupations( output_obj%band_structure )
-  CALL readschema_brillouin_zone( output_obj%symmetries,  output_obj%band_structure )
-  CALL readschema_band_structure( output_obj%band_structure )
+  CALL readschema_brillouin_zone( output_obj%band_structure )
   !! Symmetry section
   IF ( lvalid_input ) THEN 
      CALL qexsd_copy_symmetry ( output_obj%symmetries, &
           nsym, nrot, s, ft, sname, t_rev, invsym, irt, &
           noinv, nosym, no_t_rev, input_obj%symmetry_flags )
-     CALL readschema_efield ( input_obj%electric_field )
+
+     CALL qexsd_copy_efield ( input_obj%electric_field, &
+          tefield, dipfield, edir, emaxpos, eopreg, eamp, &
+          gate, zgate, block, block_1, block_2, block_height, relaxz )
+
   ELSE 
      CALL qexsd_copy_symmetry ( output_obj%symmetries, &
           nsym, nrot, s, ft, sname, t_rev, invsym, irt, &
@@ -232,11 +298,9 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   !! symmetry check - FIXME: is this needed?
   IF (nat > 0) CALL checkallsym( nat, tau, ityp)
   !
-  CALL readschema_outputPBC ( output_obj%boundary_conditions)
-  IF ( output_obj%dft%hybrid_ispresent  ) THEN
-     CALL readschema_exx ( output_obj%dft%hybrid )
-  END IF
-  CALL readschema_algo(output_obj%algorithmic_info )  
+  do_cutoff_2D = (output_obj%boundary_conditions%assume_isolated == "2D")
+  CALL qexsd_copy_algorithmic_info ( output_obj%algorithmic_info, &
+       real_space, tqr, okvan, okpaw )
   !
   ! ... xml data no longer needed, can be discarded
   !
