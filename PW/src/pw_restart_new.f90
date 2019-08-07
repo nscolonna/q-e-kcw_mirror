@@ -40,8 +40,6 @@ MODULE pw_restart_new
   PRIVATE
   PUBLIC :: pw_write_schema, pw_write_binaries, pw_read_schema, &
        read_collected_to_evc
-  PUBLIC :: readschema_ef, readschema_magnetization, &
-       readschema_occupations, readschema_brillouin_zone
   !
   CONTAINS
     !------------------------------------------------------------------------
@@ -139,6 +137,7 @@ MODULE pw_restart_new
       USE Coul_cut_2D,          ONLY : do_cutoff_2D 
       USE esm,                  ONLY : do_comp_esm 
       USE martyna_tuckerman,    ONLY : do_comp_mt 
+      USE run_info,             ONLY : title
       !
       IMPLICIT NONE
       !
@@ -146,6 +145,8 @@ MODULE pw_restart_new
       !
       CHARACTER(LEN=20)     :: dft_name
       CHARACTER(LEN=256)    :: dirname
+      CHARACTER(LEN=8)      :: smearing_loc
+      CHARACTER(LEN=8), EXTERNAL :: schema_smearing
       INTEGER               :: i, ig, ngg, ipol
       INTEGER               :: npwx_g, ispin, inlc
       INTEGER,  ALLOCATABLE :: ngk_g(:)
@@ -156,22 +157,22 @@ MODULE pw_restart_new
       INTEGER                  :: n_opt_steps, n_scf_steps_, h_band
       REAL(DP),TARGET                 :: h_energy
       TYPE(gateInfo_type),TARGET      :: gate_info_temp
-      TYPE(gateInfo_type),POINTER     :: gate_info_ptr => NULL()
+      TYPE(gateInfo_type),POINTER     :: gate_info_ptr
       TYPE(dipoleOutput_type),TARGET  :: dipol_obj 
-      TYPE(dipoleOutput_type),POINTER :: dipol_ptr  => NULL()
-      TYPE(BerryPhaseOutput_type),  POINTER :: bp_obj_ptr => NULL()
-      TYPE(hybrid_type), POINTER            :: hybrid_obj => NULL()
-      TYPE(vdW_type), POINTER               :: vdw_obj => NULL()
-      TYPE(dftU_type), POINTER              :: dftU_obj => NULL() 
+      TYPE(dipoleOutput_type),POINTER :: dipol_ptr 
+      TYPE(BerryPhaseOutput_type),  POINTER :: bp_obj_ptr
+      TYPE(hybrid_type), POINTER            :: hybrid_obj 
+      TYPE(vdW_type), POINTER               :: vdw_obj
+      TYPE(dftU_type), POINTER              :: dftU_obj 
       REAL(DP), TARGET                      :: lumo_tmp, ef_targ, dispersion_energy_term 
-      REAL(DP), POINTER                     :: lumo_energy => NULL(), ef_point => NULL()
+      REAL(DP), POINTER                     :: lumo_energy, ef_point 
       REAL(DP), ALLOCATABLE                 :: ef_updw(:)
       !
       !
       !
       TYPE(output_type) :: output
       REAL(DP),POINTER    :: degauss_, demet_, efield_corr, potstat_corr,  gatefield_corr  
-      LOGICAL, POINTER    :: optimization_has_converged => NULL() 
+      LOGICAL, POINTER    :: optimization_has_converged 
       LOGICAL, TARGET     :: conv_opt  
       LOGICAL             :: scf_has_converged 
       INTEGER             :: itemp = 1
@@ -181,20 +182,23 @@ MODULE pw_restart_new
       CHARACTER(LEN=20),TARGET   :: dft_nonlocc_
       INTEGER,TARGET             :: dftd3_version_
       CHARACTER(LEN=20),TARGET   :: vdw_corr_, pbc_label 
-      CHARACTER(LEN=20),POINTER  :: non_local_term_pt =>NULL(), vdw_corr_pt=>NULL()
+      CHARACTER(LEN=20),POINTER  :: non_local_term_pt, vdw_corr_pt 
       REAL(DP),TARGET            :: temp(20), lond_rcut_, lond_s6_, ts_vdw_econv_thr_, xdm_a1_, xdm_a2_, ectuvcut_,&
                                     scr_par_, loc_thr_  
-      REAL(DP),POINTER           :: vdw_term_pt =>NULL(), ts_thr_pt=>NULL(), london_s6_pt=>NULL(),&
-                                    london_rcut_pt=>NULL(), xdm_a1_pt=>NULL(), xdm_a2_pt=>NULL(), &
-                                    ts_vdw_econv_thr_pt=>NULL(), ectuvcut_opt=>NULL(), scr_par_opt=>NULL(), &
-                                    loc_thr_p => NULL(), h_energy_ptr => NULL()  
+      REAL(DP),POINTER           :: vdw_term_pt, ts_thr_pt, london_s6_pt, london_rcut_pt, xdm_a1_pt, xdm_a2_pt, &
+                                    ts_vdw_econv_thr_pt, ectuvcut_opt, scr_par_opt, loc_thr_p, h_energy_ptr
       LOGICAL,TARGET             :: dftd3_threebody_, ts_vdw_isolated_
-      LOGICAL,POINTER            :: ts_isol_pt=>NULL(), dftd3_threebody_pt=>NULL(), ts_vdw_isolated_pt =>NULL()
-      INTEGER,POINTER            :: dftd3_version_pt => NULL() 
+      LOGICAL,POINTER            :: ts_isol_pt, dftd3_threebody_pt, ts_vdw_isolated_pt 
+      INTEGER,POINTER            :: dftd3_version_pt
       TYPE(smearing_type),TARGET :: smear_obj 
-      TYPE(smearing_type),POINTER:: smear_obj_ptr => NULL() 
+      TYPE(smearing_type),POINTER:: smear_obj_ptr 
 
-      NULLIFY( degauss_, demet_, efield_corr, potstat_corr, gatefield_corr )
+      NULLIFY( degauss_, demet_, efield_corr, potstat_corr, gatefield_corr) 
+      NULLIFY( gate_info_ptr, dipol_ptr, bp_obj_ptr, hybrid_obj, vdw_obj, dftU_obj, lumo_energy, ef_point)  
+      NULLIFY ( optimization_has_converged, non_local_term_pt, vdw_corr_pt, vdw_term_pt, ts_thr_pt, london_s6_pt,  &
+                xdm_a1_pt, xdm_a2_pt, ts_vdw_econv_thr_pt, ts_isol_pt, dftd3_threebody_pt, ts_vdw_isolated_pt,     & 
+                dftd3_version_pt )
+      NULLIFY ( ectuvcut_opt, scr_par_opt, loc_thr_p, h_energy_ptr, smear_obj_ptr) 
 
       !
       ! Global PW dimensions need to be properly computed, reducing across MPI tasks
@@ -234,7 +238,8 @@ MODULE pw_restart_new
 ! ... HEADER
 !-------------------------------------------------------------------------------
          !
-         CALL qexsd_openschema(TRIM( dirname ) // TRIM( xmlpun_schema ), 'PWSCF' )
+         CALL qexsd_openschema(TRIM( dirname ) // TRIM( xmlpun_schema ), &
+              'PWSCF', title )
          output%tagname="output"
          output%lwrite = .TRUE.
          output%lread  = .TRUE.
@@ -537,8 +542,9 @@ MODULE pw_restart_new
          IF ( lgauss ) THEN
             IF (TRIM(qexsd_input_obj%tagname) == 'input') THEN 
                smear_obj = qexsd_input_obj%bands%smearing
-            ELSE 
-               CALL qexsd_init_smearing(smear_obj, smearing, degauss)
+            ELSE
+               smearing_loc = schema_smearing( smearing )
+               CALL qexsd_init_smearing(smear_obj, smearing_loc, degauss)
             END IF  
             smear_obj_ptr => smear_obj  
          END IF 
@@ -912,7 +918,6 @@ MODULE pw_restart_new
       !------------------------------------------------------------------------
       USE qes_types_module,     ONLY : input_type, output_type, general_info_type, parallel_info_type    
       !
-      USE qes_libs_module,      ONLY : qes_write  
       USE FoX_dom,              ONLY : parseFile, item, getElementsByTagname, destroy, nodeList, Node
       USE qes_read_module,      ONLY : qes_read
       IMPLICIT NONE 
@@ -958,7 +963,6 @@ MODULE pw_restart_new
             errmsg='error reading header of xml data file'
             GOTO 100
          END IF
-         ! CALL qes_write_general_info( 82, restart_general_info) 
       END IF 
       ! 
       IF ( PRESENT ( restart_parallel_info ) ) THEN 
@@ -969,7 +973,6 @@ MODULE pw_restart_new
             errmsg='error parallel_info  of xsd data file' 
             GOTO 100
          END IF
-         ! CALL qes_write_parallel_info ( 82, restart_parallel_info )
       END IF  
       ! 
       IF ( PRESENT ( restart_output ) ) THEN
@@ -980,7 +983,6 @@ MODULE pw_restart_new
             GOTO 100 
          END IF 
          !
-         !CALL qes_write_output ( 82, restart_output ) 
       END IF 
       !
       IF (PRESENT (prev_input)) THEN
@@ -1004,187 +1006,6 @@ MODULE pw_restart_new
       !
     END SUBROUTINE pw_read_schema
     !  
-    !-----------------------------------------------------------------------------------------
-    SUBROUTINE readschema_magnetization( band_structure_obj, magnetization_obj ) 
-      !---------------------------------------------------------------------------------------
-      ! 
-      USE klist,            ONLY : two_fermi_energies, nelup, neldw, tot_magnetization
-      USE ener,             ONLY : ef_up, ef_dw
-      USE lsda_mod,         ONLY : nspin, lsda, starting_magnetization
-      USE noncollin_module, ONLY : noncolin, npol, bfield
-      USE electrons_base,   ONLY : set_nelup_neldw
-      USE spin_orb,         ONLY : lspinorb, domag
-      USE qes_types_module, ONLY : band_structure_type, magnetization_type
-      !
-      IMPLICIT NONE 
-      !
-      TYPE ( band_structure_type ),INTENT(IN)    :: band_structure_obj
-      TYPE ( magnetization_type ) ,INTENT(IN)    :: magnetization_obj
-      REAL(dp) :: nelec_
-      ! 
-      lsda  =   magnetization_obj%lsda
-      noncolin = magnetization_obj%noncolin  
-      lspinorb = magnetization_obj%spinorbit 
-      domag =   magnetization_obj%do_magnetization 
-      !
-      IF ( lsda ) THEN  
-        nspin = 2
-        npol = 1
-      ELSE IF (noncolin ) THEN 
-        nspin = 4
-        npol = 2
-      ELSE 
-        nspin =1
-        npol = 1 
-      END IF
-      !
-      bfield = 0.d0
-      nelec_ = band_structure_obj%nelec
-      two_fermi_energies = band_structure_obj%two_fermi_energies_ispresent
-      IF (two_fermi_energies) THEN 
-         ef_up = band_structure_obj%two_fermi_energies(1)
-         ef_dw = band_structure_obj%two_fermi_energies(2) 
-         IF (TRIM(band_structure_obj%occupations_kind%occupations) == 'fixed') THEN
-            tot_magnetization = magnetization_obj%total
-            CALL set_nelup_neldw(tot_magnetization, nelec_, nelup, neldw) 
-         END IF 
-      END IF 
-      !
-    END SUBROUTINE readschema_magnetization
-    !-----------------------------------------------------------------------
-    !
-    !---------------------------------------------------------------------------
-    SUBROUTINE readschema_brillouin_zone( band_structure )
-    !---------------------------------------------------------------------------
-       !
-       USE lsda_mod, ONLY : lsda, isk
-       USE klist,    ONLY : nkstot, xk, wk
-       USE start_k,  ONLY : nks_start, xk_start, wk_start, &
-                              nk1, nk2, nk3, k1, k2, k3 
-       USE qes_types_module, ONLY : band_structure_type
-       !
-       IMPLICIT NONE
-       !
-       TYPE ( band_structure_type ),INTENT(IN)    :: band_structure
-       INTEGER                                    :: ik, isym, nks_
-       ! 
-       nks_ = band_structure%nks
-       nkstot = nks_
-       IF ( band_structure%lsda ) nkstot = nkstot * 2  
-       ! 
-       ! 
-       DO ik = 1, nks_
-          xk(:,ik) = band_structure%ks_energies(ik)%k_point%k_point(:) 
-       END DO 
-       !!  during lsda computations pw uses, for each k-point in the mesh, a distinct 
-       !!  k_point variable for the two spin channels, while in 
-       !!  the xml file only one k_point is present
-       IF ( band_structure%lsda ) THEN
-          DO ik = 1, nks_
-             xk(:,nks_+ik) = band_structure%ks_energies(ik)%k_point%k_point(:) 
-             isk(ik) = 1
-             isk(ik+nks_) = 2
-          END DO
-       END IF   
-       !   
-       IF ( band_structure%starting_k_points%monkhorst_pack_ispresent ) THEN 
-          nks_start = 0 
-          nk1 = band_structure%starting_k_points%monkhorst_pack%nk1 
-          nk2 = band_structure%starting_k_points%monkhorst_pack%nk2
-          nk3 = band_structure%starting_k_points%monkhorst_pack%nk3 
-           k1 = band_structure%starting_k_points%monkhorst_pack%k1
-           k2 = band_structure%starting_k_points%monkhorst_pack%k2
-           k3 = band_structure%starting_k_points%monkhorst_pack%k3
-       ELSE IF (band_structure%starting_k_points%nk_ispresent ) THEN 
-           nks_start = band_structure%starting_k_points%nk
-           IF ( nks_start > 0 ) THEN 
-              IF ( .NOT. ALLOCATED(xk_start) ) ALLOCATE (xk_start(3,nks_start))
-              IF ( .NOT. ALLOCATED(wk_start) ) ALLOCATE (wk_start(nks_start))
-              IF ( nks_start == size( band_structure%starting_k_points%k_point ) ) THEN 
-                 DO ik =1, nks_start
-                    xk_start(:,ik) = band_structure%starting_k_points%k_point(ik)%k_point(:) 
-                    IF ( band_structure%starting_k_points%k_point(ik)%weight_ispresent) THEN 
-                        wk_start(ik) = band_structure%starting_k_points%k_point(ik)%weight 
-                    ELSE 
-                        wk_start(ik) = 0.d0
-                    END IF 
-                 END DO
-              ELSE
-                 CALL infomsg ( "readschema_bz: ", &
-                                "actual number of start kpoint not equal to nks_start, set nks_start=0")  
-                 nks_start = 0 
-              END IF
-           END IF
-       ELSE 
-           CALL errore ("readschema_bz: ", &
-                        " no information found for initializing brillouin zone information", 1)
-       END IF  
-       ! 
-    END SUBROUTINE readschema_brillouin_zone     
-    !--------------------------------------------------------------------------------------------------
-    SUBROUTINE readschema_occupations( band_struct_obj ) 
-      !------------------------------------------------------------------------------------------------
-      ! 
-      USE lsda_mod,         ONLY : lsda, nspin
-      USE fixed_occ,        ONLY : tfixed_occ, f_inp
-      USE ktetra,           ONLY : ntetra, tetra_type
-      USE klist,            ONLY : ltetra, lgauss, ngauss, degauss, smearing
-      USE wvfct,            ONLY : nbnd
-      USE input_parameters, ONLY : input_parameters_occupations => occupations
-      USE qes_types_module, ONLY : input_type, band_structure_type
-      ! 
-      IMPLICIT NONE 
-      ! 
-      TYPE ( band_structure_type ),INTENT(IN)     :: band_struct_obj 
-      INTEGER                                     :: ispin, nk1, nk2, nk3, aux_dim1, aux_dim2 
-      ! 
-      lgauss = .FALSE. 
-      ltetra = .FALSE. 
-      tetra_type = 0
-      ngauss = 0
-      input_parameters_occupations = TRIM ( band_struct_obj%occupations_kind%occupations ) 
-      IF (TRIM(input_parameters_occupations) == 'tetrahedra' ) THEN 
-        ltetra = .TRUE. 
-        nk1 = band_struct_obj%starting_k_points%monkhorst_pack%nk1
-        nk2 = band_struct_obj%starting_k_points%monkhorst_pack%nk2
-        nk3 = band_struct_obj%starting_k_points%monkhorst_pack%nk3
-        ntetra = 6* nk1 * nk2 * nk3 
-      ELSE IF (TRIM(input_parameters_occupations) == 'tetrahedra_lin' .OR. &
-               TRIM(input_parameters_occupations) == 'tetrahedra-lin' ) THEN
-        ltetra = .TRUE. 
-        nk1 = band_struct_obj%starting_k_points%monkhorst_pack%nk1
-        nk2 = band_struct_obj%starting_k_points%monkhorst_pack%nk2
-        nk3 = band_struct_obj%starting_k_points%monkhorst_pack%nk3
-        tetra_type = 1
-        ntetra = 6* nk1 * nk2 * nk3 
-      ELSE IF (TRIM(input_parameters_occupations) == 'tetrahedra_opt' .OR. &
-               TRIM(input_parameters_occupations) == 'tetrahedra-opt' ) THEN 
-        ltetra = .TRUE. 
-        nk1 = band_struct_obj%starting_k_points%monkhorst_pack%nk1
-        nk2 = band_struct_obj%starting_k_points%monkhorst_pack%nk2
-        nk3 = band_struct_obj%starting_k_points%monkhorst_pack%nk3
-        tetra_type = 2
-        ntetra = 6* nk1 * nk2 * nk3 
-      ELSE IF ( TRIM (input_parameters_occupations) == 'smearing') THEN 
-        lgauss = .TRUE.  
-        degauss = band_struct_obj%smearing%degauss
-        SELECT CASE ( TRIM( band_struct_obj%smearing%smearing ) )
-           CASE ( 'gaussian', 'gauss', 'Gaussian', 'Gauss' )
-             ngauss = 0
-             smearing  = 'gaussian'
-           CASE ( 'methfessel-paxton', 'm-p', 'mp', 'Methfessel-Paxton', 'M-P', 'MP' )
-             ngauss = 1
-             smearing = 'mp'
-           CASE ( 'marzari-vanderbilt', 'cold', 'm-v', 'mv', 'Marzari-Vanderbilt', 'M-V', 'MV')
-             ngauss = -1
-             smearing  = 'mv'
-           CASE ( 'fermi-dirac', 'f-d', 'fd', 'Fermi-Dirac', 'F-D', 'FD')
-             ngauss = -99
-             smearing = 'fd'
-        END SELECT
-      END IF       
-     !
-    END SUBROUTINE readschema_occupations
     !
     !------------------------------------------------------------------------
     SUBROUTINE read_collected_to_evc( dirname )
@@ -1319,27 +1140,5 @@ MODULE pw_restart_new
       !
     END SUBROUTINE read_collected_to_evc
     !
-    !----------------------------------------------------------------------------------------
-    SUBROUTINE readschema_ef ( band_struct_obj )
-    !----------------------------------------------------------------------------------------
-       !
-       USE constants, ONLY        : e2
-       USE ener,  ONLY            : ef, ef_up, ef_dw
-       USE klist, ONLY            : two_fermi_energies, nelec
-       USE qes_types_module, ONLY : band_structure_type 
-       ! 
-       IMPLICIT NONE 
-       ! 
-       TYPE ( band_structure_type ),INTENT(IN)      :: band_struct_obj 
-       ! 
-       two_fermi_energies = band_struct_obj%two_fermi_energies_ispresent 
-       nelec = band_struct_obj%nelec
-       IF ( two_fermi_energies) THEN 
-          ef_up = band_struct_obj%two_fermi_energies(1)*e2
-          ef_dw = band_struct_obj%two_fermi_energies(2)*e2
-       ELSE IF ( band_struct_obj%fermi_energy_ispresent ) THEN 
-          ef = band_struct_obj%fermi_energy*e2
-       END IF 
-    END SUBROUTINE readschema_ef 
     !------------------------------------------------------------------------
   END MODULE pw_restart_new

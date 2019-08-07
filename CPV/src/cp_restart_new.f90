@@ -95,7 +95,7 @@ MODULE cp_restart_new
       USE tsvdw_module,             ONLY : vdw_isolated, vdw_econv_thr
       USE wrappers,                 ONLY : f_copy
       USE uspp,                     ONLY : okvan
-      USE input_parameters,         ONLY : vdw_corr, london, starting_ns_eigenvalue
+      USE input_parameters,         ONLY : vdw_corr, starting_ns_eigenvalue
       USE qexsd_module,             ONLY: qexsd_init_vdw, qexsd_init_hybrid, qexsd_init_dftU 
       USE qexsd_input, ONLY: qexsd_init_k_points_ibz
 
@@ -175,22 +175,23 @@ MODULE cp_restart_new
       TYPE(occupations_type)       :: bands_occu 
       TYPE(k_points_IBZ_type)      :: k_points_IBZ 
       CHARACTER(LEN=6), EXTERNAL   :: int_to_char
-      TYPE (vdW_type),POINTER      :: vdW_ =>NULL() 
-      TYPE (dftU_type),POINTER     :: dftU_ => NULL() 
-      TYPE (hybrid_type),POINTER   :: hybrid_ => NULL() 
+      TYPE (vdW_type),POINTER      :: vdW_ 
+      TYPE (dftU_type),POINTER     :: dftU_ 
+      TYPE (hybrid_type),POINTER   :: hybrid_
       REAL(DP),ALLOCATABLE         :: london_c6_(:) 
       CHARACTER(LEN=3),ALLOCATABLE :: species_(:) 
       REAL(DP),TARGET              :: lond_rcut_, lond_s6_, ts_vdw_econv_thr_      
       REAL(DP),POINTER             :: london_s6_pt, lonrcut_opt, ts_thr_opt 
       INTEGER,POINTER              :: nbnd_pt, nbnd_up_pt, nbnd_dw_pt 
       CHARACTER(LEN=20),TARGET     :: non_locc_, vdw_corr_ 
-      CHARACTER(LEN=20),POINTER    :: non_locc_opt=>NULL(), vdw_corr_opt=>NULL()
-      LOGICAL,POINTER              :: ts_isol_opt => NULL() 
+      CHARACTER(LEN=20),POINTER    :: non_locc_opt, vdw_corr_opt 
+      LOGICAL,POINTER              :: ts_isol_opt 
       LOGICAL,TARGET               :: ts_vdW_isolated_ 
       !
       ! ... subroutine body
       !
       NULLIFY( london_s6_pt, lonrcut_opt, ts_thr_opt, nbnd_pt, nbnd_up_pt, nbnd_dw_pt) 
+      NULLIFY ( vdW_, dftU_, hybrid_, non_locc_opt, vdw_corr_opt, ts_isol_opt )
       CALL start_clock('restart')
       !
       IF( force_pairing ) &
@@ -270,7 +271,8 @@ MODULE cp_restart_new
 ! ... HEADER
 !-------------------------------------------------------------------------------
          !
-         CALL qexsd_openschema(TRIM( dirname ) // TRIM( xmlpun_schema ), 'CPV' )
+         CALL qexsd_openschema(TRIM( dirname ) // TRIM( xmlpun_schema ), 'CPV',&
+              title)
          output_obj%tagname="output"
          output_obj%lwrite = .TRUE.
 !-------------------------------------------------------------------------------
@@ -806,8 +808,8 @@ MODULE cp_restart_new
       nbnd_ = nupdwn(1)
       ALLOCATE( occ_(nbnd_, nspin), et_(nbnd_, nspin) )
       CALL qexsd_copy_band_structure( output_obj%band_structure, lsda_, &
-              nk_, isk_, natomwfc, nbnd_up, nbnd_dw, nelec_, wk_, occ_, &
-              ef, ef_up, ef_dw, et_ )
+           nk_, isk_, natomwfc, nbnd, nbnd_up, nbnd_dw, nelec_, xk, &
+           wk_, occ_, ef, ef_up, ef_dw, et_ )
       ! FIXME: in the call, the same array is passed as both occ0 and occm!
       DO iss = 1, nspin
          ib = iupdwn(iss)
@@ -1478,11 +1480,11 @@ MODULE cp_restart_new
     INTEGER          :: ibrav_
     INTEGER          :: nat_
     INTEGER          :: nsp_
-    INTEGER          :: ityp_(nat) 
+    INTEGER, ALLOCATABLE  :: ityp_(:) 
     REAL(DP)         :: alat_
     REAL(DP)         :: a1_(3), a2_(3), a3_(3)
     REAL(DP)         :: b1_(3), b2_(3), b3_(3)
-    REAL(DP)         :: tau_(3,nat) 
+    REAL(DP), ALLOCATABLE :: tau_(:,:) 
     CHARACTER(LEN=3) :: atm_(ntypx)
     TYPE(output_type) :: output_obj
     TYPE(Node),POINTER :: root, simpleNode, timestepsNode, cellNode, stepNode
