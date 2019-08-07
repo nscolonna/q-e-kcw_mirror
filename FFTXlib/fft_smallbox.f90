@@ -187,7 +187,7 @@
       !   Here initialize table 
       !
 
-!$omp parallel
+!$omp parallel default(none) private(sp) shared(nx, ny, nz, single_precision)
 
       sp = .FALSE.
       IF( PRESENT( single_precision ) ) THEN
