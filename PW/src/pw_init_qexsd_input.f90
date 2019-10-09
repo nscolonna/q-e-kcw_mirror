@@ -60,7 +60,6 @@
                                 gate, zgate, relaxz, block, block_1, block_2, block_height, real_space
 !
   USE fixed_occ,         ONLY:  f_inp               
-                                
 !
   USE kinds,             ONLY:   DP
   USE parameters,        ONLY:   ntypx
@@ -73,7 +72,7 @@
   USE control_flags,     ONLY:   cf_nstep => nstep 
   USE qes_types_module
   USE qes_libs_module
-  USE qexsd_module,      ONLY: qexsd_init_atomic_species, qexsd_init_atomic_structure, qexsd_init_dft, &
+  USE qexsd_init,        ONLY: qexsd_init_atomic_species, qexsd_init_atomic_structure, qexsd_init_dft, &
                                qexsd_init_hybrid, qexsd_init_vdw, qexsd_init_dftU
   USE qexsd_input  
   IMPLICIT NONE
@@ -254,6 +253,9 @@
                 dftd3_threebody_ = dftd3_threebody
                 dftd3_threebody_pt => dftd3_threebody_
         END SELECT
+     ELSE
+        vdw_corr_ = 'none'
+        vdw_corr_pointer => vdw_corr_
      END IF
      IF (dft_is_nonlocc) THEN
          vdw_nonlocc_ = TRIM(get_nonlocc_name())

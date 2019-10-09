@@ -13,8 +13,7 @@ SUBROUTINE read_file()
   ! Wrapper routine for backwards compatibility
   !
   USE io_global,            ONLY : stdout
-  USE io_files,             ONLY : nwordwfc, iunwfc, prefix, postfix, &
-       tmp_dir, wfc_dir
+  USE io_files,             ONLY : nwordwfc, iunwfc, wfc_dir, tmp_dir, restart_dir
   USE buffers,              ONLY : open_buffer, close_buffer
   USE wvfct,                ONLY : nbnd, npwx
   USE noncollin_module,     ONLY : npol
@@ -36,7 +35,7 @@ SUBROUTINE read_file()
   !
   ! ... Read the contents of the xml data file
   !
-  dirname = TRIM( tmp_dir ) // TRIM( prefix ) // postfix
+  dirname = restart_dir( )
   WRITE( stdout, '(/,5x,A,/,5x,A)') &
      'Reading data from directory:', TRIM( dirname )
   !
@@ -96,7 +95,8 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   USE gvecw,           ONLY : ecutwfc
   USE fft_base,        ONLY : dfftp, dffts
   USE io_global,       ONLY : stdout, ionode, ionode_id
-  USE io_files,        ONLY : psfile, pseudo_dir, pseudo_dir_cur
+  USE io_files,        ONLY : psfile, pseudo_dir, pseudo_dir_cur, &
+                              restart_dir, xmlfile
   USE mp_global,       ONLY : nproc_file, nproc_pool_file, &
                               nproc_image_file, ntask_groups_file, &
                               nproc_bgrp_file, nproc_ortho_file
@@ -114,7 +114,6 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   USE extfield,        ONLY : forcefield, forcegate, tefield, dipfield, &
        edir, emaxpos, eopreg, eamp, el_dipole, ion_dipole, gate, zgate, &
        relaxz, block, block_1, block_2, block_height
-  USE io_files,        ONLY : tmp_dir, prefix, postfix
   USE symm_base,       ONLY : nrot, nsym, invsym, s, ft, irt, t_rev, &
                               sname, inverse_s, s_axis_to_cart, &
                               time_reversal, no_t_rev, nosym, checkallsym
@@ -126,7 +125,6 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
                               start_exx, dft_is_hybrid
   USE london_module,   ONLY : scal6, lon_rcut, in_C6
   USE tsvdw_module,    ONLY : vdw_isolated
-  USE kernel_table,    ONLY : vdw_table_name
   USE exx_base,        ONLY : x_gamma_extrapolation, nq1, nq2, nq3, &
                               exxdiv_treatment, yukawa, ecutvcut
   USE exx,             ONLY : ecutfock, local_thr
@@ -143,21 +141,19 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   USE uspp,            ONLY : okvan
   USE paw_variables,   ONLY : okpaw
   !
-  USE pw_restart_new,  ONLY : pw_read_schema
   USE qes_types_module,ONLY : output_type, parallel_info_type, &
        general_info_type, input_type
   USE qes_libs_module, ONLY : qes_reset
+  USE qexsd_module,    ONLY : qexsd_readschema
   USE qexsd_copy,      ONLY : qexsd_copy_parallel_info, &
        qexsd_copy_algorithmic_info, qexsd_copy_atomic_species, &
        qexsd_copy_atomic_structure, qexsd_copy_symmetry, &
        qexsd_copy_basis_set, qexsd_copy_dft, qexsd_copy_efield, &
        qexsd_copy_band_structure, qexsd_copy_magnetization, &
        qexsd_copy_kpoints
-#if defined(__BEOWULF)
   USE qes_bcast_module,ONLY : qes_bcast
   USE mp_images,       ONLY : intra_image_comm
   USE mp,              ONLY : mp_bcast
-#endif
   !
   IMPLICIT NONE
   LOGICAL, INTENT(OUT) :: wfc_is_collected
@@ -165,27 +161,24 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
   INTEGER  :: i, is, ik, ierr, dum1,dum2,dum3
   LOGICAL  :: magnetic_sym, lvalid_input, lfixed
   CHARACTER(LEN=20) :: dft_name, vdw_corr, occupations
+  CHARACTER(LEN=320):: filename
   REAL(dp) :: exx_fraction, screening_parameter
-  TYPE (output_type)      :: output_obj 
+  TYPE (output_type)        :: output_obj 
   TYPE (parallel_info_type) :: parinfo_obj
   TYPE (general_info_type ) :: geninfo_obj
   TYPE (input_type)         :: input_obj
   !
   !
-#if defined(__BEOWULF)
-   IF (ionode) THEN
-      CALL pw_read_schema ( ierr, output_obj, parinfo_obj, geninfo_obj, input_obj)
-   END IF
-   CALL mp_bcast(ierr,intra_image_comm)
-   IF ( ierr /= 0 ) CALL errore ( 'read_schema', 'unable to read xml file', abs(ierr) ) 
-   CALL qes_bcast(output_obj, ionode_id, intra_image_comm)
-   CALL qes_bcast(parinfo_obj, ionode_id, intra_image_comm)
-   CALL qes_bcast(geninfo_obj, ionode_id, intra_image_comm) 
-   CALL qes_bcast(input_obj, ionode_id, intra_image_comm)
-#else
-  CALL pw_read_schema ( ierr, output_obj, parinfo_obj, geninfo_obj, input_obj)
-  IF ( ierr /= 0 ) CALL errore ( 'read_schema', 'unable to read xml file', abs(ierr) ) 
-#endif
+  filename = xmlfile ( )
+  !
+  IF (ionode) CALL qexsd_readschema ( filename, &
+       ierr, output_obj, parinfo_obj, geninfo_obj, input_obj)
+  CALL mp_bcast(ierr, ionode_id, intra_image_comm)
+  IF ( ierr > 0 ) CALL errore ( 'read_xml_file', 'fatal error reading xml file', ierr ) 
+  CALL qes_bcast(output_obj, ionode_id, intra_image_comm)
+  CALL qes_bcast(parinfo_obj, ionode_id, intra_image_comm)
+  CALL qes_bcast(geninfo_obj, ionode_id, intra_image_comm) 
+  CALL qes_bcast(input_obj, ionode_id, intra_image_comm)
   !
   ! ... Now read all needed variables from xml objects
   !
@@ -196,7 +189,7 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
        nproc_pool_file, nproc_image_file, ntask_groups_file, &
        nproc_bgrp_file, nproc_ortho_file)
   !
-  pseudo_dir_cur = TRIM( tmp_dir ) // TRIM( prefix ) // postfix
+  pseudo_dir_cur = restart_dir ( )
   CALL qexsd_copy_atomic_species ( output_obj%atomic_species, &
        nsp, atm, amass, angle1, angle2, starting_magnetization, &
        psfile, pseudo_dir ) 
@@ -234,7 +227,7 @@ SUBROUTINE read_xml_file ( wfc_is_collected )
        exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, &
        lda_plus_U, lda_plus_U_kind, U_projection, Hubbard_l, Hubbard_lmax, &
        Hubbard_U, Hubbard_J0, Hubbard_alpha, Hubbard_beta, Hubbard_J, &
-       vdw_corr, vdw_table_name, scal6, lon_rcut, vdw_isolated )
+       vdw_corr, scal6, lon_rcut, vdw_isolated )
   !! More DFT initializations
   CALL set_vdw_corr ( vdw_corr, llondon, ldftd3, ts_vdw, lxdm )
   CALL enforce_input_dft ( dft_name, .TRUE. )
@@ -341,7 +334,6 @@ SUBROUTINE post_xml_init (  )
   USE paw_onecenter,        ONLY : paw_potential
   USE dfunct,               ONLY : newd
   USE funct,                ONLY : get_inlc, get_dft_name
-  USE kernel_table,         ONLY : initialize_kernel_table
   USE ldaU,                 ONLY : lda_plus_u, eth, init_lda_plus_u, U_projection
   USE esm,                  ONLY : do_comp_esm, esm_init
   USE Coul_cut_2D,          ONLY : do_cutoff_2D, cutoff_fact 
@@ -384,11 +376,6 @@ SUBROUTINE post_xml_init (  )
   !
   dft_name = get_dft_name ()
   CALL readpp ( dft_name )
-  !
-  ! ... read the vdw kernel table if needed
-  !
-  inlc = get_inlc()
-  IF (inlc > 0 ) CALL initialize_kernel_table(inlc)
   !
   ! ... misc PP initialization (from setup.f90)
   !

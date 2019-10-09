@@ -49,7 +49,6 @@ invmat.o \
 io_files.o \
 io_global.o  \
 ions_base.o \
-kernel_table.o \
 kind.o \
 libxc.o \
 mdiis.o \
@@ -123,6 +122,7 @@ qes_read_module.o \
 qes_bcast_module.o \
 qexsd.o   \
 qexsd_copy.o   \
+qexsd_init.o   \
 qexsd_input.o \
 hdf5_qe.o\
 qeh5_module.o\
