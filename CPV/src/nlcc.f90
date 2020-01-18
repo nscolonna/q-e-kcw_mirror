@@ -171,7 +171,7 @@
 !     same logic as in newd - uses box grid. For parallel execution:
 !     the sum over node contributions is done in the calling routine
 !
-      USE kinds,             ONLY: DP, SP
+      USE kinds,             ONLY: DP, sgl
       use electrons_base,    only: nspin
       use smallbox_gvec,     only: gxb, ngb
       use smallbox_subs,     only: fft_oned2box, boxdotgrid
@@ -198,8 +198,8 @@
       complex(dp) facg
       !complex(dp), allocatable :: qv(:)
       !complex(dp), allocatable :: fg1(:), fg2(:)
-      complex(sp), allocatable :: qv(:)
-      complex(sp), allocatable :: fg1(:), fg2(:)
+      complex(sgl), allocatable :: qv(:)
+      complex(sgl), allocatable :: fg1(:), fg2(:)
       real(dp), allocatable :: fcc(:,:)
 
 #if defined(_OPENMP)
@@ -212,7 +212,7 @@
       fac = omega/DBLE(dfftp%nr1*dfftp%nr2*dfftp%nr3*nspin)
 
 !$omp parallel default(none) &      
-!$omp          shared(nsp, na, ngb, eigrb, dfftb, irb, ci, rhocb, &
+!$omp          shared(nsp, na, ngb, eigrb, dfftb, irb, rhocb, &
 !$omp                 gxb, nat, fac, upf, vxc, nspin, tpibab, fion1, ityp ) &
 !$omp          private(mytid, ntids, is, ia, nfft, ig, qv, fg1, fg2, itid, res, ix, fcc, facg, iss )
 
@@ -257,14 +257,14 @@
          do ix=1,3
             if (nfft.eq.2) then
                do ig=1,ngb
-                  facg = tpibab*CMPLX(0.d0,gxb(ix,ig),kind=DP)*rhocb(ig,is)
+                  facg = tpibab*CMPLX(0.d0,gxb(ix,ig),kind=sgl)*rhocb(ig,is)
                   fg1(ig) = eigrb(ig,ia  )*facg
                   fg2(ig) = eigrb(ig,ia+1)*facg
                end do
                CALL fft_oned2box( qv, fg1, fg2 )
             else
                do ig=1,ngb
-                  facg = tpibab*CMPLX(0.d0,gxb(ix,ig),kind=DP)*rhocb(ig,is)
+                  facg = tpibab*CMPLX(0.d0,gxb(ix,ig),kind=sgl)*rhocb(ig,is)
                   fg1(ig) = eigrb(ig,ia)*facg
                end do
                CALL fft_oned2box( qv, fg1 )
@@ -313,7 +313,7 @@
 !     Calculate core charge contribution in real space, rhoc(r)
 !     Same logic as for rhov: use box grid for core charges
 ! 
-      use kinds, only: dp, sp
+      use kinds, only: dp, sgl
       use ions_base,         only: nsp, na, nat, ityp
       use uspp_param,        only: upf
       use smallbox_gvec,     only: ngb
@@ -335,9 +335,9 @@
       !complex(dp), allocatable :: wrk1(:)
       !complex(dp), allocatable :: qv(:)
       !complex(dp), allocatable :: fg1(:), fg2(:)
-      complex(sp), allocatable :: wrk1(:)
-      complex(sp), allocatable :: qv(:)
-      complex(sp), allocatable :: fg1(:), fg2(:)
+      complex(sgl), allocatable :: wrk1(:)
+      complex(sgl), allocatable :: qv(:)
+      complex(sgl), allocatable :: fg1(:), fg2(:)
 
 #if defined(_OPENMP)
       INTEGER :: itid, mytid, ntids, omp_get_thread_num, omp_get_num_threads
@@ -350,7 +350,7 @@
       wrk1 (:) = (0.0, 0.0)
 !
 !$omp parallel default(none) &      
-!$omp          shared(nsp, na, ngb, eigrb, dfftb, irb, ci, rhocb, &
+!$omp          shared(nsp, na, ngb, eigrb, dfftb, irb, rhocb, &
 !$omp                 nat, upf, wrk1, ityp ) &
 !$omp          private(mytid, ntids, is, ia, nfft, ig, isa, qv, fg1, fg2, itid )
 

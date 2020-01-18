@@ -40,7 +40,7 @@
 !
 !     e_v = sum_i,ij rho_i,ij d^ion_is,ji
 !
-      USE kinds,              ONLY: DP, SP
+      USE kinds,              ONLY: DP, sgl
       USE control_flags,      ONLY: iprint, iverbosity, thdyn, tpre, trhor, ndr
       USE ions_base,          ONLY: nat
       USE gvect,              ONLY: gstart, ig_l2g
@@ -93,15 +93,15 @@
       REAL(DP) :: rsumr(2), rsumg(2), detmp(6), mtmp(3,3)
       REAL(DP) :: rnegsum, rmin, rmax, rsum
       COMPLEX(DP) :: ci,fp,fm
-      REAL(SP) :: sa1, sa2
+      REAL(sgl) :: sa1, sa2
       !REAL(DP) :: sa1, sa2
 #if defined(__INTEL_COMPILER)
 #if __INTEL_COMPILER  >= 1300
 !dir$ attributes align: 4096 :: psis, drhovan, tmp_rhos
 #endif
 #endif
-      REAL(SP), ALLOCATABLE :: tmp_rhos(:,:)
-      COMPLEX(SP), ALLOCATABLE :: psis(:)
+      REAL(sgl), ALLOCATABLE :: tmp_rhos(:,:)
+      COMPLEX(sgl), ALLOCATABLE :: psis(:)
       !REAL(DP), ALLOCATABLE :: tmp_rhos(:,:)
       !COMPLEX(DP), ALLOCATABLE :: psis(:)
       REAL(DP), ALLOCATABLE :: drhovan(:,:,:,:,:)
@@ -493,7 +493,7 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
 !     On input rhor and rhog must contain the smooth part only !!!
 !     Output in (drhor, drhog)
 !
-      USE kinds,                    ONLY: DP, SP
+      USE kinds,                    ONLY: DP, sgl
       USE control_flags,            ONLY: iprint
       USE ions_base,                ONLY: na, nsp, nat, ityp
       USE uspp_param,               ONLY: nhm, nh, upf
@@ -532,10 +532,10 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
       !COMPLEX(DP), ALLOCATABLE:: dqgbt(:,:)
       !COMPLEX(DP), ALLOCATABLE :: qv(:)
       !COMPLEX(DP), ALLOCATABLE :: fg1(:), fg2(:)
-      COMPLEX(SP), ALLOCATABLE :: v(:)
-      COMPLEX(SP), ALLOCATABLE:: dqgbt(:,:)
-      COMPLEX(SP), ALLOCATABLE :: qv(:)
-      COMPLEX(SP), ALLOCATABLE :: fg1(:), fg2(:)
+      COMPLEX(sgl), ALLOCATABLE :: v(:)
+      COMPLEX(sgl), ALLOCATABLE:: dqgbt(:,:)
+      COMPLEX(sgl), ALLOCATABLE :: qv(:)
+      COMPLEX(sgl), ALLOCATABLE :: fg1(:), fg2(:)
 !
       INTEGER  :: itid, mytid, ntids
 #if defined(_OPENMP)
@@ -587,7 +587,7 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
 
 !$omp parallel default(none) &
 !$omp          shared(nat, ityp, ngb, nh, eigrb, dfftb, irb, v, &
-!$omp                 ci, i, j, dqgb, qgb, nhm, rhovan, drhovan, upf ) &
+!$omp                 ci, i, j, dqgb, qgb, nhm, rhovan, drhovan, upf, dfftp, drhor ) &
 !$omp          private(mytid, ntids, is, ia, iv, jv, ijv, ig, iss, &
 !$omp                  qv, fg1, fg2, itid, dqgbt, dsumt, asumt )
 !$omp do
@@ -774,7 +774,7 @@ SUBROUTINE rhov(irb,eigrb,rhovan,rhog,rhor)
 !
 !     routine makes use of c(-g)=c*(g)  and  beta(-g)=beta*(g)
 !
-      USE kinds,                    ONLY: dp, sp
+      USE kinds,                    ONLY: dp, sgl
       USE ions_base,                ONLY: nat, na, nsp, ityp
       USE io_global,                ONLY: stdout
       USE mp_global,                ONLY: intra_bgrp_comm
@@ -813,10 +813,10 @@ SUBROUTINE rhov(irb,eigrb,rhovan,rhog,rhor)
       !COMPLEX(DP), ALLOCATABLE :: v(:)
       !COMPLEX(DP), ALLOCATABLE :: qv(:)
       !COMPLEX(DP), ALLOCATABLE :: fg1(:), fg2(:)
-      COMPLEX(SP), ALLOCATABLE :: qgbt(:,:)
-      COMPLEX(SP), ALLOCATABLE :: v(:)
-      COMPLEX(SP), ALLOCATABLE :: qv(:)
-      COMPLEX(SP), ALLOCATABLE :: fg1(:), fg2(:)
+      COMPLEX(sgl), ALLOCATABLE :: qgbt(:,:)
+      COMPLEX(sgl), ALLOCATABLE :: v(:)
+      COMPLEX(sgl), ALLOCATABLE :: qv(:)
+      COMPLEX(sgl), ALLOCATABLE :: fg1(:), fg2(:)
 
 #if defined(_OPENMP)
       INTEGER  :: itid, mytid, ntids

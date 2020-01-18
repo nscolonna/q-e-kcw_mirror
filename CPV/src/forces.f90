@@ -357,7 +357,7 @@
 !                                 e^-ig.r_i < beta_i,j | c_n >}
 !
       USE parallel_include
-      USE kinds,                  ONLY: dp, sp
+      USE kinds,                  ONLY: dp, sgl
       USE control_flags,          ONLY: iprint
       USE uspp,                   ONLY: nhsa=>nkb, dvan, deeq
       USE uspp_param,             ONLY: nhm, nh, ish
@@ -382,7 +382,7 @@
       COMPLEX(DP)                :: c(:,:)
       COMPLEX(DP)                :: df(:), da(:)
       INTEGER,     INTENT(IN)    :: ldv
-      REAL(SP)                   :: v( ldv, * )
+      REAL(sgl)                   :: v( ldv, * )
       INTEGER                    :: ispin( : )
       REAL(DP)                   :: f( : )
       INTEGER,     INTENT(IN)    :: n, nspin
@@ -401,7 +401,7 @@
 #endif
 #endif
       REAL(DP),    ALLOCATABLE :: af( :, : ), aa( :, : )
-      COMPLEX(SP), ALLOCATABLE :: psi(:)
+      COMPLEX(sgl), ALLOCATABLE :: psi(:)
       REAL(DP)    :: tmp1, tmp2                      ! Lingzhu Kong
       REAL(DP),    ALLOCATABLE :: exx_a(:), exx_b(:) ! Lingzhu Kong      
       !
@@ -453,14 +453,14 @@
             DO ir = 1, dffts%nr1x*dffts%nr2x*tg_nr3
                tmp1 = v(ir,iss1) * DBLE( psi(ir) )+exx_potential(ir,i/nogrp_+1)
                tmp2 = v(ir,iss2) * AIMAG(psi(ir) )+exx_potential(ir,i/nogrp_+2)
-               psi(ir) = CMPLX( tmp1, tmp2, kind=SP)
+               psi(ir) = CMPLX( tmp1, tmp2, kind=sgl)
             END DO
             !$omp end parallel do 
          ELSE
             !$omp parallel do 
             DO ir = 1, dffts%nr1x*dffts%nr2x*tg_nr3
                psi(ir) = CMPLX ( v(ir,iss1) * DBLE( psi(ir) ), &
-                                 v(ir,iss2) *AIMAG( psi(ir) ) ,kind=SP)
+                                 v(ir,iss2) *AIMAG( psi(ir) ) ,kind=sgl)
             END DO
             !$omp end parallel do 
          ENDIF
@@ -496,7 +496,7 @@
                DO ir=1,dffts%nnr
                   tmp1 =  v(ir,iss1)* DBLE(psi(ir))+exx_a(ir)
                   tmp2 = v1(ir,iss2)*AIMAG(psi(ir))+exx_b(ir)
-                  psi(ir)=CMPLX( tmp1, tmp2, kind=SP )
+                  psi(ir)=CMPLX( tmp1, tmp2, kind=sgl )
                END DO
                !$omp end parallel do 
                !
@@ -505,7 +505,7 @@
                !$omp parallel do 
                DO ir=1,dffts%nnr
                   psi(ir)=CMPLX ( v(ir,iss1)* DBLE(psi(ir)), &
-                                 v1(ir,iss2)*AIMAG(psi(ir)) ,kind=SP)
+                                 v1(ir,iss2)*AIMAG(psi(ir)) ,kind=sgl)
                END DO
                !$omp end parallel do 
                !
@@ -533,7 +533,7 @@
                DO ir=1,dffts%nnr
                   tmp1 = v(ir,iss1)* DBLE(psi(ir))+exx_a(ir)
                   tmp2 = v(ir,iss2)*AIMAG(psi(ir))+exx_b(ir)
-                  psi(ir)=CMPLX( tmp1, tmp2, kind=SP )
+                  psi(ir)=CMPLX( tmp1, tmp2, kind=sgl )
                END DO
                !$omp end parallel do 
 !===============================================================================
@@ -541,7 +541,7 @@
                !$omp parallel do 
                DO ir=1,dffts%nnr
                   psi(ir)=CMPLX( v(ir,iss1)* DBLE(psi(ir)), &
-                                 v(ir,iss2)*AIMAG(psi(ir)) ,kind=SP)
+                                 v(ir,iss2)*AIMAG(psi(ir)) ,kind=sgl)
                END DO
                !$omp end parallel do 
             ENDIF

@@ -318,7 +318,7 @@
       !  cm_bgrp  wave functions at time t + dt, not yet othogonalized 
       !
       USE parallel_include
-      USE kinds,               ONLY : DP,SP
+      USE kinds,               ONLY : DP,sgl
       USE mp_global,           ONLY : me_bgrp, &
                                       my_bgrp_id, nbgrp, inter_bgrp_comm
       USE mp,                  ONLY : mp_sum
@@ -358,7 +358,7 @@
      complex(DP), allocatable :: c2(:), c3(:), c2tmp(:), c3tmp(:)
      REAL(DP),    ALLOCATABLE :: ftmp(:)
      INTEGER,     ALLOCATABLE :: itmp(:)
-     REAL(SP),    ALLOCATABLE :: tg_rhos_sp(:,:), rhos_sp(:,:)
+     REAL(sgl),    ALLOCATABLE :: tg_rhos_sp(:,:), rhos_sp(:,:)
      integer :: i, nsiz, incr, idx, idx_in, ierr
      integer :: iwfc, nwfc, is, ii, tg_rhos_siz, c2_siz
      integer :: iflag

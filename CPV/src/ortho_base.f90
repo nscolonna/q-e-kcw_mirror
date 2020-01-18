@@ -430,7 +430,7 @@ CONTAINS
       !  But the subroutine work with any number of processors, when
       !  nproc is not a square, some procs are left idle
 
-      USE kinds,             ONLY: DP, SP
+      USE kinds,             ONLY: DP, sgl
       USE io_global,         ONLY: stdout
       USE control_flags,     ONLY: ortho_eps, ortho_max
       USE mp_bands,          ONLY: intra_bgrp_comm, me_bgrp, nproc_bgrp
@@ -453,9 +453,9 @@ CONTAINS
 
       INTEGER :: i, j
       INTEGER :: nr, nc, ir, ic
-      REAL(SP), ALLOCATABLE :: tmp1(:,:), tmp2(:,:), dd(:,:), tr1(:,:), tr2(:,:)
-      REAL(SP), ALLOCATABLE :: con(:,:), x1(:,:), xloc(:,:), rhor(:,:), rhos(:,:)
-      REAL(SP), ALLOCATABLE :: tau(:,:), u(:,:)
+      REAL(sgl), ALLOCATABLE :: tmp1(:,:), tmp2(:,:), dd(:,:), tr1(:,:), tr2(:,:)
+      REAL(sgl), ALLOCATABLE :: con(:,:), x1(:,:), xloc(:,:), rhor(:,:), rhos(:,:)
+      REAL(sgl), ALLOCATABLE :: tau(:,:), u(:,:)
       !
       IF( nss < 1 ) RETURN
 
@@ -623,13 +623,13 @@ CONTAINS
       REAL(DP), ALLOCATABLE :: sigd(:)
       REAL(DP) :: den, dx
       !
-      REAL(SP), ALLOCATABLE :: xloc_sp(:,:)
-      REAL(SP), ALLOCATABLE :: x1_sp(:,:)
-      REAL(SP), ALLOCATABLE :: rhor_sp(:,:)
-      REAL(SP), ALLOCATABLE :: tau_sp(:,:)
-      REAL(SP), ALLOCATABLE :: sig_sp(:,:)
-      REAL(SP), ALLOCATABLE :: tmp1_sp(:,:)
-      REAL(SP), ALLOCATABLE :: tmp2_sp(:,:)
+      REAL(sgl), ALLOCATABLE :: xloc_sp(:,:)
+      REAL(sgl), ALLOCATABLE :: x1_sp(:,:)
+      REAL(sgl), ALLOCATABLE :: rhor_sp(:,:)
+      REAL(sgl), ALLOCATABLE :: tau_sp(:,:)
+      REAL(sgl), ALLOCATABLE :: sig_sp(:,:)
+      REAL(sgl), ALLOCATABLE :: tmp1_sp(:,:)
+      REAL(sgl), ALLOCATABLE :: tmp2_sp(:,:)
       !
       IF( nss < 1 ) RETURN
 

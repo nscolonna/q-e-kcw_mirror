@@ -129,7 +129,7 @@
          REAL(DP),    OPTIONAL      :: v1( ldv, * )
       END SUBROUTINE dforce_x
       SUBROUTINE dforce_sp( i, bec, vkb, c, df, da, v, ldv, ispin, f, n, nspin, v1 )
-         USE kinds,              ONLY: DP, SP
+         USE kinds,              ONLY: DP, sgl
          IMPLICIT NONE
          INTEGER,     INTENT(IN)    :: i
          REAL(DP)                   :: bec(:,:)
@@ -137,7 +137,7 @@
          COMPLEX(DP)                :: c(:,:)
          COMPLEX(DP)                :: df(:), da(:)
          INTEGER,     INTENT(IN)    :: ldv
-         REAL(SP)                   :: v( ldv, * )
+         REAL(sgl)                   :: v( ldv, * )
          INTEGER                    :: ispin( : )
          REAL(DP)                   :: f( : )
          INTEGER,     INTENT(IN)    :: n, nspin

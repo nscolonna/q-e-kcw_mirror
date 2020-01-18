@@ -21,7 +21,7 @@ SUBROUTINE wf( clwf, c, bec, eigr, eigrb, taub, irb, &
   !
   ! ... routine makes use of c(-g)=c*(g)  and  beta(-g)=beta*(g)
   !
-  USE kinds,                    ONLY : DP, SP
+  USE kinds,                    ONLY : DP, sgl
   USE constants,                ONLY : pi, tpi
   USE ions_base,                ONLY : nsp, na, nax, nat, ityp
   USE uspp,                     ONLY : indv_ijkb0, nkbus
@@ -72,8 +72,8 @@ SUBROUTINE wf( clwf, c, bec, eigr, eigrb, taub, irb, &
   REAL(DP),    ALLOCATABLE :: Uspin(:,:)
   COMPLEX(DP), ALLOCATABLE :: X(:,:), Xsp(:,:), X2(:,:), X3(:,:)
   COMPLEX(DP), ALLOCATABLE :: O(:,:,:), Ospin(:,:,:), Oa(:,:,:)
-  COMPLEX(SP), ALLOCATABLE :: fg1(:)
-  COMPLEX(SP), ALLOCATABLE :: qv(:)
+  COMPLEX(sgl), ALLOCATABLE :: fg1(:)
+  COMPLEX(sgl), ALLOCATABLE :: qv(:)
   REAL(DP),    ALLOCATABLE :: gr(:,:), mt(:), mt0(:), wr(:), W(:,:), EW(:,:)
   INTEGER,     ALLOCATABLE :: f3(:), f4(:)
   COMPLEX(DP), ALLOCATABLE :: U2(:,:)

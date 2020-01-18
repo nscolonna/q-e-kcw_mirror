@@ -597,13 +597,13 @@ END FUNCTION boxdotgridcplx_dp
 !
 
   SUBROUTINE fft_oned2box_sp( qv, fg1, fg2 )
-    USE kinds, ONLY: DP, SP
+    USE kinds, ONLY: DP, sgl
     IMPLICIT NONE
-    COMPLEX(SP), INTENT(OUT) :: qv(:)
-    COMPLEX(SP), INTENT(IN) :: fg1(:)
-    COMPLEX(SP), OPTIONAL, INTENT(IN) :: fg2(:)
+    COMPLEX(sgl), INTENT(OUT) :: qv(:)
+    COMPLEX(sgl), INTENT(IN) :: fg1(:)
+    COMPLEX(sgl), OPTIONAL, INTENT(IN) :: fg2(:)
     INTEGER :: ig
-    COMPLEX(SP) :: ci
+    COMPLEX(sgl) :: ci
     ci = ( 0.0, 1.0 )
     !
     qv = ( 0.0, 0.0 )
@@ -622,13 +622,13 @@ END FUNCTION boxdotgridcplx_dp
   END SUBROUTINE fft_oned2box_sp
 
   SUBROUTINE fft_add_oned2box_sp( qv, fg1, fg2 )
-    USE kinds, ONLY: DP, SP
+    USE kinds, ONLY: DP, sgl
     IMPLICIT NONE
-    COMPLEX(SP), INTENT(INOUT) :: qv(:)
-    COMPLEX(SP), INTENT(IN) :: fg1(:)
-    COMPLEX(SP), OPTIONAL, INTENT(IN) :: fg2(:)
+    COMPLEX(sgl), INTENT(INOUT) :: qv(:)
+    COMPLEX(sgl), INTENT(IN) :: fg1(:)
+    COMPLEX(sgl), OPTIONAL, INTENT(IN) :: fg2(:)
     INTEGER :: ig
-    COMPLEX(SP) :: ci
+    COMPLEX(sgl) :: ci
     ci = ( 0.0, 1.0 )
     !
     IF( PRESENT( fg2 ) ) THEN
@@ -654,14 +654,14 @@ END FUNCTION boxdotgridcplx_dp
 ! nfft=1  add      real part of qv(r) to real part of array vr(r)
 ! nfft=2  add imaginary part of qv(r) to real part of array vr(r)
 !
-      USE kinds, ONLY: dp,sp
+      USE kinds, ONLY: dp,sgl
       USE fft_base, ONLY: dfftp, dfftb
       USE mp_global, ONLY: me_bgrp
 
       IMPLICIT NONE
       INTEGER, INTENT(in):: nfft, irb(3)
-      COMPLEX(sp), INTENT(in):: qv(dfftb%nnr)
-      COMPLEX(sp), INTENT(inout):: vr(dfftp%nnr)
+      COMPLEX(sgl), INTENT(in):: qv(dfftb%nnr)
+      COMPLEX(sgl), INTENT(inout):: vr(dfftp%nnr)
 !
       INTEGER ir1, ir2, ir3, ir, ibig1, ibig2, ibig3, ibig
       INTEGER me
@@ -716,15 +716,15 @@ END FUNCTION boxdotgridcplx_dp
 ! add array qv(r) on box grid to array v(r) on dense grid
 ! irb   : position of the box in the dense grid
 !
-      USE kinds, ONLY: dp,sp
+      USE kinds, ONLY: dp,sgl
       USE fft_base, ONLY: dfftp, dfftb
       USE mp_global, ONLY: me_bgrp
       !
       IMPLICIT NONE
       !
       INTEGER, INTENT(in):: irb(3)
-      COMPLEX(sp), INTENT(in):: qv(dfftb%nnr)
-      COMPLEX(sp), INTENT(inout):: v(dfftp%nnr)
+      COMPLEX(sgl), INTENT(in):: qv(dfftb%nnr)
+      COMPLEX(sgl), INTENT(inout):: v(dfftp%nnr)
 !
       INTEGER ir1, ir2, ir3, ir, ibig1, ibig2, ibig3, ibig
       INTEGER me
@@ -776,12 +776,12 @@ END FUNCTION boxdotgridcplx_dp
 ! nfft=1 (2): use real (imaginary) part of qv(r)
 ! Parallel execution: remember to sum the contributions from other nodes
 !
-      USE kinds, ONLY: dp,sp
+      USE kinds, ONLY: dp,sgl
       USE fft_base, ONLY: dfftp, dfftb
       USE mp_global, ONLY: me_bgrp
       IMPLICIT NONE
       INTEGER, INTENT(in):: nfft, irb(3)
-      COMPLEX(sp), INTENT(in):: qv(dfftb%nnr)
+      COMPLEX(sgl), INTENT(in):: qv(dfftb%nnr)
       REAL(dp), INTENT(in):: vr(dfftp%nnr)
 !
       INTEGER ir1, ir2, ir3, ir, ibig1, ibig2, ibig3, ibig
@@ -834,14 +834,14 @@ FUNCTION boxdotgridcplx_sp(irb,qv,vr)
   !
   !      use ion_parameters
   !
-  USE kinds,           ONLY : DP, SP
+  USE kinds,           ONLY : DP, sgl
   USE fft_base,        ONLY : dfftp, dfftb
   USE mp_global,       ONLY : me_bgrp
   !
   IMPLICIT NONE
   !
   INTEGER,           INTENT(IN):: irb(3)
-  COMPLEX(SP), INTENT(IN):: qv(dfftb%nnr)
+  COMPLEX(sgl), INTENT(IN):: qv(dfftb%nnr)
   COMPLEX(DP), INTENT(IN):: vr(dfftp%nnr)
   COMPLEX(DP)            :: boxdotgridcplx_sp
   !

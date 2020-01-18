@@ -17,6 +17,7 @@ USE parallel_include
 !
 CHARACTER(LEN = 5), PARAMETER :: crash_file = 'CRASH'
 INTEGER, PARAMETER :: DP = selected_real_kind(14, 200)
+INTEGER, PARAMETER :: sgl = selected_real_kind(6,30)
 INTEGER, PARAMETER :: i8b = selected_int_kind(18)
 INTEGER, PARAMETER :: stdout = 6    ! unit connected to standard output
 ! 

@@ -16,7 +16,7 @@
 !     where
 !         rho_lm = \sum_j f_j <psi_j|beta_l><beta_m|psi_j>
 !
-      USE kinds,            ONLY: dp, sp
+      USE kinds,            ONLY: dp, sgl
       USE uspp_param,       ONLY: nh, nhm, upf
       USE uspp,             ONLY: deeq
       USE ions_base,        ONLY: nat, nsp, na, ityp
@@ -46,7 +46,7 @@
       REAL(DP)  fac, fac1, fac2, res
       COMPLEX(DP) ci, facg1, facg2
       !COMPLEX(DP), ALLOCATABLE :: qv(:), fg1(:), fg2(:)
-      COMPLEX(SP), ALLOCATABLE :: qv(:), fg1(:), fg2(:)
+      COMPLEX(sgl), ALLOCATABLE :: qv(:), fg1(:), fg2(:)
       REAL(DP), ALLOCATABLE :: fvan(:,:)
       INTEGER :: na_bgrp, ia_bgrp
 
