@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2001-2016 Quantum ESPRESSO group
+! Copyright (C) 2001-2020 Quantum ESPRESSO group
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -35,7 +35,7 @@ SUBROUTINE setup()
   !! 3) generates k-points corresponding to the actual crystal symmetry;
   !
   !! 4) calculates various quantities used in magnetic, spin-orbit, PAW
-  !!    electric-field, LDA+U calculations, and for parallelism.
+  !!    electric-field, DFT+U(+V) calculations, and for parallelism.
   !
   USE kinds,              ONLY : DP
   USE constants,          ONLY : eps8, e2, fpi, pi, degspin
@@ -80,7 +80,7 @@ SUBROUTINE setup()
   USE lsda_mod,           ONLY : lsda, nspin, current_spin, isk, &
                                  starting_magnetization
   USE spin_orb,           ONLY : lspinorb, domag
-  USE noncollin_module,   ONLY : noncolin, npol, m_loc, i_cons, &
+  USE noncollin_module,   ONLY : noncolin, npol, i_cons, m_loc, &
                                  angle1, angle2, bfield, ux, nspin_lsda, &
                                  nspin_gga, nspin_mag
   USE qexsd_module,       ONLY : qexsd_readschema
@@ -153,6 +153,9 @@ SUBROUTINE setup()
      END IF
      IF ( noncolin ) no_t_rev=.true.
   END IF
+  !
+  IF ( dft_is_meta() .AND. noncolin )  CALL errore( 'setup', &
+                               'Non-collinear Meta-GGA not implemented', 1 )
   !
   ! ... Compute the ionic charge for each atom type and the total ionic charge
   !
@@ -627,9 +630,9 @@ SUBROUTINE setup()
      ENDDO
   ENDIF
   !
-  ! ... Set up Hubbard parameters for LDA+U calculation
+  ! ... Set up Hubbard parameters for DFT+U(+V) calculation
   !
-  CALL init_lda_plus_u ( upf(1:ntyp)%psd, noncolin )
+  CALL init_lda_plus_u ( upf(1:ntyp)%psd, nspin, noncolin )
   !
   ! ... initialize d1 and d2 to rotate the spherical harmonics
   !
@@ -686,7 +689,7 @@ LOGICAL FUNCTION check_para_diag( nbnd )
         ELSE
            CALL errore( 'setup','Unexpected sub-group communicator ', 1 )
         END IF
-#if defined(__ELPA) || defined(__ELPA_2015) || defined(__ELPA_2016)
+#if defined(__ELPA)  || defined(__ELPA_2015) || defined(__ELPA_2016) || defined(__ELPA_2017) || defined(__ELPA_2018) || defined(__ELPA_2019)
         WRITE( stdout, '(5X,"ELPA distributed-memory algorithm ", &
               & "(size of sub-group: ", I2, "*", I3, " procs)",/)') &
                np_ortho(1), np_ortho(2)

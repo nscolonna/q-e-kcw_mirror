@@ -164,7 +164,7 @@ SUBROUTINE laxlib_start_drv( ndiag_, my_world_comm, parent_comm, do_distr_diag_i
        ! no command-line argument -ndiag N or -northo N is present
        ! insert here custom architecture specific default definitions
 #if defined __SCALAPACK
-       nproc_ortho_try = MAX( parent_nproc/2, 1 )
+       nproc_ortho_try = MAX( parent_nproc, 1 )
 #else
        nproc_ortho_try = 1
 #endif
@@ -388,7 +388,99 @@ SUBROUTINE print_lambda_x( lambda, idesc, n, nshow, nudx, ccc, ionode, iunit )
     RETURN
 END SUBROUTINE print_lambda_x
 
+  SUBROUTINE laxlib_desc_init1( nsiz, nx, la_proc, idesc, rank_ip, idesc_ip )
+     !
+     IMPLICIT NONE
+     include 'laxlib_low.fh'
+     include 'laxlib_param.fh'
+     include 'laxlib_kinds.fh'
+     !
+     INTEGER, INTENT(IN)  :: nsiz
+     INTEGER, INTENT(OUT) :: nx
+     LOGICAL, INTENT(OUT) :: la_proc
+     INTEGER, INTENT(OUT) :: idesc(LAX_DESC_SIZE)
+     INTEGER, INTENT(OUT), ALLOCATABLE :: rank_ip( :, : )
+     INTEGER, INTENT(OUT), ALLOCATABLE :: idesc_ip(:,:,:)
+     !
+     INTEGER :: ortho_comm, np_ortho(2), me_ortho(2), ortho_comm_id, &
+          leg_ortho
+     !
+     CALL laxlib_getval( np_ortho = np_ortho, me_ortho = me_ortho, &
+          ortho_comm = ortho_comm, leg_ortho = leg_ortho, &
+          ortho_comm_id = ortho_comm_id )
+     !
+     IF ( .NOT. ALLOCATED (idesc_ip) ) THEN
+        ALLOCATE( idesc_ip( LAX_DESC_SIZE, np_ortho(1), np_ortho(2) ) )
+     ELSE
+        IF ( SIZE (idesc_ip,2) /= np_ortho(1) .OR. &
+             SIZE (idesc_ip,3) /= np_ortho(2) ) &
+             CALL lax_error__( " desc_init ", " inconsistent dimension ", 2 )
+     END IF
+     IF ( .NOT. ALLOCATED (rank_ip) ) &
+          ALLOCATE( rank_ip( np_ortho(1), np_ortho(2) ) )
+     !
+     CALL laxlib_init_desc( idesc, idesc_ip, rank_ip, nsiz, nsiz )
+     ! 
+     nx = idesc(LAX_DESC_NRCX)
+     !
+     la_proc = .FALSE.
+     IF( idesc(LAX_DESC_ACTIVE_NODE) > 0 ) la_proc = .TRUE.
+     !
+     RETURN
+   END SUBROUTINE laxlib_desc_init1
+   !
+   SUBROUTINE laxlib_desc_init2( nsiz, nx, la_proc, idesc, rank_ip, irc_ip, nrc_ip )
+     !
+     IMPLICIT NONE
+     include 'laxlib_low.fh'
+     include 'laxlib_param.fh'
+     include 'laxlib_kinds.fh'
+     !
+     INTEGER, INTENT(IN)  :: nsiz
+     INTEGER, INTENT(OUT) :: nx
+     LOGICAL, INTENT(OUT) :: la_proc
+     INTEGER, INTENT(OUT) :: idesc(LAX_DESC_SIZE)
+     INTEGER, INTENT(OUT), ALLOCATABLE :: rank_ip(:,:)
+     INTEGER, INTENT(OUT), ALLOCATABLE :: irc_ip(:)
+     INTEGER, INTENT(OUT), ALLOCATABLE :: nrc_ip(:)
 
+     INTEGER :: i, j, rank
+     INTEGER :: ortho_comm, np_ortho(2), me_ortho(2), ortho_comm_id, &
+          leg_ortho, ortho_cntx
+     !
+     CALL laxlib_getval( np_ortho = np_ortho, me_ortho = me_ortho, &
+          ortho_comm = ortho_comm, leg_ortho = leg_ortho, &
+          ortho_comm_id = ortho_comm_id, ortho_cntx = ortho_cntx )
+     !
+     CALL laxlib_init_desc( idesc, nsiz, nsiz, np_ortho, me_ortho, &
+          ortho_comm, ortho_cntx, ortho_comm_id )
+     !
+     nx = idesc(LAX_DESC_NRCX)
+     !
+     IF ( .NOT. ALLOCATED (rank_ip) ) THEN
+        ALLOCATE( rank_ip( np_ortho(1), np_ortho(2) ) )
+        ALLOCATE( irc_ip( np_ortho(1) ), nrc_ip (np_ortho(1) ) )
+     ELSE
+        IF ( SIZE (rank_ip,1) /= np_ortho(1) .OR. &
+             SIZE (rank_ip,2) /= np_ortho(2) ) &
+             CALL lax_error__( " desc_init ", " inconsistent dimension ", 1 )
+     END IF
+     DO j = 0, idesc(LAX_DESC_NPC) - 1
+        CALL laxlib_local_dims( irc_ip( j + 1 ), nrc_ip( j + 1 ), &
+             idesc(LAX_DESC_N), idesc(LAX_DESC_NX), np_ortho(1), j )
+        DO i = 0, idesc(LAX_DESC_NPR) - 1
+           CALL GRID2D_RANK( 'R', idesc(LAX_DESC_NPR), idesc(LAX_DESC_NPC), i, j, rank )
+           rank_ip( i+1, j+1 ) = rank * leg_ortho
+        END DO
+     END DO
+     !
+     la_proc = .FALSE.
+     IF( idesc(LAX_DESC_ACTIVE_NODE) > 0 ) la_proc = .TRUE.
+     !
+     RETURN
+   END SUBROUTINE laxlib_desc_init2
+  !
+  !
 SUBROUTINE laxlib_init_desc_x( idesc, n, nx, np, me, comm, cntx, comm_id )
     USE laxlib_descriptor,       ONLY: la_descriptor, descla_init, laxlib_desc_to_intarray
     IMPLICIT NONE
@@ -429,17 +521,17 @@ SUBROUTINE laxlib_multi_init_desc_x( idesc, idesc_ip, rank_ip, n, nx  )
     !
     includeme = 1
     !
-	DO j = 0, idesc(LAX_DESC_NPC) - 1
-		DO i = 0, idesc(LAX_DESC_NPR) - 1
-			coor_ip( 1 ) = i
-			coor_ip( 2 ) = j
-			CALL descla_init( descla, idesc(LAX_DESC_N), idesc(LAX_DESC_NX), &
-			                  np_ortho, coor_ip, ortho_comm, ortho_cntx, includeme )
-			CALL laxlib_desc_to_intarray( idesc_ip(:,i+1,j+1), descla )
-			CALL GRID2D_RANK( 'R', idesc(LAX_DESC_NPR), idesc(LAX_DESC_NPC), i, j, rank )
-			rank_ip( i+1, j+1 ) = rank * leg_ortho
-		END DO
-	END DO
+    DO j = 0, idesc(LAX_DESC_NPC) - 1
+       DO i = 0, idesc(LAX_DESC_NPR) - 1
+          coor_ip( 1 ) = i
+          coor_ip( 2 ) = j
+          CALL descla_init( descla, idesc(LAX_DESC_N), idesc(LAX_DESC_NX), &
+               np_ortho, coor_ip, ortho_comm, ortho_cntx, includeme )
+          CALL laxlib_desc_to_intarray( idesc_ip(:,i+1,j+1), descla )
+          CALL GRID2D_RANK( 'R', idesc(LAX_DESC_NPR), idesc(LAX_DESC_NPC), i, j, rank )
+          rank_ip( i+1, j+1 ) = rank * leg_ortho
+       END DO
+    END DO
     !
     RETURN
 END SUBROUTINE laxlib_multi_init_desc_x
@@ -567,3 +659,70 @@ END SUBROUTINE laxlib_multi_init_desc_x
       RETURN
    END SUBROUTINE diagonalize_serial_x
 
+#if (!defined(__USE_CUSOLVER)) && defined(__CUDA)
+   SUBROUTINE diagonalize_serial_gpu( m, rhos, rhod, s, info )
+      use eigsolve_vars
+      use nvtx_inters
+      use dsyevd_gpu
+      use cudafor
+      IMPLICIT NONE
+      include 'laxlib_kinds.fh'
+      INTEGER, INTENT(IN) :: m
+      REAL(DP), DEVICE, INTENT(IN) :: rhos(:,:)
+      REAL(DP), DEVICE, INTENT(OUT) :: rhod(:)
+      REAL(DP), DEVICE, INTENT(OUT) :: s(:,:)
+      INTEGER, INTENT(OUT) :: info
+      !
+      REAL(DP), ALLOCATABLE :: work_d(:), a(:,:), b(:,:)
+      ATTRIBUTES( DEVICE ) :: work_d, a
+      REAL(DP), ALLOCATABLE :: work_h(:), w_h(:), z_h(:,:)
+      ATTRIBUTES( PINNED ) :: work_h, w_h, z_h
+      INTEGER, ALLOCATABLE :: iwork_h(:)
+      ATTRIBUTES( PINNED ) :: iwork_h
+      !
+      INTEGER :: lwork_d, lwork_h, liwork_h
+      INTEGER :: i,j,lda
+      !
+      info = 0
+      lwork_d  = 2*64*64 + 66*SIZE(rhos,1)
+      lwork_h = 1 + 6*SIZE(rhos,1) + 2*SIZE(rhos,1)*SIZE(rhos,1)
+      liwork_h = 3 + 5*SIZE(rhos,1)
+      ALLOCATE(work_d(lwork_d),STAT = info)
+      IF( info /= 0 ) CALL lax_error__( ' laxlib diagonalize_serial_gpu ', ' allocate work_d ', ABS( info ) )
+      ALLOCATE(a(SIZE(rhos,1),SIZE(rhos,2)),STAT = info)
+      IF( info /= 0 ) CALL lax_error__( ' laxlib diagonalize_serial_gpu ', ' allocate a ', ABS( info ) )
+      ALLOCATE(work_h(lwork_h),STAT = info)
+      IF( info /= 0 ) CALL lax_error__( ' laxlib diagonalize_serial_gpu ', ' allocate work_h ', ABS( info ) )
+      ALLOCATE(iwork_h(liwork_h),STAT = info)
+      IF( info /= 0 ) CALL lax_error__( ' laxlib diagonalize_serial_gpu ', ' allocate iwork_h ', ABS( info ) )
+      !
+      ALLOCATE(w_h(SIZE(rhod)),STAT = info)
+      IF( info /= 0 ) CALL lax_error__( ' laxlib diagonalize_serial_gpu ', ' allocate w_h ', ABS( info ) )
+      ALLOCATE(z_h(SIZE(s,1),SIZE(s,2)),STAT = info)
+      IF( info /= 0 ) CALL lax_error__( ' laxlib diagonalize_serial_gpu ', ' allocate z_h ', ABS( info ) )
+
+      if(initialized == 0) call init_eigsolve_gpu
+      
+      info = cudaMemcpy(a, rhos, SIZE(rhos,1)*SIZE(rhos,2), cudaMemcpyDeviceToDevice)
+      lda = SIZE(rhos,1)
+      !$cuf kernel do(2) <<<*,*>>>
+      do j = 1,m
+        do i = 1,m
+          if (i > j) then
+            s(i,j) = a(i,j)
+          endif
+        end do
+      end do
+      
+      call dsyevd_gpu('V', 'U', 1, m, m, a, lda, s, lda, rhod, work_d, lwork_d, &
+                      work_h, lwork_h, iwork_h, liwork_h, z_h, lda, w_h, info)
+
+      DEALLOCATE(z_h)
+      DEALLOCATE(w_h)
+      DEALLOCATE(iwork_h)
+      DEALLOCATE(work_h)
+      DEALLOCATE(a)
+      DEALLOCATE(work_d)
+
+   END SUBROUTINE
+#endif

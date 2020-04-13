@@ -15,9 +15,9 @@ SUBROUTINE rotate_wfc_gamma( h_psi, s_psi, overlap, &
   ! ... This version assumes real wavefunctions (k=0) with only
   ! ... half plane waves stored: psi(-G)=psi*(G), except G=0
   !
-  USE ppcg_param,    ONLY : DP
-  USE mp_bands_util, ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, &
-          nbgrp, my_bgrp_id, me_bgrp, root_bgrp
+  USE util_param,    ONLY : DP
+  USE mp_bands_util, ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id, &
+                            me_bgrp, root_bgrp
   USE mp_bands_util, ONLY : gstart ! index of the first nonzero G 
   USE mp,            ONLY : mp_sum 
   !
@@ -158,9 +158,8 @@ SUBROUTINE protate_wfc_gamma( h_psi, s_psi, overlap, &
   ! ... This version assumes real wavefunctions (k=0) with only
   ! ... half plane waves stored: psi(-G)=psi*(G), except G=0
   !
-  USE ppcg_param,       ONLY : DP, gamma_only
-  USE mp_bands_util,    ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id,&
-          nbgrp, my_bgrp_id
+  USE util_param,       ONLY : DP
+  USE mp_bands_util,    ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id
   USE mp_bands_util,    ONLY : gstart ! index of the first nonzero G 
   USE mp,               ONLY : mp_bcast, mp_root_sum, mp_sum, mp_barrier
   !
@@ -195,11 +194,10 @@ SUBROUTINE protate_wfc_gamma( h_psi, s_psi, overlap, &
     ! maximum local block dimension
   LOGICAL :: la_proc
     ! flag to distinguish procs involved in linear algebra
+  LOGICAL :: do_distr_diag_inside_bgrp
+  INTEGER :: ortho_parent_comm
   INTEGER, ALLOCATABLE :: idesc_ip( :, :, : )
   INTEGER, ALLOCATABLE :: rank_ip( :, : )
-  INTEGER :: ortho_comm, np_ortho(2), me_ortho(2), ortho_comm_id, leg_ortho, &
-             ortho_parent_comm, ortho_cntx
-  LOGICAL :: do_distr_diag_inside_bgrp
   !
   EXTERNAL  h_psi,    s_psi
     ! h_psi(npwx,npw,nvec,psi,hpsi)
@@ -210,17 +208,10 @@ SUBROUTINE protate_wfc_gamma( h_psi, s_psi, overlap, &
 
   call start_clock('protwfcg'); !write(*,*) 'start protwfcg' ; FLUSH(6)
   !
-  CALL laxlib_getval( np_ortho = np_ortho, me_ortho = me_ortho, ortho_comm = ortho_comm, &
-    leg_ortho = leg_ortho, ortho_comm_id = ortho_comm_id, ortho_parent_comm = ortho_parent_comm, &
-    ortho_cntx = ortho_cntx, do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp )
-
+  CALL laxlib_getval( do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp, &
+       ortho_parent_comm = ortho_parent_comm )
+  CALL desc_init( nstart, nx, la_proc, idesc, rank_ip, idesc_ip )
   !
-  ALLOCATE( idesc_ip( LAX_DESC_SIZE, np_ortho(1), np_ortho(2) ) )
-  ALLOCATE( rank_ip( np_ortho(1), np_ortho(2) ) )
-  !
-  CALL desc_init( nstart, idesc, idesc_ip )
-  !
-
   npw2  = 2 * npw
   npwx2 = 2 * npwx
 
@@ -305,22 +296,6 @@ SUBROUTINE protate_wfc_gamma( h_psi, s_psi, overlap, &
   RETURN
   !
 CONTAINS
-  !
-  SUBROUTINE desc_init( nsiz, idesc, idesc_ip )
-     !
-     INTEGER, INTENT(IN)  :: nsiz
-     INTEGER, INTENT(OUT) :: idesc(LAX_DESC_SIZE)
-     INTEGER, INTENT(OUT) :: idesc_ip(:,:,:)
-     ! 
-     CALL laxlib_init_desc( idesc, idesc_ip, rank_ip, nsiz, nsiz )
-     ! 
-     nx = idesc(LAX_DESC_NRCX)
-     !
-     la_proc = .FALSE.
-     IF( idesc(LAX_DESC_ACTIVE_NODE) > 0 ) la_proc = .TRUE.
-     !
-     RETURN
-  END SUBROUTINE desc_init
   !
   !
   SUBROUTINE compute_distmat( dm, v, w )
