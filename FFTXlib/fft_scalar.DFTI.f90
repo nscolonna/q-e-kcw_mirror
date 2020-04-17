@@ -51,7 +51,7 @@
 !=----------------------------------------------------------------------=!
 !
 
-   SUBROUTINE cft_1z_dp(c, nsl, nz, ldz, isign, cout)
+   SUBROUTINE cft_1z_dp(c, nsl, nz, ldz, isign, cout, in_place)
 
 !     driver routine for nsl 1d complex fft's of length nz
 !     ldz >= nz is the distance between sequences to be transformed
