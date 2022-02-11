@@ -140,6 +140,7 @@ stack.o
 
 # GPU versions of modules
 MODULES += \
+  onemkl_gpu.o \
   wavefunctions_gpu.o \
   becmod_gpu.o \
   becmod_subs_gpu.o \

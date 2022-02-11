@@ -92,9 +92,11 @@ MODULE fft_types
     INTEGER, ALLOCATABLE :: ir1w_tg(:)! if >0 ir1w_tg(m1) is the incremental index of the active ( wfc ) X value in task group
     INTEGER, ALLOCATABLE :: indw_tg(:)! is the inverse of ir1w_tg
 
+#if !defined(__OPENMP_GPU)
     INTEGER, POINTER DEV_ATTRIBUTES :: ir1p_d(:),   ir1w_d(:),   ir1w_tg_d(:)   ! duplicated version of the arrays declared above
     INTEGER, POINTER DEV_ATTRIBUTES :: indp_d(:,:), indw_d(:,:), indw_tg_d(:,:) !
     INTEGER, POINTER DEV_ATTRIBUTES :: nr1p_d(:),   nr1w_d(:),   nr1w_tg_d(:)   !
+#endif
 
     INTEGER :: nst      ! total number of sticks ( potential )
 
@@ -152,6 +154,14 @@ MODULE fft_types
     CHARACTER(len=12):: wave_clock_label = ' '
 
     INTEGER :: grid_id
+#if defined(__CUDA) || defined(__OPENMP_GPU)
+    ! These variables define the dimension of batches and subbatches in
+    ! * the 1D+2D GPU implementation:
+    INTEGER              :: batchsize = 16    ! how many ffts to batch together
+    INTEGER              :: subbatchsize = 4  ! size of subbatch for pipelining
+    INTEGER, ALLOCATABLE :: srh(:,:) ! These are non blocking send/recv handles that are used to
+                                     ! overlap computation and communication of FFTs subbatches.
+#endif
 #if defined(__CUDA)
     ! These CUDA streams are used in the 1D+1D+1D GPU implementation
     INTEGER(kind=cuda_stream_kind), allocatable, dimension(:) :: stream_scatter_yz
@@ -162,9 +172,6 @@ MODULE fft_types
     TYPE(cudaEvent), allocatable, dimension(:) :: bevents
     !
     ! These variables define the dimension of batches and subbatches in 
-    ! * the 1D+2D GPU implementation:
-    INTEGER              :: batchsize = 16    ! how many ffts to batch together
-    INTEGER              :: subbatchsize = 4  ! size of subbatch for pipelining
     ! * the 1D+1D+1D implementation:
     INTEGER              :: nstream_many = 16 ! this should be replace by batchsize
                                               ! since it has the same meaning.
@@ -172,8 +179,6 @@ MODULE fft_types
 #if defined(__IPC)
     INTEGER :: IPC_PEER(16)          ! This is used for IPC that is not imlpemented yet.
 #endif
-    INTEGER, ALLOCATABLE :: srh(:,:) ! These are non blocking send/recv handles that are used to
-                                     ! overlap computation and communication of FFTs subbatches.
 #endif
     COMPLEX(DP), ALLOCATABLE, DIMENSION(:) :: aux
 #if defined(__FFT_OPENMP_TASKS)
@@ -315,6 +320,17 @@ CONTAINS
     ALLOCATE( desc%tg_sdsp( desc%nproc2) ) ; desc%tg_sdsp = 0
     ALLOCATE( desc%tg_rdsp( desc%nproc2) ) ; desc%tg_rdsp = 0
 
+#if defined (__OPENMP_GPU)
+    !$omp target enter data map(alloc:desc%nsp, desc%nsw)
+    !$omp target enter data map(alloc:desc%ismap)
+    !$omp target enter data map(alloc:desc%ir1p, desc%ir1w, desc%ir1w_tg)
+    !$omp target enter data map(alloc:desc%indp, desc%indw, desc%indw_tg)
+
+    nsubbatches = ceiling(real(desc%batchsize)/desc%subbatchsize)
+    ALLOCATE( desc%srh(2*nproc, nsubbatches))
+    !$omp target enter data map(alloc:desc%srh)
+#endif
+
 #if defined(__CUDA)
     ALLOCATE( desc%indp_d( desc%nr1x,desc%nproc2 ) ) ; desc%indp_d  = 0
     ALLOCATE( desc%indw_d( desc%nr1x, desc%nproc2 ) ) ; desc%indw_d  = 0
@@ -363,6 +379,15 @@ CONTAINS
     TYPE (fft_type_descriptor) :: desc
     INTEGER :: i, ierr, nsubbatches
      !write (6,*) ' inside fft_type_deallocate' ; FLUSH(6)
+#if defined(__OPENMP_GPU)
+    !$omp target exit data map(delete:desc%nsp, desc%nsw)
+    !$omp target exit data map(delete:desc%ismap)
+    !$omp target exit data map(delete:desc%ir1p, desc%ir1w, desc%ir1w_tg)
+    !$omp target exit data map(delete:desc%indp, desc%indw, desc%indw_tg)
+    !$omp target exit data map(delete:desc%aux)
+    !$omp target exit data map(delete:desc%srh)
+#endif
+    IF ( ALLOCATED( desc%aux  ) )   DEALLOCATE( desc%aux )
     IF ( ALLOCATED( desc%nr2p ) )   DEALLOCATE( desc%nr2p )
     IF ( ALLOCATED( desc%nr2p_offset ) )   DEALLOCATE( desc%nr2p_offset )
     IF ( ALLOCATED( desc%nr3p_offset ) )   DEALLOCATE( desc%nr3p_offset )
@@ -397,7 +422,10 @@ CONTAINS
     IF ( ALLOCATED( desc%tg_rcv ) ) DEALLOCATE( desc%tg_rcv )
     IF ( ALLOCATED( desc%tg_sdsp ) )DEALLOCATE( desc%tg_sdsp )
     IF ( ALLOCATED( desc%tg_rdsp ) )DEALLOCATE( desc%tg_rdsp )
+    IF ( ALLOCATED( desc%srh ) )    DEALLOCATE( desc%srh )
 
+    !$omp target exit data map(delete:desc%nl)
+    !$omp target exit data map(delete:desc%nlm)
     IF ( ALLOCATED( desc%nl ) )  DEALLOCATE( desc%nl )
     IF ( ALLOCATED( desc%nlm ) ) DEALLOCATE( desc%nlm )
 
@@ -521,13 +549,6 @@ CONTAINS
           CALL MPI_COMM_DUP(desc%comm2, desc%comm2s(i), ierr)
           CALL MPI_COMM_DUP(desc%comm3, desc%comm3s(i), ierr)
        ENDDO
-       !ELSEIF (nmany == 1) THEN
-       !  DO i=1, SIZE(desc%comm2s)
-       !     IF (desc%comm2s(i) /= MPI_COMM_NULL) CALL MPI_COMM_FREE( desc%comm2s(i), ierr )
-       !     IF (desc%comm3s(i) /= MPI_COMM_NULL) CALL MPI_COMM_FREE( desc%comm3s(i), ierr )
-       !  ENDDO
-       !  DEALLOCATE( desc%comm2s )
-       !  DEALLOCATE( desc%comm3s )
        ENDIF
 #endif
 #endif
@@ -913,6 +934,20 @@ CONTAINS
        desc%tg_rdsp(i) = desc%tg_rdsp(i-1) + desc%tg_rcv(i-1)
     ENDDO
 
+    IF (nmany > 1) THEN
+       ALLOCATE(desc%aux(nmany * desc%nnr))
+#if defined (__OPENMP_GPU)
+       !$omp target enter data map(alloc:desc%aux)
+#endif
+    ENDIF
+
+#if defined (__OPENMP_GPU)
+    !$omp target update to(desc%nsp, desc%nsw)
+    !$omp target update to(desc%ir1p, desc%ir1w, desc%ir1w_tg)
+    !$omp target update to(desc%indp, desc%indw, desc%indw_tg)
+    !$omp target update to(desc%ismap)
+#endif
+
 #if defined(__CUDA)
     desc%ismap_d = desc%ismap
     desc%ir1p_d = desc%ir1p
@@ -926,9 +961,7 @@ CONTAINS
     desc%nr1p_d = desc%nr1p
     desc%nr1w_d = desc%nr1w
     desc%nr1w_tg_d(1) = desc%nr1w_tg
-
 #endif
-    IF (nmany > 1) ALLOCATE(desc%aux(nmany * desc%nnr))
 
     RETURN
 

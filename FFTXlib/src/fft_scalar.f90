@@ -44,7 +44,7 @@
 
      PRIVATE
      PUBLIC :: cft_1z, cft_2xy, cfft3d, cfft3ds
-#if defined(__CUDA)
+#if defined(__CUDA) || defined(__OPENMP_GPU)
      PUBLIC :: cft_1z_gpu, cft_2xy_gpu, cfft3d_gpu, cfft3ds_gpu
 #endif
 
