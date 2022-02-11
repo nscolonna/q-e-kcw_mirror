@@ -91,8 +91,6 @@ CONTAINS
 
   END SUBROUTINE
 
-
-
   SUBROUTINE tg_reduce_rho_2( rhos, tmp_rhos, ispin, desc )
      USE fft_param
      USE fft_types,      ONLY : fft_type_descriptor
@@ -119,7 +117,7 @@ CONTAINS
         ioff_tg = desc%nr1x * desc%nr2x    * (ir3-1) + desc%nr1x * desc%my_i0r2p
         rhos(ioff+1:ioff+nxyp,ispin) = rhos(ioff+1:ioff+nxyp,ispin) + tmp_rhos(ioff_tg+1:ioff_tg+nxyp)
      END DO
- 
+
   END SUBROUTINE
 
   SUBROUTINE tg_reduce_rho_3( rhos, tmp_rhos, desc )
@@ -152,7 +150,6 @@ CONTAINS
      END DO
   END SUBROUTINE
 
-
   SUBROUTINE tg_reduce_rho_4( rhos, tmp_rhos, desc )
      USE fft_param
      USE fft_types,      ONLY : fft_type_descriptor
@@ -183,7 +180,6 @@ CONTAINS
      END DO
   END SUBROUTINE
 
-
   SUBROUTINE tg_reduce_rho_5( rhos, tmp_rhos, desc )
      USE fft_param
      USE fft_types,      ONLY : fft_type_descriptor
@@ -213,8 +209,6 @@ CONTAINS
         rhos(ioff+1:ioff+nxyp,:) = rhos(ioff+1:ioff+nxyp,:) + tmp_rhos(ioff_tg+1:ioff_tg+nxyp,:)
      END DO
   END SUBROUTINE
-
-
 
   SUBROUTINE tg_get_nnr( desc, right_nnr )
      USE fft_param
@@ -315,8 +309,6 @@ CONTAINS
      complex(DP), parameter :: ci=(0.0d0,1.0d0)
      integer :: ig
      !
-     !!$omp declare target(psi, c, ca, c, desc%nlm, desc%nl)
-     !
      associate(nlm_d=>desc%nlm, nl_d=>desc%nl)
      !
      psi = 0.0d0
@@ -360,7 +352,9 @@ CONTAINS
      complex(DP), parameter :: ci=(0.0d0,1.0d0)
      integer :: ig
      !
+#ifdef __OPENMP_GPU
      !$omp declare variant (c2psi_gamma_gpu) match( construct={dispatch} )
+#endif
      !
      psi = 0.0d0
      !
@@ -426,7 +420,7 @@ CONTAINS
 
   SUBROUTINE c2psi_k( desc, psi, c, igk, ngk)
      !
-     !  Copy wave-functions from 1D array (c/evc) ordered according (k+G) index igk 
+     !  Copy wave-functions from 1D array (c/evc) ordered according (k+G) index igk
      !  to 3D array (psi) in Fourier space
      !
      USE fft_param
@@ -438,7 +432,7 @@ CONTAINS
      ! local variables
      integer :: ig
      !
-     !  nl array: hold conversion indices from 3D to 1-D vectors. 
+     !  nl array: hold conversion indices from 3D to 1-D vectors.
      !     Columns along the z-direction are stored contigiously
      !  c array: stores the Fourier expansion coefficients of the wave function
      !     Loop for all local g-vectors (npw
@@ -542,7 +536,7 @@ CONTAINS
         END DO
      END IF
   END SUBROUTINE
-  
+
   SUBROUTINE fftx_threed2oned_gpu( desc, vin_d, vout1_d, vout2_d )
      !! GPU version of \(\texttt{fftx_threed2oned}\).
      USE fft_param
@@ -643,10 +637,9 @@ CONTAINS
 #endif
   END SUBROUTINE
 
-
   SUBROUTINE c2psi_gamma_tg(desc, psis, c_bgrp, i, nbsp_bgrp )
      !
-     !  Copy all wave-functions of an orbital group 
+     !  Copy all wave-functions of an orbital group
      !  from 1D array (c_bgrp) to 3D array (psi) in Fourier space
      !
      USE fft_param
@@ -699,7 +692,6 @@ CONTAINS
 !$omp  end parallel
      RETURN
   END SUBROUTINE
-
 
   SUBROUTINE fft_dist_info( desc, unit )
      USE fft_param
