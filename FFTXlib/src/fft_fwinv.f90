@@ -225,7 +225,9 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   USE fft_parallel_2d,  ONLY: tg_cft3s_2d => tg_cft3s
   USE fft_types,     ONLY: fft_type_descriptor
   USE fft_param,     ONLY: DP
+#if defined(__OPENMP_GPU)
   USE fft_interfaces,  ONLY: invfft_y_gpu
+#endif
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft
@@ -325,7 +327,9 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   USE fft_parallel_2d,  ONLY: tg_cft3s_2d => tg_cft3s
   USE fft_types,     ONLY: fft_type_descriptor
   USE fft_param,     ONLY: DP
+#if defined(__OPENMP_GPU)
   USE fft_interfaces,  ONLY: fwfft_y_gpu
+#endif
 
   IMPLICIT NONE
 

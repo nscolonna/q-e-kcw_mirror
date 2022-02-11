@@ -12,11 +12,10 @@ MODULE fft_interfaces
   IMPLICIT NONE
   PRIVATE
 
-
   PUBLIC :: fwfft, invfft, fft_interpolate
+#if defined(__OPENMP_GPU)
   PUBLIC :: invfft_y_gpu, fwfft_y_gpu
 
-#if defined(__OPENMP_GPU)
   INTERFACE
      SUBROUTINE invfft_y_gpu( fft_kind, f, dfft, howmany )
        USE fft_types,       ONLY : fft_type_descriptor
@@ -39,12 +38,12 @@ MODULE fft_interfaces
      END SUBROUTINE fwfft_y_gpu
   END INTERFACE
 #endif
-  
+
   INTERFACE invfft
      !! invfft is the interface to both the standard fft **invfft_x**,
-     !! and to the "box-grid" version **invfft_b**, used only in CP 
+     !! and to the "box-grid" version **invfft_b**, used only in CP
      !! (the latter has an additional argument)
-     
+
      SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
@@ -111,8 +110,8 @@ MODULE fft_interfaces
 
   INTERFACE fft_interpolate
      !! fft_interpolate  is the interface to utility that fourier interpolate
-     !! real/complex arrays between two grids 
-     
+     !! real/complex arrays between two grids
+
      SUBROUTINE fft_interpolate_real( dfft_in, v_in, dfft_out, v_out )
        USE fft_param,  ONLY :DP
        USE fft_types,  ONLY: fft_type_descriptor
