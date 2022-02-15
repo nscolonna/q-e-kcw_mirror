@@ -24,6 +24,7 @@ constraints_module.o \
 control_flags.o \
 coulomb_vcut.o \
 dist.o \
+distools.o \
 electrons_base.o \
 environment.o \
 fd_gradient.o \
@@ -157,15 +158,14 @@ dlamch.o : dlamch.f
 	$(F77) $(FFLAGS_NOOPT) -c $<
 
 libqemod.a: 	$(MODULES) $(OBJS)
-	$(AR) $(ARFLAGS) $@ $?       
-	$(RANLIB) $@    
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
 
 tldeps :
 	if test -n "$(TLDEPS)" ; then \
 	( cd ../.. ; $(MAKE) $(TLDEPS) || exit 1 ) ; fi
 
-
 clean :
-	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L
+	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L *.modmic
 
 include make.depend
