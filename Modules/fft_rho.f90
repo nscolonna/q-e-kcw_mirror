@@ -55,7 +55,7 @@ CONTAINS
              psi(ir)=CMPLX(rhor(ir,iss),0.0_dp,kind=dp)
           END DO
        END IF
-       CALL fwfft('Rho', psi, desc )
+       CALL fwfft(1, psi, desc )
        CALL fftx_threed2oned( desc, psi, rhog(:,iss) )
     ELSE
        IF ( gamma_only ) THEN
@@ -72,7 +72,7 @@ CONTAINS
                    psi(ir)=CMPLX(rhor(ir,isup),rhor(ir,isdw),kind=dp)
                 END DO
              END IF
-             CALL fwfft('Rho', psi, desc )
+             CALL fwfft(1, psi, desc )
              CALL fftx_threed2oned( desc, psi, rhog(:,isup), rhog(:,isdw) )
           END DO
        ELSE
@@ -86,12 +86,12 @@ CONTAINS
                    psi(ir)=CMPLX(rhor(ir,iss),0.0_dp,kind=dp)
                 END DO
              END IF
-             CALL fwfft('Rho', psi, desc )
+             CALL fwfft(1, psi, desc )
              CALL fftx_threed2oned( desc, psi, rhog(:,iss) )
           END DO
        END IF
     ENDIF
-    
+
     DEALLOCATE( psi )
 
   END SUBROUTINE rho_r2g
@@ -101,8 +101,8 @@ CONTAINS
     !---------------------------------------------------------------
     !! Bring charge density rho from real to G- space - GPU version.
     !
-    USE fft_types,              ONLY: fft_type_descriptor
-    USE fft_helper_subroutines, ONLY: fftx_threed2oned_gpu
+    USE fft_types,              ONLY : fft_type_descriptor
+    USE fft_helper_subroutines, ONLY : fftx_threed2oned_gpu
     !
     TYPE(fft_type_descriptor), INTENT(in) :: desc
     REAL(dp),    INTENT(in) :: rhor_d(:,:)
@@ -123,22 +123,26 @@ CONTAINS
     nspin= SIZE(rhor_d, 2)
     !
     ALLOCATE( psi_d(desc%nnr) )
+    !$omp target data use_device_ptr( rhor_d(:,:), rhog_d(:,:), v_d(:) ) map(alloc:psi_d)
     !$acc data create( psi_d(1:desc%nnr) )
     !$acc host_data use_device( psi_d )
     IF( nspin == 1 ) THEN
        iss=1
        IF( PRESENT( v_d ) ) THEN
           !$acc parallel loop
+          !$omp target teams loop
           DO ir=1,desc%nnr
              psi_d(ir)=CMPLX(rhor_d(ir,iss)+v_d(ir),0.0_dp,kind=dp)
           END DO
        ELSE
           !$acc parallel loop
+          !$omp target teams loop
           DO ir=1,desc%nnr
              psi_d(ir)=CMPLX(rhor_d(ir,iss),0.0_dp,kind=dp)
           END DO
        END IF
-       CALL fwfft('Rho', psi_d, desc )
+       !$omp dispatch
+       CALL fwfft(1, psi_d, desc )
        CALL fftx_threed2oned_gpu( desc, psi_d, rhog_d(:,iss) )
     ELSE
        IF ( gamma_only ) THEN
@@ -148,38 +152,45 @@ CONTAINS
              isdw=2+(iss-1)*nspin/2 ! 2 for LSDA, 2 and 4 for noncolinear
              IF( PRESENT( v_d ) ) THEN
                 !$acc parallel loop
+                !$omp target teams loop
                 DO ir=1,desc%nnr
                     psi_d(ir)=CMPLX(rhor_d(ir,isup)+v_d(ir),rhor_d(ir,isdw)+v_d(ir),kind=dp)
                 END DO
              ELSE
                 !$acc parallel loop
+                !$omp target teams loop
                 DO ir=1,desc%nnr
                    psi_d(ir)=CMPLX(rhor_d(ir,isup),rhor_d(ir,isdw),kind=dp)
                 END DO
              END IF
-             CALL fwfft('Rho', psi_d, desc )
+             !$omp dispatch
+             CALL fwfft(1, psi_d, desc )
              CALL fftx_threed2oned_gpu( desc, psi_d, rhog_d(:,isup), rhog_d(:,isdw) )
           END DO
        ELSE
           DO iss=1,nspin
              IF( PRESENT( v_d ) ) THEN
                 !$acc parallel loop
+                !$omp target teams loop
                 DO ir=1,desc%nnr
                     psi_d(ir)=CMPLX(rhor_d(ir,iss)+v_d(ir),0.0_dp,kind=dp)
                 END DO
              ELSE
                 !$acc parallel loop
+                !$omp target teams loop
                 DO ir=1,desc%nnr
                    psi_d(ir)=CMPLX(rhor_d(ir,iss),0.0_dp,kind=dp)
                 END DO
              END IF
-             CALL fwfft('Rho', psi_d, desc )
+             !$omp dispatch
+             CALL fwfft(1, psi_d, desc )
              CALL fftx_threed2oned_gpu( desc, psi_d, rhog_d(:,iss) )
           END DO
        END IF
     ENDIF
     !$acc end host_data
     !$acc end data
+    !$omp end target data
     DEALLOCATE( psi_d )
     !
     !$acc end data
@@ -200,13 +211,13 @@ CONTAINS
 
     ALLOCATE( psi( desc%nnr ) )
     CALL fftx_oned2threed( desc, psi, rhog )
-    CALL invfft('Rho',psi, desc )
+    CALL invfft(1,psi, desc )
 !$omp parallel do
     DO ir=1,desc%nnr
        rhor(ir)=DBLE(psi(ir))
     END DO
 !$omp end parallel do
-    
+
     DEALLOCATE( psi )
 
   END SUBROUTINE rho_g2r_1
@@ -230,7 +241,7 @@ CONTAINS
        IF( nspin == 1 ) THEN
           iss=1
           CALL fftx_oned2threed( desc, psi, rhog(:,iss) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(1,psi, desc )
 !$omp parallel do
           DO ir=1,desc%nnr
              rhor(ir,iss)=DBLE(psi(ir))
@@ -242,7 +253,7 @@ CONTAINS
              isup=1+(iss-1)*nspin/2 ! 1 for LSDA, 1 and 3 for noncolinear
              isdw=2+(iss-1)*nspin/2 ! 2 for LSDA, 2 and 4 for noncolinear
              CALL fftx_oned2threed( desc, psi, rhog(:,isup), rhog(:,isdw) )
-             CALL invfft('Rho',psi, desc )
+             CALL invfft(1,psi, desc )
 !$omp parallel do
              DO ir=1,desc%nnr
                 rhor(ir,isup)= DBLE(psi(ir))
@@ -256,7 +267,7 @@ CONTAINS
        !
        DO iss=1, nspin
           CALL fftx_oned2threed( desc, psi, rhog(:,iss) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(1,psi, desc )
 !$omp parallel do
           DO ir=1,desc%nnr
              rhor(ir,iss)=DBLE(psi(ir))
@@ -264,7 +275,7 @@ CONTAINS
 !$omp end parallel do
        END DO
     END IF
-    
+
     DEALLOCATE( psi )
 
   END SUBROUTINE rho_g2r_2
@@ -288,7 +299,7 @@ CONTAINS
        IF( nspin == 1 ) THEN
           iss=1
           CALL fftx_oned2threed( desc, psi, rhog(:,iss) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(1,psi, desc )
 !$omp parallel do
           DO ir=1,desc%nnr
              rhor(ir)=DBLE(psi(ir))
@@ -298,7 +309,7 @@ CONTAINS
           isup=1
           isdw=2
           CALL fftx_oned2threed( desc, psi, rhog(:,isup), rhog(:,isdw) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(1,psi, desc )
 !$omp parallel do
           DO ir=1,desc%nnr
              rhor(ir)= DBLE(psi(ir))+AIMAG(psi(ir))
@@ -312,7 +323,7 @@ CONTAINS
        !
        DO iss=1, nspin
           CALL fftx_oned2threed( desc, psi, rhog(:,iss) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(1,psi, desc )
           IF( iss == 1 ) THEN
 !$omp parallel do
              DO ir=1,desc%nnr
@@ -328,7 +339,7 @@ CONTAINS
           END IF
        END DO
     END IF
-    
+
     DEALLOCATE( psi )
 
   END SUBROUTINE rho_g2r_sum_components
