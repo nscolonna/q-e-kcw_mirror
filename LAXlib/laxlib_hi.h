@@ -7,6 +7,30 @@
 !
 !
 !----------------------------------------------------------------------------
+#if defined(__OPENMP_GPU)
+INTERFACE
+SUBROUTINE laxlib_rdiaghg_gpu( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm )
+  IMPLICIT NONE
+  INCLUDE 'laxlib_kinds.fh'
+  INTEGER, INTENT(IN) :: n, m, ldh
+  REAL(DP), INTENT(INOUT) :: h(ldh,n), s(ldh,n)
+  REAL(DP), INTENT(OUT) :: e(n)
+  REAL(DP), INTENT(OUT) :: v(ldh,m)
+  INTEGER,  INTENT(IN)  :: me_bgrp, root_bgrp, intra_bgrp_comm
+END SUBROUTINE
+
+SUBROUTINE laxlib_cdiaghg_gpu( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm )
+  IMPLICIT NONE
+  INCLUDE 'laxlib_kinds.fh'
+  INTEGER, INTENT(IN) :: n, m, ldh
+  COMPLEX(DP), INTENT(INOUT) :: h(ldh,n), s(ldh,n)
+  REAL(DP), INTENT(OUT) :: e(n)
+  COMPLEX(DP), INTENT(OUT) :: v(ldh,m)
+  INTEGER, INTENT(IN) :: me_bgrp, root_bgrp, intra_bgrp_comm
+END SUBROUTINE
+ENDINTERFACE
+#endif
+
 INTERFACE diaghg
 SUBROUTINE laxlib_rdiaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm )
   IMPLICIT NONE
@@ -16,6 +40,9 @@ SUBROUTINE laxlib_rdiaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp
   REAL(DP), INTENT(OUT) :: e(n)
   REAL(DP), INTENT(OUT) :: v(ldh,m)
   INTEGER,  INTENT(IN)  :: me_bgrp, root_bgrp, intra_bgrp_comm
+#if defined(__OPENMP_GPU)
+  !$omp declare variant (laxlib_rdiaghg_gpu) match( construct={dispatch} )
+#endif
 END SUBROUTINE
 #ifdef __CUDA
 SUBROUTINE laxlib_rdiaghg_gpu( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm )
@@ -36,6 +63,9 @@ SUBROUTINE laxlib_cdiaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp
   REAL(DP), INTENT(OUT) :: e(n)
   COMPLEX(DP), INTENT(OUT) :: v(ldh,m)
   INTEGER, INTENT(IN) :: me_bgrp, root_bgrp, intra_bgrp_comm
+#if defined(__OPENMP_GPU)
+  !$omp declare variant (laxlib_cdiaghg_gpu) match( construct={dispatch} )
+#endif
 END SUBROUTINE
 #ifdef __CUDA
 SUBROUTINE laxlib_cdiaghg_gpu( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm )
@@ -103,14 +133,20 @@ END INTERFACE
          REAL(DP)              :: rhos(:,:)
          REAL(DP)              :: rhod(:)
       END SUBROUTINE
-#ifdef __CUDA
+#if defined (__CUDA) || defined (__OPENMP_GPU)
       SUBROUTINE diagonalize_serial_gpu( m, rhos, rhod, s, info )
          IMPLICIT NONE
          include 'laxlib_kinds.fh'
          INTEGER, INTENT(IN) :: m
+#if !defined (__OPENMP_GPU)
          REAL(DP), DEVICE, INTENT(IN) :: rhos(:,:)
          REAL(DP), DEVICE, INTENT(OUT) :: rhod(:)
          REAL(DP), DEVICE, INTENT(OUT) :: s(:,:)
+#else
+         REAL(DP), INTENT(IN) :: rhos(:,:)
+         REAL(DP), INTENT(OUT) :: rhod(:)
+         REAL(DP), INTENT(OUT) :: s(:,:)
+#endif
          INTEGER, INTENT(OUT) :: info
       END SUBROUTINE
 #endif

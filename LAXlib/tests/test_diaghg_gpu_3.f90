@@ -1,4 +1,4 @@
-#ifdef __CUDA
+#if defined(__CUDA) ||  defined(__OPENMP_GPU)
 program test_diaghg_gpu_3
 
     USE laxlib_parallel_include
@@ -16,7 +16,7 @@ program test_diaghg_gpu_3
     CALL test%init()
     test%tolerance64=1.d-8
     !
-#if defined(__MPI)    
+#if defined(__MPI)
     world_group = MPI_COMM_WORLD
 #endif
     CALL mp_world_start(world_group)
@@ -42,7 +42,7 @@ program test_diaghg_gpu_3
     implicit none
     !
     TYPE(tester_t) :: test
-    ! 
+    !
     integer :: ldh, n, m
     real(DP), allocatable :: h(:,:)
     real(DP), allocatable :: h_save(:,:)
@@ -54,11 +54,13 @@ program test_diaghg_gpu_3
     real(DP), allocatable :: v_save(:,:)
     real(DP), allocatable :: e_dc(:)      ! stores results from divide and conquer
     real(DP), allocatable :: v_dc(:,:)    !
+#if !defined(__OPENMP_GPU)
     ! device copies
     real(DP), allocatable, device :: h_d(:,:)
     real(DP), allocatable, device :: s_d(:,:)
     real(DP), allocatable, device :: e_d(:)
     real(DP), allocatable, device :: v_d(:,:)
+#endif
     !
     !
     character(len=20) :: inputs(2)
@@ -85,14 +87,22 @@ program test_diaghg_gpu_3
         !
         v = (0.d0, 0.d0)
         e = 0.d0
+#if defined(__OPENMP_GPU)
+        CALL diaghg(  n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#else
         CALL diaghg(  n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
+#endif
         !
         CALL test%assert_close( e(1:m), e_save(1:m) )
         !
         !
         v = (0.d0, 0.d0)
         e = 0.d0
+#if defined(__OPENMP_GPU)
+        CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true., .true. )
+#else
         CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#endif
         !
         ALLOCATE(v_dc, SOURCE=h_save)
         ALLOCATE(e_dc(n))
@@ -108,6 +118,11 @@ program test_diaghg_gpu_3
         e = 0.d0
         s = s_save
         h = h_save
+#if defined(__OPENMP_GPU)
+        !$omp target data map(tofrom: h, s, e, v)
+        CALL diaghg(  n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
+        !$omp end target data
+#else
         ALLOCATE(e_d, SOURCE=e); ALLOCATE(v_d, SOURCE=v)
         ALLOCATE(h_d, SOURCE=h); ALLOCATE(s_d, SOURCE=s)
         !
@@ -115,9 +130,21 @@ program test_diaghg_gpu_3
         !
         v(1:n, 1:m) = v_d(1:n, 1:m)
         e(1:m)      = e_d(1:m)
+#endif
         CALL test%assert_close( e(1:m), e_save(1:m) )
         !
         !
+#if defined(__OPENMP_GPU)
+        v = (0.d0, 0.d0)
+        e = 0.d0
+        s = s_save
+        h = h_save
+        !
+        ! Start from data on the GPU and diagonalize on the CPU
+        !$omp target data map(tofrom: h, s, e, v)
+        CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false., .true. )
+        !$omp end target data
+#else
         v_d = (0.d0, 0.d0)
         e_d = 0.d0
         s_d = s_save
@@ -128,10 +155,13 @@ program test_diaghg_gpu_3
         !
         v(1:n, 1:m) = v_d(1:n, 1:m)
         e(1:m)      = e_d(1:m)
+#endif
         !
         CALL test%assert_close( e(1:m), e_save(1:m))
         !
+#if !defined(__OPENMP_GPU)
         DEALLOCATE(h_d, s_d, e_d, v_d)
+#endif
         DEALLOCATE(h,s,e,v,h_save,s_save,e_save,v_save, v_dc, e_dc)
     END DO
     !
@@ -144,7 +174,7 @@ program test_diaghg_gpu_3
     implicit none
     !
     TYPE(tester_t) :: test
-    ! 
+    !
     integer :: ldh, n, m
     complex(DP), allocatable :: h(:,:)
     complex(DP), allocatable :: h_save(:,:)
@@ -156,12 +186,14 @@ program test_diaghg_gpu_3
     complex(DP), allocatable :: v_save(:,:)
     real(DP), allocatable    :: e_dc(:)      ! stores results from divide and conquer
     complex(DP), allocatable :: v_dc(:,:)    !
-    
+
+#if !defined(__OPENMP_GPU)
     ! device copies
     complex(DP), allocatable, device :: h_d(:,:)
     complex(DP), allocatable, device :: s_d(:,:)
     real(DP), allocatable, device    :: e_d(:)
     complex(DP), allocatable, device :: v_d(:,:)
+#endif
     !
     !
     character(len=20)        :: inputs(4)
@@ -195,7 +227,11 @@ program test_diaghg_gpu_3
         !
         v = (0.d0, 0.d0)
         e = 0.d0
+#if defined(__OPENMP_GPU)
+        CALL diaghg(  n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#else
         CALL diaghg(  n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
+#endif
         !
         CALL test%assert_close( e(1:m), e_save(1:m) )
         !
@@ -203,7 +239,11 @@ program test_diaghg_gpu_3
         h = h_save; s = s_save;
         v = (0.d0, 0.d0)
         e = 0.d0
+#if defined(__OPENMP_GPU)
+        CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true., .true. )
+#else
         CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#endif
         !
         ! N.B.: GPU eigensolver uses a different algorithm: zhegvd
         s = s_save; e_dc = 0.d0
@@ -217,6 +257,11 @@ program test_diaghg_gpu_3
         e = 0.d0
         s = s_save
         h = h_save
+#if defined(__OPENMP_GPU)
+        !$omp target data map(tofrom: h, s, e, v)
+        CALL diaghg(  n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
+        !$omp end target data
+#else
         ALLOCATE(e_d, SOURCE=e); ALLOCATE(v_d, SOURCE=v)
         ALLOCATE(h_d, SOURCE=h); ALLOCATE(s_d, SOURCE=s)
         !
@@ -224,9 +269,19 @@ program test_diaghg_gpu_3
         !
         v(1:n, 1:m) = v_d(1:n, 1:m)
         e(1:m)      = e_d(1:m)
+#endif
         CALL test%assert_close( e(1:m), e_save(1:m) )
         !
         !
+#if defined(__OPENMP_GPU)
+        v = (0.d0, 0.d0)
+        e = 0.d0
+        s = s_save
+        h = h_save
+        !$omp target data map(tofrom: h, s, e, v)
+        CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false., .true. )
+        !$omp end target data
+#else
         v_d = (0.d0, 0.d0)
         e_d = 0.d0
         s_d = s_save
@@ -235,10 +290,13 @@ program test_diaghg_gpu_3
         !
         v(1:n, 1:m) = v_d(1:n, 1:m)
         e(1:m)      = e_d(1:m)
+#endif
         !
         CALL test%assert_close( e(1:m), e_save(1:m))
         !
+#if !defined(__OPENMP_GPU)
         DEALLOCATE(h_d, s_d, e_d, v_d)
+#endif
         DEALLOCATE(h,s,e,v,h_save,s_save,e_save,v_save)
         DEALLOCATE(e_dc, v_dc)
     END DO

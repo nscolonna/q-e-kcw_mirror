@@ -15,13 +15,13 @@ CONTAINS
 SUBROUTINE laxlib_dsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
    !
    !! Double precision SQuare Matrix REDistribution
-   !! 
+   !!
    !! Copy a global "na * na" matrix locally stored in "a",
    !! and distributed as described by "desca", into a larger
    !! global "nb * nb" matrix stored in "b" and distributed
    !! as described in "descb".
    !!
-   ! 
+   !
    ! If you want to read, get prepared for an headache!
    ! Written struggling by Carlo Cavazzoni.
    !
@@ -35,12 +35,12 @@ SUBROUTINE laxlib_dsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
    !! global dimension of matrix a
    INTEGER, INTENT(IN) :: lda
    !! leading dimension of matrix a
-   REAL(DP)            :: a(lda,lda)  
+   REAL(DP)            :: a(lda,lda)
    !!  matrix to be redistributed into b
    TYPE(la_descriptor), INTENT(IN) :: desca
    !! laxlib descriptor of matrix a
    INTEGER, INTENT(IN) :: nb
-   !! global dimension of matrix b   
+   !! global dimension of matrix b
    INTEGER, INTENT(IN) :: ldb
    !! leading dimension of matrix b
    REAL(DP)            :: b(ldb,ldb)
@@ -105,7 +105,7 @@ SUBROUTINE laxlib_dsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
    CALL MPI_Comm_split( comm, mycol, myrow, col_comm, ierr )
    IF( ierr /= 0 ) &
       CALL lax_error__( " dsqmred ", " in MPI_Comm_split 1 ", ABS( ierr ) )
-    
+
    CALL MPI_Comm_split( comm, myrow, mycol, row_comm, ierr )
    IF( ierr /= 0 ) &
       CALL lax_error__( " dsqmred ", " in MPI_Comm_split 2 ", ABS( ierr ) )
@@ -164,7 +164,7 @@ SUBROUTINE laxlib_dsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
          ELSE IF( ir_new >= ir_old .AND. ir_new <= irx_old ) THEN
             !
             nrsnd( ipr_old ) = irx_old - ir_new + 1
-            irb = ir_new - ir_old + 1 
+            irb = ir_new - ir_old + 1
             ire = nr_old
             irb_new( ipr_old ) = 1
             ire_new( ipr_old ) = nrsnd( ipr_old )
@@ -220,7 +220,7 @@ SUBROUTINE laxlib_dsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
                   CALL mpi_recv( buf, nrsnd(ipr_old), MPI_DOUBLE_PRECISION, ipr_old-1, ipr, col_comm, istatus, ierr )
                   IF( ierr /= 0 ) &
                      CALL lax_error__( " dsqmred ", " in mpi_recv ", ABS( ierr ) )
-                  CALL mpi_get_count( istatus, MPI_DOUBLE_PRECISION, ib, ierr) 
+                  CALL mpi_get_count( istatus, MPI_DOUBLE_PRECISION, ib, ierr)
                   IF( ierr /= 0 ) &
                      CALL lax_error__( " dsqmred ", " in mpi_get_count ", ABS( ierr ) )
                   IF( ib /= nrsnd(ipr_old) ) &
@@ -276,7 +276,7 @@ SUBROUTINE laxlib_dsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
          ELSE IF( ic_new >= ic_old .AND. ic_new <= icx_old ) THEN
             !
             ncsnd( ipc_old ) = icx_old - ic_new + 1
-            icb = ic_new - ic_old + 1 
+            icb = ic_new - ic_old + 1
             ice = nc_old
             icb_new( ipc_old ) = 1
             ice_new( ipc_old ) = ncsnd( ipc_old )
@@ -333,7 +333,7 @@ SUBROUTINE laxlib_dsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
                   CALL mpi_recv( b( 1, ib ), ncsnd(ipc_old), MPI_DOUBLE_PRECISION, ipc_old-1, ipc, row_comm, istatus, ierr )
                   IF( ierr /= 0 ) &
                      CALL lax_error__( " dsqmred ", " in mpi_recv 2 ", ABS( ierr ) )
-                  CALL MPI_GET_COUNT( istatus, MPI_DOUBLE_PRECISION, ib, ierr ) 
+                  CALL MPI_GET_COUNT( istatus, MPI_DOUBLE_PRECISION, ib, ierr )
                   IF( ierr /= 0 ) &
                      CALL lax_error__( " dsqmred ", " in MPI_GET_COUNT 2 ", ABS( ierr ) )
                   IF( ib /= ncsnd(ipc_old) ) &
@@ -396,7 +396,7 @@ SUBROUTINE laxlib_dsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
    CALL MPI_REDUCE( ab, tst2, nb*nb, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr )
 
    IF( myid == 0 ) THEN
-      write( 1000, * ) na, nb, SUM( ABS( tst2 - tst1 ) ) 
+      write( 1000, * ) na, nb, SUM( ABS( tst2 - tst1 ) )
    END IF
 
    DEALLOCATE( ab )
@@ -413,13 +413,13 @@ END SUBROUTINE laxlib_dsqmred_x_x
 SUBROUTINE laxlib_zsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
    !
    !! double complex (Z) SQuare Matrix REDistribution
-   !! 
+   !!
    !! Copy a global "na * na" matrix locally stored in "a",
    !! and distributed as described by "desca", into a larger
    !! global "nb * nb" matrix stored in "b" and distributed
    !! as described in "descb".
    !!
-   ! 
+   !
    ! If you want to read, get prepared for an headache!
    ! Written struggling by Carlo Cavazzoni.
    !
@@ -438,7 +438,7 @@ SUBROUTINE laxlib_zsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
    TYPE(la_descriptor), INTENT(IN) :: desca
    !! laxlib descriptor of matrix a
    INTEGER, INTENT(IN) :: nb
-   !! global dimension of matrix b   
+   !! global dimension of matrix b
    INTEGER, INTENT(IN) :: ldb
    !! leading dimension of matrix b
    COMPLEX(DP)            :: b(ldb,ldb)
@@ -556,7 +556,7 @@ SUBROUTINE laxlib_zsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
          ELSE IF( ir_new >= ir_old .AND. ir_new <= irx_old ) THEN
             !
             nrsnd( ipr_old ) = irx_old - ir_new + 1
-            irb = ir_new - ir_old + 1 
+            irb = ir_new - ir_old + 1
             ire = nr_old
             irb_new( ipr_old ) = 1
             ire_new( ipr_old ) = nrsnd( ipr_old )
@@ -608,7 +608,7 @@ SUBROUTINE laxlib_zsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
                   CALL mpi_recv( buf, nrsnd(ipr_old), MPI_DOUBLE_COMPLEX, ipr_old-1, ipr, col_comm, istatus, ierr )
                   IF( ierr /= 0 ) &
                      CALL lax_error__( " zsqmred ", " in mpi_recv 1 ", ABS( ierr ) )
-                  CALL MPI_GET_COUNT( istatus, MPI_DOUBLE_COMPLEX, ib, ierr) 
+                  CALL MPI_GET_COUNT( istatus, MPI_DOUBLE_COMPLEX, ib, ierr)
                   IF( ierr /= 0 ) &
                      CALL lax_error__( " zsqmred ", " in MPI_GET_COUNT 1 ", ABS( ierr ) )
                   IF( ib /= nrsnd(ipr_old) ) &
@@ -660,7 +660,7 @@ SUBROUTINE laxlib_zsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
          ELSE IF( ic_new >= ic_old .AND. ic_new <= icx_old ) THEN
             !
             ncsnd( ipc_old ) = icx_old - ic_new + 1
-            icb = ic_new - ic_old + 1 
+            icb = ic_new - ic_old + 1
             ice = nc_old
             icb_new( ipc_old ) = 1
             ice_new( ipc_old ) = ncsnd( ipc_old )
@@ -713,7 +713,7 @@ SUBROUTINE laxlib_zsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
                   CALL mpi_recv( b( 1, ib ), ncsnd(ipc_old), MPI_DOUBLE_COMPLEX, ipc_old-1, ipc, row_comm, istatus, ierr )
                   IF( ierr /= 0 ) &
                      CALL lax_error__( " zsqmred ", " in mpi_recv 2 ", ABS( ierr ) )
-                  CALL MPI_GET_COUNT( istatus, MPI_DOUBLE_COMPLEX, ib, ierr ) 
+                  CALL MPI_GET_COUNT( istatus, MPI_DOUBLE_COMPLEX, ib, ierr )
                   IF( ierr /= 0 ) &
                      CALL lax_error__( " zsqmred ", " in MPI_GET_COUNT 2 ", ABS( ierr ) )
                   IF( ib /= ncsnd(ipc_old) ) &
@@ -774,7 +774,7 @@ SUBROUTINE laxlib_zsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
    CALL MPI_REDUCE( ab, tst2, nb*nb, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, comm, ierr )
 
    IF( myid == 0 ) THEN
-      write( 4000, * ) na, nb, SUM( ABS( tst2 - tst1 ) ) 
+      write( 4000, * ) na, nb, SUM( ABS( tst2 - tst1 ) )
    END IF
 
    DEALLOCATE( ab )
@@ -790,9 +790,7 @@ END SUBROUTINE laxlib_zsqmred_x_x
 
 END MODULE laxlib_ptoolkit
 
-
 ! ---------------------------------------------------------------------------------
-
 
 SUBROUTINE laxlib_dsqmdst_x( n, ar, ldar, a, lda, desc )
   !
@@ -809,7 +807,7 @@ SUBROUTINE laxlib_dsqmdst_x( n, ar, ldar, a, lda, desc )
   !! global dimension
   INTEGER, INTENT(IN) :: ldar
   !! leading dimension of matrix ar
-  REAL(DP)            :: ar(ldar,*)  
+  REAL(DP)            :: ar(ldar,*)
   !! matrix to be splitted, replicated on all proc
   INTEGER, INTENT(IN) :: lda
   !! leading dimension of matrix a
@@ -855,7 +853,6 @@ SUBROUTINE laxlib_dsqmdst_x( n, ar, ldar, a, lda, desc )
   RETURN
 
 END SUBROUTINE laxlib_dsqmdst_x
-
 
 SUBROUTINE laxlib_zsqmdst_x( n, ar, ldar, a, lda, desc )
   !
@@ -924,7 +921,7 @@ END SUBROUTINE laxlib_zsqmdst_x
 SUBROUTINE laxlib_dsqmcll_x( n, a, lda, ar, ldar, desc, comm )
   !
   !! Double precision SQuare Matrix CoLLect
-  !! This sub. take a distributed square matrix "a" and collect 
+  !! This sub. take a distributed square matrix "a" and collect
   !! the block assigned to processors into a replicated matrix "ar",
   !! matrix is distributed as described by descriptor desc
   !!
@@ -1003,7 +1000,7 @@ SUBROUTINE laxlib_dsqmcll_x( n, a, lda, ar, ldar, desc, comm )
      !
   END IF
   !
-  CALL mpi_bcast( ar,  ldar * n, mpi_double_precision, 0, comm, ierr )   
+  CALL mpi_bcast( ar,  ldar * n, mpi_double_precision, 0, comm, ierr )
   !
   IF( ierr /= 0 ) &
      CALL lax_error__( " dsqmcll ", " in bcast ", ABS( ierr ) )
@@ -1021,11 +1018,10 @@ SUBROUTINE laxlib_dsqmcll_x( n, a, lda, ar, ldar, desc, comm )
   RETURN
 END SUBROUTINE laxlib_dsqmcll_x
 
-
 SUBROUTINE laxlib_zsqmcll_x( n, a, lda, ar, ldar, desc, comm )
   !
   !  double complex (Z) SQuare Matrix CoLLect
-  !  This sub. take a distributed square matrix "a" and collect 
+  !  This sub. take a distributed square matrix "a" and collect
   !  the block assigned to processors into a replicated matrix "ar",
   !  matrix is distributed as described by descriptor desc
   !
@@ -1061,7 +1057,7 @@ SUBROUTINE laxlib_zsqmcll_x( n, a, lda, ar, ldar, desc, comm )
   !
   IF( desc%active_node > 0 ) THEN
      !
-     np = desc%npr * desc%npc 
+     np = desc%npr * desc%npc
      nx = desc%nrcx
      npr = desc%npr
      npc = desc%npc
@@ -1103,7 +1099,7 @@ SUBROUTINE laxlib_zsqmcll_x( n, a, lda, ar, ldar, desc, comm )
      !
   END IF
   !
-  CALL mpi_bcast( ar,  ldar * n, mpi_double_complex, 0, comm, ierr )   
+  CALL mpi_bcast( ar,  ldar * n, mpi_double_complex, 0, comm, ierr )
   !
   IF( ierr /= 0 ) &
      CALL lax_error__( " zsqmcll ", " in bcast ", ABS( ierr ) )
@@ -1121,7 +1117,6 @@ SUBROUTINE laxlib_zsqmcll_x( n, a, lda, ar, ldar, desc, comm )
   RETURN
 END SUBROUTINE laxlib_zsqmcll_x
 
-
 ! ---------------------------------------------------------------------------------
 
 SUBROUTINE laxlib_dsqmwpb_x( n, a, lda, desc )
@@ -1137,8 +1132,8 @@ SUBROUTINE laxlib_dsqmwpb_x( n, a, lda, desc )
    INTEGER, INTENT(IN) :: n
    !! global dimension of matrix a
    INTEGER, INTENT(IN) :: lda
-   !! leading dimension of matrix a 
-   REAL(DP)            :: a(lda,*)  
+   !! leading dimension of matrix a
+   REAL(DP)            :: a(lda,*)
    !! distributed matrix a
    TYPE(la_descriptor), INTENT(IN) :: desc
    !! laxlib descriptor
@@ -1168,6 +1163,7 @@ SUBROUTINE laxlib_dsqmsym_x( n, a, lda, idesc )
    !
    USE laxlib_descriptor
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
    !
    IMPLICIT NONE
    include 'laxlib_kinds.fh'
@@ -1176,7 +1172,7 @@ SUBROUTINE laxlib_dsqmsym_x( n, a, lda, idesc )
    INTEGER, INTENT(IN) :: n
    !! global dimension of matrix a
    INTEGER, INTENT(IN) :: lda
-   !! leading dimension of matrix a 
+   !! leading dimension of matrix a
    REAL(DP)            :: a(lda,*)
    !! distributed matrix a
    INTEGER, INTENT(IN) :: idesc(LAX_DESC_SIZE)
@@ -1187,7 +1183,7 @@ SUBROUTINE laxlib_dsqmsym_x( n, a, lda, idesc )
    INTEGER :: istatus( MPI_STATUS_SIZE )
 #endif
    INTEGER :: i, j
-   INTEGER :: comm 
+   INTEGER :: comm
    INTEGER :: nr, nc, dest, sreq, ierr, sour
    REAL(DP) :: atmp
 
@@ -1206,8 +1202,8 @@ SUBROUTINE laxlib_dsqmsym_x( n, a, lda, idesc )
 
    comm = desc%comm
 
-   nr = desc%nr 
-   nc = desc%nc 
+   nr = desc%nr
+   nc = desc%nc
    IF( desc%myc == desc%myr ) THEN
       !
       !  diagonal block, procs work locally
@@ -1296,7 +1292,7 @@ SUBROUTINE laxlib_dsqmsym_gpu_x( n, a, lda, idesc )
    INTEGER, INTENT(IN) :: n
    !! global dimension of matrix a
    INTEGER, INTENT(IN) :: lda
-   !! leading dimension of matrix a 
+   !! leading dimension of matrix a
    REAL(DP), INTENT(INOUT), DEVICE :: a(:,:)
    ATTRIBUTES(DEVICE) :: a
    !! distributed matrix a
@@ -1307,11 +1303,11 @@ SUBROUTINE laxlib_dsqmsym_gpu_x( n, a, lda, idesc )
 #if defined __MPI
    INTEGER :: istatus( MPI_STATUS_SIZE )
 #if ! defined(__GPU_MPI)
-   REAL(DP), ALLOCATABLE :: a_h(:,:) 
+   REAL(DP), ALLOCATABLE :: a_h(:,:)
 #endif
 #endif
    INTEGER :: i, j
-   INTEGER :: comm 
+   INTEGER :: comm
    INTEGER :: nr, nc, dest, sreq, ierr, sour
    REAL(DP) :: atmp
 
@@ -1330,8 +1326,8 @@ SUBROUTINE laxlib_dsqmsym_gpu_x( n, a, lda, idesc )
 
    comm = desc%comm
 
-   nr = desc%nr 
-   nc = desc%nc 
+   nr = desc%nr
+   nc = desc%nc
    IF( desc%myc == desc%myr ) THEN
       !
       !  diagonal block, procs work locally
@@ -1380,7 +1376,7 @@ SUBROUTINE laxlib_dsqmsym_gpu_x( n, a, lda, idesc )
          END DO
       END DO
 #else
-      ALLOCATE(a_h(SIZE(a,1),SIZE(a,2))) 
+      ALLOCATE(a_h(SIZE(a,1),SIZE(a,2)))
       CALL mpi_recv( a_h, SIZE(a_h), MPI_DOUBLE_PRECISION, sour, 1, comm, istatus, ierr )
       DO j = 1, lda
          DO i = j + 1, lda
@@ -1390,7 +1386,7 @@ SUBROUTINE laxlib_dsqmsym_gpu_x( n, a, lda, idesc )
          END DO
       END DO
       a = a_h
-      DEALLOCATE(a_h) 
+      DEALLOCATE(a_h)
 #endif
       !
       IF( ierr /= 0 ) &
@@ -1404,7 +1400,7 @@ SUBROUTINE laxlib_dsqmsym_gpu_x( n, a, lda, idesc )
       !
 #if defined(__GPU_MPI)
 #else
-      DEALLOCATE(a_h) 
+      DEALLOCATE(a_h)
 #endif
       IF( ierr /= 0 ) &
          CALL lax_error__( " dsqmsym ", " in wait ", ABS( ierr ) )
@@ -1424,6 +1420,138 @@ SUBROUTINE laxlib_dsqmsym_gpu_x( n, a, lda, idesc )
 
    RETURN
 END SUBROUTINE laxlib_dsqmsym_gpu_x
+#elif defined (__OPENMP_GPU)
+SUBROUTINE laxlib_dsqmsym_x_gpu( n, a, lda, idesc )
+   !
+   ! Double precision SQuare Matrix SYMmetrization
+   !
+   USE laxlib_descriptor
+   USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
+   !
+   IMPLICIT NONE
+   INCLUDE 'laxlib_kinds.fh'
+   include 'laxlib_param.fh'
+   INTEGER, INTENT(IN)     :: n
+   INTEGER, INTENT(IN)     :: lda
+   REAL(DP), INTENT(INOUT) :: a(:,:)
+   INTEGER, INTENT(IN)     :: idesc(LAX_DESC_SIZE)
+   TYPE(la_descriptor) :: desc
+#if defined __MPI
+   INTEGER :: istatus( MPI_STATUS_SIZE )
+#endif
+   INTEGER :: i, j
+   INTEGER :: comm
+   INTEGER :: nr, nc, dest, sreq, ierr, sour
+   REAL(DP) :: atmp
+
+#if defined __MPI
+
+   CALL laxlib_intarray_to_desc(desc,idesc)
+
+   IF( desc%active_node <= 0 ) THEN
+      RETURN
+   END IF
+
+   IF( n /= desc%n ) &
+      CALL lax_error__( " dsqmsym ", " wrong global dim n ", n )
+   IF( lda /= desc%nrcx ) &
+      CALL lax_error__( " dsqmsym ", " wrong leading dim lda ", lda )
+
+   comm = desc%comm
+
+   nr = desc%nr
+   nc = desc%nc
+   IF( desc%myc == desc%myr ) THEN
+      !
+      !  diagonal block, procs work locally
+      !
+!$omp target teams distribute parallel do
+      DO j = 1, nc
+         DO i = j + 1, nr
+            a(i,j) = a(j,i)
+         END DO
+      END DO
+!$omp end target teams distribute parallel do
+      !
+   ELSE IF( desc%myc > desc%myr ) THEN
+      !
+      !  super diagonal block, procs send the block to sub diag.
+      !
+      CALL GRID2D_RANK( 'R', desc%npr, desc%npc, &
+                             desc%myc, desc%myr, dest )
+#if defined(__GPU_MPI)
+      !ierr = cudaDeviceSynchronize()
+      !CALL mpi_isend( a, SIZE(a), MPI_DOUBLE_PRECISION, dest, 1, comm, sreq, ierr )
+#else
+!$omp target update from(a)
+      CALL mpi_isend( a, SIZE(a), MPI_DOUBLE_PRECISION, dest, 1, comm, sreq, ierr )
+#endif
+      !
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " dsqmsym ", " in isend ", ABS( ierr ) )
+      !
+   ELSE IF( desc%myc < desc%myr ) THEN
+      !
+      !  sub diagonal block, procs receive the block from super diag,
+      !  then transpose locally
+      !
+      CALL GRID2D_RANK( 'R', desc%npr, desc%npc, &
+                             desc%myc, desc%myr, sour )
+
+#if defined(__GPU_MPI)
+!      ierr = cudaDeviceSynchronize()
+!      CALL mpi_recv( a, SIZE(a), MPI_DOUBLE_PRECISION, sour, 1, comm, istatus, ierr )
+!!$cuf kernel do(1) <<<*,*>>>
+!      DO j = 1, lda
+!         DO i = j + 1, lda
+!            atmp = a(i,j)
+!            a(i,j) = a(j,i)
+!            a(j,i) = atmp
+!         END DO
+!      END DO
+#else
+      CALL mpi_recv( a, SIZE(a), MPI_DOUBLE_PRECISION, sour, 1, comm, istatus, ierr )
+!$omp parallel do
+      DO j = 1, lda
+         DO i = j + 1, lda
+            atmp = a(i,j)
+            a(i,j) = a(j,i)
+            a(j,i) = atmp
+         END DO
+      END DO
+!$omp end parallel do
+!$omp target update to(a)
+#endif
+      !
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " dsqmsym ", " in recv ", ABS( ierr ) )
+      !
+   END IF
+
+   IF( desc%myc > desc%myr ) THEN
+      !
+      CALL MPI_Wait( sreq, istatus, ierr )
+      !
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " dsqmsym ", " in wait ", ABS( ierr ) )
+      !
+   END IF
+
+#else
+
+!$omp target teams distribute parallel do
+   DO j = 1, n
+      DO i = j + 1, n
+         a(i,j) = a(j,i)
+      END DO
+   END DO
+!$omp end target teams distribute parallel do
+
+#endif
+
+   RETURN
+END SUBROUTINE laxlib_dsqmsym_x_gpu
 #endif
 ! ---------------------------------------------------------------------------------
 
@@ -1434,6 +1562,7 @@ SUBROUTINE laxlib_zsqmher_x( n, a, lda, idesc )
    !
    USE laxlib_descriptor
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
    !
    IMPLICIT NONE
    include 'laxlib_kinds.fh'
@@ -1442,7 +1571,7 @@ SUBROUTINE laxlib_zsqmher_x( n, a, lda, idesc )
    INTEGER, INTENT(IN) :: n
    !! global dimension of matrix a
    INTEGER, INTENT(IN) :: lda
-   !! leading dimension of matrix a 
+   !! leading dimension of matrix a
    COMPLEX(DP)            :: a(lda,lda)
    !! distributed matrix a
    INTEGER, INTENT(IN) :: idesc(LAX_DESC_SIZE)
@@ -1474,8 +1603,8 @@ SUBROUTINE laxlib_zsqmher_x( n, a, lda, idesc )
 
    comm = desc%comm
 
-   nr = desc%nr 
-   nc = desc%nc 
+   nr = desc%nr
+   nc = desc%nc
    IF( desc%myc == desc%myr ) THEN
       !
       !  diagonal block, procs work locally
@@ -1560,7 +1689,7 @@ SUBROUTINE laxlib_zsqmher_x( n, a, lda, idesc )
       !
    END DO
    END IF
-   
+
    DEALLOCATE( tst1 )
    DEALLOCATE( tst2 )
 #endif
@@ -1584,13 +1713,12 @@ SUBROUTINE laxlib_zsqmher_x( n, a, lda, idesc )
    RETURN
 END SUBROUTINE laxlib_zsqmher_x
 
-
 ! ---------------------------------------------------------------------------------
 
 SUBROUTINE laxlib_dsqmred_x( na, a, lda, idesca, nb, b, ldb, idescb )
    !
    !! Double precision SQuare Matrix REDistribution
-   !! 
+   !!
    !! Copy a global "na * na" matrix locally stored in "a",
    !! and distributed as described by integer "idesca", into a larger
    !! global "nb * nb" matrix stored in "b" and distributed
@@ -1614,7 +1742,7 @@ SUBROUTINE laxlib_dsqmred_x( na, a, lda, idesca, nb, b, ldb, idescb )
    INTEGER, INTENT(IN) :: idesca(LAX_DESC_SIZE)
    !! integer laxlib descriptor matrix a
    INTEGER, INTENT(IN) :: nb
-   !! global dimension of matrix b   
+   !! global dimension of matrix b
    INTEGER, INTENT(IN) :: ldb
    !! leading dimension of matrix b
    REAL(DP)            :: b(ldb,ldb)
@@ -1633,7 +1761,7 @@ END SUBROUTINE
 SUBROUTINE laxlib_zsqmred_x( na, a, lda, idesca, nb, b, ldb, idescb )
    !
    !! double complex (Z) SQuare Matrix REDistribution
-   !! 
+   !!
    !! Copy a global "na * na" matrix locally stored in "a",
    !! and distributed as described by integer "idesca", into a larger
    !! global "nb * nb" matrix stored in "b" and distributed
@@ -1656,7 +1784,7 @@ SUBROUTINE laxlib_zsqmred_x( na, a, lda, idesca, nb, b, ldb, idescb )
    INTEGER, INTENT(IN) :: idesca(LAX_DESC_SIZE)
    !! integer laxlib descriptor matrix a
    INTEGER, INTENT(IN) :: nb
-   !! global dimension of matrix b   
+   !! global dimension of matrix b
    INTEGER, INTENT(IN) :: ldb
    !! leading dimension of matrix b
    COMPLEX(DP)            :: b(ldb,ldb)
@@ -1672,9 +1800,7 @@ SUBROUTINE laxlib_zsqmred_x( na, a, lda, idesca, nb, b, ldb, idescb )
    CALL laxlib_zsqmred_x_x( na, a, lda, desca, nb, b, ldb, descb )
 END SUBROUTINE
 
-
 ! ---------------------------------------------------------------------------------
-
 
 SUBROUTINE rep_matmul_drv( TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC, comm )
   !
@@ -1702,7 +1828,7 @@ SUBROUTINE rep_matmul_drv( TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA,
   !! specifies the form of op( A ) to be used in the matrix multiplication as follows:
   !! 'N' or 'n',  op( A ) = A.
   !! 'T' or 't',  op( A ) = A**T.
-  !! 'C' or 'c',  op( A ) = A**T. 
+  !! 'C' or 'c',  op( A ) = A**T.
   CHARACTER(LEN=1), INTENT(IN) :: transb
   !! specifies the form of op( B ) to be used in the matrix multiplication as
   !follows:
@@ -1865,7 +1991,6 @@ SUBROUTINE rep_matmul_drv( TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA,
 
 END SUBROUTINE rep_matmul_drv
 
-
 SUBROUTINE zrep_matmul_drv( TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, LDC, comm )
   !
   !!  Parallel matrix multiplication with replicated matrix
@@ -1892,7 +2017,7 @@ SUBROUTINE zrep_matmul_drv( TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA
   !follows:
   !! 'N' or 'n',  op( A ) = A.
   !! 'T' or 't',  op( A ) = A**T.
-  !! 'C' or 'c',  op( A ) = A**T. 
+  !! 'C' or 'c',  op( A ) = A**T.
   CHARACTER(LEN=1), INTENT(IN) :: transb
   !! specifies the form of op( B ) to be used in the matrix multiplication as
   !follows:
@@ -2062,13 +2187,13 @@ END SUBROUTINE zrep_matmul_drv
 !
 !  Cannon's algorithms for parallel matrix multiplication
 !  written by Carlo Cavazzoni
-!  
+!
 !
 !
 
 SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, ldc, idesc )
    !
-   !!  
+   !!
    !!  Double precision parallel square matrix multiplication with Cannon's algorithm
    !!  performs one of the matrix-matrix operations
    !!
@@ -2083,6 +2208,7 @@ SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    !
    USE laxlib_descriptor
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
    !
    IMPLICIT NONE
    include 'laxlib_kinds.fh'
@@ -2093,7 +2219,7 @@ SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    !follows:
    !! 'N' or 'n',  op( A ) = A.
    !! 'T' or 't',  op( A ) = A**T.
-   !! 'C' or 'c',  op( A ) = A**T. 
+   !! 'C' or 'c',  op( A ) = A**T.
    CHARACTER(LEN=1), INTENT(IN) :: transb
    !! specifies the form of op( B ) to be used in the matrix multiplication as
    !follows:
@@ -2152,9 +2278,9 @@ SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
       RETURN
    END IF
 
-   IF( desc%npr == 1 ) THEN 
+   IF( desc%npr == 1 ) THEN
       !
-      !  quick return if only one processor is used 
+      !  quick return if only one processor is used
       !
       CALL dgemm( TRANSA, TRANSB, n, n, n, alpha, a, lda, b, ldb, beta, c, ldc)
       !
@@ -2174,8 +2300,8 @@ SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    !
    !  Retrieve the size of the local block
    !
-   nr    = desc%nr 
-   nc    = desc%nc 
+   nr    = desc%nr
+   nc    = desc%nc
    nb    = desc%nrcx
    !
 #if defined (__MPI)
@@ -2230,7 +2356,7 @@ SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    tb = ( TRANSB == 'T' .OR. TRANSB == 't' )
    !
    !  Shift A rowid+1 places to the west
-   ! 
+   !
    IF( ta ) THEN
       CALL shift_exch_block( ablk, 'W', 1 )
    ELSE
@@ -2238,7 +2364,7 @@ SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    END IF
    !
    !  Shift B colid+1 places to the north
-   ! 
+   !
    IF( tb ) THEN
       CALL shift_exch_block( bblk, 'N', np+1 )
    ELSE
@@ -2252,11 +2378,11 @@ SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    DO iter = 2, np
       !
       !  Shift A 1 places to the east
-      ! 
+      !
       CALL shift_block( ablk, 'E', 1, iter )
       !
       !  Shift B 1 places to the south
-      ! 
+      !
       CALL shift_block( bblk, 'S', 1, np+iter )
       !
       !  Accumulate on C
@@ -2266,14 +2392,14 @@ SUBROUTINE sqr_dmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    END DO
 
    deallocate( ablk, bblk )
-   
+
    RETURN
 
 CONTAINS
 
    SUBROUTINE shift_block( blk, dir, ln, tag )
       !
-      !   Block shift 
+      !   Block shift
       !
       IMPLICIT NONE
       REAL(DP) :: blk( :, : )
@@ -2398,9 +2524,9 @@ END SUBROUTINE sqr_dmm_cannon_x
 #if defined (__CUDA)
 SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, ldc, idesc )
    !
-   !!  
+   !!
    !!  Double precision parallel square matrix multiplication with Cannon's algorithm
-   !!  performs one of the matrix-matrix operations 
+   !!  performs one of the matrix-matrix operations
    !!
    !!  GPU version
    !!
@@ -2427,7 +2553,7 @@ SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta,
    !follows:
    !! 'N' or 'n',  op( A ) = A.
    !! 'T' or 't',  op( A ) = A**T.
-   !! 'C' or 'c',  op( A ) = A**T. 
+   !! 'C' or 'c',  op( A ) = A**T.
    CHARACTER(LEN=1), INTENT(IN) :: transb
    !! specifies the form of op( B ) to be used in the matrix multiplication as
    !follows:
@@ -2488,9 +2614,9 @@ SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta,
       RETURN
    END IF
 
-   IF( desc%npr == 1 ) THEN 
+   IF( desc%npr == 1 ) THEN
       !
-      !  quick return if only one processor is used 
+      !  quick return if only one processor is used
       !
       CALL cublasdgemm( TRANSA, TRANSB, n, n, n, alpha, a, lda, b, ldb, beta, c, ldc)
       !
@@ -2510,8 +2636,8 @@ SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta,
    !
    !  Retrieve the size of the local block
    !
-   nr    = desc%nr 
-   nc    = desc%nc 
+   nr    = desc%nr
+   nc    = desc%nc
    nb    = desc%nrcx
    !
 #if defined (__MPI)
@@ -2521,7 +2647,7 @@ SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta,
 #endif
    !
    allocate( ablk( nb, nb ) )
-   
+
 !$cuf kernel do(2) <<<*,*>>>
    DO j = 1, nc
       DO i = 1, nr
@@ -2574,7 +2700,7 @@ SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta,
    tb = ( TRANSB == 'T' .OR. TRANSB == 't' )
    !
    !  Shift A rowid+1 places to the west
-   ! 
+   !
    IF( ta ) THEN
       CALL shift_exch_block( ablk, 'W', 1 )
    ELSE
@@ -2582,7 +2708,7 @@ SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta,
    END IF
    !
    !  Shift B colid+1 places to the north
-   ! 
+   !
    IF( tb ) THEN
       CALL shift_exch_block( bblk, 'N', np+1 )
    ELSE
@@ -2598,11 +2724,11 @@ SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta,
       ierr = cudaDeviceSynchronize()
       !
       !  Shift A 1 places to the east
-      ! 
+      !
       CALL shift_block( ablk, 'E', 1, iter )
       !
       !  Shift B 1 places to the south
-      ! 
+      !
       CALL shift_block( bblk, 'S', 1, np+iter )
       !
       !  Accumulate on C
@@ -2613,14 +2739,14 @@ SUBROUTINE sqr_dmm_cannon_gpu_x( transa, transb, n, alpha, a, lda, b, ldb, beta,
 
    ierr = cudaDeviceSynchronize()
    deallocate( ablk, bblk )
-   
+
    RETURN
 
 CONTAINS
 
    SUBROUTINE shift_block( blk, dir, ln, tag )
       !
-      !   Block shift 
+      !   Block shift
       !
       IMPLICIT NONE
       REAL(DP), DEVICE :: blk( :, : )
@@ -2772,13 +2898,369 @@ CONTAINS
    END SUBROUTINE shift_exch_block
 
 END SUBROUTINE sqr_dmm_cannon_gpu_x
+#elif defined (__OPENMP_GPU)
+SUBROUTINE sqr_dmm_cannon_x_gpu( transa, transb, n, alpha, a, lda, b, ldb, beta, c, ldc, idesc )
+   !
+   !  Parallel square matrix multiplication with Cannon's algorithm
+   !
+   USE laxlib_descriptor
+   USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
+   use onemkl_blas_gpu
+   !use dmr
+   use omp_lib
+
+   !
+   IMPLICIT NONE
+   INCLUDE 'laxlib_kinds.fh'
+   INCLUDE 'laxlib_param.fh'
+   !
+   CHARACTER(LEN=1), INTENT(IN)    :: transa, transb
+   INTEGER,          INTENT(IN)    :: n
+   REAL(DP),         INTENT(IN)    :: alpha, beta
+   INTEGER,          INTENT(IN)    :: lda, ldb, ldc
+   REAL(DP),         INTENT(IN)    :: a(:,:), b(:,:)
+   REAL(DP),         INTENT(INOUT) :: c(:,:)
+   INTEGER,          INTENT(IN)    :: idesc(LAX_DESC_SIZE)
+   !
+   TYPE(la_descriptor) :: desc
+   !
+   !  performs one of the matrix-matrix operations
+   !
+   !     C := ALPHA*OP( A )*OP( B ) + BETA*C,
+   !
+   !  where  op( x ) is one of
+   !
+   !     OP( X ) = X   OR   OP( X ) = X',
+   !
+   !  alpha and beta are scalars, and a, b and c are square matrices
+   !
+   integer :: ierr
+   integer :: np
+   integer :: i, j, nr, nc, nb, iter, rowid, colid
+   logical :: ta, tb
+   INTEGER :: comm, omp_device
+   !
+   !
+   real(DP), pointer, contiguous :: bblk(:,:), ablk(:,:)
+   !
+#if defined (__MPI)
+   !
+   integer :: istatus( MPI_STATUS_SIZE )
+   !
+#endif
+   !
+!$omp barrier
+   !
+   CALL laxlib_intarray_to_desc(desc,idesc)
+   !
+   IF( desc%active_node < 0 ) THEN
+      !
+      !  processors not interested in this computation return quickly
+      !
+      RETURN
+      !
+   END IF
+
+   IF( n < 1 ) THEN
+      RETURN
+   END IF
+
+   IF( desc%npr == 1 ) THEN
+      !
+      !  quick return if only one processor is used
+      !
+!$omp target variant dispatch use_device_ptr(a, b, c)
+      call dgemm(transa, transb, n, n, n, alpha, a, lda, b, ldb, beta, c, ldc)
+!$omp end target variant dispatch
+      !
+      RETURN
+      !
+   END IF
+
+   IF( desc%npr /= desc%npc ) &
+      CALL lax_error__( ' sqr_mm_cannon ', ' works only with square processor mesh ', 1 )
+   !
+   !  Retrieve communicator and mesh geometry
+   !
+   np    = desc%npr
+   comm  = desc%comm
+   rowid = desc%myr
+   colid = desc%myc
+   !
+   !  Retrieve the size of the local block
+   !
+   nr    = desc%nr
+   nc    = desc%nc
+   nb    = desc%nrcx
+   !
+   omp_device = omp_get_default_device()
+   !
+#if defined (__MPI)
+   CALL MPI_BARRIER( comm, ierr )
+   IF( ierr /= 0 ) &
+      CALL lax_error__( " sqr_mm_cannon ", " in MPI_BARRIER ", ABS( ierr ) )
+#endif
+   !
+   !call omp_target_alloc_f(fptr_dev=ablk, dimensions=[n,n], omp_dev=omp_device)
+   !$omp allocate allocator(omp_target_device_mem_alloc)
+   allocate(ablk(n,n))
+
+!$omp target teams distribute parallel do collapse(2)
+   DO j = 1, nc
+      DO i = 1, nr
+         ablk( i, j ) = a( i, j )
+      END DO
+   END DO
+!$omp end target teams distribute parallel do
+   !
+   !  Clear memory outside the matrix block
+   !
+!$omp target teams distribute parallel do collapse(2)
+   DO j = nc+1, nb
+      DO i = 1, nb
+         ablk( i, j ) = 0.0_DP
+      END DO
+   END DO
+!$omp end target teams distribute parallel do
+!$omp target teams distribute parallel do collapse(2)
+   DO j = 1, nb
+      DO i = nr+1, nb
+         ablk( i, j ) = 0.0_DP
+      END DO
+   END DO
+!$omp end target teams distribute parallel do
+   !
+   !
+   !call omp_target_alloc_f(fptr_dev=bblk, dimensions=[nb,nb], omp_dev=omp_device)
+   !$omp allocate allocator(omp_target_device_mem_alloc)
+   allocate(bblk(nb,nb))
+
+!$omp target teams distribute parallel do collapse(2)
+   DO j = 1, nc
+      DO i = 1, nr
+         bblk( i, j ) = b( i, j )
+      END DO
+   END DO
+!$omp end target teams distribute parallel do
+   !
+   !  Clear memory outside the matrix block
+   !
+!$omp target teams distribute parallel do collapse(2)
+   DO j = nc+1, nb
+      DO i = 1, nb
+         bblk( i, j ) = 0.0_DP
+      END DO
+   END DO
+!$omp end target teams distribute parallel do
+!$omp target teams distribute parallel do collapse(2)
+   DO j = 1, nb
+      DO i = nr+1, nb
+         bblk( i, j ) = 0.0_DP
+      END DO
+   END DO
+!$omp end target teams distribute parallel do
+   !
+   ta = ( TRANSA == 'T' .OR. TRANSA == 't' )
+   tb = ( TRANSB == 'T' .OR. TRANSB == 't' )
+   !
+   !  Shift A rowid+1 places to the west
+   !
+   IF( ta ) THEN
+      CALL shift_exch_block( ablk, 'W', 1 )
+   ELSE
+      CALL shift_block( ablk, 'W', rowid+1, 1 )
+   END IF
+   !
+   !  Shift B colid+1 places to the north
+   !
+   IF( tb ) THEN
+      CALL shift_exch_block( bblk, 'N', np+1 )
+   ELSE
+      CALL shift_block( bblk, 'N', colid+1, np+1 )
+   END IF
+   !
+   !  Accumulate on C
+   !
+!$omp target variant dispatch use_device_ptr(ablk, bblk, c)
+   call dgemm(transa, transb, nr, nc, nb, alpha, ablk, nb, bblk, nb, beta, c, ldc)
+!$omp end target variant dispatch
+   !
+   DO iter = 2, np
+      !
+      !  Shift A 1 places to the east
+      !
+      CALL shift_block( ablk, 'E', 1, iter )
+      !
+      !  Shift B 1 places to the south
+      !
+      CALL shift_block( bblk, 'S', 1, np+iter )
+      !
+      !  Accumulate on C
+      !
+!$omp target variant dispatch use_device_ptr(ablk, bblk, c)
+      call dgemm(transa, transb, nr, nc, nb, alpha, ablk, nb, bblk, nb, 1.0_DP, c, ldc)
+!$omp end target variant dispatch
+      !
+   END DO
+
+   !call omp_target_free_f(fptr_dev=ablk, omp_dev=omp_device)
+   !call omp_target_free_f(fptr_dev=bblk, omp_dev=omp_device)
+   deallocate(ablk)
+   deallocate(bblk)
+
+   RETURN
+
+CONTAINS
+
+   SUBROUTINE shift_block( blk, dir, ln, tag )
+      !
+      !   Block shift
+      !
+      IMPLICIT NONE
+      REAL(DP),         INTENT(INOUT) :: blk( :, : )
+      CHARACTER(LEN=1), INTENT(IN)    :: dir      ! shift direction
+      INTEGER,          INTENT(IN)    :: ln       ! shift length
+      INTEGER,          INTENT(IN)    :: tag      ! communication tag
+      !
+      INTEGER :: icdst, irdst, icsrc, irsrc, idest, isour
+      !
+      IF( dir == 'W' ) THEN
+         !
+         irdst = rowid
+         irsrc = rowid
+         icdst = MOD( colid - ln + np, np )
+         icsrc = MOD( colid + ln + np, np )
+         !
+      ELSE IF( dir == 'E' ) THEN
+         !
+         irdst = rowid
+         irsrc = rowid
+         icdst = MOD( colid + ln + np, np )
+         icsrc = MOD( colid - ln + np, np )
+         !
+      ELSE IF( dir == 'N' ) THEN
+
+         irdst = MOD( rowid - ln + np, np )
+         irsrc = MOD( rowid + ln + np, np )
+         icdst = colid
+         icsrc = colid
+
+      ELSE IF( dir == 'S' ) THEN
+
+         irdst = MOD( rowid + ln + np, np )
+         irsrc = MOD( rowid - ln + np, np )
+         icdst = colid
+         icsrc = colid
+
+      ELSE
+
+         CALL lax_error__( ' sqr_mm_cannon ', ' unknown shift direction ', 1 )
+
+      END IF
+      !
+      CALL GRID2D_RANK( 'R', np, np, irdst, icdst, idest )
+      CALL GRID2D_RANK( 'R', np, np, irsrc, icsrc, isour )
+      !
+#if defined (__MPI)
+      !
+#if defined(__GPU_MPI)
+      !CALL MPI_SENDRECV_REPLACE(blk, SIZE(blk), MPI_DOUBLE_PRECISION, &
+      !     idest, tag, isour, tag, comm, istatus, ierr)
+      !IF( ierr /= 0 ) &
+      !   CALL lax_error__( " sqr_mm_cannon_gpu ", " in MPI_SENDRECV_REPLACE ", ABS( ierr ) )
+#else
+!$omp target update from(blk)
+      CALL MPI_SENDRECV_REPLACE(blk, SIZE(blk), MPI_DOUBLE_PRECISION, &
+           idest, tag, isour, tag, comm, istatus, ierr)
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " sqr_mm_cannon_gpu ", " in MPI_SENDRECV_REPLACE ", ABS( ierr ) )
+!$omp target update to(blk)
+#endif
+      !
+#endif
+      RETURN
+   END SUBROUTINE shift_block
+
+   SUBROUTINE shift_exch_block( blk, dir, tag )
+      !
+      !   Combined block shift and exchange
+      !   only used for the first step
+      !
+      IMPLICIT NONE
+      REAL(DP),         INTENT(INOUT) :: blk( :, : )
+      CHARACTER(LEN=1), INTENT(IN)    :: dir
+      INTEGER,          INTENT(IN)    :: tag
+      !
+      INTEGER :: icdst, irdst, icsrc, irsrc, idest, isour
+      INTEGER :: icol, irow
+      !
+      IF( dir == 'W' ) THEN
+         !
+         icol = rowid
+         irow = colid
+         !
+         irdst = irow
+         icdst = MOD( icol - irow-1 + np, np )
+         !
+         irow = rowid
+         icol = MOD( colid + rowid+1 + np, np )
+         !
+         irsrc = icol
+         icsrc = irow
+         !
+      ELSE IF( dir == 'N' ) THEN
+         !
+         icol = rowid
+         irow = colid
+         !
+         icdst = icol
+         irdst = MOD( irow - icol-1 + np, np )
+         !
+         irow = MOD( rowid + colid+1 + np, np )
+         icol = colid
+         !
+         irsrc = icol
+         icsrc = irow
+
+      ELSE
+
+         CALL lax_error__( ' sqr_mm_cannon_gpu ', ' unknown shift_exch direction ', 1 )
+
+      END IF
+      !
+      CALL GRID2D_RANK( 'R', np, np, irdst, icdst, idest )
+      CALL GRID2D_RANK( 'R', np, np, irsrc, icsrc, isour )
+      !
+#if defined (__MPI)
+      !
+#if defined(__GPU_MPI)
+      !ierr = cudaDeviceSynchronize()
+      !CALL MPI_SENDRECV_REPLACE(blk, SIZE(blk), MPI_DOUBLE_PRECISION, &
+      !     idest, tag, isour, tag, comm, istatus, ierr)
+      !IF( ierr /= 0 ) &
+      !   CALL lax_error__( " sqr_mm_cannon_gpu ", " in MPI_SENDRECV_REPLACE 2 ", ABS( ierr ) )
+#else
+!$omp target update from(blk)
+      CALL MPI_SENDRECV_REPLACE(blk, SIZE(blk), MPI_DOUBLE_PRECISION, &
+           idest, tag, isour, tag, comm, istatus, ierr)
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " sqr_mm_cannon_gpu ", " in MPI_SENDRECV_REPLACE 2 ", ABS( ierr ) )
+!$omp target update to(blk)
+#endif
+      !
+#endif
+      RETURN
+   END SUBROUTINE shift_exch_block
+
+END SUBROUTINE sqr_dmm_cannon_x_gpu
 #endif
 !=----------------------------------------------------------------------------=!
 
 SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, ldc, idesc )
    !
    !!  Single precision parallel square matrix multiplication with Cannon's algorithm
-   !!  performs one of the matrix-matrix operations 
+   !!  performs one of the matrix-matrix operations
    !!
    !!     C := ALPHA*OP( A )*OP( B ) + BETA*C,
    !!
@@ -2790,6 +3272,7 @@ SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    !
    USE laxlib_descriptor
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
    !
    IMPLICIT NONE
    include 'laxlib_kinds.fh'
@@ -2800,7 +3283,7 @@ SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    !follows:
    !! 'N' or 'n',  op( A ) = A.
    !! 'T' or 't',  op( A ) = A**T.
-   !! 'C' or 'c',  op( A ) = A**T. 
+   !! 'C' or 'c',  op( A ) = A**T.
    CHARACTER(LEN=1), INTENT(IN) :: transb
    !! specifies the form of op( B ) to be used in the matrix multiplication as
    !follows:
@@ -2859,9 +3342,9 @@ SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
       RETURN
    END IF
 
-   IF( desc%npr == 1 ) THEN 
+   IF( desc%npr == 1 ) THEN
       !
-      !  quick return if only one processor is used 
+      !  quick return if only one processor is used
       !
       CALL sgemm( TRANSA, TRANSB, n, n, n, alpha, a, lda, b, ldb, beta, c, ldc)
       !
@@ -2881,8 +3364,8 @@ SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    !
    !  Retrieve the size of the local block
    !
-   nr    = desc%nr 
-   nc    = desc%nc 
+   nr    = desc%nr
+   nc    = desc%nc
    nb    = desc%nrcx
    !
 #if defined (__MPI)
@@ -2937,7 +3420,7 @@ SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    tb = ( TRANSB == 'T' .OR. TRANSB == 't' )
    !
    !  Shift A rowid+1 places to the west
-   ! 
+   !
    IF( ta ) THEN
       CALL shift_exch_block( ablk, 'W', 1 )
    ELSE
@@ -2945,7 +3428,7 @@ SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    END IF
    !
    !  Shift B colid+1 places to the north
-   ! 
+   !
    IF( tb ) THEN
       CALL shift_exch_block( bblk, 'N', np+1 )
    ELSE
@@ -2959,11 +3442,11 @@ SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    DO iter = 2, np
       !
       !  Shift A 1 places to the east
-      ! 
+      !
       CALL shift_block( ablk, 'E', 1, iter )
       !
       !  Shift B 1 places to the south
-      ! 
+      !
       CALL shift_block( bblk, 'S', 1, np+iter )
       !
       !  Accumulate on C
@@ -2973,14 +3456,14 @@ SUBROUTINE sqr_smm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    END DO
 
    deallocate( ablk, bblk )
-   
+
    RETURN
 
 CONTAINS
 
    SUBROUTINE shift_block( blk, dir, ln, tag )
       !
-      !   Block shift 
+      !   Block shift
       !
       IMPLICIT NONE
       REAL(SP) :: blk( :, : )
@@ -3101,13 +3584,12 @@ CONTAINS
 
 END SUBROUTINE sqr_smm_cannon_x
 
-
 !=----------------------------------------------------------------------------=!
 
 SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, ldc, idesc )
    !
    !!  Double precision complex (Z) parallel square matrix multiplication with Cannon's algorithm
-   !!  performs one of the matrix-matrix operations 
+   !!  performs one of the matrix-matrix operations
    !!
    !!     C := ALPHA*OP( A )*OP( B ) + BETA*C,
    !!
@@ -3120,6 +3602,7 @@ SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    USE laxlib_descriptor
    !
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
    IMPLICIT NONE
    include 'laxlib_kinds.fh'
    include 'laxlib_param.fh'
@@ -3129,7 +3612,7 @@ SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    !follows:
    !! 'N' or 'n',  op( A ) = A.
    !! 'T' or 't',  op( A ) = A**T.
-   !! 'C' or 'c',  op( A ) = A**T. 
+   !! 'C' or 'c',  op( A ) = A**T.
    CHARACTER(LEN=1), INTENT(IN) :: transb
    !! specifies the form of op( B ) to be used in the matrix multiplication as
    !follows:
@@ -3190,9 +3673,9 @@ SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
       RETURN
    END IF
 
-   IF( desc%npr == 1 ) THEN 
+   IF( desc%npr == 1 ) THEN
       !
-      !  quick return if only one processor is used 
+      !  quick return if only one processor is used
       !
       CALL zgemm( TRANSA, TRANSB, n, n, n, alpha, a, lda, b, ldb, beta, c, ldc)
       !
@@ -3212,8 +3695,8 @@ SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    !
    !  Retrieve the size of the local block
    !
-   nr    = desc%nr 
-   nc    = desc%nc 
+   nr    = desc%nr
+   nc    = desc%nc
    nb    = desc%nrcx
    !
 #if defined (__MPI)
@@ -3268,7 +3751,7 @@ SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    tb = ( TRANSB == 'C' .OR. TRANSB == 'c' )
    !
    !  Shift A rowid+1 places to the west
-   ! 
+   !
    IF( ta ) THEN
       CALL shift_exch_block( ablk, 'W', 1 )
    ELSE
@@ -3276,7 +3759,7 @@ SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    END IF
    !
    !  Shift B colid+1 places to the north
-   ! 
+   !
    IF( tb ) THEN
       CALL shift_exch_block( bblk, 'N', np+1 )
    ELSE
@@ -3290,11 +3773,11 @@ SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    DO iter = 2, np
       !
       !  Shift A 1 places to the east
-      ! 
+      !
       CALL shift_block( ablk, 'E', 1, iter )
       !
       !  Shift B 1 places to the south
-      ! 
+      !
       CALL shift_block( bblk, 'S', 1, np+iter )
       !
       !  Accumulate on C
@@ -3304,14 +3787,14 @@ SUBROUTINE sqr_zmm_cannon_x( transa, transb, n, alpha, a, lda, b, ldb, beta, c, 
    END DO
 
    deallocate( ablk, bblk )
-   
+
    RETURN
 
 CONTAINS
 
    SUBROUTINE shift_block( blk, dir, ln, tag )
       !
-      !   Block shift 
+      !   Block shift
       !
       IMPLICIT NONE
       COMPLEX(DP) :: blk( :, : )
@@ -3443,6 +3926,7 @@ SUBROUTINE sqr_tr_cannon_x( n, a, lda, b, ldb, idesc )
    !!
    !
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
    IMPLICIT NONE
    !
    include 'laxlib_param.fh'
@@ -3504,8 +3988,8 @@ SUBROUTINE sqr_tr_cannon_x( n, a, lda, b, ldb, idesc )
    !
    !  Compute the size of the local block
    !
-   nr = idesc(LAX_DESC_NR) 
-   nc = idesc(LAX_DESC_NC) 
+   nr = idesc(LAX_DESC_NR)
+   nc = idesc(LAX_DESC_NC)
    nb = idesc(LAX_DESC_NRCX)
    !
    allocate( ablk( nb, nb ) )
@@ -3540,7 +4024,7 @@ SUBROUTINE sqr_tr_cannon_x( n, a, lda, b, ldb, idesc )
    END DO
    !
    deallocate( ablk )
-   
+
    RETURN
 
 CONTAINS
@@ -3573,7 +4057,6 @@ CONTAINS
 
       RETURN
    END SUBROUTINE
-
 
 END SUBROUTINE
 
@@ -3643,7 +4126,6 @@ SUBROUTINE sqr_tr_cannon_gpu_x( n, a, lda, b, ldb, idesc )
       GOTO 1000
    END IF
 
-
    IF( idesc(LAX_DESC_NPR) /= idesc(LAX_DESC_NPC) ) &
       CALL lax_error__( ' sqr_tr_cannon_gpu ', ' works only with square processor mesh ', 1 )
    IF( n /= idesc(LAX_DESC_N) ) &
@@ -3661,12 +4143,12 @@ SUBROUTINE sqr_tr_cannon_gpu_x( n, a, lda, b, ldb, idesc )
    !
    !  Compute the size of the local block
    !
-   nr = idesc(LAX_DESC_NR) 
-   nc = idesc(LAX_DESC_NC) 
+   nr = idesc(LAX_DESC_NR)
+   nc = idesc(LAX_DESC_NC)
    nb = idesc(LAX_DESC_NRCX)
    ldx = MAX(lda,ldb)
    !
-   ALLOCATE( ablk(nb,nb) ) 
+   ALLOCATE( ablk(nb,nb) )
    ablk(1:nr,1:nc) = a(1:nr,1:nc)
    DO j = nc+1, nb
       DO i = 1, nb
@@ -3704,7 +4186,7 @@ SUBROUTINE sqr_tr_cannon_gpu_x( n, a, lda, b, ldb, idesc )
       END DO
    END DO
    !ierr = cudaMemcpy2D(b, SIZE(b,1), ablk, ldx, nc, nr, cudaMemcpyHostToDevice )
-   b(1:nr,1:nc) = ablk(1:nr,1:nc) 
+   b(1:nr,1:nc) = ablk(1:nr,1:nc)
    !DO j = 1, nr
    !   DO i = 1, nc
    !      b( j, i ) = ablk( i, j )
@@ -3718,7 +4200,7 @@ SUBROUTINE sqr_tr_cannon_gpu_x( n, a, lda, b, ldb, idesc )
 1000 CONTINUE
 
    ierr = cudaDeviceSynchronize()
-   
+
    RETURN
 
 CONTAINS
@@ -3760,6 +4242,229 @@ CONTAINS
    END SUBROUTINE
 
 END SUBROUTINE sqr_tr_cannon_gpu_x
+#elif defined (__OPENMP_GPU)
+SUBROUTINE sqr_tr_cannon_x_gpu( n, a, lda, b, ldb, idesc )
+   !
+   !  Parallel square matrix transposition with Cannon's algorithm
+   !
+   !
+   USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
+   use onemkl_blas_gpu
+   use omp_lib
+   !
+   IMPLICIT NONE
+   !
+   include 'laxlib_param.fh'
+   INCLUDE 'laxlib_kinds.fh'
+   !
+   INTEGER,  INTENT(IN)  :: n
+   INTEGER,  INTENT(IN)  :: lda, ldb
+   REAL(DP), INTENT(IN)  :: a(:,:)
+   REAL(DP), INTENT(OUT) :: b(:,:)
+   INTEGER,  INTENT(IN)  :: idesc(:)
+   !
+   INTEGER :: ierr
+   INTEGER :: np, rowid, colid
+   INTEGER :: i, j, nr, nc, nb, ldx
+   INTEGER :: comm
+   INTEGER :: omp_host, omp_device
+   !
+   REAL(DP) :: tmp
+#if defined (__GPU_MPI)
+   !REAL(DP), POINTER, CONTIGUOUS :: ablk(:,:)
+   !INTEGER :: omp_device
+#else
+   REAL(DP), ALLOCATABLE :: ablk(:,:)
+#endif
+   !
+#if defined (__MPI)
+   !
+   INTEGER :: istatus( MPI_STATUS_SIZE )
+   !
+#endif
+   !
+   omp_host   = omp_get_initial_device()
+   omp_device = omp_get_default_device()
+   IF( n < 2 ) THEN
+     GOTO 1000
+   END IF
+   !
+   IF( idesc(LAX_DESC_ACTIVE_NODE) < 0 ) THEN
+      GOTO 1000
+   END IF
+   !
+   IF( idesc(LAX_DESC_NPR) == 1 .AND. idesc(LAX_DESC_NPC) == 1 ) THEN
+!$omp target teams distribute parallel do collapse(2)
+      DO j = 1, n
+         DO i = 1, n
+            b( j, i ) = a( i, j )
+         END DO
+      END DO
+!$omp end target teams distribute parallel do
+      GOTO 1000
+   END IF
+
+   IF( idesc(LAX_DESC_NPR) /= idesc(LAX_DESC_NPC) ) &
+      CALL lax_error__( ' sqr_tr_cannon_gpu ', ' works only with square processor mesh ', 1 )
+   IF( n /= idesc(LAX_DESC_N) ) &
+      CALL lax_error__( ' sqr_tr_cannon_gpu ', ' inconsistent size n  ', 1 )
+   IF( lda /= idesc(LAX_DESC_NRCX) .OR. lda /= SIZE(a,1) ) &
+      CALL lax_error__( ' sqr_tr_cannon_gpu ', ' inconsistent size lda  ', 1 )
+   IF( ldb /= idesc(LAX_DESC_NRCX) .OR. ldb /= SIZE(b,1) ) &
+      CALL lax_error__( ' sqr_tr_cannon_gpu ', ' inconsistent size ldb  ', 1 )
+
+   comm = idesc(LAX_DESC_COMM)
+
+   rowid = idesc(LAX_DESC_MYR)
+   colid = idesc(LAX_DESC_MYC)
+   np    = idesc(LAX_DESC_NPR)
+   !
+   !  Compute the size of the local block
+   !
+   nr = idesc(LAX_DESC_NR)
+   nc = idesc(LAX_DESC_NC)
+   nb = idesc(LAX_DESC_NRCX)
+   ldx = MAX(lda,ldb)
+   !
+#if defined (__GPU_MPI)
+!   !omp_device = omp_get_default_device()
+!   !call omp_target_alloc_f(fptr_dev=ablk, dimensions=[nb,nb], omp_dev=omp_device)
+!   !$omp allocate allocator(omp_target_device_mem_alloc)
+!   allocate(ablk(nb,nb))
+!!$omp target teams distribute parallel do collapse(2)
+!   DO j = 1, nc
+!      DO i = 1, nr
+!         ablk( i, j ) = a( i, j )
+!      END DO
+!   END DO
+!!$omp end target teams distribute parallel do
+!!$omp target teams distribute parallel do collapse(2)
+!   DO j = nc+1, nb
+!      DO i = 1, nb
+!         ablk( i, j ) = 0.0_DP
+!      END DO
+!   END DO
+!!$omp end target teams distribute parallel do
+!!$omp target teams distribute parallel do collapse(2)
+!   DO j = 1, nb
+!      DO i = nr+1, nb
+!         ablk( i, j ) = 0.0_DP
+!      END DO
+!   END DO
+!!$omp end target teams distribute parallel do
+#else
+   ALLOCATE( ablk(nb,nb) )
+   !$omp target enter data map(alloc:ablk)
+   !$omp target teams
+   !$omp distribute parallel do collapse(2)
+   DO j = 1, nc
+      DO i = 1, nr
+         ablk(i,j) = a(i,j)
+      END DO
+   END DO
+   !$omp distribute parallel do collapse(2)
+   DO j = nc+1, nb
+      DO i = 1, nb
+         ablk( i, j ) = 0.0_DP
+      END DO
+   END DO
+   !$omp distribute parallel do collapse(2)
+   DO j = 1, nb
+      DO i = nr+1, nb
+         ablk( i, j ) = 0.0_DP
+      END DO
+   END DO
+   !$omp end target teams
+   !$omp target update from(ablk)
+#endif
+   !
+   CALL exchange_block( ablk )
+   !
+#if defined (__MPI)
+   CALL MPI_BARRIER( comm, ierr )
+   IF( ierr /= 0 ) &
+      CALL lax_error__( " sqr_tr_cannon_gpu ", " in MPI_BARRIER ", ABS( ierr ) )
+#endif
+   !
+#if defined (__GPU_MPI)
+!!$omp target teams distribute parallel do
+!   DO j = 1, nr
+!      DO i = 1, nc
+!         b( j, i ) = ablk( i, j )
+!      END DO
+!   END DO
+!!$omp end target teams distribute parallel do
+#else
+   DO j = 1, ldx
+      DO i = j + 1, ldx
+            tmp = ablk(i,j)
+            ablk(i,j) = ablk(j,i)
+            ablk(j,i) = tmp
+      END DO
+   END DO
+   !$omp target update to(ablk)
+   !$omp target teams distribute parallel do collapse(2)
+   DO j = 1, nc
+      DO i = 1, nr
+         b( i, j ) = ablk( i, j )
+      END DO
+   END DO
+   !$omp end target teams distribute parallel do
+#endif
+   !
+   !
+#if defined (__GPU_MPI)
+   !call omp_target_free_f(fptr_dev=ablk)
+   !deallocate( ablk )
+#else
+   !$omp target exit data map(delete:ablk)
+   deallocate( ablk )
+#endif
+
+1000 CONTINUE
+
+   RETURN
+
+CONTAINS
+
+   SUBROUTINE exchange_block( blk )
+      !
+      !   Block exchange ( transpose )
+      !
+      IMPLICIT NONE
+#if defined (__GPU_MPI)
+      !REAL(DP), POINTER, CONTIGUOUS :: blk( :, : )
+#else
+      REAL(DP) :: blk( :, : )
+#endif
+      !
+      INTEGER :: icdst, irdst, icsrc, irsrc, idest, isour
+      !
+      irdst = colid
+      icdst = rowid
+      irsrc = colid
+      icsrc = rowid
+      !
+      CALL GRID2D_RANK( 'R', np, np, irdst, icdst, idest )
+      CALL GRID2D_RANK( 'R', np, np, irsrc, icsrc, isour )
+      !
+#if defined (__MPI)
+      !
+#if !defined (__GPU_MPI)
+      !CUDA sync: what about OpenMP???
+#endif
+      CALL MPI_SENDRECV_REPLACE(blk, SIZE(blk), MPI_DOUBLE_PRECISION, &
+           idest, np+np+1, isour, np+np+1, comm, istatus, ierr)
+      IF( ierr /= 0 ) &
+         CALL lax_error__( " sqr_tr_cannon_gpu ", " in MPI_SENDRECV_REPLACE ", ABS( ierr ) )
+      !
+#endif
+
+      RETURN
+   END SUBROUTINE
+
+END SUBROUTINE sqr_tr_cannon_x_gpu
 #endif
 
 !
@@ -3770,6 +4475,7 @@ SUBROUTINE sqr_tr_cannon_sp_x( n, a, lda, b, ldb, idesc )
    !! single precision version
    !
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
    IMPLICIT NONE
    !
    include 'laxlib_param.fh'
@@ -3831,8 +4537,8 @@ SUBROUTINE sqr_tr_cannon_sp_x( n, a, lda, b, ldb, idesc )
    !
    !  Compute the size of the local block
    !
-   nr = idesc(LAX_DESC_NR) 
-   nc = idesc(LAX_DESC_NC) 
+   nr = idesc(LAX_DESC_NR)
+   nc = idesc(LAX_DESC_NC)
    nb = idesc(LAX_DESC_NRCX)
    !
    allocate( ablk( nb, nb ) )
@@ -3867,7 +4573,7 @@ SUBROUTINE sqr_tr_cannon_sp_x( n, a, lda, b, ldb, idesc )
    END DO
    !
    deallocate( ablk )
-   
+
    RETURN
 
 CONTAINS
@@ -3901,18 +4607,16 @@ CONTAINS
       RETURN
    END SUBROUTINE
 
-
 END SUBROUTINE
-
-
 
 SUBROUTINE redist_row2col_x( n, a, b, ldx, nx, idesc )
    !
    !!  redistribute a, array whose second dimension is distributed over processor row,
-   !!  to obtain b, with the second dim. distributed over processor column 
+   !!  to obtain b, with the second dim. distributed over processor column
    !
    !
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
    IMPLICIT NONE
    !
    include 'laxlib_kinds.fh'
@@ -3999,7 +4703,7 @@ END SUBROUTINE redist_row2col_x
 SUBROUTINE redist_row2col_gpu_x( n, a, b, ldx, nx, idesc )
    !
    !!  redistribute a, array whose second dimension is distributed over processor row,
-   !!  to obtain b, with the second dim. distributed over processor column 
+   !!  to obtain b, with the second dim. distributed over processor column
    !!  GPU version
    !
    USE cudafor
@@ -4109,6 +4813,119 @@ SUBROUTINE redist_row2col_gpu_x( n, a, b, ldx, nx, idesc )
 
 END SUBROUTINE redist_row2col_gpu_x
 
+#elif defined (__OPENMP_GPU)
+SUBROUTINE redist_row2col_x_gpu( n, a, b, ldx, nx, idesc )
+   !
+   !  redistribute a, array whose second dimension is distributed over processor row,
+   !  to obtain b, with the second dim. distributed over processor clolumn
+   !
+   USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_rank
+   !
+   IMPLICIT NONE
+   !
+   INCLUDE 'laxlib_kinds.fh'
+   include 'laxlib_param.fh'
+   !
+   INTEGER,  INTENT(IN)    :: n
+   INTEGER,  INTENT(IN)    :: ldx, nx
+   REAL(DP), INTENT(IN)    :: a(:,:)
+   REAL(DP), INTENT(INOUT) :: b(:,:)
+   INTEGER,  INTENT(IN)    :: idesc(LAX_DESC_SIZE)
+   !
+   INTEGER :: ierr
+   INTEGER :: np, rowid, colid
+   INTEGER :: comm
+   INTEGER :: icdst, irdst, icsrc, irsrc, idest, isour, i, j, l, m
+   !
+#if defined (__MPI)
+   !
+   INTEGER :: istatus( MPI_STATUS_SIZE )
+   !
+#endif
+   !
+   IF( idesc(LAX_DESC_ACTIVE_NODE) < 0 ) THEN
+      RETURN
+   END IF
+
+   IF( n < 1 ) THEN
+      RETURN
+   END IF
+
+   IF( idesc(LAX_DESC_NPR) == 1 ) THEN
+      l = size(b,1); m = size(b,2)
+!$omp target teams distribute parallel do collapse(2)
+      DO j =1, m
+         DO i = 1, l
+            b(i,j) = a(i,j)
+         ENDDO
+      ENDDO
+!$omp end target teams distribute parallel do
+      RETURN
+   END IF
+
+   IF( idesc(LAX_DESC_NPR) /= idesc(LAX_DESC_NPC) ) &
+      CALL lax_error__( ' redist_row2col_gpu ', ' works only with square processor mesh ', 1 )
+   IF( n /= idesc(LAX_DESC_N) ) &
+      CALL lax_error__( ' redist_row2col_gpu ', ' inconsistent size n  ', 1 )
+   IF( nx /= idesc(LAX_DESC_NRCX) ) &
+      CALL lax_error__( ' redist_row2col_gpu ', ' inconsistent size lda  ', 1 )
+
+   comm = idesc(LAX_DESC_COMM)
+
+   rowid = idesc(LAX_DESC_MYR)
+   colid = idesc(LAX_DESC_MYC)
+   np    = idesc(LAX_DESC_NPR)
+   !
+   irdst = colid
+   icdst = rowid
+   irsrc = colid
+   icsrc = rowid
+   !
+   CALL GRID2D_RANK( 'R', np, np, irdst, icdst, idest )
+   CALL GRID2D_RANK( 'R', np, np, irsrc, icsrc, isour )
+   !
+#if defined (__MPI)
+   !
+   CALL MPI_BARRIER( comm, ierr )
+   IF( ierr /= 0 ) &
+      CALL lax_error__( " redist_row2col_gpu ", " in MPI_BARRIER ", ABS( ierr ) )
+   !
+#if defined(__GPU_MPI)
+   !IF( ierr /= 0 ) &
+   !   CALL lax_error__( " redist_row2col_gpu ", " allocating wrk ", ABS( ierr ) )
+   !!
+   !ierr = cudaDeviceSynchronize()
+   !CALL MPI_SENDRECV(a, ldx*nx, MPI_DOUBLE_PRECISION, idest, np+np+1, &
+   !                  b, ldx*nx, MPI_DOUBLE_PRECISION, isour, np+np+1, comm, istatus, ierr)
+   !IF( ierr /= 0 ) &
+   !   CALL lax_error__( " redist_row2col_gpu ", " in MPI_SENDRECV ", ABS( ierr ) )
+#else
+   !
+!$omp target update from(a)
+   CALL MPI_SENDRECV(a, ldx*nx, MPI_DOUBLE_PRECISION, idest, np+np+1, &
+                     b, ldx*nx, MPI_DOUBLE_PRECISION, isour, np+np+1, comm, istatus, ierr)
+   IF( ierr /= 0 ) &
+      CALL lax_error__( " redist_row2col_gpu ", " in MPI_SENDRECV ", ABS( ierr ) )
+   !
+!$omp target update to(b)
+   !
+#endif
+   !
+#else
+   m = size(b,1); n = size(b,2)
+!$omp target teams distribute parallel do collapse(2)
+   DO j =1, n
+      DO i = 1, m
+         b(i,j) = a(i,j)
+      ENDDO
+   ENDDO
+!$omp end target teams distr ibute parallel do
+#endif
+   !
+   RETURN
+
+END SUBROUTINE redist_row2col_x_gpu
 #endif
 
 !
@@ -4122,8 +4939,9 @@ SUBROUTINE cyc2blk_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !!  B (output) is distributed by block across 2D processors grid
    !!
    !
-   USE laxlib_descriptor 
+   USE laxlib_descriptor
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_coords
    !
    IMPLICIT NONE
    !
@@ -4187,7 +5005,7 @@ SUBROUTINE cyc2blk_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    ALLOCATE( rcvbuf( nb/nproc+2, nb, nproc ) )
    !
    ! loop over all processors
-   ! 
+   !
    DO ip = 0, nproc - 1
       !
       ! 2D proc ortho grid sizes
@@ -4222,14 +5040,14 @@ SUBROUTINE cyc2blk_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
                   CALL check_sndbuf_index()
                   sndbuf( il, j ) = a( ( ii - 1 )/nproc + 1, jj )
                   il = il + 1
-               END IF 
+               END IF
             END DO
          END DO
-   
+
       END IF
 
       CALL mpi_barrier( comm_a, ierr )
-     
+
       CALL mpi_gather( sndbuf, nbuf, mpi_double_precision, &
                        rcvbuf, nbuf, mpi_double_precision, ip, comm_a, ierr )
       IF( ierr /= 0 ) &
@@ -4238,7 +5056,7 @@ SUBROUTINE cyc2blk_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    END DO
 
    !
-   nr  = desc%nr 
+   nr  = desc%nr
    nc  = desc%nc
    ir  = desc%ir
    ic  = desc%ic
@@ -4252,17 +5070,17 @@ SUBROUTINE cyc2blk_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
                CALL check_rcvbuf_index()
                b( i, j ) = rcvbuf( il, j, ip+1 )
                il = il + 1
-            END IF 
+            END IF
          END DO
       END DO
    END DO
    !
    DEALLOCATE( rcvbuf )
    DEALLOCATE( sndbuf )
-   
+
 #else
 
-   b( 1:n, 1:n ) = a( 1:n, 1:n )   
+   b( 1:n, 1:n ) = a( 1:n, 1:n )
 
 #endif
 
@@ -4292,7 +5110,6 @@ CONTAINS
 
 END SUBROUTINE cyc2blk_redist_x
 
-
 SUBROUTINE cyc2blk_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !
    !! Parallel square matrix redistribution. Double precision complex (Z)
@@ -4301,6 +5118,7 @@ SUBROUTINE cyc2blk_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !
    USE laxlib_descriptor
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_coords
    !
    IMPLICIT NONE
    !
@@ -4363,7 +5181,7 @@ SUBROUTINE cyc2blk_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !
    ALLOCATE( sndbuf( nb/nproc+2, nb ) )
    ALLOCATE( rcvbuf( nb/nproc+2, nb, nproc ) )
-   
+
    DO ip = 0, nproc - 1
       !
       ! 2D proc ortho grid sizes
@@ -4393,21 +5211,21 @@ SUBROUTINE cyc2blk_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
                CALL check_sndbuf_index()
                sndbuf( il, j ) = a( ( ii - 1 )/nproc + 1, jj )
                il = il + 1
-            END IF 
+            END IF
          END DO
       END DO
-   
+
       CALL mpi_barrier( comm_a, ierr )
 
       CALL mpi_gather( sndbuf, nbuf, mpi_double_complex, &
                        rcvbuf, nbuf, mpi_double_complex, ip, comm_a, ierr )
       IF( ierr /= 0 ) &
          CALL lax_error__( " cyc2blk_zredist ", " in mpi_gather ", ABS( ierr ) )
-     
+
    END DO
 
    !
-   nr  = desc%nr 
+   nr  = desc%nr
    nc  = desc%nc
    ir  = desc%ir
    ic  = desc%ic
@@ -4421,7 +5239,7 @@ SUBROUTINE cyc2blk_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
                CALL check_rcvbuf_index()
                b( i, j ) = rcvbuf( il, j, ip+1 )
                il = il + 1
-            END IF 
+            END IF
          END DO
       END DO
    END DO
@@ -4429,10 +5247,10 @@ SUBROUTINE cyc2blk_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !
    DEALLOCATE( rcvbuf )
    DEALLOCATE( sndbuf )
-   
+
 #else
 
-   b( 1:n, 1:n ) = a( 1:n, 1:n )   
+   b( 1:n, 1:n ) = a( 1:n, 1:n )
 
 #endif
 
@@ -4462,9 +5280,6 @@ CONTAINS
 
 END SUBROUTINE cyc2blk_zredist_x
 
-
-
-
 SUBROUTINE blk2cyc_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !
    !!  Parallel square matrix redistribution. Double precision.
@@ -4473,6 +5288,7 @@ SUBROUTINE blk2cyc_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !
    USE laxlib_descriptor
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_coords
    !
    IMPLICIT NONE
    !
@@ -4535,7 +5351,7 @@ SUBROUTINE blk2cyc_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    ALLOCATE( sndbuf( nb/nproc+2, nb ) )
    ALLOCATE( rcvbuf( nb/nproc+2, nb, nproc ) )
    !
-   nr  = desc%nr 
+   nr  = desc%nr
    nc  = desc%nc
    ir  = desc%ir
    ic  = desc%ic
@@ -4548,7 +5364,7 @@ SUBROUTINE blk2cyc_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
             IF( MOD( ii - 1, nproc ) == ip ) THEN
                sndbuf( il, j ) = b( i, j )
                il = il + 1
-            END IF 
+            END IF
          END DO
       END DO
       CALL mpi_barrier( comm_a, ierr )
@@ -4558,7 +5374,7 @@ SUBROUTINE blk2cyc_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
          CALL lax_error__( " blk2cyc_redist ", " in mpi_gather ", ABS( ierr ) )
    END DO
    !
-   
+
    DO ip = 0, nproc - 1
       !
       ! 2D proc ortho grid sizes
@@ -4587,25 +5403,24 @@ SUBROUTINE blk2cyc_redist_x( n, a, lda, nca, b, ldb, ncb, idesc )
             IF( MOD( ii - 1, nproc ) == me ) THEN
                a( ( ii - 1 )/nproc + 1, jj ) = rcvbuf( il, j, ip+1 )
                il = il + 1
-            END IF 
+            END IF
          END DO
       END DO
-   
+
    END DO
    !
    DEALLOCATE( rcvbuf )
    DEALLOCATE( sndbuf )
-   
+
 #else
 
-   a( 1:n, 1:n ) = b( 1:n, 1:n )   
+   a( 1:n, 1:n ) = b( 1:n, 1:n )
 
 #endif
 
    RETURN
 
 END SUBROUTINE blk2cyc_redist_x
-
 
 SUBROUTINE blk2cyc_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !
@@ -4615,6 +5430,7 @@ SUBROUTINE blk2cyc_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    !
    USE laxlib_descriptor
    USE laxlib_parallel_include
+   USE distools, ONLY : grid2d_coords
    !
    IMPLICIT NONE
    !
@@ -4678,7 +5494,7 @@ SUBROUTINE blk2cyc_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
    ALLOCATE( sndbuf( nb/nproc+2, nb ) )
    ALLOCATE( rcvbuf( nb/nproc+2, nb, nproc ) )
    !
-   nr  = desc%nr 
+   nr  = desc%nr
    nc  = desc%nc
    ir  = desc%ir
    ic  = desc%ic
@@ -4691,7 +5507,7 @@ SUBROUTINE blk2cyc_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
             IF( MOD( ii - 1, nproc ) == ip ) THEN
                sndbuf( il, j ) = b( i, j )
                il = il + 1
-            END IF 
+            END IF
          END DO
       END DO
       CALL mpi_barrier( comm_a, ierr )
@@ -4701,7 +5517,7 @@ SUBROUTINE blk2cyc_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
          CALL lax_error__( " blk2cyc_zredist ", " in mpi_gather ", ABS( ierr ) )
    END DO
    !
-   
+
    DO ip = 0, nproc - 1
       !
       ! 2D proc ortho grid sizes
@@ -4730,18 +5546,18 @@ SUBROUTINE blk2cyc_zredist_x( n, a, lda, nca, b, ldb, ncb, idesc )
             IF( MOD( ii - 1, nproc ) == me ) THEN
                a( ( ii - 1 )/nproc + 1, jj ) = rcvbuf( il, j, ip+1 )
                il = il + 1
-            END IF 
+            END IF
          END DO
       END DO
-   
+
    END DO
    !
    DEALLOCATE( rcvbuf )
    DEALLOCATE( sndbuf )
-   
+
 #else
 
-   a( 1:n, 1:n ) = b( 1:n, 1:n )   
+   a( 1:n, 1:n ) = b( 1:n, 1:n )
 
 #endif
 
@@ -4773,7 +5589,7 @@ SUBROUTINE laxlib_pzpotrf_x( sll, ldx, n, idesc )
    integer :: n
    !! global dimension
    integer :: ldx
-   !! leading dimension of sll   
+   !! leading dimension of sll
    integer, INTENT(IN) :: idesc(LAX_DESC_SIZE)
    !! integer laxlib descriptor
    complex(DP) :: sll( ldx, ldx )
@@ -4806,11 +5622,11 @@ SUBROUTINE laxlib_pzpotrf_x( sll, ldx, n, idesc )
    np    = desc%npr
 
    IF( desc%npr /= desc%npc ) THEN
-      CALL lax_error__( ' pzpotrf ', ' only square grid are allowed ', 1 ) 
+      CALL lax_error__( ' pzpotrf ', ' only square grid are allowed ', 1 )
    END IF
 
    IF( ldx /= desc%nrcx ) THEN
-      CALL lax_error__( ' pzpotrf ', ' wrong leading dimension ldx ', ldx ) 
+      CALL lax_error__( ' pzpotrf ', ' wrong leading dimension ldx ', ldx )
    END IF
 
    nr = desc%nr
@@ -4828,10 +5644,10 @@ SUBROUTINE laxlib_pzpotrf_x( sll, ldx, n, idesc )
       !
       !    since we loop on diagonal blocks/procs we have jnc == jnr
       !
-      jnc = jnr   
+      jnc = jnr
       !
       !    prepare row and colum communicators
-      IF( ( myrow >= ( jb-1 ) ) .AND. ( mycol <= ( jb-1 ) ) ) THEN 
+      IF( ( myrow >= ( jb-1 ) ) .AND. ( mycol <= ( jb-1 ) ) ) THEN
           color = mycol
           key   = myrow
       ELSE
@@ -4842,7 +5658,7 @@ SUBROUTINE laxlib_pzpotrf_x( sll, ldx, n, idesc )
       CALL mpi_comm_split( desc%comm , color, key, ccomm, ierr )
       IF( ierr /= 0 ) &
          CALL lax_error__( " pzpotrf ", " in mpi_comm_split 1 ", ABS( ierr ) )
-      !  
+      !
       IF( myrow >= jb-1 .and. mycol <= jb-1 ) THEN
           color = myrow
           key   = mycol
@@ -4864,9 +5680,9 @@ SUBROUTINE laxlib_pzpotrf_x( sll, ldx, n, idesc )
                !
                !  this is because only the lover triangle of ssnd will be set to 0 by ZHERK
                !
-               ssnd = 0.0_DP  
+               ssnd = 0.0_DP
                !
-               !  remember: matrix ssnd is nr*nr, and procs on the diagonale have nr == nc 
+               !  remember: matrix ssnd is nr*nr, and procs on the diagonale have nr == nc
                !
                CALL ZHERK( 'L', 'N', nr, nc, -ONE, sll, ldx, zero, ssnd, ldx )
                !
@@ -4909,12 +5725,12 @@ SUBROUTINE laxlib_pzpotrf_x( sll, ldx, n, idesc )
          !
          IF( ( myrow == ( jb - 1 ) ) .AND. ( mycol < ( jb - 1 ) ) ) THEN
             CALL mpi_barrier( ccomm, ierr )
-            CALL mpi_bcast( sll,  ldx*ldx, MPI_DOUBLE_COMPLEX, 0, ccomm, ierr )   
+            CALL mpi_bcast( sll,  ldx*ldx, MPI_DOUBLE_COMPLEX, 0, ccomm, ierr )
             IF( ierr /= 0 ) &
                CALL lax_error__( " pzpotrf ", " in mpi_bcast 1 ", ABS( ierr ) )
          ELSE IF( ( myrow > ( jb - 1 ) ) .AND. ( mycol < ( jb - 1 ) ) ) THEN
             CALL mpi_barrier( ccomm, ierr )
-            CALL mpi_bcast( srcv, ldx*ldx, MPI_DOUBLE_COMPLEX, 0, ccomm, ierr )   
+            CALL mpi_bcast( srcv, ldx*ldx, MPI_DOUBLE_COMPLEX, 0, ccomm, ierr )
             IF( ierr /= 0 ) &
                CALL lax_error__( " pzpotrf ", " in mpi_bcast 2 ", ABS( ierr ) )
          END IF
@@ -4958,12 +5774,12 @@ SUBROUTINE laxlib_pzpotrf_x( sll, ldx, n, idesc )
          !
          IF( ( myrow == ( jb - 1 ) ) .AND. ( mycol == ( jb - 1 ) ) ) THEN
             CALL mpi_barrier( ccomm, ierr )
-            CALL mpi_bcast( sll,  ldx*ldx, MPI_DOUBLE_COMPLEX, 0, ccomm, ierr )   
+            CALL mpi_bcast( sll,  ldx*ldx, MPI_DOUBLE_COMPLEX, 0, ccomm, ierr )
             IF( ierr /= 0 ) &
                CALL lax_error__( " pzpotrf ", " in mpi_bcast 3 ", ABS( ierr ) )
          ELSE IF( ( myrow > ( jb - 1 ) ) .AND. ( mycol == ( jb - 1 ) ) ) THEN
             CALL mpi_barrier( ccomm, ierr )
-            CALL mpi_bcast( srcv,  ldx*ldx, MPI_DOUBLE_COMPLEX, 0, ccomm, ierr )   
+            CALL mpi_bcast( srcv,  ldx*ldx, MPI_DOUBLE_COMPLEX, 0, ccomm, ierr )
             IF( ierr /= 0 ) &
                CALL lax_error__( " pzpotrf ", " in mpi_bcast 4 ", ABS( ierr ) )
          END IF
@@ -5047,11 +5863,11 @@ SUBROUTINE laxlib_pdpotrf_x( sll, ldx, n, idesc )
    np    = desc%npr
 
    IF( desc%npr /= desc%npc ) THEN
-      CALL lax_error__( ' pdpotrf ', ' only square grid are allowed ', 1 ) 
+      CALL lax_error__( ' pdpotrf ', ' only square grid are allowed ', 1 )
    END IF
 
    IF( ldx /= desc%nrcx ) THEN
-      CALL lax_error__( ' pdpotrf ', ' wrong leading dimension ldx ', ldx ) 
+      CALL lax_error__( ' pdpotrf ', ' wrong leading dimension ldx ', ldx )
    END IF
 
    nr = desc%nr
@@ -5069,10 +5885,10 @@ SUBROUTINE laxlib_pdpotrf_x( sll, ldx, n, idesc )
       !
       !    since we loop on diagonal blocks/procs we have jnc == jnr
       !
-      jnc = jnr   
+      jnc = jnr
       !
       !    prepare row and colum communicators
-      IF( ( myrow >= ( jb-1 ) ) .AND. ( mycol <= ( jb-1 ) ) ) THEN 
+      IF( ( myrow >= ( jb-1 ) ) .AND. ( mycol <= ( jb-1 ) ) ) THEN
           color = mycol
           key   = myrow
       ELSE
@@ -5083,7 +5899,7 @@ SUBROUTINE laxlib_pdpotrf_x( sll, ldx, n, idesc )
       CALL mpi_comm_split( desc%comm , color, key, ccomm, ierr )
       IF( ierr /= 0 ) &
          CALL lax_error__( " pdpotrf ", " in mpi_comm_split 1 ", ABS( ierr ) )
-      !  
+      !
       IF( myrow >= jb-1 .and. mycol <= jb-1 ) THEN
           color = myrow
           key   = mycol
@@ -5107,7 +5923,7 @@ SUBROUTINE laxlib_pdpotrf_x( sll, ldx, n, idesc )
                !
                ssnd = 0_DP
                !
-               !  remember: matrix ssnd is nr*nr, and procs on the diagonale have nr == nc 
+               !  remember: matrix ssnd is nr*nr, and procs on the diagonale have nr == nc
                !
                CALL DSYRK( 'L', 'N', nr, nc, -ONE, sll, ldx, zero, ssnd, ldx )
                !
@@ -5148,12 +5964,12 @@ SUBROUTINE laxlib_pdpotrf_x( sll, ldx, n, idesc )
          !
          IF( ( myrow == ( jb - 1 ) ) .AND. ( mycol < ( jb - 1 ) ) ) THEN
             CALL mpi_barrier( ccomm, ierr )
-            CALL mpi_bcast( sll,  ldx*ldx, MPI_DOUBLE_PRECISION, 0, ccomm, ierr )   
+            CALL mpi_bcast( sll,  ldx*ldx, MPI_DOUBLE_PRECISION, 0, ccomm, ierr )
             IF( ierr /= 0 ) &
                CALL lax_error__( " pdpotrf ", " in mpi_bcast 1 ", ABS( ierr ) )
          ELSE IF( ( myrow > ( jb - 1 ) ) .AND. ( mycol < ( jb - 1 ) ) ) THEN
             CALL mpi_barrier( ccomm, ierr )
-            CALL mpi_bcast( srcv, ldx*ldx, MPI_DOUBLE_PRECISION, 0, ccomm, ierr )   
+            CALL mpi_bcast( srcv, ldx*ldx, MPI_DOUBLE_PRECISION, 0, ccomm, ierr )
             IF( ierr /= 0 ) &
                CALL lax_error__( " pdpotrf ", " in mpi_bcast 2 ", ABS( ierr ) )
          END IF
@@ -5196,12 +6012,12 @@ SUBROUTINE laxlib_pdpotrf_x( sll, ldx, n, idesc )
          !
          IF( ( myrow == ( jb - 1 ) ) .AND. ( mycol == ( jb - 1 ) ) ) THEN
             CALL mpi_barrier( ccomm, ierr )
-            CALL mpi_bcast( sll,  ldx*ldx, MPI_DOUBLE_PRECISION, 0, ccomm, ierr )   
+            CALL mpi_bcast( sll,  ldx*ldx, MPI_DOUBLE_PRECISION, 0, ccomm, ierr )
             IF( ierr /= 0 ) &
                CALL lax_error__( " pdpotrf ", " in mpi_bcast 3 ", ABS( ierr ) )
          ELSE IF( ( myrow > ( jb - 1 ) ) .AND. ( mycol == ( jb - 1 ) ) ) THEN
             CALL mpi_barrier( ccomm, ierr )
-            CALL mpi_bcast( srcv,  ldx*ldx, MPI_DOUBLE_PRECISION, 0, ccomm, ierr )   
+            CALL mpi_bcast( srcv,  ldx*ldx, MPI_DOUBLE_PRECISION, 0, ccomm, ierr )
             IF( ierr /= 0 ) &
                CALL lax_error__( " pdpotrf ", " in mpi_bcast 4 ", ABS( ierr ) )
          END IF
@@ -5244,19 +6060,19 @@ END SUBROUTINE laxlib_pdpotrf_x
 !
 
 SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
-    ! 
-    !! pztrtri computes the parallel inversion of a lower triangular matrix 
-    !! distribuited among the processes using a 2-D block partitioning. 
-    !! The algorithm is based on the schema below and executes the model 
-    !! recursively to each column C2 under the diagonal.     
+    !
+    !! pztrtri computes the parallel inversion of a lower triangular matrix
+    !! distribuited among the processes using a 2-D block partitioning.
+    !! The algorithm is based on the schema below and executes the model
+    !! recursively to each column C2 under the diagonal.
     !!
     !!     |-------|-------|      |--------------------|--------------------|
     !!     |   A1  |   0   |      |   C1 = trtri(A1)   |          0         |
     !! A = |-------|-------|  C = |--------------------|--------------------|
-    !!     |   A2  |   A3  |      | C2 = -C3 * A2 * C1 |   C3 = trtri(A3)   | 
+    !!     |   A2  |   A3  |      | C2 = -C3 * A2 * C1 |   C3 = trtri(A3)   |
     !!     |-------|-------|      |--------------------|--------------------|
     !!
-    !! The recursive steps of multiplication (C2 = -C3 * A2 * C1) is based on the Cannon's algorithms 
+    !! The recursive steps of multiplication (C2 = -C3 * A2 * C1) is based on the Cannon's algorithms
     !! for parallel matrix multiplication and is done with BLACS(dgemm)
     !!
     !!
@@ -5275,6 +6091,7 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
 
     USE laxlib_descriptor
     USE laxlib_parallel_include
+    USE distools, ONLY : grid2d_rank
 
     IMPLICIT NONE
     include 'laxlib_kinds.fh'
@@ -5300,14 +6117,14 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
     INTEGER :: myrow, mycol, np, myid, comm
 
     ! counters
-    INTEGER :: k, i, j, count, step_count, shiftcount, cicle 
+    INTEGER :: k, i, j, count, step_count, shiftcount, cicle
     INTEGER :: C3dim   ! Dimension of submatrix B
     INTEGER :: nc, nr ! Local dimension of block
     INTEGER :: info, sup_recv
-    INTEGER :: idrowref, idcolref, idref, idrecv 
+    INTEGER :: idrowref, idcolref, idref, idrecv
 
     ! B and BUF_RECV are used to overload the computation of matrix multiplication and the shift of the blocks
-    COMPLEX(DP), ALLOCATABLE, DIMENSION( :, : ) :: B, C, BUF_RECV 
+    COMPLEX(DP), ALLOCATABLE, DIMENSION( :, : ) :: B, C, BUF_RECV
     COMPLEX(DP) :: first
     TYPE(la_descriptor) :: desc
 
@@ -5319,10 +6136,10 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
     comm  = desc%comm
 
     IF( desc%npr /= desc%npc ) THEN
-       CALL lax_error__( ' pztrtri ', ' only square grid are allowed ', 1 ) 
+       CALL lax_error__( ' pztrtri ', ' only square grid are allowed ', 1 )
     END IF
     IF( ldx /= desc%nrcx ) THEN
-       CALL lax_error__( ' pztrtri ', ' wrong leading dimension ldx ', ldx ) 
+       CALL lax_error__( ' pztrtri ', ' wrong leading dimension ldx ', ldx )
     END IF
 
     nr = desc%nr
@@ -5408,7 +6225,6 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
        !
     END IF
 
-  
     IF( myrow >= mycol ) THEN
        !
        !  only procs on lower triangle partecipates
@@ -5436,10 +6252,10 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
        sll = zero
        !
     END IF
-    ! 
+    !
 
-    ! Compute the inverse of a lower triangular 
-    ! along the diagonal of the global array with BLAS(ztrtri) 
+    ! Compute the inverse of a lower triangular
+    ! along the diagonal of the global array with BLAS(ztrtri)
     !
     IF( mycol == myrow ) THEN
        !
@@ -5491,8 +6307,8 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
           ! Compute C2 = -C3 * A2 * C1
           DO shiftcount = count, np-2
              IF(mycol>count)THEN
-                ! Execute the virtual shift of the matrix C3 along the row in order to know which processor 
-                ! have to send the block to C2 
+                ! Execute the virtual shift of the matrix C3 along the row in order to know which processor
+                ! have to send the block to C2
                 IF( cicle == 0)THEN
                    ! virtual shift of the block i,j of the submatrix C3 i place to West
                    send = shift(idref, myid, myrow-count, C3dim, 'W')
@@ -5518,7 +6334,7 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
                    CALL lax_error__( " pztrtri ", " in MPI_Recv 16 ", ABS( ierr ) )
                 send = shift(1, group_rank, 1, (group_size-1), 'S')
                 recv = shift(1, group_rank, 1, (group_size-1), 'N')
-                ! with the no-blocking communication the computation and the shift of the column block are overapped  
+                ! with the no-blocking communication the computation and the shift of the column block are overapped
                 !
                 IF( MOD( cicle, 2 ) == 0 ) THEN
                    CALL MPI_Isend(BUF_RECV, ldx*ldx, MPI_DOUBLE_COMPLEX, send, group_rank+cicle, col_comm, req(1), ierr)
@@ -5548,7 +6364,7 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
                 !
              END IF
              cicle = cicle + 1
-             first = ONE 
+             first = ONE
           END DO
        END IF
     END DO
@@ -5588,14 +6404,13 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
        !
      END SUBROUTINE compute_ztrtri
 
-
      INTEGER FUNCTION shift ( idref, id, pos, size, dir )
 
        IMPLICIT NONE
-   
+
        INTEGER :: idref, id, pos, size
        CHARACTER ( LEN = 1 ) :: dir
-   
+
        IF( ( dir == 'E' ) .OR. ( dir == 'S' ) ) THEN
           shift = idref + MOD ( ( id - idref ) + pos, size )
        ELSE IF( ( dir == 'W' ) .OR. ( dir == 'N' ) ) THEN
@@ -5603,7 +6418,7 @@ SUBROUTINE laxlib_pztrtri_x ( sll, ldx, n, idesc )
        ELSE
           shift = -1
        END IF
-   
+
        RETURN
 
      END FUNCTION shift
@@ -5613,21 +6428,21 @@ END SUBROUTINE laxlib_pztrtri_x
 !  now the Double Precision subroutine
 
 SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
-    
+
     !
     !!
-    !! pdtrtri computes the parallel inversion of a lower triangular matrix 
-    !! distribuited among the processes using a 2-D block partitioning. 
-    !! The algorithm is based on the schema below and executes the model 
-    !! recursively to each column C2 under the diagonal.     
+    !! pdtrtri computes the parallel inversion of a lower triangular matrix
+    !! distribuited among the processes using a 2-D block partitioning.
+    !! The algorithm is based on the schema below and executes the model
+    !! recursively to each column C2 under the diagonal.
     !!
     !!     |-------|-------|      |--------------------|--------------------|
     !!     |   A1  |   0   |      |   C1 = trtri(A1)   |          0         |
     !! A = |-------|-------|  C = |--------------------|--------------------|
-    !!     |   A2  |   A3  |      | C2 = -C3 * A2 * C1 |   C3 = trtri(A3)   | 
+    !!     |   A2  |   A3  |      | C2 = -C3 * A2 * C1 |   C3 = trtri(A3)   |
     !!     |-------|-------|      |--------------------|--------------------|
     !!
-    !! The recursive steps of multiplication (C2 = -C3 * A2 * C1) is based on the Cannon's algorithms 
+    !! The recursive steps of multiplication (C2 = -C3 * A2 * C1) is based on the Cannon's algorithms
     !! for parallel matrix multiplication and is done with BLACS(dgemm)
     !!
     !
@@ -5645,6 +6460,7 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
 
     USE laxlib_descriptor
     USE laxlib_parallel_include
+    USE distools, ONLY : grid2d_rank
 
     IMPLICIT NONE
     include 'laxlib_kinds.fh'
@@ -5670,14 +6486,14 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
     INTEGER :: myrow, mycol, np, myid, comm
 
     ! counters
-    INTEGER :: k, i, j, count, step_count, shiftcount, cicle 
+    INTEGER :: k, i, j, count, step_count, shiftcount, cicle
     INTEGER :: C3dim   ! Dimension of submatrix B
     INTEGER :: nc, nr ! Local dimension of block
     INTEGER :: info, sup_recv
-    INTEGER :: idrowref, idcolref, idref, idrecv 
+    INTEGER :: idrowref, idcolref, idref, idrecv
 
     ! B and BUF_RECV are used to overload the computation of matrix multiplication and the shift of the blocks
-    REAL(DP), ALLOCATABLE, DIMENSION( :, : ) :: B, C, BUF_RECV 
+    REAL(DP), ALLOCATABLE, DIMENSION( :, : ) :: B, C, BUF_RECV
     REAL(DP) :: first
     TYPE(la_descriptor) :: desc
 
@@ -5690,10 +6506,10 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
     comm  = desc%comm
 
     IF( desc%npr /= desc%npc ) THEN
-       CALL lax_error__( ' pdtrtri ', ' only square grid are allowed ', 1 ) 
+       CALL lax_error__( ' pdtrtri ', ' only square grid are allowed ', 1 )
     END IF
     IF( ldx /= desc%nrcx ) THEN
-       CALL lax_error__( ' pdtrtri ', ' wrong leading dimension ldx ', ldx ) 
+       CALL lax_error__( ' pdtrtri ', ' wrong leading dimension ldx ', ldx )
     END IF
 
     nr = desc%nr
@@ -5779,7 +6595,6 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
        !
     END IF
 
-  
     IF( myrow >= mycol ) THEN
        !
        !  only procs on lower triangle partecipates
@@ -5807,10 +6622,10 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
        sll = zero
        !
     END IF
-    ! 
+    !
 
-    ! Compute the inverse of a lower triangular 
-    ! along the diagonal of the global array with BLAS(ztrtri) 
+    ! Compute the inverse of a lower triangular
+    ! along the diagonal of the global array with BLAS(ztrtri)
     !
     IF( mycol == myrow ) THEN
        !
@@ -5862,8 +6677,8 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
           ! Compute C2 = -C3 * A2 * C1
           DO shiftcount = count, np-2
              IF(mycol>count)THEN
-                ! Execute the virtual shift of the matrix C3 along the row in order to know which processor 
-                ! have to send the block to C2 
+                ! Execute the virtual shift of the matrix C3 along the row in order to know which processor
+                ! have to send the block to C2
                 IF( cicle == 0)THEN
                    ! virtual shift of the block i,j of the submatrix C3 i place to West
                    send = shift(idref, myid, myrow-count, C3dim, 'W')
@@ -5889,7 +6704,7 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
                    CALL lax_error__( " pdtrtri ", " in MPI_Recv 16 ", ABS( ierr ) )
                 send = shift(1, group_rank, 1, (group_size-1), 'S')
                 recv = shift(1, group_rank, 1, (group_size-1), 'N')
-                ! with the no-blocking communication the computation and the shift of the column block are overapped  
+                ! with the no-blocking communication the computation and the shift of the column block are overapped
                 IF( MOD( cicle, 2 ) == 0 ) THEN
                    !
                    CALL MPI_Isend(BUF_RECV, ldx*ldx, MPI_DOUBLE_PRECISION, send, group_rank+cicle, col_comm, req(1), ierr)
@@ -5923,7 +6738,7 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
                 !
              END IF
              cicle = cicle + 1
-             first = ONE 
+             first = ONE
           END DO
        END IF
     END DO
@@ -5963,14 +6778,13 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
        !
      END SUBROUTINE compute_dtrtri
 
-
      INTEGER FUNCTION shift ( idref, id, pos, size, dir )
 
        IMPLICIT NONE
-   
+
        INTEGER :: idref, id, pos, size
        CHARACTER ( LEN = 1 ) :: dir
-   
+
        IF( ( dir == 'E' ) .OR. ( dir == 'S' ) ) THEN
           shift = idref + MOD ( ( id - idref ) + pos, size )
        ELSE IF( ( dir == 'W' ) .OR. ( dir == 'N' ) ) THEN
@@ -5978,14 +6792,12 @@ SUBROUTINE laxlib_pdtrtri_x ( sll, ldx, n, idesc )
        ELSE
           shift = -1
        END IF
-   
+
        RETURN
 
      END FUNCTION shift
 
 END SUBROUTINE laxlib_pdtrtri_x
-
-
 
 SUBROUTINE laxlib_pdsyevd_x( tv, n, idesc, hh, ldh, e )
    !
@@ -5999,7 +6811,7 @@ SUBROUTINE laxlib_pdsyevd_x( tv, n, idesc, hh, ldh, e )
    LOGICAL, INTENT(IN) :: tv
    !! if true compute eigenvalues and eigenvectors (not used)
    INTEGER, INTENT(IN) :: n
-   !! global dimension 
+   !! global dimension
    INTEGER, INTENT(IN) :: ldh
    !! leading dimension of hh
    INTEGER, INTENT(IN) :: idesc(LAX_DESC_SIZE)
@@ -6013,8 +6825,8 @@ SUBROUTINE laxlib_pdsyevd_x( tv, n, idesc, hh, ldh, e )
    REAL(DP), ALLOCATABLE :: diag(:,:), vv(:,:)
    CHARACTER :: jobv
 
-   nrl   = idesc(LAX_DESC_NRL) 
-   nrlx  = idesc(LAX_DESC_NRLX) 
+   nrl   = idesc(LAX_DESC_NRL)
+   nrlx  = idesc(LAX_DESC_NRLX)
    nproc = idesc(LAX_DESC_NPC) * idesc(LAX_DESC_NPR)
 
    ALLOCATE( diag( nrlx, n ) )
@@ -6023,7 +6835,7 @@ SUBROUTINE laxlib_pdsyevd_x( tv, n, idesc, hh, ldh, e )
    jobv = 'N'
    IF( tv ) jobv = 'V'
    !
-   !  Redistribute matrix "hh" into "diag",  
+   !  Redistribute matrix "hh" into "diag",
    !  matrix "hh" is block distributed, matrix diag is cyclic distributed
    CALL blk2cyc_redist( n, diag, nrlx, n, hh, ldh, ldh, idesc )
    !
@@ -6038,8 +6850,6 @@ SUBROUTINE laxlib_pdsyevd_x( tv, n, idesc, hh, ldh, e )
    RETURN
 END SUBROUTINE
 
-
-
 SUBROUTINE laxlib_pzheevd_x( tv, n, idesc, hh, ldh, e )
    !
    !! Parallel version of the HOUSEHOLDER tridiagonalization Algorithm for simmetric matrix.
@@ -6052,7 +6862,7 @@ SUBROUTINE laxlib_pzheevd_x( tv, n, idesc, hh, ldh, e )
    LOGICAL, INTENT(IN) :: tv
    !! if true compute eigenvalues and eigenvectors (not used)
    INTEGER, INTENT(IN) :: n
-   !! global dimensio of matrix 
+   !! global dimensio of matrix
    INTEGER, INTENT(IN) :: ldh
    !! leading dimension of hh
    INTEGER, INTENT(IN) :: idesc(LAX_DESC_SIZE)
@@ -6082,18 +6892,16 @@ SUBROUTINE laxlib_pzheevd_x( tv, n, idesc, hh, ldh, e )
    !
    if( tv ) CALL cyc2blk_redist( n, vv, nrlx, n, hh, ldh, ldh, idesc )
    !
-   DEALLOCATE( vv ) 
+   DEALLOCATE( vv )
    DEALLOCATE( diag )
 
    RETURN
 END SUBROUTINE
 
-
-
 SUBROUTINE sqr_dsetmat_x( what, n, alpha, a, lda, idesc )
    !
    !!
-   !!  Set the double precision values of a square distributed matrix 
+   !!  Set the double precision values of a square distributed matrix
    !!
    !
    IMPLICIT NONE
@@ -6173,10 +6981,9 @@ SUBROUTINE sqr_dsetmat_x( what, n, alpha, a, lda, idesc )
    RETURN
 END SUBROUTINE sqr_dsetmat_x
 
-
 SUBROUTINE sqr_zsetmat_x( what, n, alpha, a, lda, idesc )
    !
-   !!  Set the double precision complex(Z) values of a square distributed matrix 
+   !!  Set the double precision complex(Z) values of a square distributed matrix
    !
    IMPLICIT NONE
    !
@@ -6188,7 +6995,7 @@ SUBROUTINE sqr_zsetmat_x( what, n, alpha, a, lda, idesc )
    !! 'U' set the values in the upper triangle of "a" equal to alpha
    !! 'L' set the values in the lower triangle of "a" equal to alpha
    !! 'D' set the values in the diagonal of "a" equal to alpha
-   !! 'H' clear the imaginary part of the diagonal of "a" 
+   !! 'H' clear the imaginary part of the diagonal of "a"
    INTEGER, INTENT(IN) :: n
    !! global dimension of the matrix
    COMPLEX(DP), INTENT(IN) :: alpha

@@ -8,11 +8,10 @@
 
    MODULE laxlib_descriptor
       !
+      USE distools, ONLY : ldim_block, ldim_cyclic, ldim_block_sca, &
+                           gind_block, gind_cyclic, gind_block_sca
       IMPLICIT NONE
       SAVE
-
-      INTEGER, EXTERNAL ::  ldim_block, ldim_cyclic, ldim_block_sca
-      INTEGER, EXTERNAL ::  gind_block, gind_cyclic, gind_block_sca
 
       !  Descriptor for linear algebra data distribution (like in Cannon's algorithm)
       !

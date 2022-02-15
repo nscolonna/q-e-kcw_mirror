@@ -356,7 +356,6 @@ CONTAINS
                  END DO
                END DO
 
-
 #if defined __MPI
                ! ... parallel sum TAU
                CALL MPI_ALLREDUCE( MPI_IN_PLACE, tau( i ), 2*(n - i + 1), MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr )
@@ -392,7 +391,6 @@ CONTAINS
                CALL MPI_ALLREDUCE( MPI_IN_PLACE, alpha, 2, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr )
                IF( ierr /= 0 ) CALL lax_error__( ' pzhptrd ', 'error in mpi_allreduce 4', ierr )
 #endif
-
 
 #if defined __MPI
                IF ( NI1 > 0 ) CALL zaxpy(NI1,ALPHA,AP(I1,I),1,TAUL(1),1)
@@ -499,6 +497,7 @@ CONTAINS
 !     Courant Institute, Argonne National Lab, and Rice University
 
       USE laxlib_parallel_include
+      USE distools, ONLY : ldim_cyclic, lind_cyclic
 
       IMPLICIT NONE
 
@@ -588,7 +587,6 @@ CONTAINS
 !     .. Local __SCALARs ..
       INTEGER :: I, IINFO, J, K, JL, KL, J1, I1, I2, NI1, L, IERR
       INTEGER :: ibeg, iend, nr
-      INTEGER, EXTERNAL :: ldim_cyclic, lind_cyclic
 !     ..
 
 !     .. Executable Statements ..
@@ -735,7 +733,6 @@ CONTAINS
           END DO
         END DO
       END IF
-
 
       RETURN
 
@@ -1419,7 +1416,6 @@ CONTAINS
 
 !==----------------------------------------------==!
 
-
 #if defined __SCALAPACK
 
   SUBROUTINE pzheevd_drv( tv, n, nb, h, w, ortho_cntx, ortho_comm )
@@ -1515,7 +1511,6 @@ CONTAINS
   call elpa_deallocate(elpa_h, ierr)
   call elpa_uninit(ierr)
 
-
 #elif defined(__ELPA_2016)
      ! -> from ELPA 2016.11.001_pre thru 2017.XX.XX to elpa-2018.05.001
      ierr = elpa_get_communicators(ortho_comm, my_prow, my_pcol,mpi_comm_rows, mpi_comm_cols)
@@ -1576,9 +1571,7 @@ CONTAINS
 
 END MODULE zhpev_module
 
-
 !==----------------------------------------------==!
-
 
    SUBROUTINE zhpev_drv_x( JOBZ, UPLO, N, AP, W, Z, LDZ )
 

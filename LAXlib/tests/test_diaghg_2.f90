@@ -46,7 +46,7 @@ program test_diaghg_2
     complex(DP) :: v(m_size,m_size)
     real(DP)    :: e_save(m_size)
     complex(DP) :: v_save(m_size,m_size)
-    integer :: j
+    integer :: i, j
     !
     CALL hermitian(m_size, h)
     CALL hermitian(m_size, s)
@@ -56,8 +56,11 @@ program test_diaghg_2
     !
     v = (0.d0, 0.d0)
     e = 0.d0
-
+#if defined(__OPENMP_GPU)
+    CALL diaghg(  m_size, m_size, h, s, m_size, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#else
     CALL diaghg(  m_size, m_size, h, s, m_size, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
+#endif
     ! 
     DO j = 1, m_size
        CALL test%assert_close( h(1:m_size, j), h_save(1:m_size, j))
@@ -69,7 +72,12 @@ program test_diaghg_2
     !
     v = (0.d0, 0.d0)
     e = 0.d0
+    !
+#if defined(__OPENMP_GPU)
+    CALL diaghg(  m_size, m_size, h, s, m_size, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true., .true. )
+#else
     CALL diaghg(  m_size, m_size, h, s, m_size, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#endif
     !
     DO j = 1, m_size
        CALL test%assert_close( h(1:m_size, j), h_save(1:m_size, j))

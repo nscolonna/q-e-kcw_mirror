@@ -149,7 +149,7 @@ SUBROUTINE laxlib_rdiaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp
      ELSE IF ( info < 0 ) THEN
         CALL lax_error__( 'rdiaghg', 'incorrect call to DSYGV*', ABS( info ) )
      END IF
-     
+
      ! ... restore input S matrix from saved diagonal and lower triangle
      !
      !$omp parallel do
@@ -186,6 +186,193 @@ SUBROUTINE laxlib_rdiaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp
 END SUBROUTINE laxlib_rdiaghg
 
 !----------------------------------------------------------------------------
+#if defined(__OPENMP_GPU)
+SUBROUTINE laxlib_rdiaghg_gpu( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm )
+  !----------------------------------------------------------------------------
+  ! ... Hv=eSv, with H symmetric matrix, S overlap matrix.
+  ! ... On output both matrix are unchanged
+  !
+  ! ... LAPACK version - uses both DSYGV and DSYGVX
+  !
+  USE laxlib_parallel_include
+  USE onemkl_lapack_gpu
+  !USE dmr
+#define __USE_GLOBAL_BUFFER
+#if defined(__USE_GLOBAL_BUFFER)
+  USE device_fbuff_m, ONLY : dev=>dev_buf
+#else
+  USE omp_lib
+#endif
+  !
+  IMPLICIT NONE
+  INCLUDE 'laxlib_kinds.fh'
+  !
+  INTEGER, INTENT(IN) :: n, m, ldh
+    ! dimension of the matrix to be diagonalized
+    ! number of eigenstates to be calculated
+    ! leading dimension of h, as declared in the calling pgm unit
+  REAL(DP), INTENT(INOUT) :: h(ldh,n), s(ldh,n)
+    ! matrix to be diagonalized
+    ! overlap matrix
+  !
+  REAL(DP), INTENT(OUT) :: e(n)
+    ! eigenvalues
+  REAL(DP), INTENT(OUT) :: v(ldh,m)
+    ! eigenvectors (column-wise)
+  INTEGER,  INTENT(IN)  :: me_bgrp, root_bgrp, intra_bgrp_comm
+  !
+  INTEGER               :: lwork, info, i, j, nb, mm, omp_device
+  REAL(DP)              :: abstol
+  REAL(DP), PARAMETER   :: one = 1_DP
+  REAL(DP), PARAMETER   :: zero = 0_DP
+  INTEGER,  POINTER, CONTIGUOUS :: ifail(:)
+  !
+  INTEGER,  POINTER, CONTIGUOUS :: iwork(:)
+  REAL(DP), POINTER, CONTIGUOUS :: work(:)
+  !
+  REAL(DP)                      :: dummy(2)
+  !
+  ! Temp arrays to save H and S.
+  INTEGER                       :: h_meig, itype=1
+  REAL(DP), POINTER, CONTIGUOUS :: h_bkp(:,:), s_bkp(:,:)
+  character*1 :: jobz = 'V'
+  character*1 :: ranged = 'I'
+  character*1 :: uplo = 'U'
+  !
+  !
+  CALL start_clock_gpu( 'rdiaghg_gpu' )
+  !
+  ! ... only the first processor diagonalizes the matrix
+  !
+  IF ( me_bgrp == root_bgrp ) THEN
+#if !defined(__USE_GLOBAL_BUFFER)
+     !omp_device = omp_get_default_device()
+     !call omp_target_alloc_f(fptr_dev=ifail, dimensions=[n],     omp_dev=omp_device)
+     !call omp_target_alloc_f(fptr_dev=h_bkp, dimensions=[n,n],   omp_dev=omp_device)
+     !call omp_target_alloc_f(fptr_dev=s_bkp, dimensions=[n,n],   omp_dev=omp_device)
+     !call omp_target_alloc_f(fptr_dev=iwork, dimensions=[3+5*n], omp_dev=omp_device)
+     !$omp allocate allocator(omp_target_device_mem_alloc)
+     allocate(ifail(n))
+     allocate(h_bkp(n,n))
+     allocate(s_bkp(n,n))
+     allocate(iwork(3+5*n))
+#else
+     CALL dev%lock_buffer( ifail,  n, info )
+     IF( info /= 0 ) CALL lax_error__( ' rdiaghg_gpu ', ' cannot allocate ifail ', ABS( info ) )
+     CALL dev%lock_buffer( h_bkp,  (/ n, n /), info )
+     IF( info /= 0 ) CALL lax_error__( ' rdiaghg_gpu ', ' cannot allocate h_bkp ', ABS( info ) )
+     CALL dev%lock_buffer( s_bkp,  (/ n, n /), info )
+     IF( info /= 0 ) CALL lax_error__( ' rdiaghg_gpu ', ' cannot allocate s_bkp ', ABS( info ) )
+     CALL dev%lock_buffer( iwork, 3+5*n, info )
+     IF( info /= 0 ) CALL lax_error__( ' rdiaghg_gpu ', ' cannot allocate iwork ', ABS( info ) )
+#endif
+     !
+     !$omp target teams distribute parallel do collapse(2) is_device_ptr(h_bkp, s_bkp)
+     DO j=1,n
+        DO i=1,n
+           h_bkp(i,j) = h(i,j)
+           s_bkp(i,j) = s(i,j)
+        ENDDO
+     ENDDO
+     !$omp end target teams distribute parallel do
+     !
+     ! Workspace query
+     !
+     !$omp target data map(from:h_meig, dummy, info)
+     !$omp target variant dispatch use_device_ptr(h, s, h_meig, e, v, dummy, iwork, ifail, info)
+     call dsygvx(itype=itype, jobz=jobz, range=ranged, uplo=uplo, n=n, a=h, lda=ldh, b=s, ldb=ldh, vl=0.0D0, vu=0.0D0, il=1, iu=m, abstol=0.0D0, &
+        m=h_meig, w=e, z=v, ldz=ldh, work=dummy, lwork=-1, iwork=iwork, ifail=ifail, info=info)
+     !$omp end target variant dispatch
+     !$omp end target data
+     lwork = nint(dummy(1))
+#if ! defined(__USE_GLOBAL_BUFFER)
+     !call omp_target_alloc_f(fptr_dev=work,  dimensions=[lwork], omp_dev=omp_device)
+     !$omp allocate allocator(omp_target_device_mem_alloc)
+     allocate(work(lwork))
+#else
+     CALL dev%lock_buffer( work, lwork, info )
+     IF( info /= 0 ) CALL lax_error__( ' cdiaghg_gpu ', ' cannot allocate work ', ABS( info ) )
+#endif
+     !$omp target data map(from:h_meig, info)
+     !$omp target variant dispatch use_device_ptr(h, s, h_meig, e, v, work, iwork, ifail, info)
+     call dsygvx(itype=itype, jobz=jobz, range=ranged, uplo=uplo, n=n, a=h, lda=ldh, b=s, ldb=ldh, vl=0.0D0, vu=0.0D0, il=1, iu=m, abstol=0.0D0, &
+        m=h_meig, w=e, z=v, ldz=ldh, work=work, lwork=lwork, iwork=iwork, ifail=ifail, info=info)
+     !$omp end target variant dispatch
+     !$omp end target data
+     !
+     IF ( info > n ) THEN
+        CALL lax_error__( 'rdiaghg', 'S matrix not positive definite', ABS( info ) )
+     ELSE IF ( info > 0 ) THEN
+        CALL lax_error__( 'rdiaghg', 'eigenvectors failed to converge', ABS( info ) )
+     ELSE IF ( info < 0 ) THEN
+        CALL lax_error__( 'rdiaghg', 'incorrect call to DSYGV*', ABS( info ) )
+     END IF
+     !
+     !$omp target teams distribute parallel do collapse(2) is_device_ptr(h_bkp, s_bkp)
+     DO j=1,n
+        DO i=1,n
+           h(i,j) = h_bkp(i,j)
+           s(i,j) = s_bkp(i,j)
+        ENDDO
+     ENDDO
+!$omp end target teams distribute parallel do
+#if !defined(__USE_GLOBAL_BUFFER)
+     !call omp_target_free_f(fptr_dev=ifail)
+     !call omp_target_free_f(fptr_dev=h_bkp)
+     !call omp_target_free_f(fptr_dev=s_bkp)
+     !call omp_target_free_f(fptr_dev=work)
+     !call omp_target_free_f(fptr_dev=iwork)
+     deallocate(ifail)
+     deallocate(h_bkp)
+     deallocate(s_bkp)
+     deallocate(work)
+     deallocate(iwork)
+#else
+     CALL dev%release_buffer(ifail, info)
+     CALL dev%release_buffer(h_bkp, info)
+     CALL dev%release_buffer(s_bkp, info)
+     CALL dev%release_buffer(work,  info)
+     CALL dev%release_buffer(iwork, info)
+#endif
+  !
+  END IF
+  !
+  ! ... broadcast eigenvectors and eigenvalues to all other processors
+  !
+#if defined __MPI
+#if defined __GPU_MPI
+!  info = cudaDeviceSynchronize()
+!  IF ( info /= 0 ) &
+!        CALL lax_error__( 'rdiaghg', 'error synchronizing device (first)', ABS( info ) )
+!  CALL MPI_BCAST( e_d, n, MPI_DOUBLE_PRECISION, root_bgrp, intra_bgrp_comm, info )
+!  IF ( info /= 0 ) &
+!        CALL lax_error__( 'rdiaghg', 'error broadcasting array e_d', ABS( info ) )
+!  CALL MPI_BCAST( v_d, ldh*m, MPI_DOUBLE_COMPLEX, root_bgrp, intra_bgrp_comm, info )
+!  IF ( info /= 0 ) &
+!        CALL lax_error__( 'rdiaghg', 'error broadcasting array v_d', ABS( info ) )
+!  info = cudaDeviceSynchronize() ! this is probably redundant...
+!  IF ( info /= 0 ) &
+!        CALL lax_error__( 'rdiaghg', 'error synchronizing device (second)', ABS( info ) )
+#else
+!$omp target update from(e, v)
+  CALL MPI_BCAST( e, SIZE(e), MPI_DOUBLE_PRECISION, root_bgrp, intra_bgrp_comm, info )
+  IF ( info /= 0 ) &
+        CALL lax_error__( 'rdiaghg', 'error broadcasting array e', ABS( info ))
+  CALL MPI_BCAST( v, SIZE(v), MPI_DOUBLE_PRECISION, root_bgrp, intra_bgrp_comm, info )
+  IF ( info /= 0 ) &
+        CALL lax_error__( 'rdiaghg', 'error broadcasting array v', ABS( info ))
+! Are this copies necessary???
+!$omp target update to(e)
+!$omp target update to(v)
+#endif
+#endif
+  !
+  CALL stop_clock_gpu( 'rdiaghg_gpu' )
+  !
+  RETURN
+  !
+END SUBROUTINE laxlib_rdiaghg_gpu
+#else
 SUBROUTINE laxlib_rdiaghg_gpu( n, m, h_d, s_d, ldh, e_d, v_d, me_bgrp, root_bgrp, intra_bgrp_comm )
   !----------------------------------------------------------------------------
   !!
@@ -398,6 +585,7 @@ SUBROUTINE laxlib_rdiaghg_gpu( n, m, h_d, s_d, ldh, e_d, v_d, me_bgrp, root_bgrp
   RETURN
   !
 END SUBROUTINE laxlib_rdiaghg_gpu
+#endif
 !
 !----------------------------------------------------------------------------
 SUBROUTINE laxlib_prdiaghg( n, h, s, ldh, e, v, idesc )
@@ -440,7 +628,7 @@ SUBROUTINE laxlib_prdiaghg( n, h, s, ldh, e, v, idesc )
   REAL(DP), INTENT(OUT) :: v(ldh,ldh)
   !! eigenvectors (column-wise)
   INTEGER, INTENT(IN) :: idesc(LAX_DESC_SIZE)
-  !! laxlib descriptor 
+  !! laxlib descriptor
   INTEGER, PARAMETER    :: root = 0
   INTEGER               :: nx, info
     ! local block size
@@ -485,7 +673,7 @@ SUBROUTINE laxlib_prdiaghg( n, h, s, ldh, e, v, idesc )
      !
 #if defined(__SCALAPACK)
      CALL descinit( desch, n, n, desc%nrcx, desc%nrcx, 0, 0, ortho_cntx, SIZE( hh, 1 ) , info )
-  
+
      IF( info /= 0 ) CALL lax_error__( ' rdiaghg ', ' descinit ', ABS( info ) )
 #endif
      !
@@ -507,7 +695,7 @@ SUBROUTINE laxlib_prdiaghg( n, h, s, ldh, e, v, idesc )
   IF( desc%active_node > 0 ) THEN
      !
 #if defined(__SCALAPACK)
-     ! 
+     !
      CALL sqr_setmat( 'U', n, zero, ss, size(ss,1), idesc )
 
      CALL PDTRTRI( 'L', 'N', n, ss, 1, 1, desch, info )
@@ -542,7 +730,7 @@ SUBROUTINE laxlib_prdiaghg( n, h, s, ldh, e, v, idesc )
   CALL stop_clock( 'rdiaghg:paragemm' )
   !
   IF ( desc%active_node > 0 ) THEN
-     ! 
+     !
      !  Compute local dimension of the cyclically distributed matrix
      !
 #if defined(__SCALAPACK)

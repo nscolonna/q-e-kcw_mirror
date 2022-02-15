@@ -13,8 +13,8 @@ program test_diaghg
     INTEGER :: world_group = 0
     !
     CALL test%init()
-    
-#if defined(__MPI)    
+
+#if defined(__MPI)
     world_group = MPI_COMM_WORLD
 #endif
     CALL mp_world_start(world_group)
@@ -43,7 +43,7 @@ program test_diaghg
     real(DP) :: s(2,2)
     real(DP) :: e(2)
     real(DP) :: v(2,2)
-    
+
     h = 0.d0
     h(1,1) = 1.d0
     h(2,2) = 1.d0
@@ -53,7 +53,11 @@ program test_diaghg
     !
     v = 0.d0
     e = 0.d0
+#if defined(__OPENMP_GPU)
+    CALL diaghg(  2, 2, h, s, 2, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#else
     CALL diaghg(  2, 2, h, s, 2, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
+#endif
     !
     CALL test%assert_close( e, [1.d0, 1.d0] )
     CALL test%assert_close( RESHAPE(v, [4]), [1.d0, 0.d0, 0.d0, 1.d0] )
@@ -62,7 +66,11 @@ program test_diaghg
     !
     v = 0.d0
     e = 0.d0
+#if defined(__OPENMP_GPU)
+    CALL diaghg(  2, 2, h, s, 2, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true., .true. )
+#else
     CALL diaghg(  2, 2, h, s, 2, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#endif
     !
     CALL test%assert_close( e, [1.d0, 1.d0] )
     CALL test%assert_close( RESHAPE(v, [4]), [1.d0, 0.d0, 0.d0, 1.d0] )
@@ -98,8 +106,12 @@ program test_diaghg
     !
     v = (0.d0, 0.d0)
     e = 0.d0
+#if defined(__OPENMP_GPU)
+    CALL diaghg(  2, 2, h, s, 2, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#else
     CALL diaghg(  2, 2, h, s, 2, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
-    ! 0.1715728752538099, 5.82842712474619 
+#endif
+    ! 0.1715728752538099, 5.82842712474619
     CALL test%assert_close( e, [0.1715728752538099d0,  5.82842712474619d0] )
     CALL test%assert_close( v(:,1), [( 0.d0, -0.9238795325112867d0), (-0.3826834323650898d0, 0.d0)] )
     CALL test%assert_close( v(:,2), [( 0.d0, -0.3826834323650898d0), ( 0.9238795325112867d0, 0.d0)] )
@@ -108,7 +120,11 @@ program test_diaghg
     !
     v = (0.d0, 0.d0)
     e = 0.d0
+#if defined(__OPENMP_GPU)
+    CALL diaghg(  2, 2, h, s, 2, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true., .true. )
+#else
     CALL diaghg(  2, 2, h, s, 2, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#endif
     !
     CALL test%assert_close( e, [0.1715728752538099d0,  5.82842712474619d0] )
     CALL test%assert_close( v(:,1), [( 0.d0, -0.9238795325112867d0), (-0.3826834323650898d0, 0.d0)] )

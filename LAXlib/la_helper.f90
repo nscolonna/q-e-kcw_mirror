@@ -12,7 +12,6 @@ SUBROUTINE laxlib_end()
   CALL laxlib_end_drv ( )
 END SUBROUTINE laxlib_end
 
-
 SUBROUTINE laxlib_getval_ ( nproc_ortho, leg_ortho, np_ortho, me_ortho, ortho_comm, ortho_row_comm, ortho_col_comm, &
   ortho_comm_id, ortho_parent_comm, ortho_cntx, do_distr_diag_inside_bgrp  )
   use laxlib_processors_grid, ONLY : &
@@ -20,9 +19,9 @@ SUBROUTINE laxlib_getval_ ( nproc_ortho, leg_ortho, np_ortho, me_ortho, ortho_co
     leg_ortho_   => leg_ortho, &
     np_ortho_    => np_ortho, &
     me_ortho_    => me_ortho, &
-    ortho_comm_  => ortho_comm, & 
+    ortho_comm_  => ortho_comm, &
     ortho_row_comm_ => ortho_row_comm, &
-    ortho_col_comm_ => ortho_col_comm, & 
+    ortho_col_comm_ => ortho_col_comm, &
     ortho_comm_id_  => ortho_comm_id, &
     ortho_parent_comm_ => ortho_parent_comm, &
     ortho_cntx_  => ortho_cntx, &
@@ -58,9 +57,9 @@ SUBROUTINE laxlib_get_status_x ( lax_status )
     leg_ortho_   => leg_ortho, &
     np_ortho_    => np_ortho, &
     me_ortho_    => me_ortho, &
-    ortho_comm_  => ortho_comm, & 
+    ortho_comm_  => ortho_comm, &
     ortho_row_comm_ => ortho_row_comm, &
-    ortho_col_comm_ => ortho_col_comm, & 
+    ortho_col_comm_ => ortho_col_comm, &
     ortho_comm_id_  => ortho_comm_id, &
     ortho_parent_comm_ => ortho_parent_comm, &
     ortho_cntx_  => ortho_cntx, &
@@ -93,6 +92,7 @@ SUBROUTINE laxlib_start_drv( ndiag_, parent_comm, do_distr_diag_inside_bgrp_  )
     !
     use laxlib_processors_grid
     USE laxlib_parallel_include
+    USE distools, ONLY : grid2d_dims, grid2d_coords, grid2d_rank
     !
     !
     ! ... Ortho/diag/linear algebra group initialization
@@ -106,7 +106,7 @@ SUBROUTINE laxlib_start_drv( ndiag_, parent_comm, do_distr_diag_inside_bgrp_  )
     !
     INTEGER :: nproc_ortho_try
     INTEGER :: parent_nproc ! nproc of the parent group
-    INTEGER :: my_parent_id ! id of the parent communicator 
+    INTEGER :: my_parent_id ! id of the parent communicator
     INTEGER :: ierr = 0
     !
     IF( lax_is_initialized ) &
@@ -116,14 +116,14 @@ SUBROUTINE laxlib_start_drv( ndiag_, parent_comm, do_distr_diag_inside_bgrp_  )
     my_parent_id = laxlib_rank( parent_comm ) ! set the index of the current parent communicator
 
     ! save input value inside the module
-    do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp_ 
+    do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp_
 
     !
     IF( ndiag_ > 0 ) THEN
        ! command-line argument -ndiag N or -northo N set to a value N
        ! use the command line value ensuring that it falls in the proper range
        nproc_ortho_try = MIN( ndiag_ , parent_nproc )
-    ELSE 
+    ELSE
        ! no command-line argument -ndiag N or -northo N is present
        ! insert here custom architecture specific default definitions
 #if defined(__SCALAPACK) && !defined(__CUDA)
@@ -143,7 +143,7 @@ SUBROUTINE laxlib_start_drv( ndiag_, parent_comm, do_distr_diag_inside_bgrp_  )
     ndiag_ = nproc_ortho
     !
     lax_is_initialized = .true.
-    !  
+    !
     RETURN
     !
 CONTAINS
@@ -332,7 +332,7 @@ END SUBROUTINE print_lambda_x
           ALLOCATE( rank_ip( np_ortho(1), np_ortho(2) ) )
      !
      CALL laxlib_init_desc( idesc, idesc_ip, rank_ip, nsiz, nsiz )
-     ! 
+     !
      nx = idesc(LAX_DESC_NRCX)
      !
      la_proc = .FALSE.
@@ -343,6 +343,7 @@ END SUBROUTINE print_lambda_x
    !
    SUBROUTINE laxlib_desc_init2( nsiz, nx, la_proc, idesc, rank_ip, irc_ip, nrc_ip )
      !
+     USE distools, ONLY : grid2d_rank
      IMPLICIT NONE
      include 'laxlib_low.fh'
      include 'laxlib_param.fh'
@@ -410,10 +411,10 @@ SUBROUTINE laxlib_init_desc_x( idesc, n, nx, np, me, comm, cntx, comm_id )
     RETURN
 END SUBROUTINE laxlib_init_desc_x
 
-
 SUBROUTINE laxlib_multi_init_desc_x( idesc, idesc_ip, rank_ip, n, nx  )
     USE laxlib_descriptor,       ONLY: la_descriptor, descla_init, laxlib_desc_to_intarray
     use laxlib_processors_grid,  ONLY: leg_ortho, np_ortho, me_ortho, ortho_comm, ortho_comm_id, ortho_cntx
+    USE distools, ONLY : grid2d_rank
     IMPLICIT NONE
     include 'laxlib_param.fh'
     INTEGER, INTENT(OUT) :: idesc(LAX_DESC_SIZE)
@@ -449,6 +450,7 @@ SUBROUTINE laxlib_multi_init_desc_x( idesc, idesc_ip, rank_ip, n, nx  )
 END SUBROUTINE laxlib_multi_init_desc_x
 
    SUBROUTINE descla_local_dims( i2g, nl, n, nx, np, me )
+      USE distools, ONLY : ldim_block, ldim_block_sca, gind_block, gind_block_sca
       IMPLICIT NONE
       INTEGER, INTENT(OUT) :: i2g  !  global index of the first local element
       INTEGER, INTENT(OUT) :: nl   !  local number of elements
@@ -461,9 +463,6 @@ END SUBROUTINE laxlib_multi_init_desc_x
       !  number of actual elements. This could be required for performance
       !  reasons, and to have an equal partition of matrix having different size
       !  like matrixes of spin-up and spin-down
-      !
-      INTEGER, EXTERNAL ::  ldim_block, ldim_cyclic, ldim_block_sca
-      INTEGER, EXTERNAL ::  gind_block, gind_cyclic, gind_block_sca
       !
 #if __SCALAPACK
       nl  = ldim_block_sca( nx, np, me )
@@ -483,9 +482,8 @@ END SUBROUTINE laxlib_multi_init_desc_x
       !
    END SUBROUTINE descla_local_dims
 
-
 !   ----------------------------------------------
-!   Simplified driver 
+!   Simplified driver
 
    SUBROUTINE diagonalize_parallel_x( n, rhos, rhod, s, idesc )
 
@@ -531,7 +529,6 @@ END SUBROUTINE laxlib_multi_init_desc_x
 
    END SUBROUTINE diagonalize_parallel_x
 
-
    SUBROUTINE diagonalize_serial_x( n, rhos, rhod )
       IMPLICIT NONE
       include 'laxlib_kinds.fh'
@@ -572,7 +569,69 @@ END SUBROUTINE laxlib_multi_init_desc_x
    END SUBROUTINE diagonalize_serial_x
 
    SUBROUTINE diagonalize_serial_gpu( m, rhos, rhod, s, info )
-#if defined(__CUDA)
+#if defined(__OPENMP_GPU)
+      use omp_lib
+      use onemkl_lapack_gpu
+      !use dmr
+      IMPLICIT NONE
+      include 'laxlib_kinds.fh'
+      INTEGER,  INTENT(IN)  :: m
+      REAL(DP), INTENT(IN)  :: rhos(:,:)
+      REAL(DP), INTENT(OUT) :: rhod(:)
+      REAL(DP), INTENT(OUT) :: s(:,:)
+      INTEGER,  INTENT(OUT) :: info
+      REAL(DP) :: dummy_work(1)
+      INTEGER  :: dummy_iwork(1)
+      !
+      INTEGER :: i, j, lda, l
+      !
+      REAL(DP), POINTER, CONTIGUOUS :: work(:)
+      INTEGER,  POINTER, CONTIGUOUS :: iwork(:)
+      !
+      INTEGER :: lwork, liwork, omp_device
+      !
+      ! .... Subroutine Body
+      !
+      lda = size(s,1); l = size(s,2)
+!$omp target teams distribute parallel do collapse(2)
+      do j=1,l
+         do i=1,lda
+            s(i,j) = rhos(i,j)
+         enddo
+      enddo
+!$omp end target teams distribute parallel do
+      !
+      ! Workspace query
+      !
+!$omp target data map(from:dummy_work,dummy_iwork)
+!$omp target variant dispatch use_device_ptr(s,rhod,dummy_work,dummy_iwork)
+      call dsyevd(jobz='V', uplo='U', n=m, a=s, lda=lda, w=rhod, work=dummy_work, lwork=-1, iwork=dummy_iwork, liwork=-1, info=info)
+!$omp end target variant dispatch
+!$omp end target data
+      lwork  = dummy_work(1)
+      liwork = dummy_iwork(1)
+      !
+      !omp_device = omp_get_default_device()
+      !call omp_target_alloc_f(fptr_dev=work,  dimensions=[lwork],  omp_dev=omp_device)
+      !call omp_target_alloc_f(fptr_dev=iwork, dimensions=[liwork], omp_dev=omp_device)
+      !$omp allocate allocator(omp_target_device_mem_alloc)
+      allocate(work(lwork), iwork(liwork))
+      !
+!$omp target variant dispatch use_device_ptr(s,rhod,work,iwork)
+      call dsyevd(jobz='V', uplo='U', n=m, a=s, lda=lda, w=rhod, work=work, lwork=lwork, iwork=iwork, liwork=liwork, info=info)
+!$omp end target variant dispatch
+      IF ( info > 0 ) THEN
+         CALL lax_error__( 'dsyevd', 'eigenvalue failed to converge', ABS( info ) )
+      ELSE IF ( info < 0 ) THEN
+         CALL lax_error__( 'dsyevd', 'incorrect call to DSYEV*', ABS( info ) )
+      END IF
+      !
+      !call omp_target_free_f(fptr_dev=work)
+      !call omp_target_free_f(fptr_dev=iwork)
+      deallocate(work)
+      deallocate(iwork)
+      !
+#elif defined(__CUDA)
       use cudafor
       USE cusolverDn
       IMPLICIT NONE

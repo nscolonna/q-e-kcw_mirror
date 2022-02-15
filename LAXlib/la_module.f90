@@ -5,21 +5,30 @@ MODULE LAXlib
   IMPLICIT NONE
   !
   INTERFACE diaghg
+#if !defined(__OPENMP_GPU)
      MODULE PROCEDURE cdiaghg_cpu_, rdiaghg_cpu_
 #ifdef __CUDA
      MODULE PROCEDURE cdiaghg_gpu_, rdiaghg_gpu_
 #endif
+#else
+     MODULE PROCEDURE cdiaghg, rdiaghg
+#endif
   END INTERFACE
   !
   INTERFACE pdiaghg
+#if !defined(__OPENMP_GPU)
      MODULE PROCEDURE pcdiaghg_, prdiaghg_
 #ifdef __CUDA
      MODULE PROCEDURE pcdiaghg__gpu, prdiaghg__gpu
+#endif
+#else
+     MODULE PROCEDURE pcdiaghg, prdiaghg
 #endif
   END INTERFACE
   !
   CONTAINS
   !
+#if !defined(__OPENMP_GPU)
   !----------------------------------------------------------------------------
   SUBROUTINE cdiaghg_cpu_( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, offload )
     !----------------------------------------------------------------------------
@@ -71,7 +80,7 @@ MODULE LAXlib
     !
     loffload = .false.
     !
-    ! the following ifdef ensures no offload if not compiling from GPU 
+    ! the following ifdef ensures no offload if not compiling from GPU
 #if defined(__CUDA)
     IF (PRESENT(offload)) loffload = offload
 #endif
@@ -172,6 +181,66 @@ MODULE LAXlib
   END SUBROUTINE cdiaghg_gpu_
 #endif
   !
+#else
+  !----------------------------------------------------------------------------
+  SUBROUTINE cdiaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, onhost, change_device )
+    !----------------------------------------------------------------------------
+    !
+    ! ... calculates eigenvalues and eigenvectors of the generalized problem
+    ! ... Hv=eSv, with H hermitean matrix, S overlap matrix.
+    ! ... On output both matrix are unchanged
+    !
+    ! ... LAPACK version - uses both ZHEGV and ZHEGVX
+    !
+    IMPLICIT NONE
+    include 'laxlib_kinds.fh'
+    !
+    INTEGER, INTENT(IN) :: n, m, ldh
+      ! dimension of the matrix to be diagonalized
+      ! number of eigenstates to be calculate
+      ! leading dimension of h, as declared in the calling pgm unit
+    COMPLEX(DP), INTENT(INOUT) :: h(ldh,n), s(ldh,n)
+      ! actually intent(in) but compilers don't know and complain
+      ! matrix to be diagonalized
+      ! overlap matrix
+    REAL(DP), INTENT(OUT) :: e(n)
+      ! eigenvalues
+    COMPLEX(DP), INTENT(OUT) :: v(ldh,m)
+      ! eigenvectors (column-wise)
+    INTEGER, INTENT(IN) :: me_bgrp, root_bgrp, intra_bgrp_comm
+      !
+    LOGICAL, INTENT(IN) :: onhost
+    LOGICAL, INTENT(IN), OPTIONAL :: change_device
+      ! optionally solve the eigenvalue problem on the GPU
+    LOGICAL :: change_device_ = .false.
+      !
+    !
+    IF (PRESENT(change_device)) change_device_ = change_device
+    !
+    IF ( onhost ) THEN
+       IF ( change_device_ ) THEN
+          !$omp target data map(tofrom:h, s, e, v)
+          CALL laxlib_cdiaghg_gpu(n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm)
+          !$omp end target data
+       ELSE
+          CALL laxlib_cdiaghg(n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm)
+       ENDIF
+    ELSE
+       IF ( change_device_ ) THEN
+          !$omp target update from(h, s)
+          CALL laxlib_cdiaghg(n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm)
+          !$omp target update to(e, v)
+       ELSE
+          CALL laxlib_cdiaghg_gpu(n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm)
+       ENDIF
+    ENDIF
+    !
+    RETURN
+    !
+  END SUBROUTINE cdiaghg
+#endif
+  !
+#if !defined(__OPENMP_GPU)
   !----------------------------------------------------------------------------
   SUBROUTINE rdiaghg_cpu_( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, offload )
     !----------------------------------------------------------------------------
@@ -213,7 +282,7 @@ MODULE LAXlib
     INTEGER,  INTENT(IN)  :: intra_bgrp_comm
     !! intra band group communicator
     LOGICAL, OPTIONAL ::  offload
-    !! optionally solve the eigenvalue problem on the GPU   
+    !! optionally solve the eigenvalue problem on the GPU
     LOGICAL :: loffload
       !
 #if defined(__CUDA)
@@ -224,7 +293,7 @@ MODULE LAXlib
     !
     loffload = .false.
     !
-    ! the following ifdef ensures no offload if not compiling from GPU 
+    ! the following ifdef ensures no offload if not compiling from GPU
 #if defined(__CUDA)
     IF (PRESENT(offload)) loffload = offload
 #endif
@@ -263,7 +332,7 @@ MODULE LAXlib
     !! real matrices version.
     !! On output both matrix are unchanged.
     !!
-    !! GPU version 
+    !! GPU version
     !!
     !
     USE cudafor
@@ -325,9 +394,69 @@ MODULE LAXlib
   END SUBROUTINE rdiaghg_gpu_
 #endif
   !
+#else
+  !----------------------------------------------------------------------------
+  SUBROUTINE rdiaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, onhost, change_device )
+    !----------------------------------------------------------------------------
+    !
+    ! ... calculates eigenvalues and eigenvectors of the generalized problem
+    ! ... Hv=eSv, with H hermitean matrix, S overlap matrix.
+    ! ... On output both matrix are unchanged
+    !
+    ! ... LAPACK version - uses both ZHEGV and ZHEGVX
+    !
+    IMPLICIT NONE
+    include 'laxlib_kinds.fh'
+    !
+    INTEGER, INTENT(IN) :: n, m, ldh
+      ! dimension of the matrix to be diagonalized
+      ! number of eigenstates to be calculate
+      ! leading dimension of h, as declared in the calling pgm unit
+    REAL(DP), INTENT(INOUT) :: h(ldh,n), s(ldh,n)
+      ! actually intent(in) but compilers don't know and complain
+      ! matrix to be diagonalized
+      ! overlap matrix
+    REAL(DP), INTENT(OUT) :: e(n)
+      ! eigenvalues
+    REAL(DP), INTENT(OUT) :: v(ldh,m)
+      ! eigenvectors (column-wise)
+    INTEGER, INTENT(IN) :: me_bgrp, root_bgrp, intra_bgrp_comm
+      !
+    LOGICAL, INTENT(IN) :: onhost
+    LOGICAL, INTENT(IN), OPTIONAL :: change_device
+      ! optionally solve the eigenvalue problem on the GPU
+    LOGICAL :: change_device_ = .false.
+      !
+    !
+    IF (PRESENT(change_device)) change_device_ = change_device
+    !
+    IF ( onhost ) THEN
+       IF ( change_device_ ) THEN
+          !$omp target data map(tofrom:h, s, e, v)
+          CALL laxlib_rdiaghg_gpu(n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm)
+          !$omp end target data
+       ELSE
+          CALL laxlib_rdiaghg(n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm)
+       ENDIF
+    ELSE
+       IF ( change_device_ ) THEN
+          !$omp target update from(h, s)
+          CALL laxlib_rdiaghg(n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm)
+          !$omp target update to(e, v)
+       ELSE
+          CALL laxlib_rdiaghg_gpu(n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm)
+       ENDIF
+    ENDIF
+    !
+    RETURN
+    !
+  END SUBROUTINE rdiaghg
+#endif
+  !
   !  === Parallel diagonalization interface subroutines
   !
   !
+#if !defined(__OPENMP_GPU)
   !----------------------------------------------------------------------------
   SUBROUTINE prdiaghg_( n, h, s, ldh, e, v, idesc, offload )
     !----------------------------------------------------------------------------
@@ -364,7 +493,7 @@ MODULE LAXlib
     LOGICAL :: loffload
 
     CALL laxlib_prdiaghg( n, h, s, ldh, e, v, idesc)
-      
+
   END SUBROUTINE
   !----------------------------------------------------------------------------
   SUBROUTINE pcdiaghg_( n, h, s, ldh, e, v, idesc, offload )
@@ -402,7 +531,7 @@ MODULE LAXlib
     LOGICAL :: loffload
 
     CALL laxlib_pcdiaghg( n, h, s, ldh, e, v, idesc)
-      
+
   END SUBROUTINE
   !
 #if defined(__CUDA)
@@ -443,13 +572,13 @@ MODULE LAXlib
     !
     REAL(DP), ALLOCATABLE :: v(:,:), h(:,:), s(:,:)
     REAL(DP), ALLOCATABLE :: e(:)
-    
+
     ALLOCATE(h(ldh,ldh), s(ldh,ldh), e(n), v(ldh,ldh))
     h = h_d; s = s_d;
     CALL laxlib_prdiaghg( n, h, s, ldh, e, v, idesc)
     e_d = e; v_d = v
     DEALLOCATE(h,s,v,e)
-    ! 
+    !
   END SUBROUTINE
   !----------------------------------------------------------------------------
   SUBROUTINE pcdiaghg__gpu( n, h_d, s_d, ldh, e_d, v_d, idesc, onhost )
@@ -487,12 +616,93 @@ MODULE LAXlib
       !
     COMPLEX(DP), ALLOCATABLE :: v(:,:), h(:,:), s(:,:)
     REAL(DP), ALLOCATABLE :: e(:)
-    
+
     ALLOCATE(h(ldh,ldh), s(ldh,ldh), e(n), v(ldh,ldh))
     h = h_d; s = s_d;
     CALL laxlib_pcdiaghg( n, h, s, ldh, e, v, idesc)
     e_d = e; v_d = v
     DEALLOCATE(h,s,v,e)
+    !
+  END SUBROUTINE
+#endif
+  !
+#else
+  !----------------------------------------------------------------------------
+  SUBROUTINE prdiaghg( n, h, s, ldh, e, v, idesc, offload )
+    !----------------------------------------------------------------------------
+    !
+    ! ... calculates eigenvalues and eigenvectors of the generalized problem
+    ! ... Hv=eSv, with H symmetric matrix, S overlap matrix.
+    ! ... On output both matrix are unchanged
+    !
+    ! ... Parallel version with full data distribution
+    !
+    IMPLICIT NONE
+    include 'laxlib_kinds.fh'
+    include 'laxlib_param.fh'
+    !
+    INTEGER, INTENT(IN) :: n, ldh
+      ! dimension of the matrix to be diagonalized and number of eigenstates to be calculated
+      ! leading dimension of h, as declared in the calling pgm unit
+    REAL(DP), INTENT(INOUT) :: h(ldh,ldh), s(ldh,ldh)
+      ! matrix to be diagonalized
+      ! overlap matrix
+    !
+    REAL(DP), INTENT(OUT) :: e(n)
+      ! eigenvalues
+    REAL(DP), INTENT(OUT) :: v(ldh,ldh)
+      ! eigenvectors (column-wise)
+    INTEGER, INTENT(IN) :: idesc(LAX_DESC_SIZE)
+      !
+    LOGICAL, INTENT(IN) ::  offload
+      ! place-holder, prdiaghg on GPU not implemented yet
+      !
+    IF (offload) THEN
+       !$omp target update from(h, s)
+       CALL laxlib_prdiaghg( n, h, s, ldh, e, v, idesc)
+       !$omp target update to(e, v)
+    ELSE
+       CALL laxlib_prdiaghg( n, h, s, ldh, e, v, idesc)
+    ENDIF
+    !
+  END SUBROUTINE
+  !----------------------------------------------------------------------------
+  SUBROUTINE pcdiaghg( n, h, s, ldh, e, v, idesc, offload )
+    !----------------------------------------------------------------------------
+    !
+    ! ... calculates eigenvalues and eigenvectors of the generalized problem
+    ! ... Hv=eSv, with H symmetric matrix, S overlap matrix.
+    ! ... On output both matrix are unchanged
+    !
+    ! ... Parallel version with full data distribution
+    !
+    USE iso_c_binding, ONLY : c_ptr
+    IMPLICIT NONE
+    include 'laxlib_kinds.fh'
+    include 'laxlib_param.fh'
+    !
+    INTEGER, INTENT(IN) :: n, ldh
+      ! dimension of the matrix to be diagonalized and number of eigenstates to be calculated
+      ! leading dimension of h, as declared in the calling pgm unit
+    COMPLEX(DP), INTENT(INOUT) :: h(ldh,ldh), s(ldh,ldh)
+      ! matrix to be diagonalized
+      ! overlap matrix
+    !
+    REAL(DP), INTENT(OUT) :: e(n)
+      ! eigenvalues
+    COMPLEX(DP), INTENT(OUT) :: v(ldh,ldh)
+      ! eigenvectors (column-wise)
+    INTEGER, INTENT(IN) :: idesc(LAX_DESC_SIZE)
+      !
+    LOGICAL, INTENT(IN) ::  offload
+      !
+    IF (offload) THEN
+       !$omp target update from(h, s)
+       CALL laxlib_pcdiaghg( n, h, s, ldh, e, v, idesc)
+       !$omp target update to(e, v)
+    ELSE
+       CALL laxlib_pcdiaghg( n, h, s, ldh, e, v, idesc)
+    ENDIF
     !
   END SUBROUTINE
 #endif

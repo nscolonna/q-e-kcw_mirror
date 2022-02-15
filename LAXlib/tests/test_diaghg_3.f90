@@ -76,7 +76,12 @@ program test_diaghg_3
         !
         v = (0.d0, 0.d0)
         e = 0.d0
+        !
+#if defined(__OPENMP_GPU)
+        CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#else
         CALL diaghg(  n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
+#endif
         !
         CALL test%assert_close( e(1:m), e_save(1:m) )
         !
@@ -85,8 +90,11 @@ program test_diaghg_3
         s = s_save
         v = (0.d0, 0.d0)
         e = 0.d0
+#if defined(__OPENMP_GPU)
+        CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true., .true. )
+#else
         CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
-        !
+#endif
         CALL test%assert_close( e(1:m), e_save(1:m))
         DEALLOCATE(h,s,e,v,h_save,s_save,e_save,v_save)
     END DO
@@ -138,7 +146,11 @@ program test_diaghg_3
         !
         v = (0.d0, 0.d0)
         e = 0.d0
+#if defined(__OPENMP_GPU)
+        CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#else
         CALL diaghg(  n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .false. )
+#endif
         !
         CALL test%assert_close( e(1:m), e_save(1:m) )
         !
@@ -147,7 +159,11 @@ program test_diaghg_3
         s = s_save
         v = (0.d0, 0.d0)
         e = 0.d0
+#if defined(__OPENMP_GPU)
+        CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true., .true. )
+#else
         CALL diaghg( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_bgrp_comm, .true. )
+#endif
         !
         CALL test%assert_close( e(1:m), e_save(1:m))
         DEALLOCATE(h,s,e,v,h_save,s_save,e_save,v_save)
