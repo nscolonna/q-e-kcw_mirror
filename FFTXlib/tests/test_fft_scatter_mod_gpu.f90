@@ -129,7 +129,7 @@ program test_fft_scatter_mod_gpu
     !
     ALLOCATE (rnd_aux(2*n))
     CALL RANDOM_NUMBER(rnd_aux)
-    c = CMPLX(rnd_aux(1:n), rnd_aux(n:2*n))
+    c = CMPLX(rnd_aux(1:n), rnd_aux(n+1:2*n))
     c_d = c
     !$omp target update to(c_d)
     DEALLOCATE(rnd_aux)
@@ -422,7 +422,7 @@ program test_fft_scatter_mod_gpu
        end_in   = (i+1)*dfft%nnr
        start_out= i*nstick_zx*n3x+1
        end_out  = (i+1)*nstick_zx*n3
-       scatter_in_d( start_out : end_out ) = scatter_in(start_in:start_in+nstick_zx*n3)
+       scatter_in_d(start_out:end_out) = scatter_in(start_in:start_in+nstick_zx*n3)
     END DO
     !$omp target update to(scatter_in_d)
     CALL fft_scatter_many_yz_gpu ( dfft, scatter_in_d, scatter_out_d, vsiz, 2, howmany )

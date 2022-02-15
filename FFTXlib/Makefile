@@ -1,5 +1,5 @@
 # Makefile for FFTXLIB
-sinclude ../make.inc
+include ../make.inc
 
 default: all
 

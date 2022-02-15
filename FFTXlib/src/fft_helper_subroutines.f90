@@ -545,29 +545,48 @@ CONTAINS
      complex(DP), INTENT(OUT) :: vout1_d(:)
      complex(DP), OPTIONAL, INTENT(OUT) :: vout2_d(:)
      complex(DP), INTENT(IN) :: vin_d(:)
+#if !defined(__OPENMP_GPU)
      INTEGER, POINTER :: nl_d(:), nlm_d(:)
+#endif
      COMPLEX(DP) :: fp, fm
      INTEGER :: ig
-#if defined(__CUDA) && defined(_OPENACC)
+#if defined(__CUDA) && defined(_OPENACC) || defined(__OPENMP_GPU)
+#if !defined(__OPENMP_GPU)
      attributes(DEVICE) :: nl_d, nlm_d
+#endif
      !$acc data deviceptr( vout1_d(:), vout2_d(:), vin_d(:) )
+     !$omp target data use_device_ptr( vout1_d(:), vout2_d(:), vin_d(:) )
+#if !defined(__OPENMP_GPU)
      nl_d  => desc%nl_d
      nlm_d => desc%nlm_d
+#endif
      IF( PRESENT( vout2_d ) ) THEN
         !$acc parallel loop
+        !$omp target teams loop
         DO ig=1,desc%ngm
+#if !defined(__OPENMP_GPU)
            fp=vin_d(nl_d(ig))+vin_d(nlm_d(ig))
            fm=vin_d(nl_d(ig))-vin_d(nlm_d(ig))
+#else
+           fp=vin_d(desc%nl(ig))+vin_d(desc%nlm(ig))
+           fm=vin_d(desc%nl(ig))-vin_d(desc%nlm(ig))
+#endif
            vout1_d(ig) = CMPLX(0.5d0,0.d0,kind=DP)*CMPLX( DBLE(fp),AIMAG(fm),kind=DP)
            vout2_d(ig) = CMPLX(0.5d0,0.d0,kind=DP)*CMPLX(AIMAG(fp),-DBLE(fm),kind=DP)
         END DO
      ELSE
         !$acc parallel loop
+        !$omp target teams loop
         DO ig=1,desc%ngm
+#if !defined(__OPENMP_GPU)
            vout1_d(ig) = vin_d(nl_d(ig))
+#else
+           vout1_d(ig) = vin_d(desc%nl(ig))
+#endif
         END DO
      END IF
      !$acc end data
+     !$omp end target data
 #endif
   END SUBROUTINE
 

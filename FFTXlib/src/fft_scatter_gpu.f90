@@ -1365,7 +1365,7 @@ SUBROUTINE fft_scatter_yz_gpu ( desc, f_in, f_aux, nxx_, isgn )
   COMPLEX (DP), INTENT(inout)    :: f_in (nxx_), f_aux (nxx_)
 
 #if defined(__MPI)
-  INTEGER :: ierr, me, me2, me2_start, me2_end, me3, nproc3, iproc3, ncpx, nr3px, offset
+  INTEGER :: ierr, me, me2, me2_start, me2_end, me3, nproc3, iproc3, ncpx, nr3px
   INTEGER :: nr1x, nr2x, nr3, nr3x, my_nr1p_, my_nr3p, ip
   INTEGER :: i, it, it0, k, kfrom, kdest, i_end, k_end, ioff, mc, m1, m2, i1, sendsize
   INTEGER, POINTER :: ncp_(:), ir1p_(:), ismap_(:), me2_iproc3_offset(:,:)
@@ -1762,7 +1762,7 @@ SUBROUTINE fft_scatter_many_xy_gpu ( desc, f_in, f_aux, nxx_, isgn, howmany )
 #if defined(__MPI)
   !
   INTEGER :: ierr, me2, nproc2, iproc2, ncpx, nr2px, ip, icompact
-  INTEGER :: i, j, it, it0, k, kfrom, kdest, offset, m1, m2, i1, sendsize
+  INTEGER :: i, j, it, it0, k, kfrom, kdest, m1, m2, i1, sendsize
   INTEGER :: nnr, nr1x, nr2x, my_nr2p, nr1p_2, i_end, j_end
   INTEGER, POINTER :: nr1p_(:), indx(:,:)
 #if defined(__OPENMP)
@@ -1990,7 +1990,7 @@ SUBROUTINE fft_scatter_many_yz_gpu ( desc, f_in, f_aux, nxx_, isgn, howmany )
 
 #if defined(__MPI)
   INTEGER :: ierr, me, me2, me3, nproc3, iproc3, ncpx, nr3px, me2_start, me2_end
-  INTEGER :: nr1x, nr2x, nr3, nr3x, nnr, offset
+  INTEGER :: nr1x, nr2x, nr3, nr3x, nnr
   INTEGER :: i, j, it, it0, k, i_end, j_end, kfrom, kdest, ip
   INTEGER :: ioff, mc, m1, m2, i1, sendsize, my_nr1p_, my_nr3p
   INTEGER, POINTER :: ncp_(:), ir1p_(:), ismap_(:)
@@ -2042,7 +2042,6 @@ SUBROUTINE fft_scatter_many_yz_gpu ( desc, f_in, f_aux, nxx_, isgn, howmany )
      !
      ! step one: store contiguously the slices
      !
-     offset = 0
      DO iproc3 = 1, nproc3
         kdest = ( iproc3 - 1 ) * sendsize
         kfrom = desc%nr3p_offset(iproc3)
@@ -2156,7 +2155,7 @@ SUBROUTINE fft_scatter_many_yz_gpu ( desc, f_in, f_aux, nxx_, isgn, howmany )
         DO k = 0, howmany-1
            DO j = 1, j_end
               DO i = nr3+1, nr3x
-                 f_in( k*ncpx*nr3x + (j-1)*nr3x + i) = 0.0d0
+                 f_in( k*ncpx*nr3x + (j-1)*nr3x + i) = (0.0d0,0.d0)
               END DO
            END DO
         END DO
