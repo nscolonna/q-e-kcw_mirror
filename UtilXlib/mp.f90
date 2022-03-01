@@ -17,12 +17,18 @@ MODULE mp
   USE cudafor,        ONLY : cudamemcpy, cudamemcpy2d, &
                             & cudaMemcpyDeviceToDevice, &
                             & cudaDeviceSynchronize
+#elif defined(__OPENMP_GPU)
+  USE omp_lib
 #endif
   !
   IMPLICIT NONE
   PRIVATE
-  ! 
-  PUBLIC :: mp_start, mp_abort, mp_stop, mp_end, &
+  !
+  PUBLIC :: &
+#if defined(__OPENMP_GPU)
+    mp_bcast_mapped, mp_sum_mapped, &
+#endif
+    mp_start, mp_abort, mp_stop, mp_end, &
     mp_bcast, mp_sum, mp_max, mp_min, mp_rank, mp_size, &
     mp_gather, mp_alltoall, mp_get, mp_put, &
     mp_barrier, mp_report, mp_group_free, &
@@ -49,7 +55,18 @@ MODULE mp
       mp_bcast_c5d_gpu, mp_bcast_c6d_gpu
 #endif
   END INTERFACE
-  ! 
+
+#if defined(__OPENMP_GPU)
+  INTERFACE mp_bcast_mapped
+    MODULE PROCEDURE mp_bcast_i1_gpu_mapped,  mp_bcast_r1_gpu_mapped, mp_bcast_c1_gpu_mapped,  mp_bcast_iv_gpu_mapped,  &
+                     mp_bcast_rv_gpu_mapped,  mp_bcast_cv_gpu_mapped, mp_bcast_l_gpu_mapped,   mp_bcast_rm_gpu_mapped,  &
+                     mp_bcast_cm_gpu_mapped,  mp_bcast_im_gpu_mapped, mp_bcast_it_gpu_mapped,  mp_bcast_i4d_gpu_mapped, &
+                     mp_bcast_rt_gpu_mapped,  mp_bcast_lv_gpu_mapped, mp_bcast_lm_gpu_mapped,  mp_bcast_r4d_gpu_mapped, &
+                     mp_bcast_r5d_gpu_mapped, mp_bcast_ct_gpu_mapped, mp_bcast_c4d_gpu_mapped, mp_bcast_c5d_gpu_mapped, &
+                     mp_bcast_c6d_gpu_mapped
+  END INTERFACE
+#endif
+  !
   INTERFACE mp_sum
     MODULE PROCEDURE mp_sum_i1, mp_sum_iv, mp_sum_i8v, mp_sum_im, mp_sum_it, mp_sum_i4, mp_sum_i5, &
       mp_sum_r1, mp_sum_rv, mp_sum_rm, mp_sum_rt, mp_sum_r4d, &
@@ -64,14 +81,24 @@ MODULE mp
       mp_sum_r6d_gpu
 #endif
   END INTERFACE
-  ! 
+  !
+#if defined(__OPENMP_GPU)
+  INTERFACE mp_sum_mapped
+    MODULE PROCEDURE  mp_sum_i1_gpu_mapped,  mp_sum_iv_gpu_mapped,  mp_sum_im_gpu_mapped,  mp_sum_it_gpu_mapped,  &
+                      mp_sum_r1_gpu_mapped,  mp_sum_rv_gpu_mapped,  mp_sum_rm_gpu_mapped,  mp_sum_rt_gpu_mapped,  &
+                      mp_sum_r4d_gpu_mapped, mp_sum_c1_gpu_mapped,  mp_sum_cv_gpu_mapped,  mp_sum_cm_gpu_mapped,  &
+                      mp_sum_ct_gpu_mapped,  mp_sum_c4d_gpu_mapped, mp_sum_c5d_gpu_mapped, mp_sum_c6d_gpu_mapped, &
+                      mp_sum_r5d_gpu_mapped, mp_sum_r6d_gpu_mapped
+  END INTERFACE
+#endif
+  !
   INTERFACE mp_root_sum
     MODULE PROCEDURE mp_root_sum_rm, mp_root_sum_cm
 #if defined(__CUDA)
     MODULE PROCEDURE mp_root_sum_rm_gpu, mp_root_sum_cm_gpu
 #endif
   END INTERFACE
-  ! 
+  !
   INTERFACE mp_get
     MODULE PROCEDURE mp_get_r1, mp_get_rv, mp_get_cv, mp_get_i1, mp_get_iv, mp_get_rm, mp_get_cm
 #if defined(__CUDA)
@@ -79,7 +106,7 @@ MODULE mp
       mp_get_rm_gpu, mp_get_cm_gpu
 #endif
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_put
      MODULE PROCEDURE mp_put_rv, mp_put_cv, mp_put_i1, mp_put_iv, &
        mp_put_rm
@@ -88,21 +115,21 @@ MODULE mp
      mp_put_rm_gpu
 #endif
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_max
      MODULE PROCEDURE mp_max_i, mp_max_r, mp_max_rv, mp_max_iv
 #if defined(__CUDA)
      MODULE PROCEDURE mp_max_i_gpu, mp_max_r_gpu, mp_max_rv_gpu, mp_max_iv_gpu
 #endif
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_min
      MODULE PROCEDURE mp_min_i, mp_min_r, mp_min_rv, mp_min_iv
 #if defined(__CUDA)
      MODULE PROCEDURE mp_min_i_gpu, mp_min_r_gpu, mp_min_rv_gpu, mp_min_iv_gpu
 #endif
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_gather
      MODULE PROCEDURE mp_gather_i1, mp_gather_iv, mp_gatherv_rv, mp_gatherv_iv, &
                       mp_gatherv_rm, mp_gatherv_im, mp_gatherv_cv, &
@@ -112,7 +139,7 @@ MODULE mp
        mp_gatherv_rm_gpu, mp_gatherv_im_gpu, mp_gatherv_cv_gpu, mp_gatherv_inplace_cplx_array_gpu
 #endif
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_allgather
      MODULE PROCEDURE mp_allgatherv_inplace_cplx_array
      MODULE PROCEDURE mp_allgatherv_inplace_real_array
@@ -121,14 +148,14 @@ MODULE mp
      MODULE PROCEDURE mp_allgatherv_inplace_real_array_gpu
 #endif
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_alltoall
      MODULE PROCEDURE mp_alltoall_c3d, mp_alltoall_i3d
 #if defined(__CUDA)
      MODULE PROCEDURE mp_alltoall_c3d_gpu, mp_alltoall_i3d_gpu
 #endif
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_circular_shift_left
      MODULE PROCEDURE mp_circular_shift_left_i0, &
        mp_circular_shift_left_i1, &
@@ -143,7 +170,7 @@ MODULE mp
        mp_circular_shift_left_c2d_gpu
 #endif
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_circular_shift_left_start
      MODULE PROCEDURE mp_circular_shift_left_start_i0, &
        mp_circular_shift_left_start_i1, &
@@ -151,7 +178,7 @@ MODULE mp
        mp_circular_shift_left_start_r2d, &
        mp_circular_shift_left_start_c2d
    END INTERFACE
-   ! 
+   !
    INTERFACE mp_type_create_column_section
      MODULE PROCEDURE mp_type_create_cplx_column_section
      MODULE PROCEDURE mp_type_create_real_column_section
@@ -176,6 +203,5470 @@ MODULE mp
 !------------------------------------------------------------------------------!
 !
 !------------------------------------------------------------------------------!
+!  GPU specific subroutines (Pietro Bonfa')
+!------------------------------------------------------------------------------!
+! Before hacking on the CUDA part remember that:
+!
+! 1. all mp_* interface should be blocking with respect to both MPI and CUDA.
+!    MPI will only wait for completion on the default stream therefore device
+!    synchronization must be enforced.
+! 2. Host -> device memory copies of a memory block of 64 KB or less are
+!    asynchronous in the sense that they may return before the data is actually
+!    available on the GPU. However, the user is still free to change the buffer
+!    as soon as those calls return with no ill effects.
+!    (https://devtalk.nvidia.com/default/topic/471866/cuda-programming-and-performance/host-device-memory-copies-up-to-64-kb-are-asynchronous/)
+! 3. For transfers from device to either pageable or pinned host memory,
+!    the function returns only once the copy has completed.
+! 4. GPU synchronization is always enforced even if no communication takes place.
+!------------------------------------------------------------------------------!
+#if defined(__CUDA) || defined(__OPENMP_GPU)
+
+!------------------------------------------------------------------------------!
+!..mp_bcast
+
+      SUBROUTINE mp_bcast_i1_gpu(msg_d,source,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, DEVICE :: msg_d
+#else
+        INTEGER         :: msg_d
+#endif
+        INTEGER :: msg_h
+        INTEGER :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+        msglen = 1
+        group = gid
+#if defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_integer_gpu( msg_d, msglen, source, group )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+#if defined(__CUDA)
+        msg_h = msg_d                   ! This syncs __MPI case
+        CALL bcast_integer( msg_h, msglen, source, group )
+        msg_d = msg_h
+#else
+        !$omp target data map(from:msg_h)
+        msg_h = msg_d
+        !$omp end target data
+        CALL bcast_integer( msg_h, msglen, source, group )
+        !$omp target data map(to:msg_h)
+        msg_d = msg_h
+        !$omp end target data
+#endif
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_i1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_iv_gpu(msg_d,source,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, DEVICE :: msg_d(:)
+#else
+        INTEGER         :: msg_d(:)
+        INTEGER         :: i
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_integer_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        INTEGER, ALLOCATABLE :: msg_h(:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_h(i) = msg_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_integer( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_d(i) = msg_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_iv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_im_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, DEVICE :: msg_d(:,:)
+#else
+        INTEGER         :: msg_d(:,:)
+        INTEGER         :: i, j
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_integer_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        INTEGER, ALLOCATABLE :: msg_h(:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_integer( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_d(i,j) = msg_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_im_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_it_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, DEVICE :: msg_d(:,:,:)
+#else
+        INTEGER         :: msg_d(:,:,:)
+        INTEGER         :: i, j, k
+#endif
+
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_integer_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        INTEGER, ALLOCATABLE :: msg_h(:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_h(i,j,k) = msg_d(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_integer( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_d(i,j,k) = msg_h(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_it_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_i4d_gpu(msg_d, source, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, DEVICE :: msg_d(:,:,:,:)
+#else
+        INTEGER         :: msg_d(:,:,:,:)
+        INTEGER         :: i, j, k, l
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_integer_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        INTEGER, ALLOCATABLE :: msg_h(:,:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_h(i,j,k,l) = msg_d(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_integer( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_d(i,j,k,l) = msg_h(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_i4d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_r1_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), DEVICE :: msg_d
+#else
+        REAL (DP)         :: msg_d
+#endif
+        REAL (DP) :: msg_h
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+        msglen = 1
+#if defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+#if defined(__CUDA)
+        msg_h = msg_d                   ! This syncs __MPI case
+        CALL bcast_real( msg_h, msglen, source, group )
+        msg_d = msg_h
+#else
+        !$omp target data map(from:msg_h)
+        msg_h = msg_d
+        !$omp end target data
+        CALL bcast_real( msg_h, msglen, source, gid )
+        !$omp target data map(to:msg_h)
+        msg_d = msg_h
+        !$omp end target data
+#endif
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_r1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_rv_gpu(msg_d,source,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL(DP), DEVICE :: msg_d(:)
+#else
+        REAL(DP)         :: msg_d(:)
+        INTEGER         :: i
+#endif
+        REAL(DP), ALLOCATABLE :: msg_h(:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_h(i) = msg_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_d(i) = msg_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_rv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_rm_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL(DP), DEVICE :: msg_d(:,:)
+#else
+        REAL(DP)         :: msg_d(:,:)
+        INTEGER         :: i, j
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        REAL(DP), ALLOCATABLE :: msg_h(:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_d(i,j) = msg_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_rm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_rt_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL(DP), DEVICE :: msg_d(:,:,:)
+#else
+        REAL(DP)         :: msg_d(:,:,:)
+        INTEGER         :: i, j, k
+#endif
+
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        REAL(DP), ALLOCATABLE :: msg_h(:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_h(i,j,k) = msg_d(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_d(i,j,k) = msg_h(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_rt_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_r4d_gpu(msg_d, source, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL(DP), DEVICE :: msg_d(:,:,:,:)
+#else
+        REAL(DP)         :: msg_d(:,:,:,:)
+        INTEGER         :: i, j, k, l
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        REAL(DP), ALLOCATABLE :: msg_h(:,:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_h(i,j,k,l) = msg_d(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_d(i,j,k,l) = msg_h(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_r4d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_r5d_gpu(msg_d, source, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL(DP), DEVICE :: msg_d(:,:,:,:,:)
+#else
+        REAL(DP)         :: msg_d(:,:,:,:,:)
+        INTEGER         :: i, j, k, l, m
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        REAL(DP), ALLOCATABLE :: msg_h(:,:,:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(5)
+        do m=lbound(msg_h,5), ubound(msg_h,5)
+           do l=lbound(msg_h,4), ubound(msg_h,4)
+              do k=lbound(msg_h,3), ubound(msg_h,3)
+                 do j=lbound(msg_h,2), ubound(msg_h,2)
+                    do i=lbound(msg_h,1), ubound(msg_h,1)
+                       msg_h(i,j,k,l,m) = msg_d(i,j,k,l,m)
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(5)
+        do m=lbound(msg_h,5), ubound(msg_h,5)
+           do l=lbound(msg_h,4), ubound(msg_h,4)
+              do k=lbound(msg_h,3), ubound(msg_h,3)
+                 do j=lbound(msg_h,2), ubound(msg_h,2)
+                    do i=lbound(msg_h,1), ubound(msg_h,1)
+                       msg_d(i,j,k,l,m) = msg_h(i,j,k,l,m)
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_r5d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_c1_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), DEVICE :: msg_d
+#else
+        COMPLEX (DP)         :: msg_d
+#endif
+        COMPLEX (DP) :: msg_h
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+        msglen = 1
+#if defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+#if defined(__CUDA)
+        msg_h = msg_d                   ! This syncs __MPI case
+        CALL bcast_real( msg_h, 2 * msglen, source, gid )
+        msg_d = msg_h
+#else
+        !$omp target data map(from:msg_h)
+        msg_h = msg_d
+        !$omp end target data
+        CALL bcast_real( msg_h, 2 * msglen, source, gid )
+        !$omp target data map(to:msg_h)
+        msg_d = msg_h
+        !$omp end target data
+#endif
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_c1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_cv_gpu(msg_d,source,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE :: msg_d(:)
+#else
+        COMPLEX(DP)         :: msg_d(:)
+        INTEGER         :: i
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        COMPLEX(DP), ALLOCATABLE :: msg_h(:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_h(i) = msg_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, 2 * msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_d(i) = msg_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_cv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_cm_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE :: msg_d(:,:)
+#else
+        COMPLEX(DP)         :: msg_d(:,:)
+        INTEGER         :: i, j
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        COMPLEX(DP), ALLOCATABLE :: msg_h(:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2) is_device_ptr(msg_d)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, 2 * msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(2) is_device_ptr(msg_d)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_d(i,j) = msg_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_cm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_ct_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE :: msg_d(:,:,:)
+#else
+        COMPLEX(DP)         :: msg_d(:,:,:)
+        INTEGER         :: i, j, k
+#endif
+
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        COMPLEX(DP), ALLOCATABLE :: msg_h(:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_h(i,j,k) = msg_d(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, 2 * msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_d(i,j,k) = msg_h(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_ct_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_c4d_gpu(msg_d, source, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE :: msg_d(:,:,:,:)
+#else
+        COMPLEX(DP)         :: msg_d(:,:,:,:)
+        INTEGER         :: i, j, k, l, m
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        COMPLEX(DP), ALLOCATABLE :: msg_h(:,:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_h(i,j,k,l) = msg_d(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, 2 * msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_d(i,j,k,l) = msg_h(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_c4d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_c5d_gpu(msg_d, source, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE :: msg_d(:,:,:,:,:)
+#else
+        COMPLEX(DP)         :: msg_d(:,:,:,:,:)
+        INTEGER         :: i, j, k, l, m
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        COMPLEX(DP), ALLOCATABLE :: msg_h(:,:,:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(5)
+        do m=lbound(msg_h,5), ubound(msg_h,5)
+           do l=lbound(msg_h,4), ubound(msg_h,4)
+              do k=lbound(msg_h,3), ubound(msg_h,3)
+                 do j=lbound(msg_h,2), ubound(msg_h,2)
+                    do i=lbound(msg_h,1), ubound(msg_h,1)
+                       msg_h(i,j,k,l,m) = msg_d(i,j,k,l,m)
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, 2 * msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(5)
+        do m=lbound(msg_h,5), ubound(msg_h,5)
+           do l=lbound(msg_h,4), ubound(msg_h,4)
+              do k=lbound(msg_h,3), ubound(msg_h,3)
+                 do j=lbound(msg_h,2), ubound(msg_h,2)
+                    do i=lbound(msg_h,1), ubound(msg_h,1)
+                       msg_d(i,j,k,l,m) = msg_h(i,j,k,l,m)
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_c5d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_c6d_gpu(msg_d, source, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE :: msg_d(:,:,:,:,:,:)
+#else
+        COMPLEX(DP)         :: msg_d(:,:,:,:,:,:)
+        INTEGER         :: i, j, k, l, m, n
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        COMPLEX(DP), ALLOCATABLE :: msg_h(:,:,:,:,:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(6)
+        do n=lbound(msg_h,6), ubound(msg_h,6)
+           do m=lbound(msg_h,5), ubound(msg_h,5)
+              do l=lbound(msg_h,4), ubound(msg_h,4)
+                 do k=lbound(msg_h,3), ubound(msg_h,3)
+                    do j=lbound(msg_h,2), ubound(msg_h,2)
+                       do i=lbound(msg_h,1), ubound(msg_h,1)
+                          msg_h(i,j,k,l,m,n) = msg_d(i,j,k,l,m,n)
+                       enddo
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, 2 * msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(6)
+        do n=lbound(msg_h,6), ubound(msg_h,6)
+           do m=lbound(msg_h,5), ubound(msg_h,5)
+              do l=lbound(msg_h,4), ubound(msg_h,4)
+                 do k=lbound(msg_h,3), ubound(msg_h,3)
+                    do j=lbound(msg_h,2), ubound(msg_h,2)
+                       do i=lbound(msg_h,1), ubound(msg_h,1)
+                          msg_d(i,j,k,l,m,n) = msg_h(i,j,k,l,m,n)
+                       enddo
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_c6d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_l_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        LOGICAL, DEVICE :: msg_d
+#else
+        LOGICAL         :: msg_d
+#endif
+        LOGICAL :: msg_h
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+        msglen = 1
+#if defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_logical_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+#if defined(__CUDA)
+        msg_h = msg_d                   ! This syncs __MPI case
+        CALL bcast_logical( msg_h, msglen, source, gid )
+        msg_d = msg_h
+#else
+        !$omp target data map(from:msg_h)
+        msg_h = msg_d
+        !$omp end target data
+        CALL bcast_logical( msg_h, msglen, source, gid )
+        !$omp target data map(to:msg_h)
+        msg_d = msg_h
+        !$omp end target data
+#endif
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_l_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_lv_gpu(msg_d,source,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        LOGICAL, DEVICE :: msg_d(:)
+#else
+        LOGICAL         :: msg_d(:)
+        INTEGER         :: i
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_logical_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        LOGICAL, ALLOCATABLE :: msg_h(:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_h(i) = msg_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_logical( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_d(i) = msg_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_lv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_lm_gpu( msg_d, source, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        LOGICAL, DEVICE :: msg_d(:,:)
+#else
+        LOGICAL         :: msg_d(:,:)
+        INTEGER         :: i, j
+#endif
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
+#endif
+        CALL bcast_real_gpu( msg_d, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        LOGICAL, ALLOCATABLE :: msg_h(:,:)
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL bcast_real( msg_h, msglen, source, gid )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_d(i,j) = msg_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_bcast_lm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_get_i1_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        INTEGER, DEVICE             :: msg_dest_d
+        INTEGER, INTENT(IN), DEVICE :: msg_sour_d
+#else
+        INTEGER             :: msg_dest_d
+        INTEGER, INTENT(IN) :: msg_sour_d
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group, ierr
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: nrcv
+        INTEGER :: msglen = 1
+
+#if ! defined(__GPU_MPI)
+        ! Call CPU implementation
+        INTEGER :: msg_dest_h, msg_sour_h
+        !
+#if defined(__CUDA)
+        msg_dest_h = msg_dest_d; msg_sour_h = msg_sour_d      ! This syncs __MPI case
+        CALL mp_get_i1(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(from:msg_dest_h, msg_sour_h)
+        msg_dest_h = msg_dest_d
+        msg_sour_h = msg_sour_d
+        !$omp end target data
+        CALL mp_get_i1(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+        !$omp target data map(to:msg_dest_h)
+        msg_dest_d = msg_dest_h
+        !$omp end target data
+#endif
+#else
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(dest .NE. sour) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen=1
+             CALL MPI_SEND( msg_sour_d, msglen, MPI_INTEGER, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( -8001 )
+           ELSE IF(mpime .EQ. dest) THEN
+             msglen=1
+             CALL MPI_RECV( msg_dest_d, msglen, MPI_INTEGER, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( -8002 )
+             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( -8003 )
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !$omp target
+          msg_dest_d = msg_sour_d
+          !$omp end target data
+          msglen = 1
+        END IF
+
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( -8004 )
+#endif
+
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_get_i1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_get_iv_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        INTEGER, DEVICE             :: msg_dest_d(:)
+        INTEGER, INTENT(IN), DEVICE :: msg_sour_d(:)
+#else
+        INTEGER             :: msg_dest_d(:)
+        INTEGER, INTENT(IN) :: msg_sour_d(:)
+        INTEGER             :: i
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        INTEGER, ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );       ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+           msg_sour_h(i) = msg_sour_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_get_iv(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+           msg_dest_d(i) = msg_dest_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen = SIZE(msg_sour_d)
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_INTEGER, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9001 )
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_INTEGER, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9002 )
+             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9003 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9004 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_get_iv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_get_r1_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        REAL(DP), DEVICE             :: msg_dest_d
+        REAL(DP), INTENT(IN), DEVICE :: msg_sour_d
+#else
+        REAL(DP)             :: msg_dest_d
+        REAL(DP), INTENT(IN) :: msg_sour_d
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group, ierr
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: nrcv
+        INTEGER :: msglen = 1
+
+#if ! defined(__GPU_MPI)
+        ! Call CPU implementation
+        REAL(DP) :: msg_dest_h, msg_sour_h
+        !
+#if defined(__CUDA)
+        msg_dest_h = msg_dest_d; msg_sour_h = msg_sour_d      ! This syncs __MPI case
+        CALL mp_get_r1(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(from:msg_dest_h, msg_sour_h)
+        msg_dest_h = msg_dest_d
+        msg_sour_h = msg_sour_d
+        !$omp end target data
+        CALL mp_get_r1(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+        !$omp target data map(to:msg_dest_h)
+        msg_dest_d = msg_dest_h
+        !$omp end target data
+#endif
+#else
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(dest .NE. sour) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen=1
+             CALL MPI_SEND( msg_sour_d, msglen, MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9005 )
+           ELSE IF(mpime .EQ. dest) THEN
+             msglen=1
+             CALL MPI_RECV( msg_dest_d, msglen, MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9006 )
+             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9007 )
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !$omp target
+          msg_dest_d = msg_sour_d
+          !$omp end target data
+          msglen = 1
+        END IF
+
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9008 )
+#endif
+
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_get_r1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_get_rv_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        REAL(DP), DEVICE             :: msg_dest_d(:)
+        REAL(DP), INTENT(IN), DEVICE :: msg_sour_d(:)
+#else
+        REAL(DP)             :: msg_dest_d(:)
+        REAL(DP), INTENT(IN) :: msg_sour_d(:)
+        INTEGER             :: i
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        REAL(DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );       ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+           msg_sour_h(i) = msg_sour_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_get_rv(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+           msg_dest_d(i) = msg_dest_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen = SIZE(msg_sour_d)
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9009 )
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9010 )
+             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9011 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9012 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_get_rv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_get_rm_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        REAL(DP), DEVICE             :: msg_dest_d(:,:)
+        REAL(DP), INTENT(IN), DEVICE :: msg_sour_d(:,:)
+#else
+        REAL(DP)             :: msg_dest_d(:,:)
+        REAL(DP), INTENT(IN) :: msg_sour_d(:,:)
+        INTEGER             :: i, j
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        REAL(DP), ALLOCATABLE :: msg_dest_h(:,:), msg_sour_h(:,:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );       ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_sour_h,2), ubound(msg_sour_h,2)
+           do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+              msg_sour_h(i,j) = msg_sour_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_get_rm(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_dest_h,2), ubound(msg_dest_h,2)
+           do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+              msg_dest_d(i,j) = msg_dest_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen = SIZE(msg_sour_d)
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9013 )
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9014 )
+             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9015 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9016 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_get_rm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_get_cv_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE             :: msg_dest_d(:)
+        COMPLEX(DP), INTENT(IN), DEVICE :: msg_sour_d(:)
+#else
+        COMPLEX(DP)             :: msg_dest_d(:)
+        COMPLEX(DP), INTENT(IN) :: msg_sour_d(:)
+        INTEGER             :: i
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        COMPLEX(DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );       ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+           msg_sour_h(i) = msg_sour_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_get_cv(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+           msg_dest_d(i) = msg_dest_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen = SIZE(msg_sour_d)
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9017 )
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9018 )
+             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9019 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9020 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_get_cv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_get_cm_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE             :: msg_dest_d(:,:)
+        COMPLEX(DP), INTENT(IN), DEVICE :: msg_sour_d(:,:)
+#else
+        COMPLEX(DP)             :: msg_dest_d(:,:)
+        COMPLEX(DP), INTENT(IN) :: msg_sour_d(:,:)
+        INTEGER             :: i, j
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        COMPLEX(DP), ALLOCATABLE :: msg_dest_h(:,:), msg_sour_h(:,:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );       ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_sour_h,2), ubound(msg_sour_h,2)
+           do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+              msg_sour_h(i,j) = msg_sour_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_get_cm(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_dest_h,2), ubound(msg_dest_h,2)
+           do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+              msg_dest_d(i,j) = msg_dest_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen = SIZE(msg_sour_d)
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9021 )
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9022 )
+             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9023 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9024 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_get_cm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_put_i1_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        INTEGER, DEVICE             :: msg_dest_d
+        INTEGER, INTENT(IN), DEVICE :: msg_sour_d
+#else
+        INTEGER             :: msg_dest_d
+        INTEGER, INTENT(IN) :: msg_sour_d
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        INTEGER :: msg_dest_h, msg_sour_h
+        !
+#if defined(__CUDA)
+        msg_dest_h = msg_dest_d; msg_sour_h = msg_sour_d      ! This syncs __MPI case
+        CALL mp_put_i1(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(from:msg_dest_h, msg_sour_h)
+        msg_dest_h = msg_dest_d
+        msg_sour_h = msg_sour_d
+        !$omp end target data
+        CALL mp_put_i1(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
+        !$omp target data map(to:msg_dest_h)
+        msg_dest_d = msg_dest_h
+        !$omp end target data
+#endif
+#else
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(dest .NE. sour) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             CALL MPI_SEND( msg_sour_d, 1, MPI_INTEGER, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9025 )
+             msglen = 1
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, 1, MPI_INTEGER, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9026 )
+             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9027 )
+             msglen = 1
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !$omp target
+          msg_dest_d = msg_sour_d
+          !$omp end target data
+          msglen = 1
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9028 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_put_i1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_put_iv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        INTEGER, DEVICE             :: msg_dest_d(:)
+        INTEGER, INTENT(IN), DEVICE :: msg_sour_d(:)
+#else
+        INTEGER             :: msg_dest_d(:)
+        INTEGER, INTENT(IN) :: msg_sour_d(:)
+        INTEGER             :: i
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        INTEGER, ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+           msg_sour_h(i) = msg_sour_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_put_iv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+           msg_dest_d(i) = msg_dest_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+        !
+#if defined(__MPI)
+        group = gid
+#endif
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_INTEGER, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9029 )
+             msglen = SIZE(msg_sour_d)
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_INTEGER, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9030 )
+             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9031 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9032 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_put_iv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_put_rv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        REAL (DP), DEVICE             :: msg_dest_d(:)
+        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d(:)
+#else
+        REAL (DP)             :: msg_dest_d(:)
+        REAL (DP), INTENT(IN) :: msg_sour_d(:)
+        INTEGER               :: i
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        REAL (DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+           msg_sour_h(i) = msg_sour_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_put_rv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+           msg_dest_d(i) = msg_dest_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+        !
+#if defined(__MPI)
+        group = gid
+#endif
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9033 )
+             msglen = SIZE(msg_sour_d)
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9034 )
+             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9035 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9036 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_put_rv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_put_rm_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        REAL (DP), DEVICE             :: msg_dest_d(:,:)
+        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d(:,:)
+#else
+        REAL (DP)             :: msg_dest_d(:,:)
+        REAL (DP), INTENT(IN) :: msg_sour_d(:,:)
+        INTEGER               :: i, j
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        REAL (DP), ALLOCATABLE :: msg_dest_h(:,:), msg_sour_h(:,:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do
+        do j=lbound(msg_sour_h,2), ubound(msg_sour_h,2)
+           do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+              msg_sour_h(i,j) = msg_sour_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_put_rm(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do
+        do j=lbound(msg_dest_h,2), ubound(msg_dest_h,2)
+           do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+              msg_dest_d(i,j) = msg_dest_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+        !
+#if defined(__MPI)
+        group = gid
+#endif
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9037 )
+             msglen = SIZE(msg_sour_d)
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9038 )
+             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9039 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d,1),1:SIZE(msg_sour_d,2)) = msg_sour_d(:,:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy2D(msg_dest_d, SIZE(msg_dest_d,1),&
+                              msg_sour_d, SIZE(msg_sour_d,1),&
+                              SIZE(msg_sour_d,1), SIZE(msg_sour_d,2), &
+                              cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9040 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_put_rm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_put_cv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        COMPLEX (DP), DEVICE             :: msg_dest_d(:)
+        COMPLEX (DP), INTENT(IN), DEVICE :: msg_sour_d(:)
+#else
+        COMPLEX (DP)             :: msg_dest_d(:)
+        COMPLEX (DP), INTENT(IN) :: msg_sour_d(:)
+        INTEGER               :: i
+#endif
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+        !
+#if ! defined(__GPU_MPI)
+        COMPLEX (DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
+        !
+#if defined(__CUDA)
+        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_dest_h, mold  =msg_dest_d ); ALLOCATE( msg_sour_h, mold  =msg_sour_d );       ! This syncs __MPI case
+        !$omp target data map(from:msg_sour_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_sour_h,1), ubound(msg_sour_h,1)
+           msg_sour_h(i) = msg_sour_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_put_cv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
+#if defined(__CUDA)
+        msg_dest_d = msg_dest_h
+#else
+        !$omp target data map(to:msg_dest_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_dest_h,1), ubound(msg_dest_h,1)
+           msg_dest_d(i) = msg_dest_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_dest_h, msg_sour_h)
+#else
+        !
+#if defined(__MPI)
+        group = gid
+#endif
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
+#endif
+        !
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 9041 )
+             msglen = SIZE(msg_sour_d)
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 9042 )
+             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 9043 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
+#if defined(__CUDA)
+          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
+#else
+          call dmr_device_memcpy(array_dst=msg_dest_d, array_src=msg_sour_d)
+#endif
+          msglen = SIZE(msg_sour_d)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9044 )
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
+#endif
+        RETURN
+      END SUBROUTINE mp_put_cv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+!..mp_sum
+      SUBROUTINE mp_sum_i1_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, INTENT (INOUT), DEVICE :: msg_d
+#else
+        INTEGER, INTENT (INOUT)         :: msg_d
+#endif
+        INTEGER :: msg_h
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+        msglen = 1
+#if defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_integer_gpu( msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+        !
+#if defined(__CUDA)
+        msg_h = msg_d                   ! This syncs __MPI case
+        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
+        msg_d = msg_h
+#else
+        !$omp target data map(from:msg_h)
+        msg_h = msg_d
+        !$omp end target data
+        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
+        !$omp target data map(to:msg_h)
+        msg_d = msg_h
+        !$omp end target data
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_i1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_iv_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, INTENT (INOUT), DEVICE :: msg_d(:)
+#else
+        INTEGER, INTENT (INOUT)         :: msg_d(:)
+        INTEGER                         :: i
+#endif
+        INTEGER, ALLOCATABLE :: msg_h(:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_integer_gpu( msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_h(i) = msg_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_d(i) = msg_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_iv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_im_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, INTENT (INOUT), DEVICE :: msg_d(:,:)
+#else
+        INTEGER, INTENT (INOUT)         :: msg_d(:,:)
+        INTEGER                         :: i, j
+#endif
+        INTEGER, ALLOCATABLE :: msg_h(:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_integer_gpu( msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_d(i,j) = msg_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_im_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_it_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, INTENT (INOUT), DEVICE :: msg_d(:,:,:)
+#else
+        INTEGER, INTENT (INOUT)         :: msg_d(:,:,:)
+        INTEGER                         :: i, j, k
+#endif
+        INTEGER, ALLOCATABLE :: msg_h(:,:,:)
+        INTEGER, INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_integer_gpu( msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_h(i,j,k) = msg_d(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_d(i,j,k) = msg_h(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_it_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_r1_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (INOUT), DEVICE :: msg_d
+#else
+        REAL (DP), INTENT (INOUT)         :: msg_d
+#endif
+        REAL(DP) :: msg_h
+        INTEGER, INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+        msglen = 1
+#if defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+#if defined(__CUDA)
+        msg_h = msg_d                   ! This syncs __MPI case
+        CALL reduce_base_real( msglen, msg_h, gid, -1 )
+        msg_d = msg_h
+#else
+        !$omp target data map(from:msg_h)
+        msg_h = msg_d
+        !$omp end target data
+        CALL reduce_base_real( msglen, msg_h, gid, -1 )
+        !$omp target data map(to:msg_h)
+        msg_d = msg_h
+        !$omp end target data
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_r1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_rv_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:)
+#else
+        REAL (DP), INTENT (INOUT)         :: msg_d(:)
+        INTEGER                           :: i
+#endif
+        REAL(DP), ALLOCATABLE :: msg_h(:)
+        INTEGER, INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_h(i) = msg_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_d(i) = msg_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_rv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_rm_gpu(msg_d, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:)
+#else
+        REAL (DP), INTENT (INOUT)         :: msg_d(:,:)
+        INTEGER                           :: i, j
+#endif
+        REAL (DP), ALLOCATABLE :: msg_h(:,:)
+        INTEGER, INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_d(i,j) = msg_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_rm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_root_sum_rm_gpu( msg_d, res_d, root, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (IN) , DEVICE :: msg_d(:,:)
+        REAL (DP), INTENT (OUT), DEVICE :: res_d(:,:)
+#else
+        REAL (DP), INTENT (IN)          :: msg_d(:,:)
+        REAL (DP), INTENT (OUT)         :: res_d(:,:)
+        INTEGER                         :: i, j
+#endif
+        REAL (DP), ALLOCATABLE :: res_h(:,:), msg_h(:,:)
+        INTEGER,   INTENT (IN) :: root
+        INTEGER,   INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr, taskid
+#if defined(__MPI)
+        !
+        CALL mpi_comm_rank( gid, taskid, ierr)
+        IF( ierr /= 0 ) CALL mp_stop( 9045 )
+        !
+        msglen = size(msg_d)
+        IF( taskid == root ) THEN
+           IF( msglen > size(res_d) ) CALL mp_stop( 9046 )
+        END IF
+#if  defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_to_gpu( msglen, msg_d, res_d, gid, root )
+        RETURN ! Sync not needed in this case
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        IF( taskid == root ) ALLOCATE( res_h(lbound(res_d,1):ubound(res_d,1), lbound(res_d,2):ubound(res_d,2)));
+        CALL reduce_base_real_to( msglen, msg_h, res_h, gid, root )
+        IF( taskid == root ) THEN
+#if defined(__CUDA)
+           res_d = res_h;
+#else
+           !$omp target data map(to:res_h)
+           !$omp target teams distribute parallel do collapse(2)
+           do j=lbound(res_h,2), ubound(res_h,2)
+              do i=lbound(res_h,1), ubound(res_h,1)
+                 res_d(i,j) = res_h(i,j)
+              enddo
+           enddo
+           !$omp end target teams distribute parallel do
+           !$omp end target data
+#endif
+           DEALLOCATE(res_h)
+        ENDIF
+        DEALLOCATE(msg_h)
+#endif
+
+#else
+#if defined(__CUDA)
+        res_d = msg_d
+#else
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(res_d,2), ubound(res_d,2)
+           do i=lbound(res_d,1), ubound(res_d,1)
+              res_d(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_root_sum_rm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_root_sum_cm_gpu( msg_d, res_d, root, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (IN) , DEVICE :: msg_d(:,:)
+        COMPLEX (DP), INTENT (OUT), DEVICE :: res_d(:,:)
+#else
+        COMPLEX (DP), INTENT (IN)          :: msg_d(:,:)
+        COMPLEX (DP), INTENT (OUT)         :: res_d(:,:)
+        INTEGER                            :: i, j
+#endif
+        COMPLEX (DP), ALLOCATABLE          :: res_h(:,:), msg_h(:,:)
+        INTEGER,   INTENT (IN)  :: root
+        INTEGER,  INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr, taskid
+#if defined(__MPI)
+        msglen = size(msg_d)
+
+        CALL mpi_comm_rank( gid, taskid, ierr)
+        IF( ierr /= 0 ) CALL mp_stop( 9047 )
+
+        IF( taskid == root ) THEN
+           IF( msglen > size(res_d) ) CALL mp_stop( 9048 )
+        END IF
+#if  defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_to_gpu( 2 * msglen, msg_d, res_d, gid, root )
+        RETURN ! Sync not needed in this case
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        IF( taskid == root ) ALLOCATE( res_h(lbound(res_d,1):ubound(res_d,1), lbound(res_d,2):ubound(res_d,2)));
+        CALL reduce_base_real_to( 2 * msglen, msg_h, res_h, gid, root )
+        IF( taskid == root ) THEN
+#if defined(__CUDA)
+           res_d = res_h;
+#else
+           !$omp target data map(to:res_h)
+           !$omp target teams distribute parallel do collapse(2)
+           do j=lbound(res_h,2), ubound(res_h,2)
+              do i=lbound(res_h,1), ubound(res_h,1)
+                 res_d(i,j) = res_h(i,j)
+              enddo
+           enddo
+           !$omp end target teams distribute parallel do
+           !$omp end target data
+#endif
+           DEALLOCATE(res_h)
+        ENDIF
+        DEALLOCATE(msg_h)
+#endif
+#else
+#if defined(__CUDA)
+        res_d = msg_d
+#else
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(res_d,2), ubound(res_d,2)
+           do i=lbound(res_d,1), ubound(res_d,1)
+              res_d(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_root_sum_cm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_rmm_gpu( msg_d, res_d, root, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (IN), DEVICE :: msg_d(:,:)
+        REAL (DP), INTENT (OUT),DEVICE :: res_d(:,:)
+#else
+        REAL (DP), INTENT (IN)         :: msg_d(:,:)
+        REAL (DP), INTENT (OUT)        :: res_d(:,:)
+        INTEGER                        :: i, j
+#endif
+        REAL (DP), ALLOCATABLE         :: res_h(:,:), msg_h(:,:)
+        INTEGER, INTENT (IN) :: root
+        INTEGER, INTENT (IN) :: gid
+        INTEGER :: group
+        INTEGER :: msglen
+        INTEGER :: taskid, ierr
+
+#if defined(__MPI)
+
+        msglen = size(msg_d)
+        !
+        group = gid
+        !
+        CALL mpi_comm_rank( group, taskid, ierr)
+        IF( ierr /= 0 ) CALL mp_stop( 9049 )
+
+        IF( taskid == root ) THEN
+           IF( msglen > size(res_d) ) CALL mp_stop( 9050 )
+        END IF
+        !
+#if  defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_to_gpu( msglen, msg_d, res_d, group, root )
+        RETURN ! Sync not needed in this case
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        IF( taskid == root ) ALLOCATE( res_h(lbound(res_d,1):ubound(res_d,1), lbound(res_d,2):ubound(res_d,2)));
+        CALL reduce_base_real_to( msglen, msg_h, res_h, gid, root )
+        IF( taskid == root ) THEN
+#if defined(__CUDA)
+           res_d = res_h;
+#else
+           !$omp target data map(to:res_h)
+           !$omp target teams distribute parallel do collapse(2)
+           do j=lbound(res_h,2), ubound(res_h,2)
+              do i=lbound(res_h,1), ubound(res_h,1)
+                 res_d(i,j) = res_h(i,j)
+              enddo
+           enddo
+           !$omp end target teams distribute parallel do
+           !$omp end target data
+#endif
+           DEALLOCATE(res_h)
+        ENDIF
+        DEALLOCATE(msg_h)
+#endif
+        !
+#else
+#if defined(__CUDA)
+        res_d = msg_d
+#else
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(res_d,2), ubound(res_d,2)
+           do i=lbound(res_d,1), ubound(res_d,1)
+              res_d(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_sum_rmm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_rt_gpu( msg_d, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:)
+#else
+        REAL (DP), INTENT (INOUT)         :: msg_d(:,:,:)
+        INTEGER                           :: i, j, k
+#endif
+        REAL (DP), ALLOCATABLE :: msg_h(:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_h(i,j,k) = msg_d(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(3)
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_d(i,j,k) = msg_h(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_rt_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_r4d_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:)
+#else
+        REAL (DP), INTENT (INOUT)         :: msg_d(:,:,:,:)
+        INTEGER                           :: i, j, k, l
+#endif
+        REAL (DP), ALLOCATABLE :: msg_h(:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_h(i,j,k,l) = msg_d(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_d(i,j,k,l) = msg_h(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_r4d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_c1_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d
+#else
+        COMPLEX (DP), INTENT (INOUT)         :: msg_d
+#endif
+        COMPLEX (DP) :: msg_h
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+        msglen = 1
+#if  defined(__GPU_MPI)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        msg_h=msg_d                               ! This syncs __MPI case
+        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
+        msg_d = msg_h
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#else
+        !$omp target map(from:msg_h)
+        msg_h=msg_d                               ! This syncs __MPI case
+        !$omp end target
+        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
+        !$omp target map(to:msg_h)
+        msg_d = msg_h
+        !$omp end target
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_c1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_cv_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:)
+#else
+        COMPLEX (DP), INTENT (INOUT)         :: msg_d(:)
+        INTEGER                           :: i
+#endif
+        COMPLEX(DP), ALLOCATABLE :: msg_h(:)
+        INTEGER, INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_h(i) = msg_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(msg_h,1), ubound(msg_h,1)
+           msg_d(i) = msg_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_cv_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_cm_gpu(msg_d, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:)
+#else
+        COMPLEX (DP), INTENT (INOUT)         :: msg_d(:,:)
+        INTEGER                              :: i, j
+#endif
+        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:)
+        INTEGER, INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
+        ! No need for final syncronization
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_d(i,j) = msg_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_cm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_cmm_gpu( msg_d, res_d, gid )
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (IN), DEVICE :: msg_d(:,:)
+        COMPLEX (DP), INTENT (OUT),DEVICE :: res_d(:,:)
+#else
+        COMPLEX (DP), INTENT (IN)         :: msg_d(:,:)
+        COMPLEX (DP), INTENT (OUT)        :: res_d(:,:)
+        INTEGER                           :: i, j
+#endif
+        COMPLEX (DP), ALLOCATABLE         :: res_h(:,:), msg_h(:,:)
+        INTEGER, INTENT (IN) :: gid
+        INTEGER :: group
+        INTEGER :: msglen
+        INTEGER :: taskid, ierr
+
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_to_gpu( 2 * msglen, msg_d, res_h, gid, -1 )
+        RETURN ! Sync not needed in this case
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(msg_h,2), ubound(msg_h,2)
+           do i=lbound(msg_h,1), ubound(msg_h,1)
+              msg_h(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        ALLOCATE( res_h(lbound(res_d,1):ubound(res_d,1), lbound(res_d,2):ubound(res_d,2)));
+        CALL reduce_base_real_to( 2 * msglen, msg_h, res_h, gid, -1 )
+#if defined(__CUDA)
+        res_d = res_h;
+#else
+        !$omp target data map(to:res_h)
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(res_h,2), ubound(res_h,2)
+           do i=lbound(res_h,1), ubound(res_h,1)
+              res_d(i,j) = res_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(res_h, msg_h)
+#endif
+        !
+#else
+#if defined(__CUDA)
+        res_d = msg_d
+#else
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(res_d,2), ubound(res_d,2)
+           do i=lbound(res_d,1), ubound(res_d,1)
+              res_d(i,j) = msg_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_sum_cmm_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_ct_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:)
+#else
+        COMPLEX (DP), INTENT (INOUT)         :: msg_d(:,:,:)
+        INTEGER                              :: i, j, k
+#endif
+        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = SIZE(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold=msg_d )           ! This syncs __MPI case
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_h(i,j,k) = msg_d(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do
+        do k=lbound(msg_h,3), ubound(msg_h,3)
+           do j=lbound(msg_h,2), ubound(msg_h,2)
+              do i=lbound(msg_h,1), ubound(msg_h,1)
+                 msg_d(i,j,k) = msg_h(i,j,k)
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_ct_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_c4d_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:)
+#else
+        COMPLEX (DP), INTENT (INOUT)         :: msg_d(:,:,:,:)
+        INTEGER                           :: i, j, k, l
+#endif
+        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_h(i,j,k,l) = msg_d(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(4)
+        do l=lbound(msg_h,4), ubound(msg_h,4)
+           do k=lbound(msg_h,3), ubound(msg_h,3)
+              do j=lbound(msg_h,2), ubound(msg_h,2)
+                 do i=lbound(msg_h,1), ubound(msg_h,1)
+                    msg_d(i,j,k,l) = msg_h(i,j,k,l)
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_c4d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_c5d_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:,:)
+#else
+        COMPLEX (DP), INTENT (INOUT)         :: msg_d(:,:,:,:,:)
+        INTEGER                           :: i, j, k, l, m
+#endif
+        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(5)
+        do m=lbound(msg_h,5), ubound(msg_h,5)
+           do l=lbound(msg_h,4), ubound(msg_h,4)
+              do k=lbound(msg_h,3), ubound(msg_h,3)
+                 do j=lbound(msg_h,2), ubound(msg_h,2)
+                    do i=lbound(msg_h,1), ubound(msg_h,1)
+                       msg_h(i,j,k,l,m) = msg_d(i,j,k,l,m)
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(5)
+        do m=lbound(msg_h,5), ubound(msg_h,5)
+           do l=lbound(msg_h,4), ubound(msg_h,4)
+              do k=lbound(msg_h,3), ubound(msg_h,3)
+                 do j=lbound(msg_h,2), ubound(msg_h,2)
+                    do i=lbound(msg_h,1), ubound(msg_h,1)
+                       msg_d(i,j,k,l,m) = msg_h(i,j,k,l,m)
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_c5d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_r5d_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:,:)
+#else
+        REAL (DP), INTENT (INOUT)         :: msg_d(:,:,:,:,:)
+        INTEGER                           :: i, j, k, l, m
+#endif
+        REAL (DP), ALLOCATABLE :: msg_h(:,:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(5)
+        do m=lbound(msg_h,5), ubound(msg_h,5)
+           do l=lbound(msg_h,4), ubound(msg_h,4)
+              do k=lbound(msg_h,3), ubound(msg_h,3)
+                 do j=lbound(msg_h,2), ubound(msg_h,2)
+                    do i=lbound(msg_h,1), ubound(msg_h,1)
+                       msg_h(i,j,k,l,m) = msg_d(i,j,k,l,m)
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(5)
+        do m=lbound(msg_h,5), ubound(msg_h,5)
+           do l=lbound(msg_h,4), ubound(msg_h,4)
+              do k=lbound(msg_h,3), ubound(msg_h,3)
+                 do j=lbound(msg_h,2), ubound(msg_h,2)
+                    do i=lbound(msg_h,1), ubound(msg_h,1)
+                       msg_d(i,j,k,l,m) = msg_h(i,j,k,l,m)
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_r5d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_r6d_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:,:,:)
+#else
+        REAL (DP), INTENT (INOUT)         :: msg_d(:,:,:,:,:,:)
+        INTEGER                           :: i, j, k, l, m, n
+#endif
+        REAL (DP), ALLOCATABLE :: msg_h(:,:,:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(6)
+        do n=lbound(msg_h,6), ubound(msg_h,6)
+           do m=lbound(msg_h,5), ubound(msg_h,5)
+              do l=lbound(msg_h,4), ubound(msg_h,4)
+                 do k=lbound(msg_h,3), ubound(msg_h,3)
+                    do j=lbound(msg_h,2), ubound(msg_h,2)
+                       do i=lbound(msg_h,1), ubound(msg_h,1)
+                          msg_h(i,j,k,l,m,n) = msg_d(i,j,k,l,m,n)
+                       enddo
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(6)
+        do n=lbound(msg_h,6), ubound(msg_h,6)
+           do m=lbound(msg_h,5), ubound(msg_h,5)
+              do l=lbound(msg_h,4), ubound(msg_h,4)
+                 do k=lbound(msg_h,3), ubound(msg_h,3)
+                    do j=lbound(msg_h,2), ubound(msg_h,2)
+                       do i=lbound(msg_h,1), ubound(msg_h,1)
+                          msg_d(i,j,k,l,m,n) = msg_h(i,j,k,l,m,n)
+                       enddo
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_r6d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_c6d_gpu(msg_d,gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:,:,:)
+#else
+        COMPLEX (DP), INTENT (INOUT)         :: msg_d(:,:,:,:,:,:)
+        INTEGER                           :: i, j, k, l, m, n
+#endif
+        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+          ierr = cudaDeviceSynchronize()
+#endif
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg_d)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
+#endif
+        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+#if defined(__CUDA)
+        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+#else
+        ALLOCATE( msg_h, mold  =msg_d )
+        !$omp target data map(from:msg_h)
+        !$omp target teams distribute parallel do collapse(6)
+        do n=lbound(msg_h,6), ubound(msg_h,6)
+           do m=lbound(msg_h,5), ubound(msg_h,5)
+              do l=lbound(msg_h,4), ubound(msg_h,4)
+                 do k=lbound(msg_h,3), ubound(msg_h,3)
+                    do j=lbound(msg_h,2), ubound(msg_h,2)
+                       do i=lbound(msg_h,1), ubound(msg_h,1)
+                          msg_h(i,j,k,l,m,n) = msg_d(i,j,k,l,m,n)
+                       enddo
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        msglen = size(msg_h)
+        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
+#if defined(__CUDA)
+        msg_d = msg_h
+#else
+        !$omp target data map(to:msg_h)
+        !$omp target teams distribute parallel do collapse(6)
+        do n=lbound(msg_h,6), ubound(msg_h,6)
+           do m=lbound(msg_h,5), ubound(msg_h,5)
+              do l=lbound(msg_h,4), ubound(msg_h,4)
+                 do k=lbound(msg_h,3), ubound(msg_h,3)
+                    do j=lbound(msg_h,2), ubound(msg_h,2)
+                       do i=lbound(msg_h,1), ubound(msg_h,1)
+                          msg_d(i,j,k,l,m,n) = msg_h(i,j,k,l,m,n)
+                       enddo
+                    enddo
+                 enddo
+              enddo
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(msg_h)
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
+#endif
+#endif
+#endif
+      END SUBROUTINE mp_sum_c6d_gpu
+!
+!------------------------------------------------------------------------------!
+!..mp_gather
+
+      SUBROUTINE mp_gather_i1_gpu(mydata_d, alldata_d, root, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER,              DEVICE :: mydata_d
+        INTEGER, INTENT(OUT), DEVICE :: alldata_d(:)
+#else
+        INTEGER              :: mydata_d
+        INTEGER, INTENT(OUT) :: alldata_d(:)
+        INTEGER :: i
+#endif
+        INTEGER, INTENT(IN) :: gid, root
+        INTEGER :: group
+        INTEGER :: ierr
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+        INTEGER :: mydata_h
+        INTEGER, ALLOCATABLE :: alldata_h(:)
+#if defined(__CUDA)
+        ALLOCATE( alldata_h, source=alldata_d ) ! This syncs __MPI
+        mydata_h = mydata_d
+#else
+        ALLOCATE( alldata_h, mold  =alldata_d )
+        !$omp target data map(from:alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_h,1), ubound(alldata_h,1)
+           alldata_h(i) = alldata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+        !$omp target map(from:mydata_h)
+        mydata_h = mydata_d
+        !$omp end target
+#endif
+        CALL mp_gather_i1(mydata_h, alldata_h, root, gid)
+#if defined(__CUDA)
+        mydata_d = mydata_h; alldata_d = alldata_h
+#else
+        !$omp target map(to:mydata_h)
+        mydata_d = mydata_h
+        !$omp end target
+        !$omp target data map(to:alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_h,1), ubound(alldata_h,1)
+           alldata_d(i) = alldata_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(alldata_h)
+#else
+        group = gid
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+        CALL MPI_GATHER(mydata_d, 1, MPI_INTEGER, alldata_d, 1, MPI_INTEGER, root, group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9051 )
+        RETURN ! Sync not needed after MPI call
+#endif
+#else
+        !alldata_d(1) = mydata_d
+#if defined(__CUDA)
+        ierr = cudaMemcpy( alldata_d(1), mydata_d, 1, &
+                                            & cudaMemcpyDeviceToDevice )
+        IF (ierr/=0) CALL mp_stop( 9052 )
+#else
+        !$omp target
+        alldata_d(1) = mydata_d
+        !$omp end target
+#endif
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_gather_i1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_gather_iv_gpu(mydata_d, alldata_d, root, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, DEVICE :: mydata_d(:)
+        INTEGER, INTENT(OUT), DEVICE :: alldata_d(:,:)
+#else
+        INTEGER :: mydata_d(:)
+        INTEGER, INTENT(OUT) :: alldata_d(:,:)
+        INTEGER :: j
+#endif
+        INTEGER, INTENT(IN) :: gid, root
+        INTEGER :: group
+        INTEGER :: msglen, ierr, i
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+        INTEGER, ALLOCATABLE :: mydata_h(:)
+        INTEGER, ALLOCATABLE :: alldata_h(:,:)
+#if defined(__CUDA)
+        ALLOCATE( mydata_h, source=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, source=alldata_d )
+#else
+        ALLOCATE( mydata_h,  mold=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, mold=alldata_d )
+        !$omp target data map(from:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(mydata_h,1), ubound(mydata_h,1)
+           mydata_h(i) = mydata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(alldata_h,2), ubound(alldata_h,2)
+           do i=lbound(alldata_h,1), ubound(alldata_h,1)
+              alldata_h(i,j) = alldata_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+
+        CALL mp_gather_iv(mydata_h, alldata_h, root, gid)
+#if defined(__CUDA)
+        mydata_d = mydata_h; alldata_d = alldata_h
+#else
+        !$omp target data map(to:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(mydata_h,1), ubound(mydata_h,1)
+           mydata_d(i) = mydata_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do collapse(2)
+        do j=lbound(alldata_h,2), ubound(alldata_h,2)
+           do i=lbound(alldata_h,1), ubound(alldata_h,1)
+              alldata_d(i,j) = alldata_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(alldata_h, mydata_h)
+#else
+        msglen = SIZE(mydata_d)
+        IF( msglen .NE. SIZE(alldata_d, 1) ) CALL mp_stop( 9053 )
+        group = gid
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+        CALL MPI_GATHER(mydata_d, msglen, MPI_INTEGER, alldata_d, msglen, MPI_INTEGER, root, group, IERR)
+        IF (ierr/=0) CALL mp_stop( 9054 )
+        RETURN ! Sync not needed after MPI call
+#endif
+#else
+        msglen = SIZE(mydata_d)
+        IF( msglen .NE. SIZE(alldata_d, 1) ) CALL mp_stop( 9055 )
+        !alldata_d(:,1) = mydata_d(:)
+#if defined(__CUDA)
+        ierr = cudaMemcpy(alldata_d(:,1) , mydata_d(1), msglen, cudaMemcpyDeviceToDevice )
+#else
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_d,1), ubound(alldata,1)
+           alldata_d(i,1) = mydata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+        IF (ierr/=0) CALL mp_stop( 9056 )
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_gather_iv_gpu
+!
+!------------------------------------------------------------------------------!
+!..mp_gatherv_rv
+!
+      SUBROUTINE mp_gatherv_rv_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL(DP), DEVICE :: mydata_d(:)
+        REAL(DP), DEVICE :: alldata_d(:)
+#else
+        REAL(DP)         :: mydata_d(:)
+        REAL(DP)         :: alldata_d(:)
+        INTEGER          :: i
+#endif
+        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+        INTEGER :: ierr, npe, myid
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+        REAL(DP), ALLOCATABLE :: mydata_h(:)
+        REAL(DP), ALLOCATABLE :: alldata_h(:)
+
+#if defined(__CUDA)
+        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
+        ALLOCATE(alldata_h, source=alldata_d)
+#else
+        ALLOCATE( mydata_h,  mold=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, mold=alldata_d )
+        !$omp target data map(from:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(mydata_h,1), ubound(mydata_h,1)
+           mydata_h(i) = mydata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_h,1), ubound(alldata_h,1)
+           alldata_h(i) = alldata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_gatherv_rv( mydata_h, alldata_h, recvcount, displs, root, gid)
+#if defined(__CUDA)
+        alldata_d = alldata_h ; mydata_d = mydata_h
+#else
+        !$omp target data map(to:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(mydata_h,1), ubound(mydata_h,1)
+           mydata_d(i) = mydata_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_h,1), ubound(alldata_h,1)
+           alldata_d(i) = alldata_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(alldata_h , mydata_h)
+#else
+
+        group = gid
+        CALL mpi_comm_size( group, npe, ierr )
+        IF (ierr/=0) CALL mp_stop( 9057 )
+        CALL mpi_comm_rank( group, myid, ierr )
+        IF (ierr/=0) CALL mp_stop( 9058 )
+        !
+        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9059 )
+        IF ( myid == root ) THEN
+           IF ( SIZE( alldata_d ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9060 )
+        END IF
+        IF ( SIZE( mydata_d ) < recvcount( myid + 1 ) ) CALL mp_stop( 9061 )
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+        CALL MPI_GATHERV( mydata_d, recvcount( myid + 1 ), MPI_DOUBLE_PRECISION, &
+                         alldata_d, recvcount, displs, MPI_DOUBLE_PRECISION, root, group, ierr )
+        IF (ierr/=0) CALL mp_stop( 9062 )
+        RETURN ! Sync not needed after MPI call
+#endif
+#else
+        IF ( SIZE( alldata_d ) < recvcount( 1 ) ) CALL mp_stop( 9063 )
+        IF ( SIZE( mydata_d  ) < recvcount( 1 ) ) CALL mp_stop( 9064 )
+        !
+        !alldata_d( 1:recvcount( 1 ) ) = mydata_d( 1:recvcount( 1 ) )
+#if defined(__CUDA)
+        ierr = cudaMemcpy(alldata_d(1) , mydata_d(1), recvcount( 1 ), cudaMemcpyDeviceToDevice )
+#else
+        !$omp target teams distribute parallel do
+        do i=1, recvcount(1)
+           alldata_d(i) = mydata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+        IF (ierr/=0) CALL mp_stop( 9065 )
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_gatherv_rv_gpu
+!
+!------------------------------------------------------------------------------!
+!..mp_gatherv_cv
+!
+      SUBROUTINE mp_gatherv_cv_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        COMPLEX(DP), DEVICE :: mydata_d(:)
+        COMPLEX(DP), DEVICE :: alldata_d(:)
+#else
+        COMPLEX(DP)         :: mydata_d(:)
+        COMPLEX(DP)         :: alldata_d(:)
+        INTEGER             :: i
+#endif
+        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+        INTEGER :: ierr, npe, myid
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+        COMPLEX(DP), ALLOCATABLE :: mydata_h(:)
+        COMPLEX(DP), ALLOCATABLE :: alldata_h(:)
+
+#if defined(__CUDA)
+        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
+        ALLOCATE(alldata_h, source=alldata_d)
+#else
+        ALLOCATE( mydata_h,  mold=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, mold=alldata_d )
+        !$omp target data map(from:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(mydata_h,1), ubound(mydata_h,1)
+           mydata_h(i) = mydata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_h,1), ubound(alldata_h,1)
+           alldata_h(i) = alldata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_gatherv_cv( mydata_h, alldata_h, recvcount, displs, root, gid)
+#if defined(__CUDA)
+        alldata_d = alldata_h ; mydata_d = mydata_h
+#else
+        !$omp target data map(to:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(mydata_h,1), ubound(mydata_h,1)
+           mydata_d(i) = mydata_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_h,1), ubound(alldata_h,1)
+           alldata_d(i) = alldata_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(alldata_h , mydata_h)
+#else
+
+        group = gid
+        CALL mpi_comm_size( group, npe, ierr )
+        IF (ierr/=0) CALL mp_stop( 9066 )
+        CALL mpi_comm_rank( group, myid, ierr )
+        IF (ierr/=0) CALL mp_stop( 9067 )
+        !
+        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9068 )
+        IF ( myid == root ) THEN
+           IF ( SIZE( alldata_d ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9069 )
+        END IF
+        IF ( SIZE( mydata_d ) < recvcount( myid + 1 ) ) CALL mp_stop( 9070 )
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+        CALL MPI_GATHERV( mydata_d, recvcount( myid + 1 ), MPI_DOUBLE_COMPLEX, &
+                         alldata_d, recvcount, displs, MPI_DOUBLE_COMPLEX, root, group, ierr )
+        IF (ierr/=0) CALL mp_stop( 9071 )
+        RETURN ! Sync not needed after MPI call
+#endif
+#else
+        IF ( SIZE( alldata_d ) < recvcount( 1 ) ) CALL mp_stop( 9072 )
+        IF ( SIZE( mydata_d  ) < recvcount( 1 ) ) CALL mp_stop( 9073 )
+        !
+        !alldata_d( 1:recvcount( 1 ) ) = mydata_d( 1:recvcount( 1 ) )
+#if defined(__CUDA)
+        ierr = cudaMemcpy(alldata_d(1) , mydata_d(1), recvcount( 1 ), cudaMemcpyDeviceToDevice )
+#else
+        !$omp target teams distribute parallel do
+        do i=1, recvcount(1)
+           alldata_d(i) = mydata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+        IF (ierr/=0) CALL mp_stop( 9065 )
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_gatherv_cv_gpu
+!
+!------------------------------------------------------------------------------!
+!..mp_gatherv_rv_gpu
+!
+
+      SUBROUTINE mp_gatherv_iv_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, DEVICE :: mydata_d(:)
+        INTEGER, DEVICE :: alldata_d(:)
+#else
+        INTEGER         :: mydata_d(:)
+        INTEGER         :: alldata_d(:)
+        INTEGER         :: i
+#endif
+        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+        INTEGER :: ierr, npe, myid
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+        INTEGER, ALLOCATABLE :: mydata_h(:)
+        INTEGER, ALLOCATABLE :: alldata_h(:)
+
+#if defined(__CUDA)
+        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
+        ALLOCATE(alldata_h, source=alldata_d)
+#else
+        ALLOCATE( mydata_h,  mold=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, mold=alldata_d )
+        !$omp target data map(from:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(mydata_h,1), ubound(mydata_h,1)
+           mydata_h(i) = mydata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_h,1), ubound(alldata_h,1)
+           alldata_h(i) = alldata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_gatherv_iv( mydata_h, alldata_h, recvcount, displs, root, gid)
+#if defined(__CUDA)
+        alldata_d = alldata_h ; mydata_d = mydata_h
+#else
+        !$omp target data map(to:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do i=lbound(mydata_h,1), ubound(mydata_h,1)
+           mydata_d(i) = mydata_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do i=lbound(alldata_h,1), ubound(alldata_h,1)
+           alldata_d(i) = alldata_h(i)
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(alldata_h , mydata_h)
+#else
+
+        group = gid
+        CALL mpi_comm_size( group, npe, ierr )
+        IF (ierr/=0) CALL mp_stop( 9074 )
+        CALL mpi_comm_rank( group, myid, ierr )
+        IF (ierr/=0) CALL mp_stop( 9075 )
+        !
+        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9076 )
+        IF ( myid == root ) THEN
+           IF ( SIZE( alldata_d ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9077 )
+        END IF
+        IF ( SIZE( mydata_d ) < recvcount( myid + 1 ) ) CALL mp_stop( 9078 )
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+        CALL MPI_GATHERV( mydata_d, recvcount( myid + 1 ), MPI_INTEGER, &
+                         alldata_d, recvcount, displs, MPI_INTEGER, root, group, ierr )
+        IF (ierr/=0) CALL mp_stop( 9079 )
+        RETURN ! Sync not needed after MPI call
+#endif
+#else
+        IF ( SIZE( alldata_d ) < recvcount( 1 ) ) CALL mp_stop( 9080 )
+        IF ( SIZE( mydata_d  ) < recvcount( 1 ) ) CALL mp_stop( 9081 )
+        !
+        !alldata_d( 1:recvcount( 1 ) ) = mydata_d( 1:recvcount( 1 ) )
+#if defined(__CUDA)
+        ierr = cudaMemcpy(alldata_d(1) , mydata_d(1), recvcount( 1 ), cudaMemcpyDeviceToDevice )
+#else
+        !$omp target teams distribute parallel do
+        do i=1, recvcount(1)
+           alldata_d(i) = mydata_d(i)
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+        IF (ierr/=0) CALL mp_stop( 9065 )
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_gatherv_iv_gpu
+!
+!------------------------------------------------------------------------------!
+!..mp_gatherv_rm
+!
+
+      SUBROUTINE mp_gatherv_rm_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        REAL(DP), DEVICE :: mydata_d(:,:)  ! Warning first dimension is supposed constant!
+        REAL(DP), DEVICE :: alldata_d(:,:)
+#else
+        REAL(DP)         :: mydata_d(:,:)  ! Warning first dimension is supposed constant!
+        REAL(DP)         :: alldata_d(:,:)
+        INTEGER          :: i, j
+#endif
+        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+        INTEGER :: ierr, npe, myid, nsiz
+        INTEGER, ALLOCATABLE :: nrecv(:), ndisp(:)
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+        REAL(DP), ALLOCATABLE :: mydata_h(:,:)
+        REAL(DP), ALLOCATABLE :: alldata_h(:,:)
+
+#if defined(__CUDA)
+        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
+        ALLOCATE(alldata_h, source=alldata_d)
+#else
+        ALLOCATE( mydata_h,  mold=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, mold=alldata_d )
+        !$omp target data map(from:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do j=lbound(mydata_h,2), ubound(mydata_h,2)
+           do i=lbound(mydata_h,1), ubound(mydata_h,1)
+              mydata_h(i,j) = mydata_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do j=lbound(alldata_h,2), ubound(alldata_h,2)
+           do i=lbound(alldata_h,1), ubound(alldata_h,1)
+              alldata_h(i,j) = alldata_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_gatherv_rm( mydata_h, alldata_h, recvcount, displs, root, gid)
+#if defined(__CUDA)
+        alldata_d = alldata_h ; mydata_d = mydata_h
+#else
+        ALLOCATE( mydata_h,  mold=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, mold=alldata_d )
+        !$omp target data map(to:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do j=lbound(mydata_h,2), ubound(mydata_h,2)
+           do i=lbound(mydata_h,1), ubound(mydata_h,1)
+              mydata_d(i,j) = mydata_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do j=lbound(alldata_h,2), ubound(alldata_h,2)
+           do i=lbound(alldata_h,1), ubound(alldata_h,1)
+              alldata_d(i,j) = alldata_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(alldata_h , mydata_h)
+#else
+        group = gid
+        CALL mpi_comm_size( group, npe, ierr )
+        IF (ierr/=0) CALL mp_stop( 9082 )
+        CALL mpi_comm_rank( group, myid, ierr )
+        IF (ierr/=0) CALL mp_stop( 9083 )
+        !
+        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9084 )
+        IF ( myid == root ) THEN
+           IF ( SIZE( alldata_d, 2 ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9085 )
+           IF ( SIZE( alldata_d, 1 ) /= SIZE( mydata_d, 1 ) ) CALL mp_stop( 9086 )
+        END IF
+        IF ( SIZE( mydata_d, 2 ) < recvcount( myid + 1 ) ) CALL mp_stop( 9087 )
+        !
+        ALLOCATE( nrecv( npe ), ndisp( npe ) )
+        !
+        nrecv( 1:npe ) = recvcount( 1:npe ) * SIZE( mydata_d, 1 )
+        ndisp( 1:npe ) = displs( 1:npe ) * SIZE( mydata_d, 1 )
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+        CALL MPI_GATHERV( mydata_d, nrecv( myid + 1 ), MPI_DOUBLE_PRECISION, &
+                         alldata_d, nrecv, ndisp, MPI_DOUBLE_PRECISION, root, group, ierr )
+        IF (ierr/=0) CALL mp_stop( 9088 )
+        !
+        DEALLOCATE( nrecv, ndisp )
+        !
+        RETURN ! Sync not needed after MPI call
+#endif
+#else
+        IF ( SIZE( alldata_d, 1 ) /= SIZE( mydata_d, 1 ) ) CALL mp_stop( 9089 )
+        IF ( SIZE( alldata_d, 2 ) < recvcount( 1 ) ) CALL mp_stop( 9090 )
+        IF ( SIZE( mydata_d, 2  ) < recvcount( 1 ) ) CALL mp_stop( 9091 )
+        !
+        !alldata( :, 1:recvcount( 1 ) ) = mydata( :, 1:recvcount( 1 ) )
+
+#if defined(__CUDA)
+        ierr = cudaMemcpy2D(alldata_d, SIZE(alldata_d,1),&
+                              mydata_d, SIZE(mydata_d,1),&
+                              SIZE(mydata_d,1), recvcount( 1 ), &
+                              cudaMemcpyDeviceToDevice )
+#else
+        !$omp target teams distribute parallel do collapse(2)
+        do j=1, recvcount(1)
+           do i=lbound(alldata_d,1), ubound(alldata_d,1)
+              alldata_d(i,j) = mydata_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+
+        IF (ierr/=0) CALL mp_stop( 9092 )
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_gatherv_rm_gpu
+!
+!------------------------------------------------------------------------------!
+!..mp_gatherv_im
+!
+      SUBROUTINE mp_gatherv_im_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
+        IMPLICIT NONE
+#if defined(__CUDA)
+        INTEGER, DEVICE :: mydata_d(:,:)  ! Warning first dimension is supposed constant!
+        INTEGER, DEVICE :: alldata_d(:,:)
+#else
+        INTEGER         :: mydata_d(:,:)  ! Warning first dimension is supposed constant!
+        INTEGER         :: alldata_d(:,:)
+        INTEGER         :: i, j
+#endif
+        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+        INTEGER :: ierr, npe, myid, nsiz
+        INTEGER, ALLOCATABLE :: nrecv(:), ndisp(:)
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+        INTEGER, ALLOCATABLE :: mydata_h(:,:)
+        INTEGER, ALLOCATABLE :: alldata_h(:,:)
+
+#if defined(__CUDA)
+        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
+        ALLOCATE(alldata_h, source=alldata_d)
+#else
+        ALLOCATE( mydata_h,  mold=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, mold=alldata_d )
+        !$omp target data map(from:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do j=lbound(mydata_h,2), ubound(mydata_h,2)
+           do i=lbound(mydata_h,1), ubound(mydata_h,1)
+              mydata_h(i,j) = mydata_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do j=lbound(alldata_h,2), ubound(alldata_h,2)
+           do i=lbound(alldata_h,1), ubound(alldata_h,1)
+              alldata_h(i,j) = alldata_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        CALL mp_gatherv_im( mydata_h, alldata_h, recvcount, displs, root, gid)
+#if defined(__CUDA)
+        alldata_d = alldata_h ; mydata_d = mydata_h
+#else
+        ALLOCATE( mydata_h,  mold=mydata_d )     ! This syncs __MPI
+        ALLOCATE( alldata_h, mold=alldata_d )
+        !$omp target data map(to:mydata_h, alldata_h)
+        !$omp target teams distribute parallel do
+        do j=lbound(mydata_h,2), ubound(mydata_h,2)
+           do i=lbound(mydata_h,1), ubound(mydata_h,1)
+              mydata_d(i,j) = mydata_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp target teams distribute parallel do
+        do j=lbound(alldata_h,2), ubound(alldata_h,2)
+           do i=lbound(alldata_h,1), ubound(alldata_h,1)
+              alldata_d(i,j) = alldata_h(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+        !$omp end target data
+#endif
+        DEALLOCATE(alldata_h , mydata_h)
+#else
+        group = gid
+        CALL mpi_comm_size( group, npe, ierr )
+        IF (ierr/=0) CALL mp_stop( 9093 )
+        CALL mpi_comm_rank( group, myid, ierr )
+        IF (ierr/=0) CALL mp_stop( 9094 )
+        !
+        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9095 )
+        IF ( myid == root ) THEN
+           IF ( SIZE( alldata_d, 2 ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9096 )
+           IF ( SIZE( alldata_d, 1 ) /= SIZE( mydata_d, 1 ) ) CALL mp_stop( 9097 )
+        END IF
+        IF ( SIZE( mydata_d, 2 ) < recvcount( myid + 1 ) ) CALL mp_stop( 9098 )
+        !
+        ALLOCATE( nrecv( npe ), ndisp( npe ) )
+        !
+        nrecv( 1:npe ) = recvcount( 1:npe ) * SIZE( mydata_d, 1 )
+        ndisp( 1:npe ) = displs( 1:npe ) * SIZE( mydata_d, 1 )
+        !
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+        CALL MPI_GATHERV( mydata_d, nrecv( myid + 1 ), MPI_INTEGER, &
+                         alldata_d, nrecv, ndisp, MPI_INTEGER, root, group, ierr )
+        IF (ierr/=0) CALL mp_stop( 9099 )
+        !
+        DEALLOCATE( nrecv, ndisp )
+        !
+        RETURN ! Sync not needed after MPI call
+#endif
+#else
+        IF ( SIZE( alldata_d, 1 ) /= SIZE( mydata_d, 1 ) ) CALL mp_stop( 9100 )
+        IF ( SIZE( alldata_d, 2 ) < recvcount( 1 ) ) CALL mp_stop( 9101 )
+        IF ( SIZE( mydata_d, 2  ) < recvcount( 1 ) ) CALL mp_stop( 9102 )
+        !
+        !alldata( :, 1:recvcount( 1 ) ) = mydata( :, 1:recvcount( 1 ) )
+
+#if defined(__CUDA)
+        ierr = cudaMemcpy2D(alldata_d, SIZE(alldata_d,1),&
+                              mydata_d, SIZE(mydata_d,1),&
+                              SIZE(mydata_d,1), recvcount( 1 ), &
+                              cudaMemcpyDeviceToDevice )
+#else
+        !$omp target teams distribute parallel do collapse(2)
+        do j=1, recvcount(1)
+           do i=lbound(alldata_d,1), ubound(alldata_d,1)
+              alldata_d(i,j) = mydata_d(i,j)
+           enddo
+        enddo
+        !$omp end target teams distribute parallel do
+#endif
+
+        IF (ierr/=0) CALL mp_stop( 9103 )
+#endif
+#if defined(__CUDA)
+        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_gatherv_im_gpu
+
+!------------------------------------------------------------------------------!
+!..mp_gatherv_inplace_cplx_array
+!
+      SUBROUTINE mp_gatherv_inplace_cplx_array_gpu(alldata_d, my_column_type, recvcount, displs, root, gid)
+         IMPLICIT NONE
+#if defined(__CUDA)
+         COMPLEX(DP), DEVICE :: alldata_d(:,:)
+#else
+         COMPLEX(DP)         :: alldata_d(:,:)
+         INTEGER             :: i, j
+#endif
+         INTEGER, INTENT(IN) :: my_column_type
+         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
+         INTEGER, INTENT(IN) :: root, gid
+         INTEGER :: ierr, npe, myid
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+         COMPLEX(DP), ALLOCATABLE :: alldata_h(:, :)
+         !
+         ! Avoid unnecessary communications on __MPI
+         IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+           ierr = cudaDeviceSynchronize()
+#endif
+           RETURN
+         END IF
+         !
+#if defined(__CUDA)
+         ALLOCATE(alldata_h, source=alldata_d)    ! This syncs __MPI
+#else
+         ALLOCATE(alldata_h, mold=alldata_d)
+         !$omp target data map(from:alldata_h)
+         !$omp target teams distribute parallel do
+         do j=lbound(alldata_h,2), ubound(alldata_h,2)
+            do i=lbound(alldata_h,1), ubound(alldata_h,1)
+               alldata_h(i,j) = alldata_d(i,j)
+            enddo
+         enddo
+         !$omp end target teams distribute parallel do
+         !$omp end target data
+#endif
+         CALL mp_gatherv_inplace_cplx_array(alldata_h, my_column_type, recvcount, displs, root, gid)
+#if defined(__CUDA)
+         alldata_d = alldata_h
+#else
+         !$omp target data map(to:alldata_h)
+         !$omp target teams distribute parallel do
+         do j=lbound(alldata_h,2), ubound(alldata_h,2)
+            do i=lbound(alldata_h,1), ubound(alldata_h,1)
+               alldata_d(i,j) = alldata_h(i,j)
+            enddo
+         enddo
+         !$omp end target teams distribute parallel do
+         !$omp end target data
+#endif
+         DEALLOCATE(alldata_h)
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs in case of small data chunks
+#endif
+         RETURN
+#else
+         CALL mpi_comm_size( gid, npe, ierr )
+         IF (ierr/=0) CALL mp_stop( 9127 )
+         CALL mpi_comm_rank( gid, myid, ierr )
+         IF (ierr/=0) CALL mp_stop( 9128 )
+         !
+         IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9129 )
+         !
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+         IF (myid==root) THEN
+            CALL MPI_GATHERV( MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, &
+                              alldata_d, recvcount, displs, my_column_type, root, gid, ierr )
+         ELSE
+            CALL MPI_GATHERV( alldata_d(1,displs(myid+1)+1), recvcount(myid+1), my_column_type, &
+                              MPI_IN_PLACE, recvcount, displs, MPI_DATATYPE_NULL, root, gid, ierr )
+         ENDIF
+         !
+         IF (ierr/=0) CALL mp_stop( 9130 )
+         !
+         RETURN ! Sync not needed after MPI call
+#endif
+#endif
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL
+#endif
+      END SUBROUTINE mp_gatherv_inplace_cplx_array_gpu
+
+!------------------------------------------------------------------------------!
+!..mp_allgatherv_inplace_cplx_array
+!
+
+      SUBROUTINE mp_allgatherv_inplace_cplx_array_gpu(alldata_d, my_element_type, recvcount, displs, gid)
+         IMPLICIT NONE
+#if defined(__CUDA)
+         COMPLEX(DP), DEVICE :: alldata_d(:,:)
+#else
+         COMPLEX(DP)         :: alldata_d(:,:)
+         INTEGER             :: i, j
+#endif
+         INTEGER, INTENT(IN) :: my_element_type
+         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
+         INTEGER, INTENT(IN) :: gid
+         INTEGER :: ierr, npe, myid
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+         COMPLEX(DP), ALLOCATABLE :: alldata_h(:, :)
+         !
+         ! Avoid unnecessary communications on __MPI
+         IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+           ierr = cudaDeviceSynchronize()
+#endif
+           RETURN
+         END IF
+         !
+#if defined(__CUDA)
+         ALLOCATE(alldata_h, source=alldata_d)! This syncs __MPI
+#else
+         ALLOCATE(alldata_h, mold=alldata_d)
+         !$omp target data map(from:alldata_h)
+         !$omp target teams distribute parallel do
+         do j=lbound(alldata_h,2), ubound(alldata_h,2)
+            do i=lbound(alldata_h,1), ubound(alldata_h,1)
+               alldata_h(i,j) = alldata_d(i,j)
+            enddo
+         enddo
+         !$omp end target teams distribute parallel do
+         !$omp end target data
+#endif
+         CALL mp_allgatherv_inplace_cplx_array(alldata_h, my_element_type, recvcount, displs, gid)
+#if defined(__CUDA)
+         alldata_d = alldata_h
+#else
+         !$omp target data map(to:alldata_h)
+         !$omp target teams distribute parallel do
+         do j=lbound(alldata_h,2), ubound(alldata_h,2)
+            do i=lbound(alldata_h,1), ubound(alldata_h,1)
+               alldata_d(i,j) = alldata_h(i,j)
+            enddo
+         enddo
+         !$omp end target teams distribute parallel do
+         !$omp end target data
+#endif
+         DEALLOCATE(alldata_h)
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs in case of small data chunks
+#endif
+         RETURN
+#else
+         CALL mpi_comm_size( gid, npe, ierr )
+         IF (ierr/=0) CALL mp_stop( 9131 )
+         CALL mpi_comm_rank( gid, myid, ierr )
+         IF (ierr/=0) CALL mp_stop( 9132 )
+         !
+         IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9133 )
+         !
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+         CALL MPI_ALLGATHERV( MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, &
+                              alldata_d, recvcount, displs, my_element_type, gid, ierr )
+         IF (ierr/=0) CALL mp_stop( 9134 )
+         RETURN ! Sync not needed after MPI call
+#endif
+#endif
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_allgatherv_inplace_cplx_array_gpu
+
+!------------------------------------------------------------------------------!
+!..mp_allgatherv_inplace_real_array
+!
+
+      SUBROUTINE mp_allgatherv_inplace_real_array_gpu(alldata_d, my_element_type, recvcount, displs, gid)
+         IMPLICIT NONE
+#if defined(__CUDA)
+         REAL(DP), DEVICE    :: alldata_d(:,:)
+#else
+         REAL(DP)            :: alldata_d(:,:)
+         INTEGER             :: i, j
+#endif
+         INTEGER, INTENT(IN) :: my_element_type
+         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
+         INTEGER, INTENT(IN) :: gid
+         INTEGER :: ierr, npe, myid
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+         REAL(DP), ALLOCATABLE :: alldata_h(:, :)
+         !
+         ! Avoid unnecessary communications on __MPI
+         IF ( mp_size(gid) == 1 ) THEN
+#if defined(__CUDA)
+           ierr = cudaDeviceSynchronize()
+#endif
+           RETURN
+         END IF
+         !
+#if defined(__CUDA)
+         ALLOCATE(alldata_h, source=alldata_d)! This syncs __MPI
+#else
+         ALLOCATE(alldata_h, mold=alldata_d)
+         !$omp target data map(from:alldata_h)
+         !$omp target teams distribute parallel do
+         do j=lbound(alldata_h,2), ubound(alldata_h,2)
+            do i=lbound(alldata_h,1), ubound(alldata_h,1)
+               alldata_h(i,j) = alldata_d(i,j)
+            enddo
+         enddo
+         !$omp end target teams distribute parallel do
+         !$omp end target data
+#endif
+         CALL mp_allgatherv_inplace_real_array(alldata_h, my_element_type, recvcount, displs, gid)
+#if defined(__CUDA)
+         alldata_d = alldata_h
+#else
+         !$omp target data map(to:alldata_h)
+         !$omp target teams distribute parallel do
+         do j=lbound(alldata_h,2), ubound(alldata_h,2)
+            do i=lbound(alldata_h,1), ubound(alldata_h,1)
+               alldata_d(i,j) = alldata_h(i,j)
+            enddo
+         enddo
+         !$omp end target teams distribute parallel do
+         !$omp end target data
+#endif
+         DEALLOCATE(alldata_h)
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs in case of small data chunks
+#endif
+         RETURN
+#else
+         CALL mpi_comm_size( gid, npe, ierr )
+         IF (ierr/=0) CALL mp_stop( 9131 )
+         CALL mpi_comm_rank( gid, myid, ierr )
+         IF (ierr/=0) CALL mp_stop( 9132 )
+         !
+         IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9133 )
+         !
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+         CALL MPI_ALLGATHERV( MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, &
+                              alldata_d, recvcount, displs, my_element_type, gid, ierr )
+         IF (ierr/=0) CALL mp_stop( 9134 )
+         RETURN ! Sync not needed after MPI call
+#endif
+#endif
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_allgatherv_inplace_real_array_gpu
+
+!------------------------------------------------------------------------------!
+      SUBROUTINE mp_circular_shift_left_i0_gpu( buf_d, itag, gid )
+         IMPLICIT NONE
+#if defined(__CUDA)
+         INTEGER, DEVICE :: buf_d
+#else
+         INTEGER         :: buf_d
+#endif
+         INTEGER, INTENT(IN) :: itag
+         INTEGER, INTENT(IN) :: gid
+         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+         INTEGER :: buf_h
+         !$omp target data map(from:buf_h)
+         !$omp target is_device_ptr(buf_d)
+         buf_h = buf_d     ! This syncs __MPI
+         !$omp end target
+         !$omp end target data
+         CALL mp_circular_shift_left_i0( buf_h, itag, gid )
+         !$omp target data map(from:buf_h)
+         !$omp target is_device_ptr(buf_d)
+         buf_d = buf_h
+         !$omp end target
+         !$omp end target data
+#else
+         INTEGER :: istatus( mpi_status_size )
+         !
+         group = gid
+         !
+         CALL mpi_comm_size( group, npe, ierr )
+         IF (ierr/=0) CALL mp_stop( 9112 )
+         CALL mpi_comm_rank( group, mype, ierr )
+         IF (ierr/=0) CALL mp_stop( 9113 )
+         !
+         sour = mype + 1
+         IF( sour == npe ) sour = 0
+         dest = mype - 1
+         IF( dest == -1 ) dest = npe - 1
+         !
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+         CALL MPI_Sendrecv_replace( buf_d, 1, MPI_INTEGER, &
+              dest, itag, sour, itag, group, istatus, ierr)
+         !
+         IF (ierr/=0) CALL mp_stop( 9114 )
+         !
+         RETURN ! Sync not needed after MPI call
+#endif
+#else
+         ! do nothing
+#endif
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_circular_shift_left_i0_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_circular_shift_left_i1_gpu( buf_d, itag, gid )
+         IMPLICIT NONE
+#if defined(__CUDA)
+         INTEGER, DEVICE :: buf_d(:)
+#else
+         INTEGER         :: buf_d(:)
+         INTEGER         :: i
+#endif
+         INTEGER, INTENT(IN) :: itag
+         INTEGER, INTENT(IN) :: gid
+         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+         INTEGER, ALLOCATABLE :: buf_h(:)
+#if defined(__CUDA)
+         ALLOCATE(buf_h, source=buf_d)    ! This syncs __MPI
+#else
+         ALLOCATE(buf_h, mold=buf_d)    ! This syncs __MPI
+         !$omp target teams loop map(from:buf_h) is_device_ptr(buf_d)
+         do i=lbound(buf_h,1), ubound(buf_h,1)
+            buf_h(i) = buf_d(i)
+         enddo
+         !$omp end target teams loop
+#endif
+         CALL mp_circular_shift_left_i1( buf_h, itag, gid )
+#if defined(__CUDA)
+         buf_d = buf_h
+#else
+         !$omp target teams loop map(to:buf_h) is_device_ptr(buf_d)
+         do i=lbound(buf_h,1), ubound(buf_h,1)
+            buf_d(i) = buf_h(i)
+         enddo
+         !$omp end target teams loop
+#endif
+         DEALLOCATE(buf_h)
+#else
+         INTEGER :: istatus( mpi_status_size )
+         !
+         group = gid
+         !
+         CALL mpi_comm_size( group, npe, ierr )
+         IF (ierr/=0) CALL mp_stop( 9115 )
+         CALL mpi_comm_rank( group, mype, ierr )
+         IF (ierr/=0) CALL mp_stop( 9116 )
+         !
+         sour = mype + 1
+         IF( sour == npe ) sour = 0
+         dest = mype - 1
+         IF( dest == -1 ) dest = npe - 1
+         !
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+         CALL MPI_Sendrecv_replace( buf_d, SIZE(buf_d), MPI_INTEGER, &
+              dest, itag, sour, itag, group, istatus, ierr)
+         !
+         IF (ierr/=0) CALL mp_stop( 9117 )
+         !
+         RETURN ! Sync not needed after MPI call
+#endif
+#else
+         ! do nothing
+#endif
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_circular_shift_left_i1_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_circular_shift_left_i2_gpu( buf_d, itag, gid )
+         IMPLICIT NONE
+#if defined(__CUDA)
+         INTEGER, DEVICE :: buf_d(:,:)
+#else
+         INTEGER         :: buf_d(:,:)
+         INTEGER         :: i, j
+#endif
+         INTEGER, INTENT(IN) :: itag
+         INTEGER, INTENT(IN) :: gid
+         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+         INTEGER, ALLOCATABLE :: buf_h(:,:)
+#if defined(__CUDA)
+         ALLOCATE(buf_h, source=buf_d)    ! This syncs __MPI
+#else
+         ALLOCATE(buf_h, mold=buf_d)    ! This syncs __MPI
+         !$omp target teams loop collapse(2) map(from:buf_h) is_device_ptr(buf_d)
+         do j=lbound(buf_h,2), ubound(buf_h,2)
+            do i=lbound(buf_h,1), ubound(buf_h,1)
+               buf_h(i,j) = buf_d(i,j)
+            enddo
+         enddo
+         !$omp end target teams loop
+#endif
+         CALL mp_circular_shift_left_i2( buf_h, itag, gid )
+#if defined(__CUDA)
+         buf_d = buf_h
+#else
+         !$omp target teams loop collapse(2) map(to:buf_h) is_device_ptr(buf_d)
+         do j=lbound(buf_h,2), ubound(buf_h,2)
+            do i=lbound(buf_h,1), ubound(buf_h,1)
+               buf_d(i,j) = buf_h(i,j)
+            enddo
+         enddo
+         !$omp end target teams loop
+#endif
+         DEALLOCATE(buf_h)
+#else
+         INTEGER :: istatus( mpi_status_size )
+         !
+         group = gid
+         !
+         CALL mpi_comm_size( group, npe, ierr )
+         IF (ierr/=0) CALL mp_stop( 9118 )
+         CALL mpi_comm_rank( group, mype, ierr )
+         IF (ierr/=0) CALL mp_stop( 9119 )
+         !
+         sour = mype + 1
+         IF( sour == npe ) sour = 0
+         dest = mype - 1
+         IF( dest == -1 ) dest = npe - 1
+         !
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+         CALL MPI_Sendrecv_replace( buf_d, SIZE(buf_d), MPI_INTEGER, &
+              dest, itag, sour, itag, group, istatus, ierr)
+         !
+         IF (ierr/=0) CALL mp_stop( 9120 )
+         !
+         RETURN ! Sync not needed after MPI call
+#endif
+#else
+         ! do nothing
+#endif
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_circular_shift_left_i2_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_circular_shift_left_r2d_gpu( buf_d, itag, gid )
+         IMPLICIT NONE
+#if defined(__CUDA)
+         REAL(DP), DEVICE :: buf_d( :, : )
+#else
+         REAL(DP)         :: buf_d( :, : )
+         INTEGER          :: i, j
+#endif
+         INTEGER, INTENT(IN) :: itag
+         INTEGER, INTENT(IN) :: gid
+         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+         REAL(DP), ALLOCATABLE :: buf_h(:, :)
+#if defined(__CUDA)
+         ALLOCATE(buf_h, source=buf_d)    ! This syncs __MPI
+#else
+         ALLOCATE(buf_h, mold=buf_d)    ! This syncs __MPI
+         !$omp target teams loop collapse(2) map(from:buf_h) is_device_ptr(buf_d)
+         do j=lbound(buf_h,2), ubound(buf_h,2)
+            do i=lbound(buf_h,1), ubound(buf_h,1)
+               buf_h(i,j) = buf_d(i,j)
+            enddo
+         enddo
+         !$omp end target teams loop
+#endif
+         CALL mp_circular_shift_left_r2d( buf_h, itag, gid )
+#if defined(__CUDA)
+         buf_d = buf_h
+#else
+         !$omp target teams loop collapse(2) map(to:buf_h) is_device_ptr(buf_d)
+         do j=lbound(buf_h,2), ubound(buf_h,2)
+            do i=lbound(buf_h,1), ubound(buf_h,1)
+               buf_d(i,j) = buf_h(i,j)
+            enddo
+         enddo
+         !$omp end target teams loop
+#endif
+         DEALLOCATE(buf_h)
+#else
+         INTEGER :: istatus( mpi_status_size )
+         !
+         group = gid
+         !
+         CALL mpi_comm_size( group, npe, ierr )
+         IF (ierr/=0) CALL mp_stop( 9121 )
+         CALL mpi_comm_rank( group, mype, ierr )
+         IF (ierr/=0) CALL mp_stop( 9122 )
+         !
+         sour = mype + 1
+         IF( sour == npe ) sour = 0
+         dest = mype - 1
+         IF( dest == -1 ) dest = npe - 1
+         !
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+         CALL MPI_Sendrecv_replace( buf_d, SIZE(buf_d), MPI_DOUBLE_PRECISION, &
+              dest, itag, sour, itag, group, istatus, ierr)
+         !
+         IF (ierr/=0) CALL mp_stop( 9123 )
+         !
+         RETURN ! Sync not needed after MPI call
+#endif
+#else
+         ! do nothing
+#endif
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_circular_shift_left_r2d_gpu
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_circular_shift_left_c2d_gpu( buf_d, itag, gid )
+         IMPLICIT NONE
+#if defined(__CUDA)
+         COMPLEX(DP), DEVICE :: buf_d( :, : )
+#else
+         COMPLEX(DP)         :: buf_d( :, : )
+         INTEGER             :: i, j
+#endif
+         INTEGER, INTENT(IN) :: itag
+         INTEGER, INTENT(IN) :: gid
+         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
+
+#if defined (__MPI)
+#if ! defined(__GPU_MPI)
+         COMPLEX(DP), ALLOCATABLE :: buf_h(:, :)
+#if defined(__CUDA)
+         ALLOCATE(buf_h, source=buf_d)    ! This syncs __MPI
+#else
+         ALLOCATE(buf_h, mold=buf_d)    ! This syncs __MPI
+         !$omp target teams loop collapse(2) map(from:buf_h) is_device_ptr(buf_d)
+         do j=lbound(buf_h,2), ubound(buf_h,2)
+            do i=lbound(buf_h,1), ubound(buf_h,1)
+               buf_h(i,j) = buf_d(i,j)
+            enddo
+         enddo
+         !$omp end target teams loop
+#endif
+         CALL mp_circular_shift_left_c2d( buf_h, itag, gid )
+#if defined(__CUDA)
+         buf_d = buf_h
+#else
+         !$omp target teams loop collapse(2) map(to:buf_h) is_device_ptr(buf_d)
+         do j=lbound(buf_h,2), ubound(buf_h,2)
+            do i=lbound(buf_h,1), ubound(buf_h,1)
+               buf_d(i,j) = buf_h(i,j)
+            enddo
+         enddo
+         !$omp end target teams loop
+#endif
+         DEALLOCATE(buf_h)
+#else
+         INTEGER :: istatus( mpi_status_size )
+         !
+         group = gid
+         !
+         CALL mpi_comm_size( group, npe, ierr )
+         IF (ierr/=0) CALL mp_stop( 9124 )
+         CALL mpi_comm_rank( group, mype, ierr )
+         IF (ierr/=0) CALL mp_stop( 9125 )
+         !
+         sour = mype + 1
+         IF( sour == npe ) sour = 0
+         dest = mype - 1
+         IF( dest == -1 ) dest = npe - 1
+         !
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
+#endif
+         CALL MPI_Sendrecv_replace( buf_d, SIZE(buf_d), MPI_DOUBLE_COMPLEX, &
+              dest, itag, sour, itag, group, istatus, ierr)
+         !
+         IF (ierr/=0) CALL mp_stop( 9126 )
+         !
+         RETURN ! Sync not needed after MPI call
+#endif
+#else
+         ! do nothing
+#endif
+#if defined(__CUDA)
+         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+#endif
+      END SUBROUTINE mp_circular_shift_left_c2d_gpu
+
+      SUBROUTINE mp_type_create_cplx_column_section_gpu(dummy, start, length, stride, mytype)
+         IMPLICIT NONE
+         !
+#if defined(__CUDA)
+         COMPLEX (DP), DEVICE, INTENT(IN) :: dummy
+#else
+         COMPLEX (DP), INTENT(IN) :: dummy
+#endif
+         INTEGER, INTENT(IN) :: start, length, stride
+         INTEGER, INTENT(OUT) :: mytype
+         !
+#if defined(__MPI)
+         INTEGER :: ierr
+         !
+         CALL MPI_TYPE_CREATE_SUBARRAY(1, stride, length, start, MPI_ORDER_FORTRAN,&
+                                       MPI_DOUBLE_COMPLEX, mytype, ierr)
+         IF (ierr/=0) CALL mp_stop( 8081 )
+         CALL MPI_Type_commit(mytype, ierr)
+         IF (ierr/=0) CALL mp_stop( 8082 )
+#else
+         mytype = 0;
+#endif
+         !
+         RETURN
+      END SUBROUTINE mp_type_create_cplx_column_section_gpu
+
+      SUBROUTINE mp_type_create_real_column_section_gpu(dummy, start, length, stride, mytype)
+         IMPLICIT NONE
+         !
+#if defined(__CUDA)
+         REAL (DP), DEVICE, INTENT(IN) :: dummy
+#else
+         REAL (DP), INTENT(IN) :: dummy
+#endif
+         INTEGER, INTENT(IN) :: start, length, stride
+         INTEGER, INTENT(OUT) :: mytype
+         !
+#if defined(__MPI)
+         INTEGER :: ierr
+         !
+         CALL MPI_TYPE_CREATE_SUBARRAY(1, stride, length, start, MPI_ORDER_FORTRAN,&
+                                       MPI_DOUBLE_PRECISION, mytype, ierr)
+         IF (ierr/=0) CALL mp_stop( 8083 )
+         CALL MPI_Type_commit(mytype, ierr)
+         IF (ierr/=0) CALL mp_stop( 8084 )
+#else
+         mytype = 0;
+#endif
+         !
+         RETURN
+      END SUBROUTINE mp_type_create_real_column_section_gpu
+
+      SUBROUTINE mp_type_create_cplx_row_section_gpu(dummy, column_start, column_stride, row_length, mytype)
+         IMPLICIT NONE
+         !
+#if defined(__CUDA)
+         COMPLEX (DP), DEVICE, INTENT(IN) :: dummy
+#else
+         COMPLEX (DP), INTENT(IN) :: dummy
+#endif
+         INTEGER, INTENT(IN) :: column_start, column_stride, row_length
+         INTEGER, INTENT(OUT) :: mytype
+         !
+#if defined(__MPI)
+         INTEGER :: ierr, temporary
+         INTEGER :: strides(2), lengths(2), starts(2)
+         INTEGER(KIND=MPI_ADDRESS_KIND) :: lb, extent
+         !
+         strides(1) = column_stride ; strides(2) = row_length
+         lengths(1) = 1             ; lengths(2) = row_length
+         starts(1)  = column_start  ; starts(2)  = 0
+         CALL MPI_TYPE_CREATE_SUBARRAY(2, strides, lengths, starts, MPI_ORDER_FORTRAN,&
+                                       MPI_DOUBLE_COMPLEX, temporary, ierr)
+         IF (ierr/=0) CALL mp_stop( 8085 )
+         CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_COMPLEX, lb, extent, ierr)
+         IF (ierr/=0) CALL mp_stop( 8085 )
+         CALL MPI_TYPE_COMMIT(temporary, ierr)
+         IF (ierr/=0) CALL mp_stop( 8085 )
+         CALL MPI_TYPE_CREATE_RESIZED(temporary, lb, extent, mytype, ierr)
+         IF (ierr/=0) CALL mp_stop( 8086 )
+         CALL MPI_Type_commit(mytype, ierr)
+         IF (ierr/=0) CALL mp_stop( 8086 )
+#else
+         mytype = 0;
+#endif
+         !
+         RETURN
+      END SUBROUTINE mp_type_create_cplx_row_section_gpu
+
+      SUBROUTINE mp_type_create_real_row_section_gpu(dummy, column_start, column_stride, row_length, mytype)
+         IMPLICIT NONE
+         !
+#if defined(__CUDA)
+         REAL (DP), DEVICE, INTENT(IN) :: dummy
+#else
+         REAL (DP), INTENT(IN) :: dummy
+#endif
+         INTEGER, INTENT(IN) :: column_start, column_stride, row_length
+         INTEGER, INTENT(OUT) :: mytype
+         !
+#if defined(__MPI)
+         INTEGER :: ierr, temporary
+         INTEGER :: strides(2), lengths(2), starts(2)
+         INTEGER(KIND=MPI_ADDRESS_KIND) :: lb, extent
+         !
+         strides(1) = column_stride ; strides(2) = row_length
+         lengths(1) = 1             ; lengths(2) = row_length
+         starts(1)  = column_start  ; starts(2)  = 0
+         CALL MPI_TYPE_CREATE_SUBARRAY(2, strides, lengths, starts, MPI_ORDER_FORTRAN,&
+                                       MPI_DOUBLE_PRECISION, temporary, ierr)
+         IF (ierr/=0) CALL mp_stop( 8087 )
+         CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION, lb, extent, ierr)
+         IF (ierr/=0) CALL mp_stop( 8087 )
+         CALL MPI_TYPE_COMMIT(temporary, ierr)
+         IF (ierr/=0) CALL mp_stop( 8087 )
+         CALL MPI_TYPE_CREATE_RESIZED(temporary, lb, extent, mytype, ierr)
+         IF (ierr/=0) CALL mp_stop( 8088 )
+         CALL MPI_Type_commit(mytype, ierr)
+         IF (ierr/=0) CALL mp_stop( 8088 )
+#else
+         mytype = 0;
+#endif
+         !
+         RETURN
+      END SUBROUTINE mp_type_create_real_row_section_gpu
+
+#endif
+
+!
+!------------------------------------------------------------------------------!
 !..mp_gather_i1
       SUBROUTINE mp_gather_i1(mydata, alldata, root, gid)
         IMPLICIT NONE
@@ -184,7 +5675,9 @@ MODULE mp
         INTEGER :: group
         INTEGER, INTENT(OUT) :: alldata(:)
         INTEGER :: ierr
-
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_gather_i1_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         group = gid
@@ -206,7 +5699,9 @@ MODULE mp
         INTEGER :: group
         INTEGER, INTENT(OUT) :: alldata(:,:)
         INTEGER :: msglen, ierr
-
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_gather_iv_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         msglen = SIZE(mydata)
@@ -245,7 +5740,7 @@ MODULE mp
         IF (ierr/=0) CALL mp_stop( 8006 )
 ! ...
         CALL allocate_buffers()
-#if defined(__CUDA)
+#if defined(__CUDA) || defined(__OPENMP_GPU)
         CALL allocate_buffers_gpu()
 #endif
 #endif
@@ -261,7 +5756,7 @@ MODULE mp
         INTEGER, INTENT(IN):: errorcode, gid
 #if defined(__MPI)
         CALL deallocate_buffers()
-#if defined(__CUDA)
+#if defined(__CUDA) || defined(__OPENMP_GPU)
         CALL deallocate_buffers_gpu()
 #endif
         CALL mpi_abort(gid, errorcode, ierr)
@@ -287,7 +5782,7 @@ MODULE mp
         IF (PRESENT(cleanup)) cleanup_ = cleanup
         IF(cleanup_) THEN
            CALL deallocate_buffers()
-#if defined(__CUDA)
+#if defined(__CUDA) || defined(__OPENMP_GPU)
            CALL deallocate_buffers_gpu()
 #endif
         END IF
@@ -326,7 +5821,6 @@ MODULE mp
          new_comm = old_comm
 #endif
       END SUBROUTINE  mp_comm_split
-
 
       SUBROUTINE mp_group_create( group_list, group_size, old_grp, new_grp )
         IMPLICIT NONE
@@ -437,6 +5931,9 @@ MODULE mp
         INTEGER :: group
         INTEGER :: msglen
 
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_i1_gpu) match( construct={dispatch} )
+#endif
 #if defined(__MPI)
         msglen = 1
         group = gid
@@ -447,31 +5944,34 @@ MODULE mp
       !------------------------------------------------------------------------------!
       SUBROUTINE mp_bcast_iv(msg, source, gid)
       !------------------------------------------------------------------------------!
-      !! 
+      !!
       !! Bcast an integer vector
-      !!  
+      !!
       IMPLICIT NONE
-      ! 
+      !
       INTEGER :: msg(:)
       INTEGER, INTENT(in) :: source
       INTEGER, INTENT(in) :: gid
 #if defined(__MPI)
       INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+      !$omp declare variant (mp_bcast_iv_gpu) match( construct={dispatch} )
+#endif
       msglen = SIZE(msg)
       CALL bcast_integer(msg, msglen, source, gid)
 #endif
       !------------------------------------------------------------------------------!
       END SUBROUTINE mp_bcast_iv
       !------------------------------------------------------------------------------!
-      ! 
+      !
       !------------------------------------------------------------------------------!
       SUBROUTINE mp_bcast_i8v(msg, source, gid)
       !------------------------------------------------------------------------------!
-      !! 
-      !! Bcast an integer vector of kind i8b. 
-      !!  
+      !!
+      !! Bcast an integer vector of kind i8b.
+      !!
       IMPLICIT NONE
-      ! 
+      !
       INTEGER(KIND = i8b) :: msg(:)
       INTEGER, INTENT(in) :: source
       INTEGER, INTENT(in) :: gid
@@ -493,6 +5993,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_im_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_integer(msg, msglen, source, gid)
 #endif
@@ -509,6 +6012,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_it_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_integer( msg, msglen, source, gid )
 #endif
@@ -525,6 +6031,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_i4d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_integer( msg, msglen, source, gid )
 #endif
@@ -539,6 +6048,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_r1_gpu) match( construct={dispatch} )
+#endif
         msglen = 1
         CALL bcast_real( msg, msglen, source, gid )
 #endif
@@ -553,6 +6065,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_rv_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, msglen, source, gid )
 #endif
@@ -567,6 +6082,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_rm_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, msglen, source, gid )
 #endif
@@ -583,6 +6101,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_rt_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, msglen, source, gid )
 #endif
@@ -599,6 +6120,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_r4d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, msglen, source, gid )
 #endif
@@ -616,6 +6140,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_r5d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, msglen, source, gid )
 #endif
@@ -630,6 +6157,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_c1_gpu) match( construct={dispatch} )
+#endif
         msglen = 1
         CALL bcast_real( msg, 2 * msglen, source, gid )
 #endif
@@ -643,6 +6173,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_cv_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, 2 * msglen, source, gid )
 #endif
@@ -656,6 +6189,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_cm_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, 2 * msglen, source, gid )
 #endif
@@ -669,6 +6205,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_ct_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, 2 * msglen, source, gid )
 #endif
@@ -683,6 +6222,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_c4d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, 2 * msglen, source, gid )
 #endif
@@ -695,6 +6237,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_c5d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, 2 * msglen, source, gid )
 #endif
@@ -707,6 +6252,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_c6d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_real( msg, 2 * msglen, source, gid )
 #endif
@@ -722,6 +6270,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_l_gpu) match( construct={dispatch} )
+#endif
         msglen = 1
         CALL bcast_logical( msg, msglen, source, gid )
 #endif
@@ -738,6 +6289,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_lv_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_logical( msg, msglen, source, gid )
 #endif
@@ -754,11 +6308,13 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_bcast_lm_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL bcast_logical( msg, msglen, source, gid )
 #endif
       END SUBROUTINE mp_bcast_lm
-
 
 !
 !------------------------------------------------------------------------------!
@@ -840,6 +6396,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen = 1
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_get_i1_gpu) match( construct={dispatch} )
+#endif
 
 #if defined(__MPI)
         group = gid
@@ -874,7 +6433,6 @@ MODULE mp
         IF (ierr/=0) CALL mp_stop( 8022 )
 #endif
 
-
         RETURN
       END SUBROUTINE mp_get_i1
 
@@ -893,6 +6451,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_get_iv_gpu) match( construct={dispatch} )
+#endif
 
 #if defined(__MPI)
         group = gid
@@ -940,6 +6501,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_get_r1_gpu) match( construct={dispatch} )
+#endif
 
 #if defined(__MPI)
         group = gid
@@ -989,6 +6553,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_get_rv_gpu) match( construct={dispatch} )
+#endif
 
 #if defined(__MPI)
         group = gid
@@ -1038,6 +6605,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_get_rm_gpu) match( construct={dispatch} )
+#endif
 
 #if defined(__MPI)
         group = gid
@@ -1072,7 +6642,6 @@ MODULE mp
         RETURN
       END SUBROUTINE mp_get_rm
 
-
 !------------------------------------------------------------------------------!
 !
 ! Carlo Cavazzoni
@@ -1088,6 +6657,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_get_cv_gpu) match( construct={dispatch} )
+#endif
 
 #if defined(__MPI)
         group = gid
@@ -1122,8 +6694,6 @@ MODULE mp
         RETURN
       END SUBROUTINE mp_get_cv
 
-
-
 !------------------------------------------------------------------------------!
 !
 ! Marco Govoni
@@ -1139,6 +6709,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_get_cm_gpu) match( construct={dispatch} )
+#endif
 
 #if defined(__MPI)
         group = gid
@@ -1177,7 +6750,6 @@ MODULE mp
 !
 !------------------------------------------------------------------------------!
 
-
       SUBROUTINE mp_put_i1(msg_dest, msg_sour, mpime, sour, dest, ip, gid)
         INTEGER :: msg_dest
         INTEGER, INTENT(IN) :: msg_sour
@@ -1189,6 +6761,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_put_i1_gpu) match( construct={dispatch} )
+#endif
 
 #if defined(__MPI)
         group = gid
@@ -1237,6 +6812,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_put_iv_gpu) match( construct={dispatch} )
+#endif
 #if defined(__MPI)
         group = gid
 #endif
@@ -1283,6 +6861,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_put_rv_gpu) match( construct={dispatch} )
+#endif
 #if defined(__MPI)
         group = gid
 #endif
@@ -1329,6 +6910,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_put_rm_gpu) match( construct={dispatch} )
+#endif
 #if defined(__MPI)
         group = gid
 #endif
@@ -1361,7 +6945,6 @@ MODULE mp
         RETURN
       END SUBROUTINE mp_put_rm
 
-
 !------------------------------------------------------------------------------!
 !
 !
@@ -1376,6 +6959,9 @@ MODULE mp
 #endif
         INTEGER :: ierr, nrcv
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_put_cv_gpu) match( construct={dispatch} )
+#endif
 #if defined(__MPI)
         group = gid
 #endif
@@ -1434,6 +7020,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_i1_gpu) match( construct={dispatch} )
+#endif
         msglen = 1
         CALL reduce_base_integer( msglen, msg, gid, -1 )
 #endif
@@ -1442,30 +7031,33 @@ MODULE mp
       !------------------------------------------------------------------------------!
       SUBROUTINE mp_sum_iv(msg, gid)
       !------------------------------------------------------------------------------!
-      !! 
-      !! MPI sum an integer vector from all cores and bcast the result to all.  
-      !! 
+      !!
+      !! MPI sum an integer vector from all cores and bcast the result to all.
+      !!
       IMPLICIT NONE
-      ! 
+      !
       INTEGER, INTENT(inout) :: msg(:)
       INTEGER, INTENT(in) :: gid
 #if defined(__MPI)
       INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+      !$omp declare variant (mp_sum_iv_gpu) match( construct={dispatch} )
+#endif
       msglen = SIZE(msg)
       CALL reduce_base_integer(msglen, msg, gid, -1)
 #endif
       !------------------------------------------------------------------------------!
       END SUBROUTINE mp_sum_iv
       !------------------------------------------------------------------------------!
-      ! 
+      !
       !------------------------------------------------------------------------------!
       SUBROUTINE mp_sum_i8v(msg, gid)
       !------------------------------------------------------------------------------!
-      !! 
-      !! MPI sum an integer vector from all cores and bcast the result to all.  
-      !! 
+      !!
+      !! MPI sum an integer vector from all cores and bcast the result to all.
+      !!
       IMPLICIT NONE
-      ! 
+      !
       INTEGER(KIND = i8b), INTENT(inout) :: msg(:)
       INTEGER, INTENT(in) :: gid
 #if defined(__MPI)
@@ -1485,6 +7077,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+      !$omp declare variant (mp_sum_im_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_integer( msglen, msg, gid, -1 )
 #endif
@@ -1498,6 +7093,9 @@ MODULE mp
         INTEGER, INTENT (IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+      !$omp declare variant (mp_sum_it_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_integer( msglen, msg, gid, -1 )
 #endif
@@ -1529,7 +7127,6 @@ MODULE mp
 #endif
       END SUBROUTINE mp_sum_i5
 
-
 !------------------------------------------------------------------------------!
 
       SUBROUTINE mp_sum_r1(msg,gid)
@@ -1538,6 +7135,9 @@ MODULE mp
         INTEGER, INTENT (IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_r1_gpu) match( construct={dispatch} )
+#endif
         msglen = 1
         CALL reduce_base_real( msglen, msg, gid, -1 )
 #endif
@@ -1552,6 +7152,9 @@ MODULE mp
         INTEGER, INTENT (IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_rv_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( msglen, msg, gid, -1 )
 #endif
@@ -1559,18 +7162,19 @@ MODULE mp
 !
 !------------------------------------------------------------------------------!
 
-
       SUBROUTINE mp_sum_rm(msg, gid)
         IMPLICIT NONE
         REAL (DP), INTENT (INOUT) :: msg(:,:)
         INTEGER, INTENT (IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_rm_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( msglen, msg, gid, -1 )
 #endif
       END SUBROUTINE mp_sum_rm
-
 
       SUBROUTINE mp_root_sum_rm( msg, res, root, gid )
         IMPLICIT NONE
@@ -1580,6 +7184,9 @@ MODULE mp
         INTEGER,   INTENT (IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen, ierr, taskid
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_root_sum_rm_gpu) match( construct={dispatch} )
+#endif
 
         msglen = size(msg)
 
@@ -1600,7 +7207,6 @@ MODULE mp
 
       END SUBROUTINE mp_root_sum_rm
 
-
       SUBROUTINE mp_root_sum_cm( msg, res, root, gid )
         IMPLICIT NONE
         COMPLEX (DP), INTENT (IN)  :: msg(:,:)
@@ -1609,6 +7215,9 @@ MODULE mp
         INTEGER,  INTENT (IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen, ierr, taskid
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_root_sum_cm_gpu) match( construct={dispatch} )
+#endif
 
         msglen = size(msg)
 
@@ -1632,7 +7241,6 @@ MODULE mp
 !
 !------------------------------------------------------------------------------!
 
-
 !------------------------------------------------------------------------------!
 !
 
@@ -1645,6 +7253,9 @@ MODULE mp
         INTEGER :: group
         INTEGER :: msglen
         INTEGER :: taskid, ierr
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_rmm_gpu) match( construct={dispatch} )
+#endif
 
         msglen = size(msg)
 
@@ -1668,10 +7279,8 @@ MODULE mp
 
       END SUBROUTINE mp_sum_rmm
 
-
 !
 !------------------------------------------------------------------------------!
-
 
       SUBROUTINE mp_sum_rt( msg, gid )
         IMPLICIT NONE
@@ -1679,6 +7288,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_rt_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( msglen, msg, gid, -1 )
 #endif
@@ -1695,12 +7307,13 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_r4d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( msglen, msg, gid, -1 )
 #endif
       END SUBROUTINE mp_sum_r4d
-
-
 
 !------------------------------------------------------------------------------!
 
@@ -1710,6 +7323,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_c1_gpu) match( construct={dispatch} )
+#endif
         msglen = 1
         CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
 #endif
@@ -1723,6 +7339,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_cv_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
 #endif
@@ -1736,13 +7355,15 @@ MODULE mp
         INTEGER, INTENT (IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_cm_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
 #endif
       END SUBROUTINE mp_sum_cm
 !
 !------------------------------------------------------------------------------!
-
 
       SUBROUTINE mp_sum_cmm(msg, res, gid)
         IMPLICIT NONE
@@ -1751,13 +7372,15 @@ MODULE mp
         INTEGER, INTENT (IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_cmm_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real_to( 2 * msglen, msg, res, gid, -1 )
 #else
         res = msg
 #endif
       END SUBROUTINE mp_sum_cmm
-
 
 !
 !------------------------------------------------------------------------------!
@@ -1770,6 +7393,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_ct_gpu) match( construct={dispatch} )
+#endif
         msglen = SIZE(msg)
         CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
 #endif
@@ -1786,6 +7412,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_c4d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
 #endif
@@ -1801,6 +7430,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_c5d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
 #endif
@@ -1816,11 +7448,13 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_r5d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( msglen, msg, gid, -1 )
 #endif
       END SUBROUTINE mp_sum_r5d
-
 
       SUBROUTINE mp_sum_r6d(msg,gid)
         IMPLICIT NONE
@@ -1828,6 +7462,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
 #if defined(__MPI)
         INTEGER :: msglen
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_sum_r6d_gpu) match( construct={dispatch} )
+#endif
         msglen = size(msg)
         CALL reduce_base_real( msglen, msg, gid, -1 )
 #endif
@@ -1848,8 +7485,6 @@ MODULE mp
         CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
 #endif
       END SUBROUTINE mp_sum_c6d
-
-
 
 !------------------------------------------------------------------------------!
       SUBROUTINE mp_max_i(msg,gid)
@@ -2011,7 +7646,6 @@ MODULE mp
         RETURN
       END SUBROUTINE mp_report
 
-
 !------------------------------------------------------------------------------!
 !..mp_gatherv_rv
 !..Carlo Cavazzoni
@@ -2024,6 +7658,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
         INTEGER :: group
         INTEGER :: ierr, npe, myid
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_gatherv_rv_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         group = gid
@@ -2062,6 +7699,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
         INTEGER :: group
         INTEGER :: ierr, npe, myid
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_gatherv_cv_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         group = gid
@@ -2100,6 +7740,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: gid
         INTEGER :: group
         INTEGER :: ierr, npe, myid
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_gatherv_iv_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         group = gid
@@ -2126,7 +7769,6 @@ MODULE mp
         RETURN
       END SUBROUTINE mp_gatherv_iv
 
-
 !------------------------------------------------------------------------------!
 !..mp_gatherv_rm
 !..Carlo Cavazzoni
@@ -2140,7 +7782,9 @@ MODULE mp
         INTEGER :: group
         INTEGER :: ierr, npe, myid, nsiz
         INTEGER, ALLOCATABLE :: nrecv(:), ndisp(:)
-
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_gatherv_rm_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         group = gid
@@ -2190,7 +7834,9 @@ MODULE mp
         INTEGER :: group
         INTEGER :: ierr, npe, myid, nsiz
         INTEGER, ALLOCATABLE :: nrecv(:), ndisp(:)
-
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_gatherv_im_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         group = gid
@@ -2227,7 +7873,6 @@ MODULE mp
         RETURN
       END SUBROUTINE mp_gatherv_im
 
-
 !------------------------------------------------------------------------------!
 !..mp_gatherv_inplace_cplx_array
 !..Ye Luo
@@ -2239,6 +7884,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
         INTEGER, INTENT(IN) :: root, gid
         INTEGER :: ierr, npe, myid
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_gatherv_inplace_cplx_array_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         CALL mpi_comm_size( gid, npe, ierr )
@@ -2271,6 +7919,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
         INTEGER, INTENT(IN) :: gid
         INTEGER :: ierr, npe, myid
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_allgatherv_inplace_cplx_array_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         CALL mpi_comm_size( gid, npe, ierr )
@@ -2295,6 +7946,9 @@ MODULE mp
         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
         INTEGER, INTENT(IN) :: gid
         INTEGER :: ierr, npe, myid
+#if defined(__OPENMP_GPU)
+        !$omp declare variant (mp_allgatherv_inplace_real_array_gpu) match( construct={dispatch} )
+#endif
 
 #if defined (__MPI)
         CALL mpi_comm_size( gid, npe, ierr )
@@ -2340,7 +7994,6 @@ MODULE mp
 
 !------------------------------------------------------------------------------!
 
-
 SUBROUTINE mp_alltoall_c3d( sndbuf, rcvbuf, gid )
    IMPLICIT NONE
    COMPLEX(DP) :: sndbuf( :, :, : )
@@ -2373,7 +8026,6 @@ SUBROUTINE mp_alltoall_c3d( sndbuf, rcvbuf, gid )
 
    RETURN
 END SUBROUTINE mp_alltoall_c3d
-
 
 !------------------------------------------------------------------------------!
 
@@ -2420,6 +8072,9 @@ SUBROUTINE mp_circular_shift_left_i0( buf, itag, gid )
 #if defined (__MPI)
 
    INTEGER :: istatus( mpi_status_size )
+#if defined(__OPENMP_GPU)
+   !$omp declare variant (mp_circular_shift_left_i0_gpu) match( construct={dispatch} )
+#endif
    !
    group = gid
    !
@@ -2444,7 +8099,6 @@ SUBROUTINE mp_circular_shift_left_i0( buf, itag, gid )
    RETURN
 END SUBROUTINE mp_circular_shift_left_i0
 
-
 SUBROUTINE mp_circular_shift_left_i1( buf, itag, gid )
    IMPLICIT NONE
    INTEGER :: buf(:)
@@ -2455,6 +8109,9 @@ SUBROUTINE mp_circular_shift_left_i1( buf, itag, gid )
 #if defined (__MPI)
 
    INTEGER :: istatus( mpi_status_size )
+#if defined(__OPENMP_GPU)
+   !$omp declare variant (mp_circular_shift_left_i1_gpu) match( construct={dispatch} )
+#endif
    !
    group = gid
    !
@@ -2479,7 +8136,6 @@ SUBROUTINE mp_circular_shift_left_i1( buf, itag, gid )
    RETURN
 END SUBROUTINE mp_circular_shift_left_i1
 
-
 SUBROUTINE mp_circular_shift_left_i2( buf, itag, gid )
    IMPLICIT NONE
    INTEGER :: buf(:,:)
@@ -2490,6 +8146,9 @@ SUBROUTINE mp_circular_shift_left_i2( buf, itag, gid )
 #if defined (__MPI)
 
    INTEGER :: istatus( mpi_status_size )
+#if defined(__OPENMP_GPU)
+   !$omp declare variant (mp_circular_shift_left_i2_gpu) match( construct={dispatch} )
+#endif
    !
    group = gid
    !
@@ -2514,7 +8173,6 @@ SUBROUTINE mp_circular_shift_left_i2( buf, itag, gid )
    RETURN
 END SUBROUTINE mp_circular_shift_left_i2
 
-
 SUBROUTINE mp_circular_shift_left_r2d( buf, itag, gid )
    IMPLICIT NONE
    REAL(DP) :: buf( :, : )
@@ -2525,6 +8183,9 @@ SUBROUTINE mp_circular_shift_left_r2d( buf, itag, gid )
 #if defined (__MPI)
 
    INTEGER :: istatus( mpi_status_size )
+#if defined(__OPENMP_GPU)
+   !$omp declare variant (mp_circular_shift_left_r2d_gpu) match( construct={dispatch} )
+#endif
    !
    group = gid
    !
@@ -2559,6 +8220,9 @@ SUBROUTINE mp_circular_shift_left_c2d( buf, itag, gid )
 #if defined (__MPI)
 
    INTEGER :: istatus( mpi_status_size )
+#if defined(__OPENMP_GPU)
+   !$omp declare variant (mp_circular_shift_left_c2d_gpu) match( construct={dispatch} )
+#endif
    !
    group = gid
    !
@@ -2582,7 +8246,6 @@ SUBROUTINE mp_circular_shift_left_c2d( buf, itag, gid )
 #endif
    RETURN
 END SUBROUTINE mp_circular_shift_left_c2d
-
 
 !------------------------------------------------------------------------------!
 !..mp_circular_shift_left_start
@@ -2628,7 +8291,6 @@ SUBROUTINE mp_circular_shift_left_start_i0( sendbuf, recvbuf, itag, gid, request
    RETURN
 END SUBROUTINE mp_circular_shift_left_start_i0
 
-
 SUBROUTINE mp_circular_shift_left_start_i1( sendbuf, recvbuf, itag, gid, requests)
    IMPLICIT NONE
    INTEGER  :: sendbuf( : ), recvbuf( : )
@@ -2671,7 +8333,6 @@ SUBROUTINE mp_circular_shift_left_start_i1( sendbuf, recvbuf, itag, gid, request
 #endif
    RETURN
 END SUBROUTINE mp_circular_shift_left_start_i1
-
 
 SUBROUTINE mp_circular_shift_left_start_i2( sendbuf, recvbuf, itag, gid, requests)
    IMPLICIT NONE
@@ -2716,7 +8377,6 @@ SUBROUTINE mp_circular_shift_left_start_i2( sendbuf, recvbuf, itag, gid, request
    RETURN
 END SUBROUTINE mp_circular_shift_left_start_i2
 
-
 SUBROUTINE mp_circular_shift_left_start_r2d( sendbuf, recvbuf, itag, gid, requests)
    IMPLICIT NONE
    REAL(DP) :: sendbuf( :, : ), recvbuf( :, : )
@@ -2759,7 +8419,6 @@ SUBROUTINE mp_circular_shift_left_start_r2d( sendbuf, recvbuf, itag, gid, reques
 #endif
    RETURN
 END SUBROUTINE mp_circular_shift_left_start_r2d
-
 
 SUBROUTINE mp_circular_shift_left_start_c2d( sendbuf, recvbuf, itag, gid, requests)
    IMPLICIT NONE
@@ -2833,7 +8492,7 @@ SUBROUTINE mp_count_nodes(num_nodes, color, key, group)
   CHARACTER(len=MPI_MAX_PROCESSOR_NAME) :: hostname
   CHARACTER(len=MPI_MAX_PROCESSOR_NAME), ALLOCATABLE :: host_list(:)
 #endif
-  
+
   LOGICAL, ALLOCATABLE   :: found_list(:)
   INTEGER, ALLOCATABLE   :: color_list(:)
   INTEGER, ALLOCATABLE   :: key_list(:)
@@ -2940,6 +8599,9 @@ SUBROUTINE mp_type_create_cplx_column_section(dummy, start, length, stride, myty
   !
 #if defined(__MPI)
   INTEGER :: ierr
+#if defined(__OPENMP_GPU)
+  !$omp declare variant (mp_type_create_cplx_column_section_gpu) match( construct={dispatch} )
+#endif
   !
   CALL MPI_TYPE_CREATE_SUBARRAY(1, [stride], [length], [start], &
           MPI_ORDER_FORTRAN, MPI_DOUBLE_COMPLEX, mytype, ierr)
@@ -2962,6 +8624,9 @@ SUBROUTINE mp_type_create_real_column_section(dummy, start, length, stride, myty
   !
 #if defined(__MPI)
   INTEGER :: ierr
+#if defined(__OPENMP_GPU)
+  !$omp declare variant (mp_type_create_real_column_section_gpu) match( construct={dispatch} )
+#endif
   !
   CALL MPI_TYPE_CREATE_SUBARRAY(1, [stride], [length], [start], &
           MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, mytype, ierr)
@@ -2986,6 +8651,9 @@ SUBROUTINE mp_type_create_cplx_row_section(dummy, column_start, column_stride, r
   INTEGER :: ierr, temporary
   INTEGER :: strides(2), lengths(2), starts(2)
   INTEGER(KIND=MPI_ADDRESS_KIND) :: lb, extent
+#if defined(__OPENMP_GPU)
+  !$omp declare variant (mp_type_create_cplx_row_section_gpu) match( construct={dispatch} )
+#endif
   !
   strides(1) = column_stride ; strides(2) = row_length
   lengths(1) = 1             ; lengths(2) = row_length
@@ -3053,1995 +8721,8 @@ SUBROUTINE mp_type_free(mytype)
   RETURN
 END SUBROUTINE mp_type_free
 !------------------------------------------------------------------------------!
-!  GPU specific subroutines (Pietro Bonfa')
-!------------------------------------------------------------------------------!
-! Before hacking on the CUDA part remember that:
 !
-! 1. all mp_* interface should be blocking with respect to both MPI and CUDA.
-!    MPI will only wait for completion on the default stream therefore device
-!    synchronization must be enforced.
-! 2. Host -> device memory copies of a memory block of 64 KB or less are
-!    asynchronous in the sense that they may return before the data is actually
-!    available on the GPU. However, the user is still free to change the buffer
-!    as soon as those calls return with no ill effects.
-!    (https://devtalk.nvidia.com/default/topic/471866/cuda-programming-and-performance/host-device-memory-copies-up-to-64-kb-are-asynchronous/)
-! 3. For transfers from device to either pageable or pinned host memory,
-!    the function returns only once the copy has completed.
-! 4. GPU synchronization is always enforced even if no communication takes place.
-!------------------------------------------------------------------------------!
-#ifdef __CUDA
-
-!------------------------------------------------------------------------------!
-!..mp_bcast
-
-      SUBROUTINE mp_bcast_i1_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        INTEGER, DEVICE :: msg_d
-        INTEGER :: msg_h
-        INTEGER :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-        INTEGER :: msglen, ierr
-        !
-#if defined(__MPI)
-        msglen = 1
-        group = gid
-#if defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI case
-        CALL bcast_integer_gpu( msg_d, msglen, source, group )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        msg_h = msg_d                   ! This syncs __MPI case
-        CALL bcast_integer( msg_h, msglen, source, group )
-        msg_d = msg_h
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_i1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_iv_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        INTEGER, DEVICE :: msg_d(:)
-        INTEGER, ALLOCATABLE :: msg_h(:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-        !
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_integer_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_integer( msg_h, msglen, source, gid )
-        msg_d = msg_h; DEALLOCATE( msg_h )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_iv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_im_gpu( msg_d, source, gid )
-        IMPLICIT NONE
-        INTEGER, DEVICE :: msg_d(:,:)
-        INTEGER, ALLOCATABLE :: msg_h(:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_integer_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_integer( msg_h, msglen, source, gid )
-        msg_d = msg_h; DEALLOCATE( msg_h )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_im_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_it_gpu( msg_d, source, gid )
-        IMPLICIT NONE
-        INTEGER, DEVICE :: msg_d(:,:,:)
-
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_integer_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        INTEGER, ALLOCATABLE :: msg_h(:,:,:)
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_integer( msg_h, msglen, source, gid )
-        msg_d = msg_h; DEALLOCATE( msg_h )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_it_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_i4d_gpu(msg_d, source, gid)
-        IMPLICIT NONE
-        INTEGER, DEVICE :: msg_d(:,:,:,:)
-        INTEGER, ALLOCATABLE :: msg_h(:,:,:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_integer_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_integer( msg_h, msglen, source, gid )
-        msg_d = msg_h; DEALLOCATE( msg_h )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_i4d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_r1_gpu( msg_d, source, gid )
-        IMPLICIT NONE
-        REAL (DP), DEVICE :: msg_d
-        REAL (DP) :: msg_h
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-        msglen = 1
-#if defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        msg_h=msg_d                         ! This syncs __MPI case
-        CALL bcast_real( msg_h, msglen, source, gid )
-        msg_d = msg_h
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_r1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_rv_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        REAL (DP), DEVICE :: msg_d(:)
-        REAL (DP), ALLOCATABLE :: msg_h(:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_rv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_rm_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        REAL (DP), DEVICE :: msg_d(:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        REAL (DP), ALLOCATABLE :: msg_h(:,:)
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_rm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_rt_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        REAL (DP), DEVICE :: msg_d(:,:,:)
-        REAL (DP), ALLOCATABLE :: msg_h(:,:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_rt_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_r4d_gpu(msg_d, source, gid)
-        IMPLICIT NONE
-        REAL (DP), DEVICE :: msg_d(:,:,:,:)
-        REAL (DP), ALLOCATABLE :: msg_h(:,:,:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_r4d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_r5d_gpu(msg_d, source, gid)
-        IMPLICIT NONE
-        REAL (DP), DEVICE :: msg_d(:,:,:,:,:)
-        REAL (DP), ALLOCATABLE :: msg_h(:,:,:,:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_r5d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_c1_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), DEVICE :: msg_d
-        COMPLEX (DP) :: msg_h
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-        msglen = 1
-#if defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        msg_h=msg_d                         ! This syncs __MPI case
-        CALL bcast_real( msg_h, 2 * msglen, source, gid )
-        msg_d = msg_h
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_c1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_cv_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), DEVICE :: msg_d(:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, 2 * msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_cv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_cm_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), DEVICE :: msg_d(:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, 2 * msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_cm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_ct_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), DEVICE :: msg_d(:,:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, 2 * msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_ct_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_c4d_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), DEVICE :: msg_d(:,:,:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, 2 * msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_c4d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_c5d_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), DEVICE :: msg_d(:,:,:,:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:,:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, 2 * msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_c5d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_c6d_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), DEVICE :: msg_d(:,:,:,:,:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:,:,:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_real_gpu( msg_d, 2 * msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_real( msg_h, 2 * msglen, source, gid )
-        msg_d = msg_h ; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_c6d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_l_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        LOGICAL, DEVICE :: msg_d
-        LOGICAL         :: msg_h
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-        msglen = 1
-#if defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_logical_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        msg_h = msg_d                       ! This syncs __MPI case
-        CALL bcast_logical( msg_h, msglen, source, gid )
-        msg_d = msg_h
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_l_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_lv_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        LOGICAL, DEVICE :: msg_d(:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_logical_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        LOGICAL, ALLOCATABLE :: msg_h(:)
-        ALLOCATE(msg_h, source=msg_d)       ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_logical( msg_h, msglen, source, gid )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_lv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_bcast_lm_gpu(msg_d,source,gid)
-        IMPLICIT NONE
-        LOGICAL, DEVICE :: msg_d(:,:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()      ! This syncs __GPU_MPI case
-        CALL bcast_logical_gpu( msg_d, msglen, source, gid )
-        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
-#else
-        LOGICAL, ALLOCATABLE :: msg_h(:,:)
-        ALLOCATE(msg_h, source=msg_d)       ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL bcast_logical( msg_h, msglen, source, gid )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_bcast_lm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_get_i1_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
-        INTEGER, DEVICE             :: msg_dest_d
-        INTEGER, INTENT(IN), DEVICE :: msg_sour_d
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group, ierr
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: nrcv
-        INTEGER :: msglen = 1
-
-#if ! defined(__GPU_MPI)
-        ! Call CPU implementation
-        INTEGER :: msg_dest_h, msg_sour_h
-        !
-        msg_dest_h = msg_dest_d; msg_sour_h = msg_sour_d      ! This syncs __MPI case
-        CALL mp_get_i1(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
-        msg_dest_d = msg_dest_h
-#else
-
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(dest .NE. sour) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             msglen=1
-             CALL MPI_SEND( msg_sour_d, msglen, MPI_INTEGER, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( -8001 )
-           ELSE IF(mpime .EQ. dest) THEN
-             msglen=1
-             CALL MPI_RECV( msg_dest_d, msglen, MPI_INTEGER, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( -8002 )
-             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( -8003 )
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest_d = msg_sour_d
-          msglen = 1
-        END IF
-
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( -8004 )
-#endif
-
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_get_i1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_get_iv_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
-        INTEGER, DEVICE             :: msg_dest_d(:)
-        INTEGER, INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        INTEGER, ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );       ! This syncs __MPI case
-        CALL mp_get_iv(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             msglen = SIZE(msg_sour_d)
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_INTEGER, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9001 )
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_INTEGER, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9002 )
-             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9003 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9004 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_get_iv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_get_r1_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
-        REAL (DP), DEVICE             :: msg_dest_d
-        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-#if ! defined(__GPU_MPI)
-        REAL(DP) :: msg_dest_h, msg_sour_h
-        !
-        msg_dest_h=msg_dest_d; msg_sour_h=msg_sour_d      ! This syncs __MPI case
-        CALL mp_get_r1(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
-        msg_dest_d = msg_dest_h
-#else
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             msglen = 1
-             CALL MPI_SEND( msg_sour_d, msglen, MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9005 )
-           ELSE IF(mpime .EQ. dest) THEN
-             msglen = 1
-             CALL MPI_RECV( msg_dest_d, msglen, MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9006 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9007 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest_d = msg_sour_d
-          msglen = 1
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9008 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_get_r1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_get_rv_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
-        REAL (DP), DEVICE             :: msg_dest_d(:)
-        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        REAL (DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );       ! This syncs __MPI case
-        CALL mp_get_rv(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             msglen = SIZE(msg_sour_d)
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9009 )
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9010 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9011 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9012 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_get_rv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_get_rm_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
-        REAL (DP), DEVICE             :: msg_dest_d(:,:)
-        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d(:,:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        REAL (DP), ALLOCATABLE :: msg_dest_h(:,:), msg_sour_h(:,:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );        ! This syncs __MPI case
-        CALL mp_get_rm(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9013 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9014 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9015 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d,1), 1:SIZE(msg_sour_d,2)) = msg_sour_d(:,:)
-          ! function cudaMemcpy2D(dst, dpitch, src, spitch, width, height, kdir)
-          ierr = cudaMemcpy2D(msg_dest_d, SIZE(msg_dest_d,1),&
-                              msg_sour_d, SIZE(msg_sour_d,1),&
-                              SIZE(msg_sour_d,1), SIZE(msg_sour_d,2), &
-                              cudaMemcpyDeviceToDevice )
-          msglen = SIZE( msg_sour_d )
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9016 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_get_rm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_get_cv_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
-        COMPLEX (DP), DEVICE             :: msg_dest_d(:)
-        COMPLEX (DP), INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        COMPLEX (DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );         ! This syncs __MPI case
-        CALL mp_get_cv(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
-        msg_dest_d = msg_dest_h;
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF( dest .NE. sour ) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9017 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9018 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9019 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9020 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_get_cv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_get_cm_gpu(msg_dest_d, msg_sour_d, mpime, dest, sour, ip, gid)
-        COMPLEX (DP), INTENT(IN), DEVICE :: msg_sour_d(:,:)
-        COMPLEX (DP), DEVICE             :: msg_dest_d(:,:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        COMPLEX (DP), ALLOCATABLE :: msg_dest_h(:,:), msg_sour_h(:,:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );          ! This syncs __MPI case
-        CALL mp_get_cm(msg_dest_h, msg_sour_h, mpime, dest, sour, ip, gid)
-        msg_dest_d = msg_dest_h;
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9021 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9022 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9023 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d,1), 1:SIZE(msg_sour_d,2)) = msg_sour_d(:,:)
-          ierr = cudaMemcpy2D(msg_dest_d, SIZE(msg_dest_d,1),&
-                              msg_sour_d, SIZE(msg_sour_d,1),&
-                              SIZE(msg_sour_d,1), SIZE(msg_sour_d,2), &
-                              cudaMemcpyDeviceToDevice )
-          msglen = SIZE( msg_sour_d )
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9024 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_get_cm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_i1_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        INTEGER, DEVICE             :: msg_dest_d
-        INTEGER, INTENT(IN), DEVICE :: msg_sour_d
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        INTEGER :: msg_dest_h, msg_sour_h
-        !
-        msg_dest_h=msg_dest_d ; msg_sour_h=msg_sour_d           ! This syncs __MPI case
-        CALL mp_put_i1(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-#else
-
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(dest .NE. sour) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, 1, MPI_INTEGER, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9025 )
-             msglen = 1
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, 1, MPI_INTEGER, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9026 )
-             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9027 )
-             msglen = 1
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest_d = msg_sour_d
-          msglen = 1
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9028 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_i1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_iv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        INTEGER, DEVICE             :: msg_dest_d(:)
-        INTEGER, INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        !
-#if ! defined(__GPU_MPI)
-        INTEGER, ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
-        CALL mp_put_iv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_INTEGER, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9029 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_INTEGER, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9030 )
-             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9031 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9032 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_iv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_rv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        REAL (DP), DEVICE             :: msg_dest_d(:)
-        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        REAL (DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
-        CALL mp_put_rv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9033 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9034 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9035 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9036 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_rv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_rm_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        REAL (DP), DEVICE             :: msg_dest_d(:,:)
-        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d(:,:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        REAL (DP), ALLOCATABLE :: msg_dest_h(:,:), msg_sour_h(:,:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
-        CALL mp_put_rm(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9037 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9038 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9039 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d,1),1:SIZE(msg_sour_d,2)) = msg_sour_d(:,:)
-          ierr = cudaMemcpy2D(msg_dest_d, SIZE(msg_dest_d,1),&
-                              msg_sour_d, SIZE(msg_sour_d,1),&
-                              SIZE(msg_sour_d,1), SIZE(msg_sour_d,2), &
-                              cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9040 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_rm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_cv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        COMPLEX (DP),             DEVICE :: msg_dest_d(:)
-        COMPLEX (DP), INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        COMPLEX (DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
-        CALL mp_put_cv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF( dest .NE. sour ) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9041 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9042 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9043 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9044 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_cv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-!..mp_sum
-      SUBROUTINE mp_sum_i1_gpu(msg_d,gid)
-        IMPLICIT NONE
-        INTEGER, INTENT (INOUT), DEVICE :: msg_d
-        INTEGER, msg_h
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-        msglen = 1
-#if defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
-        CALL reduce_base_integer_gpu( msglen, msg_d, gid, -1 )
-        ! No need for final syncronization
-#else
-        !
-        msg_h = msg_d                   ! This syncs __MPI case
-        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
-        msg_d = msg_h
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_i1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_iv_gpu(msg_d,gid)
-        IMPLICIT NONE
-        INTEGER, INTENT (INOUT), DEVICE :: msg_d(:)
-        INTEGER, ALLOCATABLE :: msg_h(:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
-        CALL reduce_base_integer_gpu( msglen, msg_d, gid, -1 )
-        ! No need for final syncronization
-#else
-        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_iv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_im_gpu(msg_d,gid)
-        IMPLICIT NONE
-        INTEGER, INTENT (INOUT), DEVICE :: msg_d(:,:)
-        INTEGER, ALLOCATABLE :: msg_h(:,:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
-        CALL reduce_base_integer_gpu( msglen, msg_d, gid, -1 )
-        ! No need for final syncronization
-#else
-        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_im_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_it_gpu(msg_d,gid)
-        IMPLICIT NONE
-        INTEGER, INTENT (INOUT), DEVICE :: msg_d(:,:,:)
-        INTEGER, ALLOCATABLE :: msg_h(:,:,:)
-        INTEGER, INTENT (IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
-        CALL reduce_base_integer_gpu( msglen, msg_d, gid, -1 )
-        ! No need for final syncronization
-#else
-        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_integer( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_it_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_r1_gpu(msg_d,gid)
-        IMPLICIT NONE
-        REAL (DP), INTENT (INOUT), DEVICE :: msg_d
-        REAL(DP) :: msg_h
-        INTEGER, INTENT (IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-        msglen = 1
-#if defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
-        ! No need for final syncronization
-#else
-        msg_h=msg_d                     ! This syncs __MPI case
-        CALL reduce_base_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_r1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_rv_gpu(msg_d,gid)
-        IMPLICIT NONE
-        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:)
-        REAL(DP), ALLOCATABLE :: msg_h(:)
-        INTEGER, INTENT (IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
-        ! No need for final syncronization
-#else
-        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_rv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_rm_gpu(msg_d, gid)
-        IMPLICIT NONE
-        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:)
-        REAL (DP), ALLOCATABLE :: msg_h(:,:)
-        INTEGER, INTENT (IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()  ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
-        ! No need for final syncronization
-#else
-        ALLOCATE( msg_h, source=msg_d ) ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_rm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_root_sum_rm_gpu( msg_d, res_d, root, gid )
-        IMPLICIT NONE
-        REAL (DP), INTENT (IN) , DEVICE :: msg_d(:,:)
-        REAL (DP), INTENT (OUT), DEVICE :: res_d(:,:)
-        REAL (DP), ALLOCATABLE :: res_h(:,:), msg_h(:,:)
-        INTEGER,   INTENT (IN) :: root
-        INTEGER,   INTENT (IN) :: gid
-        !
-        INTEGER :: msglen, ierr, taskid
-#if defined(__MPI)
-        !
-        CALL mpi_comm_rank( gid, taskid, ierr)
-        IF( ierr /= 0 ) CALL mp_stop( 9045 )
-        !
-        msglen = size(msg_d)
-        IF( taskid == root ) THEN
-           IF( msglen > size(res_d) ) CALL mp_stop( 9046 )
-        END IF
-#if  defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_to_gpu( msglen, msg_d, res_d, gid, root )
-        RETURN ! Sync not needed in this case
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        IF( taskid == root ) ALLOCATE( res_h(lbound(res_d,1):ubound(res_d,1), lbound(res_d,2):ubound(res_d,2)));
-        CALL reduce_base_real_to( msglen, msg_h, res_h, gid, root )
-        IF( taskid == root ) res_d = res_h;
-        IF( taskid == root ) DEALLOCATE(res_h)
-        DEALLOCATE(msg_h)
-#endif
-
-#else
-        res_d = msg_d
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_root_sum_rm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_root_sum_cm_gpu( msg_d, res_d, root, gid )
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (IN) , DEVICE :: msg_d(:,:)
-        COMPLEX (DP), INTENT (OUT), DEVICE :: res_d(:,:)
-        COMPLEX (DP), ALLOCATABLE          :: res_h(:,:), msg_h(:,:)
-        INTEGER,   INTENT (IN)  :: root
-        INTEGER,  INTENT (IN) :: gid
-        !
-        INTEGER :: msglen, ierr, taskid
-#if defined(__MPI)
-        msglen = size(msg_d)
-
-        CALL mpi_comm_rank( gid, taskid, ierr)
-        IF( ierr /= 0 ) CALL mp_stop( 9047 )
-
-        IF( taskid == root ) THEN
-           IF( msglen > size(res_d) ) CALL mp_stop( 9048 )
-        END IF
-#if  defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_to_gpu( 2 * msglen, msg_d, res_d, gid, root )
-        RETURN ! Sync not needed in this case
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        IF( taskid == root ) ALLOCATE( res_h(lbound(res_d,1):ubound(res_d,1), lbound(res_d,2):ubound(res_d,2)));
-        CALL reduce_base_real_to( 2 * msglen, msg_h, res_h, gid, root )
-        IF( taskid == root ) res_d = res_h;
-        IF( taskid == root ) DEALLOCATE(res_h)
-        DEALLOCATE(msg_h)
-#endif
-#else
-        res_d = msg_d
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_root_sum_cm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_rmm_gpu( msg_d, res_d, root, gid )
-        IMPLICIT NONE
-        REAL (DP), INTENT (IN), DEVICE :: msg_d(:,:)
-        REAL (DP), INTENT (OUT),DEVICE :: res_d(:,:)
-        REAL (DP), ALLOCATABLE         :: res_h(:,:), msg_h(:,:)
-        INTEGER, INTENT (IN) :: root
-        INTEGER, INTENT (IN) :: gid
-        INTEGER :: group
-        INTEGER :: msglen
-        INTEGER :: taskid, ierr
-
-
-
-#if defined(__MPI)
-
-        msglen = size(msg_d)
-        !
-        group = gid
-        !
-        CALL mpi_comm_rank( group, taskid, ierr)
-        IF( ierr /= 0 ) CALL mp_stop( 9049 )
-
-        IF( taskid == root ) THEN
-           IF( msglen > size(res_d) ) CALL mp_stop( 9050 )
-        END IF
-        !
-#if  defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_to_gpu( msglen, msg_d, res_d, group, root )
-        RETURN ! Sync not needed in this case
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        IF( taskid == root ) ALLOCATE( res_h(lbound(res_d,1):ubound(res_d,1), lbound(res_d,2):ubound(res_d,2)));
-        CALL reduce_base_real_to( msglen, msg_h, res_h, gid, root )
-        IF( taskid == root ) res_d = res_h;
-        IF( taskid == root ) DEALLOCATE(res_h)
-        DEALLOCATE(msg_h)
-#endif
-        !
-#else
-        res_d = msg_d
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_sum_rmm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_rt_gpu( msg_d, gid )
-        IMPLICIT NONE
-        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:)
-        REAL (DP), ALLOCATABLE :: msg_h(:,:,:)
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_rt_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_r4d_gpu(msg_d,gid)
-        IMPLICIT NONE
-        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:)
-        REAL (DP), ALLOCATABLE :: msg_h(:,:,:,:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_r4d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_c1_gpu(msg_d,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d
-        COMPLEX (DP) :: msg_h
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-        msglen = 1
-#if  defined(__GPU_MPI)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        msg_h=msg_d                               ! This syncs __MPI case
-        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
-        msg_d = msg_h
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_c1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_cv_gpu(msg_d,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        !
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs the device after small message copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_cv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_cm_gpu(msg_d, gid)
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:)
-        INTEGER, INTENT (IN) :: gid
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_cm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_cmm_gpu(msg_d, res_d, gid)
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (IN), DEVICE :: msg_d(:,:)
-        COMPLEX (DP), INTENT (OUT), DEVICE :: res_d(:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:), res_h(:,:)
-        INTEGER, INTENT (IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_to_gpu( 2 * msglen, msg_d, res_h, gid, -1 )
-        RETURN ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        ALLOCATE( res_h(lbound(msg_h,1):ubound(msg_h,1), lbound(msg_h,2):ubound(msg_h,2)));
-        CALL reduce_base_real_to( 2 * msglen, msg_h, res_h, gid, -1 )
-        res_d = res_h; DEALLOCATE(msg_h, res_h)
-#endif
-#else
-        res_d = msg_d
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_sum_cmm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_ct_gpu(msg_d,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)        
-#if  defined(__GPU_MPI)
-        msglen = SIZE(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_ct_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_c4d_gpu(msg_d,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:)
-        COMPLEX (DP),ALLOCATABLE :: msg_h(:,:,:,:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_c4d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_c5d_gpu(msg_d,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:,:,:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_c5d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_r5d_gpu(msg_d,gid)
-        IMPLICIT NONE
-        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:,:)
-        REAL (DP), ALLOCATABLE :: msg_h(:,:,:,:,:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_r5d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_r6d_gpu(msg_d,gid)
-        IMPLICIT NONE
-        REAL (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:,:,:)
-        REAL (DP), ALLOCATABLE :: msg_h(:,:,:,:,:,:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_r6d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_sum_c6d_gpu(msg_d,gid)
-        IMPLICIT NONE
-        COMPLEX (DP), INTENT (INOUT), DEVICE :: msg_d(:,:,:,:,:,:)
-        COMPLEX (DP), ALLOCATABLE :: msg_h(:,:,:,:,:,:)
-        INTEGER, INTENT(IN) :: gid
-        !
-        INTEGER :: msglen, ierr
-        ! Avoid unnecessary communications on __MPI and syncs SERIAL
-        IF ( mp_size(gid) == 1 ) THEN
-          ierr = cudaDeviceSynchronize()
-          RETURN
-        END IF
-        !
-#if defined(__MPI)
-#if  defined(__GPU_MPI)
-        msglen = size(msg_d)
-        ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
-        CALL reduce_base_real_gpu( 2 * msglen, msg_d, gid, -1 )
-        ! Sync not needed after MPI call
-#else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
-        msglen = size(msg_h)
-        CALL reduce_base_real( 2 * msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
-        ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
-#endif
-#endif
-      END SUBROUTINE mp_sum_c6d_gpu
-!
-!------------------------------------------------------------------------------!
-!
+#if defined(__CUDA)
       SUBROUTINE mp_max_i_gpu(msg_d,gid)
         IMPLICIT NONE
         INTEGER, INTENT (INOUT), DEVICE :: msg_d
@@ -5057,12 +8738,12 @@ END SUBROUTINE mp_type_free
         !
 #if defined(__MPI)
         msglen = 1
-#if  defined(__GPU_MPI)
+#if defined(__GPU_MPI)
         ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
         CALL parallel_max_integer_gpu( msglen, msg_d, gid, -1 )
         ! Sync not needed after MPI call
 #else
-        msg_h = msg_d                             ! This syncs __MPI case
+        msg_h = msg_d                   ! This syncs __MPI case
         CALL parallel_max_integer( msglen, msg_h, gid, -1 )
         msg_d = msg_h
         ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
@@ -5086,16 +8767,16 @@ END SUBROUTINE mp_type_free
         END IF
         !
 #if defined(__MPI)
-#if  defined(__GPU_MPI)
+#if defined(__GPU_MPI)
         msglen = size(msg_d)
         ierr = cudaDeviceSynchronize()            ! This syncs __GPU_MPI
         CALL parallel_max_integer_gpu( msglen, msg_d, gid, -1 )
         ! Sync not needed after MPI call
 #else
-        ALLOCATE( msg_h, source=msg_d )           ! This syncs __MPI case
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
         msglen = size(msg_h)
         CALL parallel_max_integer( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
+        msg_d = msg_h; DEALLOCATE( msg_h )
         ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
 #endif
 #endif
@@ -5147,16 +8828,16 @@ END SUBROUTINE mp_type_free
         END IF
         !
 #if defined(__MPI)
-#if  defined(__GPU_MPI)
+#if defined(__GPU_MPI)
         msglen = size(msg_d)
         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
         CALL parallel_max_real_gpu( msglen, msg_d, gid, -1 )
         ! Sync not needed after MPI call
 #else
-        ALLOCATE( msg_h, source=msg_d )  ! This syncs __MPI case
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
         msglen = size(msg_h)
         CALL parallel_max_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
+        msg_d = msg_h; DEALLOCATE( msg_h )
         ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
 #endif
 #endif
@@ -5176,15 +8857,15 @@ END SUBROUTINE mp_type_free
           ierr = cudaDeviceSynchronize()
           RETURN
         END IF
-        !
+!
 #if defined(__MPI)
         msglen = 1
-#if  defined(__GPU_MPI)
+#if defined(__GPU_MPI)
         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
         CALL parallel_min_integer_gpu( msglen, msg_d, gid, -1 )
         ! Sync not needed after MPI call
 #else
-        msg_h = msg_d                    ! This syncs __MPI case
+        msg_h=msg_d                         ! This syncs __MPI case
         CALL parallel_min_integer( msglen, msg_h, gid, -1 )
         msg_d = msg_h
         ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
@@ -5208,16 +8889,16 @@ END SUBROUTINE mp_type_free
         END IF
         !
 #if defined(__MPI)
-#if  defined(__GPU_MPI)
+#if defined(__GPU_MPI)
         msglen = SIZE(msg_d)
         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
         CALL parallel_min_integer_gpu( msglen, msg_d, gid, -1 )
         ! Sync not needed after MPI call
 #else
-        ALLOCATE( msg_h, source=msg_d )  ! This syncs __MPI case
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
         msglen = size(msg_h)
         CALL parallel_min_integer( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
+        msg_d = msg_h ; DEALLOCATE(msg_h)
         ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
 #endif
 #endif
@@ -5240,7 +8921,7 @@ END SUBROUTINE mp_type_free
         !
 #if defined(__MPI)
         msglen = 1
-#if  defined(__GPU_MPI)
+#if defined(__GPU_MPI)
         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
         CALL parallel_min_real_gpu( msglen, msg_d, gid, -1 )
         ! Sync not needed after MPI call
@@ -5269,406 +8950,37 @@ END SUBROUTINE mp_type_free
         END IF
         !
 #if defined(__MPI)
-#if  defined(__GPU_MPI)   
+#if defined(__GPU_MPI)
         msglen = size(msg_d)
         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
         CALL parallel_min_real_gpu( msglen, msg_d, gid, -1 )
         ! Sync not needed after MPI call
 #else
-        ALLOCATE( msg_h, source=msg_d )  ! This syncs __MPI case
+        ALLOCATE( msg_h, source=msg_d )     ! This syncs __MPI case
         msglen = size(msg_h)
         CALL parallel_min_real( msglen, msg_h, gid, -1 )
-        msg_d = msg_h; DEALLOCATE(msg_h)
+        msg_d = msg_h ; DEALLOCATE(msg_h)
         ierr = cudaDeviceSynchronize()  ! This syncs __MPI for small copies
 #endif
 #endif
       END SUBROUTINE mp_min_rv_gpu
-!
-!------------------------------------------------------------------------------!
-!..mp_gather
-
-      SUBROUTINE mp_gather_i1_gpu(mydata_d, alldata_d, root, gid)
-        IMPLICIT NONE
-        INTEGER, DEVICE :: mydata_d
-        INTEGER, INTENT(IN) :: gid, root
-        INTEGER :: group
-        INTEGER, INTENT(OUT), DEVICE :: alldata_d(:)
-        INTEGER :: ierr
-
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-        INTEGER :: mydata_h
-        INTEGER, ALLOCATABLE :: alldata_h(:)
-        ALLOCATE( alldata_h, source=alldata_d ) ! This syncs __MPI
-        mydata_h = mydata_d
-        CALL mp_gather_i1(mydata_h, alldata_h, root, gid)
-        mydata_d = mydata_h; alldata_d = alldata_h
-        DEALLOCATE(alldata_h)
-#else
-        group = gid
-        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-        CALL MPI_GATHER(mydata_d, 1, MPI_INTEGER, alldata_d, 1, MPI_INTEGER, root, group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9051 )
-        RETURN ! Sync not needed after MPI call
 #endif
-#else
-        !alldata_d(1) = mydata_d
-        ierr = cudaMemcpy( alldata_d(1), mydata_d, 1, &
-                                            & cudaMemcpyDeviceToDevice )
-        IF (ierr/=0) CALL mp_stop( 9052 )
-#endif
-        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_gather_i1_gpu
 !
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_gather_iv_gpu(mydata_d, alldata_d, root, gid)
-        IMPLICIT NONE
-        INTEGER, DEVICE :: mydata_d(:)
-        INTEGER, INTENT(IN) :: gid, root
-        INTEGER :: group
-        INTEGER, INTENT(OUT), DEVICE :: alldata_d(:,:)
-        INTEGER :: msglen, ierr, i
-
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-        INTEGER, ALLOCATABLE :: mydata_h(:)
-        INTEGER, ALLOCATABLE :: alldata_h(:,:)
-        ALLOCATE( mydata_h, source=mydata_d )     ! This syncs __MPI
-        ALLOCATE( alldata_h, source=alldata_d )
-        
-        CALL mp_gather_iv(mydata_h, alldata_h, root, gid)
-        mydata_d = mydata_h; alldata_d = alldata_h
-        DEALLOCATE(alldata_h, mydata_h)
-#else
-        msglen = SIZE(mydata_d)
-        IF( msglen .NE. SIZE(alldata_d, 1) ) CALL mp_stop( 9053 )
-        group = gid
-        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-        CALL MPI_GATHER(mydata_d, msglen, MPI_INTEGER, alldata_d, msglen, MPI_INTEGER, root, group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9054 )
-        RETURN ! Sync not needed after MPI call
-#endif
-#else
-        msglen = SIZE(mydata_d)
-        IF( msglen .NE. SIZE(alldata_d, 1) ) CALL mp_stop( 9055 )
-        !alldata_d(:,1) = mydata_d(:)
-        ierr = cudaMemcpy(alldata_d(:,1) , mydata_d(1), msglen, cudaMemcpyDeviceToDevice )
-        IF (ierr/=0) CALL mp_stop( 9056 )
-#endif
-        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_gather_iv_gpu
-!
-!------------------------------------------------------------------------------!
-!..mp_gatherv_rv
-!
-      SUBROUTINE mp_gatherv_rv_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
-        IMPLICIT NONE
-        REAL(DP), DEVICE :: mydata_d(:)
-        REAL(DP), DEVICE :: alldata_d(:)
-        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-        INTEGER :: ierr, npe, myid
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-        REAL(DP), ALLOCATABLE :: mydata_h(:)
-        REAL(DP), ALLOCATABLE :: alldata_h(:)
-        
-        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
-        ALLOCATE(alldata_h, source=alldata_d)
-        CALL mp_gatherv_rv( mydata_h, alldata_h, recvcount, displs, root, gid)
-        alldata_d = alldata_h ; mydata_d = mydata_h
-        DEALLOCATE(alldata_h , mydata_h)
-#else
-
-        group = gid
-        CALL mpi_comm_size( group, npe, ierr )
-        IF (ierr/=0) CALL mp_stop( 9057 )
-        CALL mpi_comm_rank( group, myid, ierr )
-        IF (ierr/=0) CALL mp_stop( 9058 )
-        !
-        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9059 )
-        IF ( myid == root ) THEN
-           IF ( SIZE( alldata_d ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9060 )
-        END IF
-        IF ( SIZE( mydata_d ) < recvcount( myid + 1 ) ) CALL mp_stop( 9061 )
-        !
-        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-        CALL MPI_GATHERV( mydata_d, recvcount( myid + 1 ), MPI_DOUBLE_PRECISION, &
-                         alldata_d, recvcount, displs, MPI_DOUBLE_PRECISION, root, group, ierr )
-        IF (ierr/=0) CALL mp_stop( 9062 )
-        RETURN ! Sync not needed after MPI call
-#endif
-#else
-        IF ( SIZE( alldata_d ) < recvcount( 1 ) ) CALL mp_stop( 9063 )
-        IF ( SIZE( mydata_d  ) < recvcount( 1 ) ) CALL mp_stop( 9064 )
-        !
-        !alldata_d( 1:recvcount( 1 ) ) = mydata_d( 1:recvcount( 1 ) )
-        ierr = cudaMemcpy(alldata_d(1) , mydata_d(1), recvcount( 1 ), cudaMemcpyDeviceToDevice )
-        IF (ierr/=0) CALL mp_stop( 9065 )
-#endif
-        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_gatherv_rv_gpu
-!
-!------------------------------------------------------------------------------!
-!..mp_gatherv_cv
-!
-      SUBROUTINE mp_gatherv_cv_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
-        IMPLICIT NONE
-        COMPLEX(DP), DEVICE :: mydata_d(:)
-        COMPLEX(DP), DEVICE :: alldata_d(:)
-        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-        INTEGER :: ierr, npe, myid
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-        COMPLEX(DP), ALLOCATABLE :: mydata_h(:)
-        COMPLEX(DP), ALLOCATABLE :: alldata_h(:)
-        
-        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
-        ALLOCATE(alldata_h, source=alldata_d)
-        CALL mp_gatherv_cv( mydata_h, alldata_h, recvcount, displs, root, gid)
-        alldata_d = alldata_h ; mydata_d = mydata_h
-        DEALLOCATE(alldata_h , mydata_h)
-#else
-        group = gid
-        CALL mpi_comm_size( group, npe, ierr )
-        IF (ierr/=0) CALL mp_stop( 9066 )
-        CALL mpi_comm_rank( group, myid, ierr )
-        IF (ierr/=0) CALL mp_stop( 9067 )
-        !
-        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9068 )
-        IF ( myid == root ) THEN
-           IF ( SIZE( alldata_d ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9069 )
-        END IF
-        IF ( SIZE( mydata_d ) < recvcount( myid + 1 ) ) CALL mp_stop( 9070 )
-        !
-        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-        CALL MPI_GATHERV( mydata_d, recvcount( myid + 1 ), MPI_DOUBLE_COMPLEX, &
-                         alldata_d, recvcount, displs, MPI_DOUBLE_COMPLEX, root, group, ierr )
-        IF (ierr/=0) CALL mp_stop( 9071 )
-        RETURN ! Sync not needed after MPI call
-#endif
-#else
-        IF ( SIZE( alldata_d ) < recvcount( 1 ) ) CALL mp_stop( 9072 )
-        IF ( SIZE( mydata_d  ) < recvcount( 1 ) ) CALL mp_stop( 9073 )
-        !
-        !alldata( 1:recvcount( 1 ) ) = mydata( 1:recvcount( 1 ) )
-        ierr = cudaMemcpy(alldata_d(1) , mydata_d(1), recvcount( 1 ), cudaMemcpyDeviceToDevice )
-#endif
-        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_gatherv_cv_gpu
-!
-!------------------------------------------------------------------------------!
-!..mp_gatherv_rv_gpu
-!
-
-      SUBROUTINE mp_gatherv_iv_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
-        IMPLICIT NONE
-        INTEGER, DEVICE :: mydata_d(:)
-        INTEGER, DEVICE :: alldata_d(:)
-        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-        INTEGER :: ierr, npe, myid
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-        INTEGER, ALLOCATABLE :: mydata_h(:)
-        INTEGER, ALLOCATABLE :: alldata_h(:)
-        
-        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
-        ALLOCATE(alldata_h, source=alldata_d)
-        CALL mp_gatherv_iv( mydata_h, alldata_h, recvcount, displs, root, gid)
-        alldata_d = alldata_h ; mydata_d = mydata_h
-        DEALLOCATE(alldata_h , mydata_h)
-#else
-        group = gid
-        CALL mpi_comm_size( group, npe, ierr )
-        IF (ierr/=0) CALL mp_stop( 9074 )
-        CALL mpi_comm_rank( group, myid, ierr )
-        IF (ierr/=0) CALL mp_stop( 9075 )
-        !
-        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9076 )
-        IF ( myid == root ) THEN
-           IF ( SIZE( alldata_d ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9077 )
-        END IF
-        IF ( SIZE( mydata_d ) < recvcount( myid + 1 ) ) CALL mp_stop( 9078 )
-        !
-        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-        CALL MPI_GATHERV( mydata_d, recvcount( myid + 1 ), MPI_INTEGER, &
-                         alldata_d, recvcount, displs, MPI_INTEGER, root, group, ierr )
-        IF (ierr/=0) CALL mp_stop( 9079 )
-        RETURN ! Sync not needed after MPI call
-#endif
-#else
-        IF ( SIZE( alldata_d ) < recvcount( 1 ) ) CALL mp_stop( 9080 )
-        IF ( SIZE( mydata_d  ) < recvcount( 1 ) ) CALL mp_stop( 9081 )
-        !
-        !alldata( 1:recvcount( 1 ) ) = mydata( 1:recvcount( 1 ) )
-        ierr = cudaMemcpy(alldata_d(1) , mydata_d(1), recvcount( 1 ), cudaMemcpyDeviceToDevice )
-#endif
-        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_gatherv_iv_gpu
-!
-!------------------------------------------------------------------------------!
-!..mp_gatherv_rm
-!
-
-      SUBROUTINE mp_gatherv_rm_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
-        IMPLICIT NONE
-        REAL(DP), DEVICE :: mydata_d(:,:)  ! Warning first dimension is supposed constant!
-        REAL(DP), DEVICE :: alldata_d(:,:)
-        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-        INTEGER :: ierr, npe, myid, nsiz
-        INTEGER, ALLOCATABLE :: nrecv(:), ndisp(:)
-
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-        REAL(DP), ALLOCATABLE :: mydata_h(:,:)
-        REAL(DP), ALLOCATABLE :: alldata_h(:,:)
-        
-        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
-        ALLOCATE(alldata_h, source=alldata_d)
-        CALL mp_gatherv_rm( mydata_h, alldata_h, recvcount, displs, root, gid)
-        alldata_d = alldata_h ; mydata_d = mydata_h
-        DEALLOCATE(alldata_h , mydata_h)
-#else
-        group = gid
-        CALL mpi_comm_size( group, npe, ierr )
-        IF (ierr/=0) CALL mp_stop( 9082 )
-        CALL mpi_comm_rank( group, myid, ierr )
-        IF (ierr/=0) CALL mp_stop( 9083 )
-        !
-        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9084 )
-        IF ( myid == root ) THEN
-           IF ( SIZE( alldata_d, 2 ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9085 )
-           IF ( SIZE( alldata_d, 1 ) /= SIZE( mydata_d, 1 ) ) CALL mp_stop( 9086 )
-        END IF
-        IF ( SIZE( mydata_d, 2 ) < recvcount( myid + 1 ) ) CALL mp_stop( 9087 )
-        !
-        ALLOCATE( nrecv( npe ), ndisp( npe ) )
-        !
-        nrecv( 1:npe ) = recvcount( 1:npe ) * SIZE( mydata_d, 1 )
-        ndisp( 1:npe ) = displs( 1:npe ) * SIZE( mydata_d, 1 )
-        !
-        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-        CALL MPI_GATHERV( mydata_d, nrecv( myid + 1 ), MPI_DOUBLE_PRECISION, &
-                         alldata_d, nrecv, ndisp, MPI_DOUBLE_PRECISION, root, group, ierr )
-        IF (ierr/=0) CALL mp_stop( 9088 )
-        !
-        DEALLOCATE( nrecv, ndisp )
-        !
-        RETURN ! Sync not needed after MPI call
-#endif
-#else
-        IF ( SIZE( alldata_d, 1 ) /= SIZE( mydata_d, 1 ) ) CALL mp_stop( 9089 )
-        IF ( SIZE( alldata_d, 2 ) < recvcount( 1 ) ) CALL mp_stop( 9090 )
-        IF ( SIZE( mydata_d, 2  ) < recvcount( 1 ) ) CALL mp_stop( 9091 )
-        !
-        !alldata( :, 1:recvcount( 1 ) ) = mydata( :, 1:recvcount( 1 ) )
-        
-        ierr = cudaMemcpy2D(alldata_d, SIZE(alldata_d,1),&
-                              mydata_d, SIZE(mydata_d,1),&
-                              SIZE(mydata_d,1), recvcount( 1 ), &
-                              cudaMemcpyDeviceToDevice )
-
-        IF (ierr/=0) CALL mp_stop( 9092 )
-#endif
-        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_gatherv_rm_gpu
-!
-!------------------------------------------------------------------------------!
-!..mp_gatherv_im
-!
-      SUBROUTINE mp_gatherv_im_gpu( mydata_d, alldata_d, recvcount, displs, root, gid)
-        IMPLICIT NONE
-        INTEGER, DEVICE :: mydata_d(:,:)  ! Warning first dimension is supposed constant!
-        INTEGER, DEVICE :: alldata_d(:,:)
-        INTEGER, INTENT(IN) :: recvcount(:), displs(:), root
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-        INTEGER :: ierr, npe, myid, nsiz
-        INTEGER, ALLOCATABLE :: nrecv(:), ndisp(:)
-
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-        INTEGER, ALLOCATABLE :: mydata_h(:,:)
-        INTEGER, ALLOCATABLE :: alldata_h(:,:)
-        
-        ALLOCATE(mydata_h, source=mydata_d)     ! This syncs __MPI
-        ALLOCATE(alldata_h, source=alldata_d)
-        CALL mp_gatherv_im( mydata_h, alldata_h, recvcount, displs, root, gid)
-        alldata_d = alldata_h ; mydata_d = mydata_h
-        DEALLOCATE(alldata_h , mydata_h)
-#else
-        group = gid
-        CALL mpi_comm_size( group, npe, ierr )
-        IF (ierr/=0) CALL mp_stop( 9093 )
-        CALL mpi_comm_rank( group, myid, ierr )
-        IF (ierr/=0) CALL mp_stop( 9094 )
-        !
-        IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9095 )
-        IF ( myid == root ) THEN
-           IF ( SIZE( alldata_d, 2 ) < displs( npe ) + recvcount( npe ) ) CALL mp_stop( 9096 )
-           IF ( SIZE( alldata_d, 1 ) /= SIZE( mydata_d, 1 ) ) CALL mp_stop( 9097 )
-        END IF
-        IF ( SIZE( mydata_d, 2 ) < recvcount( myid + 1 ) ) CALL mp_stop( 9098 )
-        !
-        ALLOCATE( nrecv( npe ), ndisp( npe ) )
-        !
-        nrecv( 1:npe ) = recvcount( 1:npe ) * SIZE( mydata_d, 1 )
-        ndisp( 1:npe ) = displs( 1:npe ) * SIZE( mydata_d, 1 )
-        !
-        ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-        CALL MPI_GATHERV( mydata_d, nrecv( myid + 1 ), MPI_INTEGER, &
-                         alldata_d, nrecv, ndisp, MPI_INTEGER, root, group, ierr )
-        IF (ierr/=0) CALL mp_stop( 9099 )
-        !
-        DEALLOCATE( nrecv, ndisp )
-        !
-        RETURN ! Sync not needed after MPI call
-#endif
-#else
-        IF ( SIZE( alldata_d, 1 ) /= SIZE( mydata_d, 1 ) ) CALL mp_stop( 9100 )
-        IF ( SIZE( alldata_d, 2 ) < recvcount( 1 ) ) CALL mp_stop( 9101 )
-        IF ( SIZE( mydata_d, 2  ) < recvcount( 1 ) ) CALL mp_stop( 9102 )
-        !
-        !alldata( :, 1:recvcount( 1 ) ) = mydata( :, 1:recvcount( 1 ) )
-        
-        ierr = cudaMemcpy2D(alldata_d, SIZE(alldata_d,1),&
-                              mydata_d, SIZE(mydata_d,1),&
-                              SIZE(mydata_d,1), recvcount( 1 ), &
-                              cudaMemcpyDeviceToDevice )
-        
-        IF (ierr/=0) CALL mp_stop( 9103 )
-#endif
-        ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_gatherv_im_gpu
-!
+#if defined(__CUDA)
 !------------------------------------------------------------------------------!
 !
       SUBROUTINE mp_alltoall_c3d_gpu( sndbuf_d, rcvbuf_d, gid )
-         IMPLICIT NONE
+        IMPLICIT NONE
          COMPLEX(DP), DEVICE :: sndbuf_d( :, :, : )
          COMPLEX(DP), DEVICE :: rcvbuf_d( :, :, : )
-         INTEGER, INTENT(IN) :: gid
+        INTEGER, INTENT(IN) :: gid
          INTEGER :: nsiz, group, ierr, npe
 
-#if defined (__MPI)
+#if defined(__MPI)
 #if ! defined(__GPU_MPI)
          COMPLEX(DP), ALLOCATABLE :: sndbuf_h(:,:,:)
          COMPLEX(DP), ALLOCATABLE :: rcvbuf_h(:,:,:)
-         
+
          ALLOCATE(sndbuf_h, source=sndbuf_d)     ! This syncs __MPI
          ALLOCATE(rcvbuf_h, source=rcvbuf_d)
          CALL mp_alltoall_c3d( sndbuf_h, rcvbuf_h, gid )
@@ -5676,43 +8988,43 @@ END SUBROUTINE mp_type_free
          DEALLOCATE(sndbuf_h , rcvbuf_h)
 #else
          group = gid
-      
+
          CALL mpi_comm_size( group, npe, ierr )
          IF (ierr/=0) CALL mp_stop( 9104 )
-      
+
          IF ( SIZE( sndbuf_d, 3 ) < npe ) CALL mp_stop( 9105 )
          IF ( SIZE( rcvbuf_d, 3 ) < npe ) CALL mp_stop( 9106 )
-      
+
          nsiz = SIZE( sndbuf_d, 1 ) * SIZE( sndbuf_d, 2 )
          !
          ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
          !
          CALL MPI_ALLTOALL( sndbuf_d, nsiz, MPI_DOUBLE_COMPLEX, &
                             rcvbuf_d, nsiz, MPI_DOUBLE_COMPLEX, group, ierr )
-      
+
          IF (ierr/=0) CALL mp_stop( 9107 )
          RETURN ! Sync not needed after MPI call
 #endif
 #else
          rcvbuf_d = sndbuf_d
 #endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
       END SUBROUTINE mp_alltoall_c3d_gpu
 !
 !------------------------------------------------------------------------------!
 !
       SUBROUTINE mp_alltoall_i3d_gpu( sndbuf_d, rcvbuf_d, gid )
-         IMPLICIT NONE
+        IMPLICIT NONE
          INTEGER, DEVICE :: sndbuf_d( :, :, : )
          INTEGER, DEVICE :: rcvbuf_d( :, :, : )
-         INTEGER, INTENT(IN) :: gid
+        INTEGER, INTENT(IN) :: gid
          INTEGER :: nsiz, group, ierr, npe
 
-#if defined (__MPI)
+#if defined(__MPI)
 #if ! defined(__GPU_MPI)
          INTEGER, ALLOCATABLE :: sndbuf_h(:,:,:)
          INTEGER, ALLOCATABLE :: rcvbuf_h(:,:,:)
-         
+
          ALLOCATE(sndbuf_h, source=sndbuf_d)     ! This syncs __MPI
          ALLOCATE(rcvbuf_h, source=rcvbuf_d)
          CALL mp_alltoall_i3d( sndbuf_h, rcvbuf_h, gid )
@@ -5720,20 +9032,20 @@ END SUBROUTINE mp_type_free
          DEALLOCATE(sndbuf_h , rcvbuf_h)
 #else
          group = gid
-         
+
          CALL mpi_comm_size( group, npe, ierr )
          IF (ierr/=0) CALL mp_stop( 9108 )
-         
+
          IF ( SIZE( sndbuf_d, 3 ) < npe ) CALL mp_stop( 9109 )
          IF ( SIZE( rcvbuf_d, 3 ) < npe ) CALL mp_stop( 9110 )
-         
+
          nsiz = SIZE( sndbuf_d, 1 ) * SIZE( sndbuf_d, 2 )
          !
          ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
          !
          CALL MPI_ALLTOALL( sndbuf_d, nsiz, MPI_INTEGER, &
                             rcvbuf_d, nsiz, MPI_INTEGER, group, ierr )
-         
+
          IF (ierr/=0) CALL mp_stop( 9111 )
          RETURN ! Sync not needed after MPI call
 #endif
@@ -5742,481 +9054,961 @@ END SUBROUTINE mp_type_free
          rcvbuf_d = sndbuf_d
 
 #endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
+        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI
       END SUBROUTINE mp_alltoall_i3d_gpu
+#endif
 !
 !------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_circular_shift_left_i0_gpu( buf_d, itag, gid )
-         IMPLICIT NONE
-         INTEGER, DEVICE :: buf_d
-         INTEGER, INTENT(IN) :: itag
-         INTEGER, INTENT(IN) :: gid
-         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-         INTEGER :: buf_h
-         buf_h = buf_d     ! This syncs __MPI
-         CALL mp_circular_shift_left_i0( buf_h, itag, gid )
-         buf_d = buf_h
-#else
-         INTEGER :: istatus( mpi_status_size )
-         !
-         group = gid
-         !
-         CALL mpi_comm_size( group, npe, ierr )
-         IF (ierr/=0) CALL mp_stop( 9112 )
-         CALL mpi_comm_rank( group, mype, ierr )
-         IF (ierr/=0) CALL mp_stop( 9113 )
-         !
-         sour = mype + 1
-         IF( sour == npe ) sour = 0
-         dest = mype - 1
-         IF( dest == -1 ) dest = npe - 1
-         !
-         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-         CALL MPI_Sendrecv_replace( buf_d, 1, MPI_INTEGER, &
-              dest, itag, sour, itag, group, istatus, ierr)
-         !
-         IF (ierr/=0) CALL mp_stop( 9114 )
-         !
-         RETURN ! Sync not needed after MPI call
-#endif
-#else
-         ! do nothing
-#endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_circular_shift_left_i0_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_circular_shift_left_i1_gpu( buf_d, itag, gid )
-         IMPLICIT NONE
-         INTEGER, DEVICE :: buf_d(:)
-         INTEGER, INTENT(IN) :: itag
-         INTEGER, INTENT(IN) :: gid
-         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-         INTEGER, ALLOCATABLE :: buf_h(:)
-         ALLOCATE(buf_h, source=buf_d)    ! This syncs __MPI
-         CALL mp_circular_shift_left_i1( buf_h, itag, gid )
-         buf_d = buf_h; DEALLOCATE(buf_h)
-#else
-         INTEGER :: istatus( mpi_status_size )
-         !
-         group = gid
-         !
-         CALL mpi_comm_size( group, npe, ierr )
-         IF (ierr/=0) CALL mp_stop( 9115 )
-         CALL mpi_comm_rank( group, mype, ierr )
-         IF (ierr/=0) CALL mp_stop( 9116 )
-         !
-         sour = mype + 1
-         IF( sour == npe ) sour = 0
-         dest = mype - 1
-         IF( dest == -1 ) dest = npe - 1
-         !
-         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-         CALL MPI_Sendrecv_replace( buf_d, SIZE(buf_d), MPI_INTEGER, &
-              dest, itag, sour, itag, group, istatus, ierr)
-         !
-         IF (ierr/=0) CALL mp_stop( 9117 )
-         !
-         RETURN ! Sync not needed after MPI call
-#endif
-#else
-         ! do nothing
-#endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_circular_shift_left_i1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_circular_shift_left_i2_gpu( buf_d, itag, gid )
-         IMPLICIT NONE
-         INTEGER, DEVICE :: buf_d(:,:)
-         INTEGER, INTENT(IN) :: itag
-         INTEGER, INTENT(IN) :: gid
-         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-         INTEGER, ALLOCATABLE :: buf_h(:,:)
-         ALLOCATE(buf_h, source=buf_d)    ! This syncs __MPI
-         CALL mp_circular_shift_left_i2( buf_h, itag, gid )
-         buf_d = buf_h; DEALLOCATE(buf_h)
-#else
-         INTEGER :: istatus( mpi_status_size )
-         !
-         group = gid
-         !
-         CALL mpi_comm_size( group, npe, ierr )
-         IF (ierr/=0) CALL mp_stop( 9118 )
-         CALL mpi_comm_rank( group, mype, ierr )
-         IF (ierr/=0) CALL mp_stop( 9119 )
-         !
-         sour = mype + 1
-         IF( sour == npe ) sour = 0
-         dest = mype - 1
-         IF( dest == -1 ) dest = npe - 1
-         !
-         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-         CALL MPI_Sendrecv_replace( buf_d, SIZE(buf_d), MPI_INTEGER, &
-              dest, itag, sour, itag, group, istatus, ierr)
-         !
-         IF (ierr/=0) CALL mp_stop( 9120 )
-         !
-         RETURN ! Sync not needed after MPI call
-#endif
-#else
-         ! do nothing
-#endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_circular_shift_left_i2_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_circular_shift_left_r2d_gpu( buf_d, itag, gid )
-         IMPLICIT NONE
-         REAL(DP), DEVICE :: buf_d( :, : )
-         INTEGER, INTENT(IN) :: itag
-         INTEGER, INTENT(IN) :: gid
-         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-         REAL(DP), ALLOCATABLE :: buf_h(:, :)
-         ALLOCATE(buf_h, source=buf_d)    ! This syncs __MPI
-         CALL mp_circular_shift_left_r2d( buf_h, itag, gid )
-         buf_d = buf_h; DEALLOCATE(buf_h)
-#else
-         INTEGER :: istatus( mpi_status_size )
-         !
-         group = gid
-         !
-         CALL mpi_comm_size( group, npe, ierr )
-         IF (ierr/=0) CALL mp_stop( 9121 )
-         CALL mpi_comm_rank( group, mype, ierr )
-         IF (ierr/=0) CALL mp_stop( 9122 )
-         !
-         sour = mype + 1
-         IF( sour == npe ) sour = 0
-         dest = mype - 1
-         IF( dest == -1 ) dest = npe - 1
-         !
-         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-         CALL MPI_Sendrecv_replace( buf_d, SIZE(buf_d), MPI_DOUBLE_PRECISION, &
-              dest, itag, sour, itag, group, istatus, ierr)
-         !
-         IF (ierr/=0) CALL mp_stop( 9123 )
-         !
-         RETURN ! Sync not needed after MPI call
-#endif
-#else
-         ! do nothing
-#endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_circular_shift_left_r2d_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_circular_shift_left_c2d_gpu( buf_d, itag, gid )
-         IMPLICIT NONE
-         COMPLEX(DP), DEVICE :: buf_d( :, : )
-         INTEGER, INTENT(IN) :: itag
-         INTEGER, INTENT(IN) :: gid
-         INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-         COMPLEX(DP), ALLOCATABLE :: buf_h(:, :)
-         ALLOCATE(buf_h, source=buf_d)    ! This syncs __MPI
-         CALL mp_circular_shift_left_c2d( buf_h, itag, gid )
-         buf_d = buf_h; DEALLOCATE(buf_h)
-#else
-         INTEGER :: istatus( mpi_status_size )
-         !
-         group = gid
-         !
-         CALL mpi_comm_size( group, npe, ierr )
-         IF (ierr/=0) CALL mp_stop( 9124 )
-         CALL mpi_comm_rank( group, mype, ierr )
-         IF (ierr/=0) CALL mp_stop( 9125 )
-         !
-         sour = mype + 1
-         IF( sour == npe ) sour = 0
-         dest = mype - 1
-         IF( dest == -1 ) dest = npe - 1
-         !
-         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-         CALL MPI_Sendrecv_replace( buf_d, SIZE(buf_d), MPI_DOUBLE_COMPLEX, &
-              dest, itag, sour, itag, group, istatus, ierr)
-         !
-         IF (ierr/=0) CALL mp_stop( 9126 )
-         !
-         RETURN ! Sync not needed after MPI call
-#endif
-#else
-         ! do nothing
-#endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_circular_shift_left_c2d_gpu
-
-!------------------------------------------------------------------------------!
-!..mp_gatherv_inplace_cplx_array
-!
-
-      SUBROUTINE mp_gatherv_inplace_cplx_array_gpu(alldata_d, my_column_type, recvcount, displs, root, gid)
-         IMPLICIT NONE
-         COMPLEX(DP), DEVICE :: alldata_d(:,:)
-         INTEGER, INTENT(IN) :: my_column_type
-         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
-         INTEGER, INTENT(IN) :: root, gid
-         INTEGER :: ierr, npe, myid
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-         COMPLEX(DP), ALLOCATABLE :: alldata_h(:, :)
-         !
-         ! Avoid unnecessary communications on __MPI
-         IF ( mp_size(gid) == 1 ) THEN
-           ierr = cudaDeviceSynchronize()
-           RETURN
-         END IF
-         !
-         ALLOCATE(alldata_h, source=alldata_d)    ! This syncs __MPI
-         CALL mp_gatherv_inplace_cplx_array(alldata_h, my_column_type, recvcount, displs, root, gid)
-         alldata_d = alldata_h; DEALLOCATE(alldata_h)
-         ierr = cudaDeviceSynchronize()   ! This syncs in case of small data chunks
-         RETURN
-#else
-         CALL mpi_comm_size( gid, npe, ierr )
-         IF (ierr/=0) CALL mp_stop( 9127 )
-         CALL mpi_comm_rank( gid, myid, ierr )
-         IF (ierr/=0) CALL mp_stop( 9128 )
-         !
-         IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9129 )
-         !
-         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-         IF (myid==root) THEN
-            CALL MPI_GATHERV( MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, &
-                              alldata_d, recvcount, displs, my_column_type, root, gid, ierr )
-         ELSE
-            CALL MPI_GATHERV( alldata_d(1,displs(myid+1)+1), recvcount(myid+1), my_column_type, &
-                              MPI_IN_PLACE, recvcount, displs, MPI_DATATYPE_NULL, root, gid, ierr )
-         ENDIF
-         !
-         IF (ierr/=0) CALL mp_stop( 9130 )
-         !
-         RETURN ! Sync not needed after MPI call
-#endif
-#endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL
-      END SUBROUTINE mp_gatherv_inplace_cplx_array_gpu
-
-!------------------------------------------------------------------------------!
-!..mp_allgatherv_inplace_cplx_array
-!
-
-      SUBROUTINE mp_allgatherv_inplace_cplx_array_gpu(alldata_d, my_element_type, recvcount, displs, gid)
-         IMPLICIT NONE
-         COMPLEX(DP), DEVICE :: alldata_d(:,:)
-         INTEGER, INTENT(IN) :: my_element_type
-         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
-         INTEGER, INTENT(IN) :: gid
-         INTEGER :: ierr, npe, myid
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-         COMPLEX(DP), ALLOCATABLE :: alldata_h(:, :)
-         !
-         ! Avoid unnecessary communications on __MPI
-         IF ( mp_size(gid) == 1 ) THEN
-           ierr = cudaDeviceSynchronize()
-           RETURN
-         END IF
-         !
-         ALLOCATE(alldata_h, source=alldata_d)! This syncs __MPI
-         CALL mp_allgatherv_inplace_cplx_array(alldata_h, my_element_type, recvcount, displs, gid)
-         alldata_d = alldata_h; DEALLOCATE(alldata_h)
-         ierr = cudaDeviceSynchronize()   ! This syncs in case of small data chunks
-         RETURN
-#else
-         CALL mpi_comm_size( gid, npe, ierr )
-         IF (ierr/=0) CALL mp_stop( 9131 )
-         CALL mpi_comm_rank( gid, myid, ierr )
-         IF (ierr/=0) CALL mp_stop( 9132 )
-         !
-         IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9133 )
-         !
-         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-         CALL MPI_ALLGATHERV( MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, &
-                              alldata_d, recvcount, displs, my_element_type, gid, ierr )
-         IF (ierr/=0) CALL mp_stop( 9134 )
-         RETURN ! Sync not needed after MPI call
-#endif
-#endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_allgatherv_inplace_cplx_array_gpu
-!..mp_allgatherv_inplace_real_array
-!
-
-      SUBROUTINE mp_allgatherv_inplace_real_array_gpu(alldata_d, my_element_type, recvcount, displs, gid)
-         IMPLICIT NONE
-         REAL(DP), DEVICE :: alldata_d(:,:)
-         INTEGER, INTENT(IN) :: my_element_type
-         INTEGER, INTENT(IN) :: recvcount(:), displs(:)
-         INTEGER, INTENT(IN) :: gid
-         INTEGER :: ierr, npe, myid
-
-#if defined (__MPI)
-#if ! defined(__GPU_MPI)
-         REAL(DP), ALLOCATABLE :: alldata_h(:, :)
-         !
-         ! Avoid unnecessary communications on __MPI
-         IF ( mp_size(gid) == 1 ) THEN
-           ierr = cudaDeviceSynchronize()
-           RETURN
-         END IF
-         !
-         ALLOCATE(alldata_h, source=alldata_d)! This syncs __MPI
-         CALL mp_allgatherv_inplace_real_array(alldata_h, my_element_type, recvcount, displs, gid)
-         alldata_d = alldata_h; DEALLOCATE(alldata_h)
-         ierr = cudaDeviceSynchronize()   ! This syncs in case of small data chunks
-         RETURN
-#else
-         CALL mpi_comm_size( gid, npe, ierr )
-         IF (ierr/=0) CALL mp_stop( 9131 )
-         CALL mpi_comm_rank( gid, myid, ierr )
-         IF (ierr/=0) CALL mp_stop( 9132 )
-         !
-         IF ( SIZE( recvcount ) < npe .OR. SIZE( displs ) < npe ) CALL mp_stop( 9133 )
-         !
-         ierr = cudaDeviceSynchronize()   ! This syncs __GPU_MPI
-         CALL MPI_ALLGATHERV( MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, &
-                              alldata_d, recvcount, displs, my_element_type, gid, ierr )
-         IF (ierr/=0) CALL mp_stop( 9134 )
-         RETURN ! Sync not needed after MPI call
-#endif
-#endif
-         ierr = cudaDeviceSynchronize()   ! This syncs SERIAL, __MPI
-      END SUBROUTINE mp_allgatherv_inplace_real_array_gpu
-
-      SUBROUTINE mp_type_create_cplx_column_section_gpu(dummy, start, length, stride, mytype)
-         IMPLICIT NONE
-         !
-         COMPLEX (DP), DEVICE, INTENT(IN) :: dummy
-         INTEGER, INTENT(IN) :: start, length, stride
-         INTEGER, INTENT(OUT) :: mytype
-         !
+#if defined(__OPENMP_GPU)
+      SUBROUTINE mp_bcast_i1_gpu_mapped(msg,source,gid)
+        IMPLICIT NONE
+        INTEGER :: msg
+        INTEGER :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+        INTEGER :: msglen, ierr
+        !
 #if defined(__MPI)
-         INTEGER :: ierr
-         !
-         CALL MPI_TYPE_CREATE_SUBARRAY(1, [stride], [length], [start], &
-                 MPI_ORDER_FORTRAN, MPI_DOUBLE_COMPLEX, mytype, ierr)
-         IF (ierr/=0) CALL mp_stop( 8081 )
-         CALL MPI_Type_commit(mytype, ierr)
-         IF (ierr/=0) CALL mp_stop( 8082 )
+        msglen = 1
+        group = gid
+#if defined(__GPU_MPI)
+        CALL bcast_integer_gpu( msg, msglen, source, group )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
 #else
-         mytype = 0;
+        !$omp target update from(msg)
+        CALL bcast_integer( msg, msglen, source, group )
+        !$omp target update to(msg)
 #endif
-         !
-         RETURN
-      END SUBROUTINE mp_type_create_cplx_column_section_gpu
-
-      SUBROUTINE mp_type_create_real_column_section_gpu(dummy, start, length, stride, mytype)
-         IMPLICIT NONE
-         !
-         REAL (DP), DEVICE, INTENT(IN) :: dummy
-         INTEGER, INTENT(IN) :: start, length, stride
-         INTEGER, INTENT(OUT) :: mytype
-         !
-#if defined(__MPI)
-         INTEGER :: ierr
-         !
-         CALL MPI_TYPE_CREATE_SUBARRAY(1, [stride], [length], [start], &
-                 MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, mytype, ierr)
-         IF (ierr/=0) CALL mp_stop( 8083 )
-         CALL MPI_Type_commit(mytype, ierr)
-         IF (ierr/=0) CALL mp_stop( 8084 )
-#else
-         mytype = 0;
 #endif
-         !
-         RETURN
-      END SUBROUTINE mp_type_create_real_column_section_gpu
-
-      SUBROUTINE mp_type_create_cplx_row_section_gpu(dummy, column_start, column_stride, row_length, mytype)
-         IMPLICIT NONE
-         !
-         COMPLEX (DP), DEVICE, INTENT(IN) :: dummy
-         INTEGER, INTENT(IN) :: column_start, column_stride, row_length
-         INTEGER, INTENT(OUT) :: mytype
-         !
-#if defined(__MPI)
-         INTEGER :: ierr, temporary
-         INTEGER :: strides(2), lengths(2), starts(2)
-         INTEGER(KIND=MPI_ADDRESS_KIND) :: lb, extent
-         !
-         strides(1) = column_stride ; strides(2) = row_length
-         lengths(1) = 1             ; lengths(2) = row_length
-         starts(1)  = column_start  ; starts(2)  = 0
-         CALL MPI_TYPE_CREATE_SUBARRAY(2, strides, lengths, starts, MPI_ORDER_FORTRAN,&
-                                       MPI_DOUBLE_COMPLEX, temporary, ierr)
-         IF (ierr/=0) CALL mp_stop( 8085 )
-         CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_COMPLEX, lb, extent, ierr)
-         IF (ierr/=0) CALL mp_stop( 8085 )
-         CALL MPI_TYPE_COMMIT(temporary, ierr)
-         IF (ierr/=0) CALL mp_stop( 8085 )
-         CALL MPI_TYPE_CREATE_RESIZED(temporary, lb, extent, mytype, ierr)
-         IF (ierr/=0) CALL mp_stop( 8086 )
-         CALL MPI_Type_commit(mytype, ierr)
-         IF (ierr/=0) CALL mp_stop( 8086 )
-#else
-         mytype = 0;
-#endif
-         !
-         RETURN
-      END SUBROUTINE mp_type_create_cplx_row_section_gpu
-
-      SUBROUTINE mp_type_create_real_row_section_gpu(dummy, column_start, column_stride, row_length, mytype)
-         IMPLICIT NONE
-         !
-         REAL (DP), DEVICE, INTENT(IN) :: dummy
-         INTEGER, INTENT(IN) :: column_start, column_stride, row_length
-         INTEGER, INTENT(OUT) :: mytype
-         !
-#if defined(__MPI)
-         INTEGER :: ierr, temporary
-         INTEGER :: strides(2), lengths(2), starts(2)
-         INTEGER(KIND=MPI_ADDRESS_KIND) :: lb, extent
-         !
-         strides(1) = column_stride ; strides(2) = row_length
-         lengths(1) = 1             ; lengths(2) = row_length
-         starts(1)  = column_start  ; starts(2)  = 0
-         CALL MPI_TYPE_CREATE_SUBARRAY(2, strides, lengths, starts, MPI_ORDER_FORTRAN,&
-                                       MPI_DOUBLE_PRECISION, temporary, ierr)
-         IF (ierr/=0) CALL mp_stop( 8087 )
-         CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION, lb, extent, ierr)
-         IF (ierr/=0) CALL mp_stop( 8087 )
-         CALL MPI_TYPE_COMMIT(temporary, ierr)
-         IF (ierr/=0) CALL mp_stop( 8087 )
-         CALL MPI_TYPE_CREATE_RESIZED(temporary, lb, extent, mytype, ierr)
-         IF (ierr/=0) CALL mp_stop( 8088 )
-         CALL MPI_Type_commit(mytype, ierr)
-         IF (ierr/=0) CALL mp_stop( 8088 )
-#else
-         mytype = 0;
-#endif
-         !
-         RETURN
-      END SUBROUTINE mp_type_create_real_row_section_gpu
-
+      END SUBROUTINE mp_bcast_i1_gpu_mapped
+!
 !------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_iv_gpu_mapped(msg,source,gid)
+        IMPLICIT NONE
+        INTEGER         :: msg(:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_integer_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_integer( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_iv_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_im_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        INTEGER         :: msg(:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_integer_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_integer( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_im_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_it_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        INTEGER         :: msg(:,:,:)
 
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_integer_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_integer( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_it_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_i4d_gpu_mapped(msg, source, gid)
+        IMPLICIT NONE
+        INTEGER         :: msg(:,:,:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_integer_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_integer( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_i4d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_r1_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        REAL (DP)         :: msg
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+        msglen = 1
+#if defined(__GPU_MPI)
+        CALL bcast_real_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        CALL bcast_real( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_r1_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_rv_gpu_mapped(msg,source,gid)
+        IMPLICIT NONE
+        REAL(DP)         :: msg(:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_rv_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_rm_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        REAL(DP)         :: msg(:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_rm_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_rt_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        REAL(DP)         :: msg(:,:,:)
+
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_rt_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_r4d_gpu_mapped(msg, source, gid)
+        IMPLICIT NONE
+        REAL(DP)         :: msg(:,:,:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_r4d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_r5d_gpu_mapped(msg, source, gid)
+        IMPLICIT NONE
+        REAL(DP)         :: msg(:,:,:,:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_r5d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_c1_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        COMPLEX (DP)         :: msg
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+        msglen = 1
+#if defined(__GPU_MPI)
+        CALL bcast_real_gpu( msg, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        CALL bcast_real( msg, 2 * msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_c1_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_cv_gpu_mapped(msg,source,gid)
+        IMPLICIT NONE
+        COMPLEX(DP)         :: msg(:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, 2 * msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_cv_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_cm_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        COMPLEX(DP)         :: msg(:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, 2 * msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_cm_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_ct_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        COMPLEX(DP)         :: msg(:,:,:)
+
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT (IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, 2 * msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_ct_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_c4d_gpu_mapped(msg, source, gid)
+        IMPLICIT NONE
+        COMPLEX(DP)         :: msg(:,:,:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT (IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, 2 * msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_c4d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_c5d_gpu_mapped(msg, source, gid)
+        IMPLICIT NONE
+        COMPLEX(DP)         :: msg(:,:,:,:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT (IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, 2 * msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_c5d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_c6d_gpu_mapped(msg, source, gid)
+        IMPLICIT NONE
+        COMPLEX(DP)         :: msg(:,:,:,:,:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT (IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, 2 * msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, 2 * msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_c6d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_l_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        LOGICAL         :: msg
+        INTEGER, INTENT(IN) :: source
+        INTEGER,   INTENT (IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+        msglen = 1
+#if  defined(__GPU_MPI)
+        CALL bcast_logical_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        CALL bcast_logical( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_l_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_lv_gpu_mapped(msg,source,gid)
+        IMPLICIT NONE
+        LOGICAL         :: msg(:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER,  INTENT (IN) :: gid
+        INTEGER :: msglen, ierr
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_logical_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_logical( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_lv_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_bcast_lm_gpu_mapped( msg, source, gid )
+        IMPLICIT NONE
+        LOGICAL         :: msg(:,:)
+        INTEGER, INTENT(IN) :: source
+        INTEGER, INTENT (IN) :: gid
+        INTEGER :: msglen, ierr
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL bcast_real_gpu( msg, msglen, source, gid )
+        RETURN ! Sync done by MPI call (or inside bcast_xxx_gpu)
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL bcast_real( msg, msglen, source, gid )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_bcast_lm_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+!..mp_sum
+      SUBROUTINE mp_sum_i1_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        INTEGER, INTENT (INOUT)         :: msg
+        INTEGER :: msg_h
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+        msglen = 1
+#if  defined(__GPU_MPI)
+        CALL reduce_base_integer_gpu( msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !
+        !$omp target update from(msg)
+        CALL reduce_base_integer( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_i1_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_iv_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        INTEGER, INTENT (INOUT)         :: msg(:)
+        INTEGER                         :: i
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_integer_gpu( msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_integer( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_iv_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_im_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        INTEGER, INTENT (INOUT)         :: msg(:,:)
+        INTEGER                         :: i, j
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_integer_gpu( msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_integer( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_im_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_it_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        INTEGER, INTENT (INOUT)         :: msg(:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_integer_gpu( msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_integer( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_it_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_r1_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        REAL (DP), INTENT (INOUT)         :: msg
+        INTEGER, INTENT (IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+        msglen = 1
+#if  defined(__GPU_MPI)
+        CALL reduce_base_real_gpu( msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !$omp target update from(msg)
+        CALL reduce_base_real( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_r1_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_rv_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        REAL (DP), INTENT (INOUT)         :: msg(:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_rv_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_rm_gpu_mapped(msg, gid)
+        IMPLICIT NONE
+        REAL (DP), INTENT (INOUT)         :: msg(:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_rm_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_rt_gpu_mapped( msg, gid )
+        IMPLICIT NONE
+        REAL (DP), INTENT (INOUT)         :: msg(:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_rt_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_r4d_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        REAL (DP), INTENT (INOUT)         :: msg(:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_r4d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_c1_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        COMPLEX (DP), INTENT (INOUT)         :: msg
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+        msglen = 1
+#if  defined(__GPU_MPI)
+        CALL reduce_base_real_gpu( 2 * msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_c1_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_cv_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        COMPLEX (DP), INTENT (INOUT)         :: msg(:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( 2 * msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_cv_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_cm_gpu_mapped(msg, gid)
+        IMPLICIT NONE
+        COMPLEX (DP), INTENT (INOUT)         :: msg(:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( 2 * msglen, msg, gid, -1 )
+        ! No need for final syncronization
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_cm_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_ct_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        COMPLEX (DP), INTENT (INOUT) :: msg(:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = SIZE(msg)
+        CALL reduce_base_real_gpu( 2 * msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_ct_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_c4d_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        COMPLEX (DP), INTENT (INOUT)         :: msg(:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( 2 * msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_c4d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_c5d_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        COMPLEX (DP), INTENT (INOUT)         :: msg(:,:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( 2 * msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_c5d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_r5d_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        REAL (DP), INTENT (INOUT)         :: msg(:,:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_r5d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_r6d_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        REAL (DP), INTENT (INOUT)         :: msg(:,:,:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_r6d_gpu_mapped
+!
+!------------------------------------------------------------------------------!
+!
+      SUBROUTINE mp_sum_c6d_gpu_mapped(msg,gid)
+        IMPLICIT NONE
+        COMPLEX (DP), INTENT (INOUT)         :: msg(:,:,:,:,:,:)
+        INTEGER, INTENT(IN) :: gid
+        !
+        INTEGER :: msglen, ierr
+        ! Avoid unnecessary communications on __MPI and syncs SERIAL
+        IF ( mp_size(gid) == 1 ) THEN
+          RETURN
+        END IF
+        !
+#if defined(__MPI)
+#if  defined(__GPU_MPI)
+        msglen = size(msg)
+        CALL reduce_base_real_gpu( 2 * msglen, msg, gid, -1 )
+        ! Sync not needed after MPI call
+#else
+        !$omp target update from(msg)
+        msglen = size(msg)
+        CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
+        !$omp target update to(msg)
+#endif
+#endif
+      END SUBROUTINE mp_sum_c6d_gpu_mapped
 #endif
 !------------------------------------------------------------------------------!
 END MODULE mp
@@ -6231,7 +10023,7 @@ END MODULE mp
 !       global i
 !       i += 1
 !       return 'mp_stop( {0} )'.format(i)
-!   
+!
 !   with open(sys.argv[1],'r') as f:
 !       data = re.sub(r"mp_stop\(\s?\d+\s?\)", replace, f.read())
 !       with open(sys.argv[1]+'.new','w') as fo:
