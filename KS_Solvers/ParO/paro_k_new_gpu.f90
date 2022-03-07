@@ -63,7 +63,9 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
   COMPLEX(DP), INTENT(INOUT) :: evc_d(npwx*npol,nbnd)
   REAL(DP), INTENT(IN)       :: ethr
   REAL(DP), INTENT(INOUT)    :: eig_d(nbnd)   
+#if !defined(__OPENMP_GPU)
   REAL(DP), ALLOCATABLE      :: eig(:)       ! copy for protate
+#endif
   INTEGER, INTENT(IN)        :: btype(nbnd)
   INTEGER, INTENT(OUT)       :: notconv, nhpsi
 !  INTEGER, INTENT(IN)        :: paro_flag
@@ -97,6 +99,7 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
   !
   ! .. device variables
   !
+#if !defined(__OPENMP_GPU)
   REAL(DP), ALLOCATABLE    :: ew_d(:)
   COMPLEX(DP), ALLOCATABLE :: psi_d(:,:), hpsi_d(:,:), spsi_d(:,:)
   LOGICAL, ALLOCATABLE     :: conv_d(:)
@@ -105,6 +108,7 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
   attributes(device) :: psi_d, hpsi_d, spsi_d, ew_d
   attributes(device) :: conv_d 
 #endif  
+#endif
   !
   ! ... init local variables
   !
@@ -117,17 +121,26 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
 
   CALL mp_type_create_column_section(evc_d(1,1), 0, npwx*npol, npwx*npol, column_type)
 
+#if defined(__OPENMP_GPU)
+  ALLOCATE ( ew(nvecx), conv(nbnd) )
+  ALLOCATE ( psi(npwx*npol,nvecx), hpsi(npwx*npol,nvecx), spsi(npwx*npol,nvecx) )
+  !$omp target enter data map(alloc:ew, conv, psi, hpsi, spsi)
+  ASSOCIATE( ew_d=>ew, conv_d=>conv, psi_d=>psi, hpsi_d=>hpsi, spsi_d=>spsi )
+#else
   ALLOCATE ( ew_d(nvecx), conv(nbnd) )
   ALLOCATE ( conv_d(nbnd) )
   ALLOCATE ( psi_d(npwx*npol,nvecx), hpsi_d(npwx*npol,nvecx), spsi_d(npwx*npol,nvecx) )
+#endif
 
   CALL start_clock( 'paro:init' ); 
   conv(:) =  .FALSE. ; nconv = COUNT ( conv(:) )
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
   do ii = 1, nbnd
     conv_d(ii) = .FALSE.
   end do  
 !$cuf kernel do(2) 
+!$omp target teams distribute parallel do collapse(2)
   DO ii = 1, npwx*npol
     DO jj = 1, nbnd
       psi_d(ii,jj) = evc_d(ii,jj)
@@ -146,6 +159,11 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
 #if defined(__MPI)
   ELSE
 !civn 2fix
+#if defined(__OPENMP_GPU)
+     !$omp target update from(psi, hpsi, spsi, eig_d)
+     CALL protate_HSpsi_k(  npwx, npw, nbnd, nbnd, npol, psi, hpsi, overlap, spsi, eig_d )
+     !$omp target update to(psi, hpsi, spsi, eig_d)
+#else
      ALLOCATE ( psi(npwx*npol,nvecx), hpsi(npwx*npol,nvecx), spsi(npwx*npol,nvecx), eig(nbnd) )
      psi = psi_d
      hpsi = hpsi_d
@@ -157,6 +175,7 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
      spsi_d = spsi
      eig_d = eig
      DEALLOCATE ( psi, hpsi, spsi, eig )
+#endif
   ENDIF
 #endif
   !write (6,'(10f10.4)') psi(1:5,1:3)
@@ -197,12 +216,14 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
      DO ibnd = 1, ntrust ! pack unconverged roots in the available space
         IF (.NOT.conv(ibnd) ) THEN
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, npwx*npol
              psi_d (ii,nbase+kbnd)  = psi_d(ii,ibnd)
              hpsi_d(ii,nbase+kbnd) = hpsi_d(ii,ibnd)
              spsi_d(ii,nbase+kbnd) = spsi_d(ii,ibnd)
            END DO 
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, 1
              ew_d(kbnd) = eig_d(ibnd) 
            END DO 
@@ -212,27 +233,31 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
      END DO
      DO ibnd = nbnd+1, nbase   ! add extra vectors if it is the case
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
         DO ii = 1, npwx*npol
           psi_d (ii,nbase+kbnd)  = psi_d(ii,ibnd)
           hpsi_d(ii,nbase+kbnd) = hpsi_d(ii,ibnd)
           spsi_d(ii,nbase+kbnd) = spsi_d(ii,ibnd)
         END DO
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
         DO ii = 1, 1
           ew_d(kbnd) = eig_d(last_unconverged)
         END DO 
         lbnd=lbnd+1 ; kbnd=kbnd+recv_counts(mod(lbnd-2,nbgrp)+1); if (kbnd>nactive) kbnd=kbnd+1-nactive
      END DO
 !$cuf kernel do(2)
+!$omp target teams distribute parallel do collapse(2)
      DO jj = 1, how_many  
-       kk = jj + ibnd_start - 1
        DO ii = 1, npwx*npol
+         kk = jj + ibnd_start - 1
          psi_d (ii,nbase+jj) = psi_d (ii,nbase+kk)
          hpsi_d(ii,nbase+jj) = hpsi_d(ii,nbase+kk)
          spsi_d(ii,nbase+jj) = spsi_d(ii,nbase+kk)
        END DO
      END DO
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
      DO ii = 1, how_many
        ew_d(ii) = ew_d(ii+ibnd_start-1)
      END DO 
@@ -249,6 +274,7 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
      CALL stop_clock( 'paro:mp_bar' ); 
      CALL start_clock( 'paro:mp_sum' ); 
 !$cuf kernel do(2)
+!$omp target teams distribute parallel do collapse(2)
      DO ii = 1, npwx*npol
        DO jj = nbase+1, nbase+how_many  
          kk = jj + ibnd_start - 1
@@ -258,8 +284,11 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
        END DO 
      END DO 
 
+     !$omp dispatch is_device_ptr(psi_d)
      CALL mp_allgather(psi_d (:,nbase+1:ndiag), column_type, recv_counts, displs, inter_bgrp_comm)
+     !$omp dispatch is_device_ptr(hpsi_d)
      CALL mp_allgather(hpsi_d(:,nbase+1:ndiag), column_type, recv_counts, displs, inter_bgrp_comm)
+     !$omp dispatch is_device_ptr(spsi_d)
      CALL mp_allgather(spsi_d(:,nbase+1:ndiag), column_type, recv_counts, displs, inter_bgrp_comm)
      CALL stop_clock( 'paro:mp_sum' ); 
 
@@ -270,6 +299,11 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
 #if defined(__MPI)
      ELSE
 !civn 2fix
+#if defined(__OPENMP_GPU)
+        !$omp target update from(psi, hpsi, spsi, ew)
+        CALL protate_HSpsi_k( npwx, npw, ndiag, ndiag, npol, psi, hpsi, overlap, spsi, ew )
+        !$omp target update to(psi, hpsi, spsi, ew)
+#else
         ALLOCATE ( psi(npwx*npol,nvecx), hpsi(npwx*npol,nvecx), spsi(npwx*npol,nvecx), ew(nvecx) )
         psi = psi_d
         hpsi = hpsi_d
@@ -281,6 +315,7 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
         spsi_d = spsi
         ew_d = ew
         DEALLOCATE ( psi, hpsi, spsi, ew )
+#endif
      ENDIF
 #endif
      !write (6,*) ' ew : ', ew(1:nbnd)
@@ -288,16 +323,19 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
      ! but only those that have actually been corrected should be trusted
      conv(1:nbnd) = .FALSE.
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
      do ii = 1, nbnd
        conv_d(ii) = .FALSE.
      end do 
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
      DO ii = 1, ntrust
        conv_d(ii) = ABS(ew_d(ii) - eig_d(ii)).LT.ethr 
      END DO 
      conv = conv_d
      nconv = COUNT(conv(1:ntrust)) ; notconv = nbnd - nconv
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
      DO ii = 1, nbnd
        eig_d(ii)  = ew_d(ii)
      END DO 
@@ -306,6 +344,7 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
   END DO ParO_loop
 
 !$cuf kernel do(2)
+!$omp target teams distribute parallel do collapse(2)
   DO ii = 1, npwx*npol
     DO jj = 1, nbnd  
       evc_d(ii,jj) = psi_d(ii,jj)
@@ -314,9 +353,16 @@ SUBROUTINE paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, overlap
 
   CALL mp_sum(nhpsi,inter_bgrp_comm)
 
+#if defined(__OPENMP_GPU)
+  ENDASSOCIATE
+  !$omp target exit data map(delete:ew, conv, psi, hpsi, spsi)
+  DEALLOCATE ( ew, conv )
+  DEALLOCATE ( psi, hpsi, spsi )
+#else
   DEALLOCATE ( ew_d, conv )
   DEALLOCATE ( conv_d )
   DEALLOCATE ( psi_d, hpsi_d, spsi_d )
+#endif
 
   CALL mp_type_free( column_type )
 
