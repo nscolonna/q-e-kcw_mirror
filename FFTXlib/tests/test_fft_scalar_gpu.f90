@@ -22,7 +22,7 @@ program test_fft_scalar_gpu
     CALL test_cft_1z_gpu(test)
     !
     CALL test_cfft3d_gpu(test)
-    !
+    !!
     CALL test_cfft3ds_gpu(test)
     !
     CALL test%print()

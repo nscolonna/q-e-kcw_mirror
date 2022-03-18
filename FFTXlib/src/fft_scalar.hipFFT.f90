@@ -107,9 +107,13 @@
 
 
         IF (is_inplace) THEN
+            !$omp target data use_device_ptr(c)
               hipfft_status = hipfftExecZ2Z(hipfft_planz(ip), c_loc(c), c_loc(c), HIPFFT_FORWARD)
+            !$omp end target data
         ELSE
+            !$omp target data use_device_ptr(c, cout)
               hipfft_status = hipfftExecZ2Z(hipfft_planz(ip), c_loc(c), c_loc(cout), HIPFFT_FORWARD)
+            !$omp end target data
         ENDIF
         CALL hipCheck(hipDeviceSynchronize())
         IF(hipfft_status /= 0) CALL fftx_error__(' cft_1z GPU ',' stopped in hipfftExecZ2Z(Forward) ')
@@ -130,9 +134,13 @@
 
      ELSE IF (isign > 0) THEN
         IF (is_inplace) THEN
+            !$omp target data use_device_ptr(c)
               hipfft_status = hipfftExecZ2Z(hipfft_planz(ip), c_loc(c), c_loc(c), HIPFFT_BACKWARD)
+            !$omp end target data
         ELSE
+            !$omp target data use_device_ptr(c, cout)
             hipfft_status = hipfftExecZ2Z(hipfft_planz(ip), c_loc(c), c_loc(cout), HIPFFT_BACKWARD)
+            !$omp end target data
         ENDIF
         IF(hipfft_status /= 0) CALL fftx_error__(' cft_1z GPU ',' stopped in hipfftExecZ2Z(Backward) ')
             CALL hipfftCheck(hipfft_status)
@@ -273,7 +281,9 @@
         !
         tscale = 1.0_DP / ( nx * ny )
         !
+        !$omp target data use_device_ptr(r_d)
         istat = hipfftExecZ2Z( hipfft_plan_2d(ip), c_loc(r_d), c_loc(r_d), HIPFFT_FORWARD )
+        !$omp end target data
         CALL fftx_error__(" fft_scalar_hipFFT: cft_2xy_gpu ", " hipfftExecZ2Z failed ", istat)
         CALL hipCheck(hipDeviceSynchronize())
 
@@ -287,7 +297,10 @@
         END DO
 
      ELSE IF( isign > 0 ) THEN
+        !$omp target data use_device_ptr(r_d)
         istat = hipfftExecZ2Z( hipfft_plan_2d(ip), c_loc(r_d), c_loc(r_d), hipFFT_INVERSE )
+        !$omp end target data
+
         CALL fftx_error__(" fft_scalar_hipFFT: cft_2xy_gpu ", " hipfftExecZ2Z failed ", istat)
         CALL hipCheck(hipDeviceSynchronize())
      END IF
@@ -414,7 +427,9 @@
 
      IF( isign < 0 ) THEN
 
-        istat = hipfftExecZ2Z( hipfft_plan_3d(ip), f_d(1), f_d(1), HIPFFT_FORWARD )
+        !$omp target data use_device_ptr(f_d)
+        istat = hipfftExecZ2Z( hipfft_plan_3d(ip), c_loc(f_d), c_loc(f_d), HIPFFT_FORWARD )
+        !$omp end target data
         call fftx_error__(" fft_scalar_hipFFT: cfft3d_gpu ", " hipfftExecZ2Z failed ", istat)
         CALL hipCheck(hipDeviceSynchronize())
 
@@ -426,7 +441,9 @@
 
      ELSE IF( isign > 0 ) THEN
 
-        istat = hipfftExecZ2Z( hipfft_plan_3d(ip), f_d(1), f_d(1), HIPFFT_INVERSE )
+        !$omp target data use_device_ptr(f_d)
+        istat = hipfftExecZ2Z( hipfft_plan_3d(ip), c_loc(f_d), c_loc(f_d), HIPFFT_INVERSE )
+        !$omp end target data
         call fftx_error__(" fft_scalar_hipFFT: cfft3d_gpu ", " hipfftExecZ2Z failed ", istat)
         CALL hipCheck(hipDeviceSynchronize())
 

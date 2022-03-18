@@ -15,7 +15,7 @@ all: common $(EXECS)
 common: sort.o tester.o utils.o recips.o
 
 %.x: %.o
-	$(LD) $(LDFLAGS) -lhipfft -I${CRAY_MPICH_DIR}/include -L${CRAY_MPICH_DIR}/lib -lmpi_cray -lmpifort_cray -lmpich -L${FFTW_DIR} -I${FFTW_INC} -v -lfftw3 -lfftw3_threads -fopenmp "-h noacc" \
+	$(LD) $(LDFLAGS) -lhipfft -I${CRAY_MPICH_DIR}/include -L${CRAY_MPICH_DIR}/lib -lmpi_cray -lmpifort_cray -lmpich -L${FFTW_DIR} -I${FFTW_INC} -v -lfftw3 -lfftw3_threads -fopenmp "-h noacc" -D__MPI \
   	  $< utils.o tester.o sort.o recips.o -o $@ ../src/libqefft.a $(FFT_LIBS) $(MPI_LIBS) $(LD_LIBS)
 #	$(LD) $(LDFLAGS) -Mcudalib=cufft $< utils.o tester.o sort.o recips.o -o $@ ../src/libqefft.a $(FFT_LIBS) $(BLAS_LIBS) $(MPI_LIBS) $(LD_LIBS)
 
