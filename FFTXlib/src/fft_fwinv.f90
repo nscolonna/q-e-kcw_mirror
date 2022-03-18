@@ -27,7 +27,11 @@ SUBROUTINE invfft_y_gpu( fft_kind, f, dfft, howmany )
   !!   No check is performed on the correspondence between dfft and fft_kind.
   !!   from all other cases
 
+#if defined(__DFTI)
   USE fft_scalar_dfti, ONLY : cfft3d_gpu, cfft3ds_gpu
+#elif defined(__HIP)
+  USE fft_scalar_hipfft, ONLY : cfft3d_gpu, cfft3ds_gpu
+#endif
   USE fft_parallel,    ONLY : tg_cft3s_gpu, many_cft3s_gpu
   USE fft_parallel_2d, ONLY : tg_cft3s_2d_gpu   => tg_cft3s_gpu,  &
                               many_cft3s_2d_gpu => many_cft3s_gpu
@@ -121,7 +125,11 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f, dfft, howmany )
   !!   On output, f is overwritten
   !!
 
+#if defined(__DFTI)
   USE fft_scalar_dfti, ONLY : cfft3d_gpu, cfft3ds_gpu
+#elif defined(__HIP)
+  USE fft_scalar_hipfft, ONLY : cfft3d_gpu, cfft3ds_gpu
+#endif
   USE fft_parallel,    ONLY : tg_cft3s_gpu, many_cft3s_gpu
   USE fft_parallel_2d, ONLY : tg_cft3s_2d_gpu   => tg_cft3s_gpu,  &
                               many_cft3s_2d_gpu => many_cft3s_gpu
@@ -237,7 +245,7 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
 
-#if defined(__OPENMP_GPU)
+#if defined(__DFTI)
   !$omp declare variant (invfft_y_gpu) match( construct={dispatch} )
 #endif
 
@@ -340,7 +348,7 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
 
-#if defined(__OPENMP_GPU)
+#if defined(__DFTI)
   !$omp declare variant(fwfft_y_gpu) match(construct={dispatch} )
 #endif
 

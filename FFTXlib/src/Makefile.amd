@@ -1,6 +1,6 @@
 # Makefile for FFTXlib modified by AMD
 
-include make.amd.inc
+include ../../make.amd.inc
 $(info    __OPENMP_GPU is $(__OPENMP_GPU))
 
 MODFLAGS= $(MOD_FLAG)../../Modules/

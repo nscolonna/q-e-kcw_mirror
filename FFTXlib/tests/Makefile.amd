@@ -1,0 +1,31 @@
+# Makefile for FFTXlib testing
+
+include ../../make.amd.inc
+
+#MODFLAGS = $(MOD_FLAG)../src $(MOD_FLAG).
+
+SRCS = test_fft_scalar_gpu.f90 \
+       test_fft_scatter_mod_gpu.f90 \
+       test_fwinv_gpu.f90
+
+EXECS = $(SRCS:.f90=.x)
+
+all: common $(EXECS)
+
+common: sort.o tester.o utils.o recips.o
+
+%.x: %.o
+	$(LD) $(LDFLAGS) -lhipfft -I${CRAY_MPICH_DIR}/include -L${CRAY_MPICH_DIR}/lib -lmpi_cray -lmpifort_cray -lmpich -L${FFTW_DIR} -I${FFTW_INC} -v -lfftw3 -lfftw3_threads -fopenmp "-h noacc" \
+  	  $< utils.o tester.o sort.o recips.o -o $@ ../src/libqefft.a $(FFT_LIBS) $(MPI_LIBS) $(LD_LIBS)
+#	$(LD) $(LDFLAGS) -Mcudalib=cufft $< utils.o tester.o sort.o recips.o -o $@ ../src/libqefft.a $(FFT_LIBS) $(BLAS_LIBS) $(MPI_LIBS) $(LD_LIBS)
+
+test : fft_test.o ../src/libqefft.a
+	$(LD) $(LDFLAGS) -o fft_test.x fft_test.o ../src/libqefft.a $(FFT_LIBS) $(MPI_LIBS) $(LD_LIBS)
+
+TEST : test # compatibility
+
+clean:
+	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L *.x rnd_seed* *.modmic *genmod.f90
+
+.PHONY: all clean
+
