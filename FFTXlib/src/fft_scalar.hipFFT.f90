@@ -6,7 +6,7 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-#if defined(__HIPFFT)
+#if defined(__HIP)
 #if !defined(__OPENMP_GPU)
 #include "mkl_dfti.f90"
 #endif
@@ -26,9 +26,9 @@
         SAVE
 
         PRIVATE
-#if defined(__OPENMP_GPU)
+!#if defined(__OPENMP_GPU)
         PUBLIC :: cft_1z_gpu, cft_2xy_gpu, cfft3d_gpu, cfft3ds_gpu
-#endif
+!#endif
         PUBLIC :: cft_1z, cft_2xy, cfft3d, cfft3ds
 
         TYPE dfti_descriptor_array

@@ -39,10 +39,15 @@ TOPDIR = /home/ooreilly/codes/q-e
 
 # MANUAL_DFLAGS  = additional precompilation option(s), if desired
 #                  BEWARE: it does not work for IBM xlf! Manually edit FDFLAGS
-MANUAL_DFLAGS  = -cpp  -lfftw3 -I/home/ooreilly/Software/fftw-3.3.10/include \
--L/home/ooreilly/Software/fftw-3.3.10/lib -lfftw3 -lm -D__OPENMP_GPU -D__HIPFFT \
--ffree-line-length-512
-DFLAGS         =  -D__PGI -D__FFTW -D__MPI -D__SCALAPACK
+MANUAL_DFLAGS  = \
+-I/home/ooreilly/Software/fftw-3.3.10/include \
+-L/home/ooreilly/Software/fftw-3.3.10/lib \
+-lfftw3_threads -lfftw3 \
+-D__OPENMP_GPU -D__HIP \
+-lhipfft \
+-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
+-Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
+DFLAGS         = -D__FFTW3 -D__MPI
 FDFLAGS        = $(DFLAGS) $(MANUAL_DFLAGS)
 
 # IFLAGS = how to locate directories with *.h or *.f90 file to be included
@@ -87,7 +92,7 @@ BASEMODS= $(TOPDIR)/Modules/libqemod.a \
 # (such as for instance mpif90, mpf90, mpxlf90,...);
 # otherwise, an ordinary fortran-90 compiler (f90, g95, xlf90, ifort,...)
 
-MPIF90         = mpif90
+MPIF90         = hipfc
 F90           = nvfortran
 CC             = /share/modules/hpc_sdk/21.3/Linux_x86_64/21.3/compilers/bin/nvc
 
@@ -132,8 +137,8 @@ FFLAGS_NOMAIN   = -Mnomain
 # for libxc, set LD_LIBS=-L/path/to/libxc/lib/ -lxcf03 -lxc
 # If libxc release is 5.0.0 replace -lxcf03 with -lxcf90
 
-LD             = mpif90
-LDFLAGS        = 
+LD             = hipfc
+LDFLAGS        = F90FLAGS
 LD_LIBS        = 
 
 # External Libraries (if any) : blas, lapack, fft, MPI

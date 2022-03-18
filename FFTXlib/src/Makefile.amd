@@ -1,9 +1,15 @@
-# Makefile for FFTXlib
+# Makefile for FFTXlib modified by AMD
 
-include make.inc
+include make.amd.inc
 $(info    __OPENMP_GPU is $(__OPENMP_GPU))
 
 MODFLAGS= $(MOD_FLAG)../../Modules/
+
+SRCS = test_fft_scalar_gpu.f90 \
+       test_fft_scatter_mod_gpu.f90 \
+       test_fwinv_gpu.f90
+
+EXECS = $(SRCS:.f90=.x)
 
 FFTX = \
 scatter_mod.o  \
@@ -14,7 +20,7 @@ fft_ggen.o  \
 fft_fwinv.o  \
 fft_scalar.o  \
 fft_scalar.DFTI.o  \
-fft_scalar.HIPFFT.o  \
+fft_scalar.hipFFT.o  \
 fft_scalar.ESSL.o  \
 fft_scalar.FFTW.o  \
 fft_scatter.o  \
@@ -41,13 +47,32 @@ fft_helper_subroutines.o \
 fft_param.o \
 fft_buffers.o
 
+FFTXTEST = \
+fft_support.o  \
+fft_error.o  \
+fft_scalar.o  \
+fft_scalar.DFTI.o  \
+fft_scalar.hipFFT.o  \
+fft_scalar.ESSL.o  \
+fft_scalar.FFTW3.o \
+tester.o \
+utils.o \
+recips.o \
+test_fft_scalar_gpu.o
+
 all : libqefft.a
 
 libqefft.a: 	$(FFTX)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
+lib1z.a:   $(FFTX1Z)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
+
 fft_scalar.o : fft_scalar.f90  fft_scalar.FFTW3.f90  fft_scalar.FFTW.f90  fft_scalar.SX6.f90 fft_scalar.DFTI.f90  fft_scalar.ESSL.f90 fft_scalar.hipFFT.f90
+
+common: sort.o tester.o utils.o recips.o
 
 fft_stick.o : fft_stick.c fftw_sp.h fftw_dp.h
 
@@ -58,6 +83,6 @@ fftw_sp.o : fftw_sp.c fftw_sp.h fftw.h konst.h
 fftw_dp.o : fftw_dp.c fftw_dp.h fftw.h konst.h
 
 clean :
-	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L *.modmic *genmod.f90
+	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L *.modmic *genmod.f90 *.cmdx *.cmod *.ilm *.stb rnd_seed*
 
 include make.depend

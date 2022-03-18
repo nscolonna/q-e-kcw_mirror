@@ -53,7 +53,7 @@ MODULE fft_interfaces
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
 #if defined(__OPENMP_GPU)
-       !$omp declare variant (invfft_y_gpu) match( construct={dispatch} )
+       !!$omp declare variant (invfft_y_gpu) match( construct={dispatch} )
 #endif
      END SUBROUTINE invfft_y
      !
@@ -90,7 +90,7 @@ MODULE fft_interfaces
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
 #if defined(__OPENMP_GPU)
-       !$omp declare variant(fwfft_y_gpu) match(construct={dispatch} )
+       !!$omp declare variant(fwfft_y_gpu) match(construct={dispatch} )
 #endif
      END SUBROUTINE fwfft_y
 #if defined(__CUDA)
