@@ -59,8 +59,12 @@ MANUAL_DFLAGS  = \
 -lhipfft \
 -fopenmp \
 	-lhipfft -lmpi -I${MPI_INC} -L${MPI_DIR} -L${FFTW_DIR} -I${FFTW_INC} -lfftw3 -lfftw3_threads -fopenmp \
-	  -L/opt/cray/pe/mpich/8.1.7/ofi/cray/10.0/lib -lmpi -L/opt/cray/pe/mpich/8.1.7/gtl/lib \
-"-h noacc"
+	  -L/opt/cray/pe/mpich/8.1.12/ofi/cray/10.0/lib -lmpi -L/opt/cray/pe/mpich/8.1.12/gtl/lib \
+      -lmpi_gtl_hsa \
+"-h noacc" \
+-L/opt/cray/pe/mpich/8.1.12/ofi/cray/10.0/lib -lmpi -L/opt/cray/pe/mpich/8.1.12/gtl/lib \
+-lmpi_gtl_hsa -g
+
 DFLAGS         = -D__FFTW3 -D__MPI
 FDFLAGS        = $(DFLAGS) $(MANUAL_DFLAGS)
 
