@@ -14,15 +14,15 @@
 !
 ! The approach following Algorithm is the parallel orbital updating algorithm:
 ! 1. Choose initial $E_{\mathrm{cut}}^{(0)}$ and then obtain $V_{N_G^{0}}$, use the SCF method to solve
-!    the Kohn-Sham equation in $V_{G_0}$ and get the initial $(\lambda_i^{0},u_i^{0}), i=1, \cdots, N$ 
+!    the Kohn-Sham equation in $V_{G_0}$ and get the initial $(\lambda_i^{0},u_i^{0}), i=1, \cdots, N$
 !    and let $n=0$.
 ! 2. For $i=1,2,\ldots,N$, find $e_i^{n+1/2}\in V_{G_n}$ satisfying
 !    $$a(\rho_{in}^{n}; e_i^{n+1/2}, v) = -[(a(\rho_{in}^{n}; u_i^{n}, v) - \lambda_i^{n} (u_i^{n}, v))]  $$
-!    in parallel , where $\rho_{in}^{n}$ is the input charge density obtained by the orbits obtained in the 
+!    in parallel , where $\rho_{in}^{n}$ is the input charge density obtained by the orbits obtained in the
 !    $n$-th iteration or the former iterations.
 ! 3. Find $\{\lambda_i^{n+1},u_i^{n+1}\} \in \mathbf{R}\times \tilde{V}_N$   satisfying
 !      $$a(\tilde{\rho}; u_i^{n+1}, v) = ( \lambda_i^{n+1}u_i^{n+1}, v) \quad  \forall v \in \tilde{V}_N$$
-!      where $\tilde{V}_N = \mathrm{span}\{e_1^{n+1/2},\ldots,e_N^{n+1/2},u_1^{n},\ldots,u_N^{n}\}$, 
+!      where $\tilde{V}_N = \mathrm{span}\{e_1^{n+1/2},\ldots,e_N^{n+1/2},u_1^{n},\ldots,u_N^{n}\}$,
 !      $\tilde{\rho}(x)$ is the input charge density obtained from the previous orbits.
 ! 4. Convergence check: if not converged, set $n=n+1$, go to step 2; else,  stop.
 !
@@ -30,7 +30,7 @@
 !  X. Dai, X. Gong, A. Zhou, J. Zhu,
 !   A parallel orbital-updating approach for electronic structure calculations, arXiv:1405.0260 (2014).
 ! X. Dai, Z. Liu, X. Zhang, A. Zhou,
-!  A Parallel Orbital-updating Based Optimization Method for Electronic Structure Calculations, 
+!  A Parallel Orbital-updating Based Optimization Method for Electronic Structure Calculations,
 !   arXiv:1510.07230 (2015).
 ! Yan Pan, Xiaoying Dai, Xingao Gong, Stefano de Gironcoli, Gian-Marco Rignanese, and Aihui Zhou,
 !  A Parallel Orbital-updating Based Plane Wave Basis Method. J. Comp. Phys. 348, 482-492 (2017).
@@ -61,9 +61,11 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
   !
   !  Ivan Carnimeo: GPU version
   !
-#if defined (__CUDA) 
+#if defined (__CUDA)
   USE cudafor
-#endif  
+#elif defined(__OPENMP_GPU)
+  USE omp_lib
+#endif
   USE util_param,    ONLY : DP, stdout
   USE mp_bands_util, ONLY : intra_bgrp_comm, gstart
   USE mp,            ONLY : mp_sum
@@ -74,54 +76,65 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
   COMPLEX(DP), INTENT(IN) :: psi0_d(npwx,nbnd)  ! psi0  needed to compute the Pv projection
   COMPLEX(DP), INTENT(IN) :: spsi0_d(npwx,nbnd) ! Spsi0  needed to compute the Pv projection
   !
-  INTEGER,  INTENT(IN)   :: npw, npwx, nbnd, nvec ! input dimensions 
+  INTEGER,  INTENT(IN)   :: npw, npwx, nbnd, nvec ! input dimensions
   REAL(DP), INTENT(IN)   :: ethr                  ! threshold for convergence.
   REAL(DP), INTENT(INOUT)   :: e_d(nvec)            ! current estimate of the target eigenvalues
-  COMPLEX(DP),INTENT(INOUT) :: psi_d(npwx,nvec),hpsi_d(npwx,nvec),spsi_d(npwx,nvec) ! 
+  COMPLEX(DP),INTENT(INOUT) :: psi_d(npwx,nvec),hpsi_d(npwx,nvec),spsi_d(npwx,nvec) !
                                                   ! input: the current estimate of the wfcs
                                                   ! output: the estimated correction vectors
   INTEGER, INTENT(INOUT) :: nhpsi                 ! (updated) number of Hpsi evaluations
   !
   ! ... LOCAL variables
   !
-  INTEGER, PARAMETER :: maxter = 5 ! maximum number of CG iterations 
+  INTEGER, PARAMETER :: maxter = 5 ! maximum number of CG iterations
   !
   REAL(DP), ALLOCATABLE :: g0(:), g1(:), g2(:), gamma(:), ethr_cg(:), ff(:), ff0(:)
   INTEGER, ALLOCATABLE :: cg_iter(:)
   REAL(DP) :: beta, ee
   INTEGER  :: npw2, npwx2, i, l, block_size, done, nactive, nnew, newdone
   !
-  ! ... DEVICE variables   
+  ! ... DEVICE variables
   !
   EXTERNAL  g_1psi_gpu, hs_psi_gpu
   REAL(DP), EXTERNAL :: gpu_DDOT
   COMPLEX(DP), ALLOCATABLE ::  b_d(:,:),                        & ! RHS for testing
                                p_d(:,:), hp_d(:,:), sp_d(:,:), z_d(:,:) ! additional working vetors
   REAL(DP), ALLOCATABLE    ::  spsi0vec_d (:,:) ! the product of spsi0 and a group of vectors
-  COMPLEX(DP) :: tmp, tmp_d
+  COMPLEX(DP) :: tmp
+#if !defined(__OPENMP_GPU)
+  COMPLEX(DP) :: tmp_d
+#else
+  REAL(DP) :: ddot_res
+#endif
   INTEGER :: ii, jj
-  REAL(DP), ALLOCATABLE ::  alpha(:) 
-#if defined (__CUDA) 
-  attributes(device) :: psi_d, spsi_d, hpsi_d 
-  attributes(device) :: psi0_d, spsi0_d, spsi0vec_d 
+  REAL(DP), ALLOCATABLE ::  alpha(:)
+#if defined (__CUDA)
+  attributes(device) :: psi_d, spsi_d, hpsi_d
+  attributes(device) :: psi0_d, spsi0_d, spsi0vec_d
   attributes(device) :: e_d, b_d, z_d, p_d, hp_d, sp_d
   attributes(device) :: tmp_d
-#endif  
+#endif
 !
   !
   CALL start_clock( 'pcg' ); !write (6,*) ' enter pcg' , e(1:2) ; FLUSH(6)
   !
   npw2  = 2*npw
   npwx2 = 2*npwx
-  block_size = min(nvec,64) 
+  block_size = min(nvec,64)
   !
   ALLOCATE( g0( block_size ), g1( block_size ), g2( block_size ), gamma( block_size ) )
   ALLOCATE( ethr_cg( block_size ), ff( block_size ), ff0( block_size ), cg_iter( block_size ) )
+  ALLOCATE( alpha( block_size ) )
+#if defined(__OPENMP_GPU)
+  !$omp allocate allocator(omp_target_device_mem_alloc)
+  ALLOCATE( z_d( npwx, block_size ), b_d( npwx, block_size ), p_d(npwx,block_size), &
+            hp_d(npwx,block_size), sp_d(npwx,block_size), spsi0vec_d(nbnd, block_size) )
+#else
   ALLOCATE( z_d( npwx, block_size ), b_d( npwx, block_size ) )
   ALLOCATE( p_d(npwx,block_size), hp_d(npwx,block_size), sp_d(npwx,block_size) )
   ALLOCATE( spsi0vec_d(nbnd, block_size) )
-  ALLOCATE( alpha( block_size ) )
-!  
+#endif
+!
   !
   done    = 0  ! the number of correction vectors already solved
   nactive = 0  ! the number of correction vectors currently being updated
@@ -137,50 +150,63 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
            !write(6,*) ' l =',l,' i =',i
            !write (6,*) ' enter pcg' , e(i) ; FLUSH(6)
 !$cuf kernel do(1)
-           DO ii = 1, npwx 
+!$omp target teams distribute parallel do
+           DO ii = 1, npwx
              b_d(ii,l) = e_d(i) * spsi_d(ii,i) - hpsi_d(ii,i)               ! initial gradient and saved RHS for later
-           END DO 
+           END DO
 !$cuf kernel do(1)
-           DO ii = 1, npwx 
+!$omp target teams distribute parallel do
+           DO ii = 1, npwx
              z_d(ii,l) = b_d(ii,l)
-           END DO 
+           END DO
            call g_1psi_gpu(npwx,npw,z_d(:,l),e_d(i)) ! initial preconditioned gradient
         end do
      !- project on conduction bands
         CALL start_clock( 'pcg:ortho' )
         CALL gpu_DGEMM( 'T','N', nbnd,nnew,npw2, 2.D0, spsi0_d, npwx2, z_d(:,nactive+1), npwx2, 0.D0, spsi0vec_d, nbnd )
         IF ( gstart == 2 ) CALL gpu_DGER( nbnd, nnew, -1.D0, spsi0_d, npwx2, z_d(:,nactive+1), npwx2, spsi0vec_d, nbnd )
+        !$omp dispatch is_device_ptr(spsi0vec_d)
         CALL mp_sum( spsi0vec_d, intra_bgrp_comm )
         CALL gpu_DGEMM( 'N','N', npw2,nnew,nbnd,-1.D0, psi0_d, npwx2, spsi0vec_d, nbnd, 1.D0, z_d(:,nactive+1), npwx2 )
         CALL stop_clock( 'pcg:ortho' )
      !-
         do l=nactive+1,nactive+nnew; i=l+done
-           g0(l) = 2.D0*gpu_DDOT(npw2,z_d(:,l),1,b_d(:,l),1) 
-           IF (gstart==2) g0(l)=g0(l) - gpu_DDOT(2,z_d(1,l),1,b_d(1,l),1)  
+           g0(l) = 2.D0*gpu_DDOT(npw2,z_d(:,l),1,b_d(:,l),1)
+           IF (gstart==2) g0(l)=g0(l) - gpu_DDOT(2,z_d(1,l),1,b_d(1,l),1)
         end do
         CALL mp_sum( g0(nactive+1:nactive+nnew), intra_bgrp_comm ) ! g0 = < initial z | initial gradient b >
-     
+
         do l=nactive+1,nactive+nnew; i=l+done
            !write(6,*) ' l =',l,' i =',i
            ff(l) = 0.d0 ; ff0(l) = ff(l)
            !write (6,*) 0, g0(l), ff(l)
 
            ! ethr_cg = ethr  ! CG convergence threshold could be set from input but it is not ...
-           ethr_cg(l) = 1.0D-2  ! it makes more sense to fix the convergence of the CG solution to a 
+           ethr_cg(l) = 1.0D-2  ! it makes more sense to fix the convergence of the CG solution to a
                                 ! fixed function of the RHS (see ethr_cg update later).
            ethr_cg(l) = max ( 0.01*ethr, ethr_cg(l) * g0(l) ) ! here we set the convergence of the correction
            !write(6,*) 'ethr_cg :', ethr_cg(l)
 
            ! zero the trial solution
+#if defined(__OPENMP_GPU)
+!$omp target teams distribute parallel do
+           DO ii = 1, npwx
+              psi_d (ii,i) = ZERO
+              hpsi_d(ii,i) = ZERO
+              spsi_d(ii,i) = ZERO
+           ENDDO
+#else
            psi_d(:,i) = ZERO
            hpsi_d(:,i) = ZERO
            spsi_d(:,i) = ZERO
+#endif
 
            ! initial search direction
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, npwx
              p_d(ii,l) = z_d(ii,l)
-           END DO 
+           END DO
            cg_iter(l) = 0 ! this is a new correction vector, reset its interation count
         end do
         nactive = nactive + nnew
@@ -201,7 +227,7 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
      CALL stop_clock( 'pcg:hs_1psi' )
 
      do l = 1, nactive; i=l+done
-        gamma(l) = 2.D0*gpu_DDOT(npw2,p_d(:,l),1,hp_d(:,l),1) - e_d(i) * 2.D0*gpu_DDOT(npw2,p_d(:,l),1,sp_d(:,l),1) 
+        gamma(l) = 2.D0*gpu_DDOT(npw2,p_d(:,l),1,hp_d(:,l),1) - e_d(i) * 2.D0*gpu_DDOT(npw2,p_d(:,l),1,sp_d(:,l),1)
         IF (gstart==2) gamma(l) = gamma(l) - gpu_DDOT(2,p_d(1,l),1,hp_d(1,l),1) + e_d(i) * gpu_DDOT(2,p_d(1,l),1,sp_d(1,l),1)
      end do
      CALL mp_sum( gamma(1:nactive), intra_bgrp_comm ) ! gamma = < p | hp - e sp >
@@ -209,16 +235,17 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
      do l = 1, nactive; i=l+done
         !write(6,*) ' l =',l,' i =',i
 
-        alpha(l) = g0(l)/gamma(l)  
+        alpha(l) = g0(l)/gamma(l)
         !write(6,*) 'g0, gamma, alpha :', g0(l), gamma(l), alpha_d(l)
         tmp = alpha(l)
 
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do map(to:tmp)
         DO ii = 1, npwx
           psi_d(ii,i)  = psi_d(ii,i)  + tmp * p_d(ii,l)     ! updated solution
           hpsi_d(ii,i) = hpsi_d(ii,i) + tmp * hp_d(ii,l)    ! updated solution
           spsi_d(ii,i) = spsi_d(ii,i) + tmp * sp_d(ii,l)    ! updated solution
-        END DO 
+        END DO
 
         g2(l) = 2.D0 * ( gpu_DDOT(npw2,z_d(:,l),1,b_d(:,l),1) + &
                          e_d(i) * gpu_DDOT(npw2,z_d(:,l),1,spsi_d(:,i),1) - &
@@ -231,15 +258,17 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
 
      do l = 1, nactive; i=l+done                      ! update the preconditioned gradient
 !$cuf kernel do(1)
-        DO ii = 1, npwx 
-          z_d(ii,l) = b_d(ii,l) + e_d(i) * spsi_d(ii,i) - hpsi_d(ii,i)    
-        END DO 
+!$omp target teams distribute parallel do
+        DO ii = 1, npwx
+          z_d(ii,l) = b_d(ii,l) + e_d(i) * spsi_d(ii,i) - hpsi_d(ii,i)
+        END DO
         call g_1psi_gpu(npwx,npw,z_d(:,l),e_d(i))
      end do
   !- project on conduction bands
      CALL start_clock( 'pcg:ortho' )
      CALL gpu_DGEMM( 'T','N', nbnd,nactive,npw2, 2.D0, spsi0_d, npwx2, z_d, npwx2, 0.D0, spsi0vec_d, nbnd )
      IF ( gstart == 2 ) CALL gpu_DGER( nbnd, nactive, -1.D0, spsi0_d, npwx2, z_d, npwx2, spsi0vec_d, nbnd )
+     !$omp dispatch is_device_ptr(spsi0vec_d)
      CALL mp_sum( spsi0vec_d, intra_bgrp_comm )
      CALL gpu_DGEMM( 'N','N', npw2,nactive,nbnd,-1.D0, psi0_d, npwx2, spsi0vec_d, nbnd, 1.D0, z_d, npwx2 )
      CALL stop_clock( 'pcg:ortho' )
@@ -250,10 +279,19 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
                          gpu_DDOT(npw2,z_d(:,l),1,hpsi_d(:,i),1) )
         IF (gstart==2) THEN
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do map(from:tmp)
           do ii = 1, 1
-            tmp_d = b_d(1,l) + e_d(i)*spsi_d(1,i) - hpsi_d(1,i) 
-          end do 
+#if defined(__OPENMP_GPU)
+            tmp   = b_d(1,l) + e_d(i)*spsi_d(1,i) - hpsi_d(1,i)
+#else
+            tmp_d = b_d(1,l) + e_d(i)*spsi_d(1,i) - hpsi_d(1,i)
+#endif
+          end do
+#if defined(__OPENMP_GPU)
+          g1(l) = g1(l) - gpu_DDOT(2,z_d(1,l),1,tmp  ,1)
+#else
           g1(l) = g1(l) - gpu_DDOT(2,z_d(1,l),1,tmp_d,1)
+#endif
         END IF
      end do
      CALL mp_sum( g1(1:nactive), intra_bgrp_comm )   ! g1 = < new z | new gradient b + e spsi - hpsi >
@@ -263,10 +301,19 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
                 - 2.D0 * gpu_DDOT(npw2,psi_d(:,i),1,b_d(:,l),1)
         if (gstart==2) THEN
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do map(from:tmp)
           do ii = 1, 1
+#if defined(__OPENMP_GPU)
+            tmp   = e_d(i)*spsi_d(1,i) - hpsi_d(1,i) + 2.D0 * b_d(1,l)
+#else
             tmp_d = e_d(i)*spsi_d(1,i) - hpsi_d(1,i) + 2.D0 * b_d(1,l)
-          end do 
+#endif
+          end do
+#if defined(__OPENMP_GPU)
+          ff(l) = ff(l) + 0.5D0 * gpu_DDOT(2,psi_d(1,i),1,tmp  ,1)
+#else
           ff(l) = ff(l) + 0.5D0 * gpu_DDOT(2,psi_d(1,i),1,tmp_d,1)
+#endif
         END IF
      end do
      CALL mp_sum( ff(1:nactive), intra_bgrp_comm )   ! function minimum -0.5 < psi | e spsi - hpsi > - < psi | b >
@@ -278,11 +325,12 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
         IF ( ff(l) > ff0(l) .AND. ff0(l) < 0.d0 ) THEN
            tmp = alpha(l)
 !$cuf kernel do(1)
-           DO ii = 1, npwx    
+!$omp target teams distribute parallel do map(to:tmp)
+           DO ii = 1, npwx
              psi_d(ii,i)  = psi_d(ii,i)  - tmp * p_d(ii,l) ! fallback solution: if last iter failed to improve ff0
              hpsi_d(ii,i) = hpsi_d(ii,i) - tmp * hp_d(ii,l)! exit whitout updating and ...
              spsi_d(ii,i) = spsi_d(ii,i) - tmp * sp_d(ii,l)! hope next time it'll be better
-           END DO 
+           END DO
         END IF
 
         !write(6,*) 'g0, g1, g2 :', g0(l), g1(l), g2(l)
@@ -299,43 +347,53 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
 
            newdone = newdone + 1         ! one more solution found (or no more active anyway)
            !write(6,*) ' newdone = ', newdone
-       
+
            CALL start_clock( 'pcg:move' )
            !write(6,*) ' swapping converged psi/hpsi/spsi i = ',i, " with i' = ",done+newdone
            ! swap the terminated vector with the first in the list of the active ones
 !$cuf kernel do(1)
-           DO ii = 1, npwx 
-             p_d (ii,l) = psi_d (ii,done+newdone) 
-             psi_d (ii,done+newdone) = psi_d (ii,i) 
+!$omp target teams distribute parallel do
+           DO ii = 1, npwx
+             p_d (ii,l) = psi_d (ii,done+newdone)
+             psi_d (ii,done+newdone) = psi_d (ii,i)
              psi_d (ii,i) = p_d (ii,l)
-             hp_d(ii,l) = hpsi_d(ii,done+newdone) 
-             hpsi_d(ii,done+newdone) = hpsi_d(ii,i) 
+             hp_d(ii,l) = hpsi_d(ii,done+newdone)
+             hpsi_d(ii,done+newdone) = hpsi_d(ii,i)
              hpsi_d(ii,i) = hp_d(ii,l)
-             sp_d(ii,l) = spsi_d(ii,done+newdone) 
-             spsi_d(ii,done+newdone) = spsi_d(ii,i) 
+             sp_d(ii,l) = spsi_d(ii,done+newdone)
+             spsi_d(ii,done+newdone) = spsi_d(ii,i)
              spsi_d(ii,i) = sp_d(ii,l)
            END DO
 
-           ee = e_d(done+newdone)      
+#if defined(__OPENMP_GPU)
+           !$omp target
+           ee = e_d(done+newdone)
+           e_d(done+newdone) = e_d(i)
+           e_d(i) = ee
+           !$omp end target
+#else
+           ee = e_d(done+newdone)
 !$cuf kernel do(1)
            DO ii = 1, 1
              e_d(done+newdone) = e_d(i)
-           END DO 
+           END DO
            e_d(i) = ee
+#endif
 
            !write(6,*) ' overwrite converged p/hp/etc l = ',l, ' with newdone = ',newdone
            ! move information of the swapped active vector in the right place to keep going
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, npwx
-             p_d(ii,l) = p_d(ii,newdone)          
-             hp_d(ii,l) = p_d(ii,newdone)       
+             p_d(ii,l) = p_d(ii,newdone)
+             hp_d(ii,l) = p_d(ii,newdone)
              sp_d(ii,l) = sp_d(ii,newdone)
-             b_d(ii,l) = b_d(ii,newdone) 
-             z_d(ii,l) = z_d(ii,newdone) 
+             b_d(ii,l) = b_d(ii,newdone)
+             z_d(ii,l) = z_d(ii,newdone)
            END DO
 
            ff0(l) = ff0(newdone) ; ff(l) = ff(newdone)
-           alpha(l) = alpha(newdone) 
+           alpha(l) = alpha(newdone)
            g0(l) = g0(newdone) ; g1(l) = g1(newdone) ; g2(l) = g2(newdone)
            cg_iter(l) = cg_iter(newdone) ; ethr_cg(l) = ethr_cg(newdone)
            CALL stop_clock( 'pcg:move' )
@@ -346,6 +404,7 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
            beta   = (g1(l)-g2(l))/g0(l)         ! Polak - Ribiere style update
            g0(l)  = g1(l)                       ! < new z | new gradient >  ->  < old z | old gradient >
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, npwx
              p_d(ii,l) = z_d(ii,l) + beta * p_d(ii,l)      ! updated search direction
            END DO
@@ -355,7 +414,7 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
 
         END IF
      end do
-    
+
      IF ( newdone > 0 ) THEN
 
         done    = done    + newdone
@@ -369,12 +428,13 @@ SUBROUTINE bpcg_gamma_gpu( hs_psi_gpu, g_1psi_gpu, psi0_d, spsi0_d, npw, npwx, n
 
            !write(6,*) ' l+newdone =',l+newdone,'  ->   l =',l
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, npwx
-             p_d (ii,l) = p_d (ii,l+newdone) 
-             hp_d(ii,l) = hp_d(ii,l+newdone) 
+             p_d (ii,l) = p_d (ii,l+newdone)
+             hp_d(ii,l) = hp_d(ii,l+newdone)
              sp_d(ii,l) = sp_d(ii,l+newdone)
-             b_d(ii,l) = b_d(ii,l+newdone) 
-             z_d(ii,l) = z_d(ii,l+newdone) 
+             b_d(ii,l) = b_d(ii,l+newdone)
+             z_d(ii,l) = z_d(ii,l+newdone)
            END DO
 
            ff0(l) = ff0(l+newdone) ; ff(l) = ff(l+newdone)

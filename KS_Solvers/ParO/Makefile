@@ -24,6 +24,6 @@ libparo.a:  $(PARO)
 	$(RANLIB) $@
 
 clean :
-	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L *.x
+	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L *.x *.modmic
 
 include make.depend

@@ -38,7 +38,7 @@ set(src_ppcg
     # GPU
     PPCG/ppcg_gamma_gpu.f90
     PPCG/ppcg_k_gpu.f90
-    PPCG/generic_cublas.f90)
+    PPCG/generic_blas_gpu.f90)
 qe_enable_cuda_fortran("${src_ppcg}")
 
 set(src_dense

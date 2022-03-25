@@ -94,8 +94,10 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
 
 !civn 2fix: these are needed only for __MPI = true (protate)
   COMPLEX(DP), ALLOCATABLE :: psi(:,:), hpsi(:,:), spsi(:,:) 
-  REAL(DP), ALLOCATABLE    :: eig(:), ew(:)
+  REAL(DP), ALLOCATABLE    :: ew(:)
 !
+#if !defined(__OPENMP_GPU)
+  REAL(DP), ALLOCATABLE    :: eig(:)
   !
   ! ... device variables
   !
@@ -107,6 +109,7 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
   attributes(device) :: evc_d, eig_d, ew_d
   attributes(device) :: conv_d 
 #endif 
+#endif
   !
   ! ... init local variables
   !
@@ -119,18 +122,27 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
 
   CALL mp_type_create_column_section(evc_d(1,1), 0, npwx, npwx, column_type)
 
+#if defined(__OPENMP_GPU)
+  ALLOCATE ( conv(nbnd) )
+  ALLOCATE ( psi(npwx,nvecx), hpsi(npwx,nvecx), spsi(npwx,nvecx), ew(nvecx) )
+  !$omp target enter data map(alloc:ew, conv, psi, hpsi, spsi)
+  ASSOCIATE( ew_d=>ew, conv_d=>conv, psi_d=>psi, hpsi_d=>hpsi, spsi_d=>spsi )
+#else
   ALLOCATE ( conv(nbnd) )
   ALLOCATE ( conv_d(nbnd) )
   ALLOCATE ( psi_d(npwx,nvecx), hpsi_d(npwx,nvecx), spsi_d(npwx,nvecx), ew_d(nvecx) )
+#endif
 
   CALL start_clock( 'paro:init' ); 
   conv(:) =  .FALSE. ; nconv = COUNT ( conv(:) )
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
   do ii = 1, nbnd
     conv_d(ii) = .FALSE.
   end do  
 
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
   DO ii = 1, npwx
     psi_d(ii,1:nbnd) = evc_d(ii,1:nbnd) ! copy input evc into work vector
   END DO
@@ -147,6 +159,11 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
 #if defined(__MPI)
   ELSE
 !civn 2fix
+#if defined(__OPENMP_GPU)
+     !$omp target update from(psi, hpsi, spsi, eig_d)
+     CALL protate_HSpsi_gamma(  npwx, npw, nbnd, nbnd, psi, hpsi, overlap, spsi, eig_d )
+     !$omp target update to(psi, hpsi, spsi, eig_d)
+#else
      ALLOCATE ( psi(npwx,nvecx), hpsi(npwx,nvecx), spsi(npwx,nvecx), eig(nbnd) )
      eig = eig_d
      psi  = psi_d
@@ -158,6 +175,7 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
      hpsi_d  =  hpsi 
      spsi_d  =  spsi 
      DEALLOCATE ( psi, hpsi, spsi, eig )
+#endif
   ENDIF
 #endif
 
@@ -199,12 +217,14 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
      DO ibnd = 1, ntrust ! pack unconverged roots in the available space
         IF (.NOT.conv(ibnd) ) THEN
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, npwx
              psi_d (ii,nbase+kbnd)  = psi_d(ii,ibnd)
              hpsi_d(ii,nbase+kbnd) = hpsi_d(ii,ibnd)
              spsi_d(ii,nbase+kbnd) = spsi_d(ii,ibnd)
            END DO 
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, 1
              ew_d(kbnd) = eig_d(ibnd) 
            END DO 
@@ -214,18 +234,21 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
      END DO
      DO ibnd = nbnd+1, nbase   ! add extra vectors if it is the case
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
         DO ii = 1, npwx
           psi_d (ii,nbase+kbnd)  = psi_d(ii,ibnd)
           hpsi_d(ii,nbase+kbnd) = hpsi_d(ii,ibnd)
           spsi_d(ii,nbase+kbnd) = spsi_d(ii,ibnd)
         END DO 
 !$cuf kernel do(1) 
+!$omp target teams distribute parallel do
         DO ii = 1, 1
           ew_d(kbnd) = eig_d(last_unconverged)
         END DO 
         lbnd=lbnd+1 ; kbnd=kbnd+recv_counts(mod(lbnd-2,nbgrp)+1); if (kbnd>nactive) kbnd=kbnd+1-nactive
      END DO
 !$cuf kernel do(2)
+!$omp target teams distribute parallel do collapse(2)
      DO ii = 1, npwx
        DO jj = nbase+1, nbase+how_many  
          kk = jj + ibnd_start - 1
@@ -235,6 +258,7 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
        END DO 
      END DO 
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
      DO ii = 1, how_many
        kk = ii + ibnd_start - 1 
        ew_d(ii) = ew_d(kk)
@@ -251,6 +275,7 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
      CALL stop_clock( 'paro:mp_bar' ); 
      CALL start_clock( 'paro:mp_sum' ); 
 !$cuf kernel do(2)
+!$omp target teams distribute parallel do collapse(2)
      DO ii = 1, npwx 
        DO jj = nbase+1, nbase+how_many 
          kk = jj + ibnd_start - 1 
@@ -259,8 +284,11 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
          spsi_d(ii, kk) = spsi_d(ii, jj)        
        END DO 
      END DO 
+     !$omp dispatch is_device_ptr(psi_d)
      CALL mp_allgather(psi_d (:,nbase+1:ndiag), column_type, recv_counts, displs, inter_bgrp_comm)
+     !$omp dispatch is_device_ptr(hpsi_d)
      CALL mp_allgather(hpsi_d(:,nbase+1:ndiag), column_type, recv_counts, displs, inter_bgrp_comm)
+     !$omp dispatch is_device_ptr(spsi_d)
      CALL mp_allgather(spsi_d(:,nbase+1:ndiag), column_type, recv_counts, displs, inter_bgrp_comm)
      CALL stop_clock( 'paro:mp_sum' ); 
 
@@ -271,6 +299,11 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
 #if defined(__MPI)
      ELSE
 !civn 2fix
+#if defined(__OPENMP_GPU)
+        !$omp target update from(psi, hpsi, spsi, ew)
+        CALL protate_HSpsi_gamma(  npwx, npw, ndiag, ndiag, psi, hpsi, overlap, spsi, ew )
+        !$omp target update to(psi, hpsi, spsi, ew)
+#else
         ALLOCATE ( psi(npwx,nvecx), hpsi(npwx,nvecx), spsi(npwx,nvecx), ew(nvecx) )
         ew = ew_d
         psi  =  psi_d   
@@ -282,6 +315,7 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
         hpsi_d  =  hpsi 
         spsi_d  =  spsi 
         DEALLOCATE ( psi, hpsi, spsi, ew )
+#endif
      ENDIF
 #endif
 
@@ -290,16 +324,19 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
      ! but only those that have actually been corrected should be trusted
      conv(1:nbnd) = .FALSE.
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
      do ii = 1, nbnd
        conv_d(ii) = .FALSE.
      end do 
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
      DO ii = 1, ntrust
        conv_d(ii) = ABS(ew_d(ii) - eig_d(ii)).LT.ethr 
      END DO 
      conv = conv_d
      nconv = COUNT(conv(1:ntrust)) ; notconv = nbnd - nconv
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
      DO ii = 1, nbnd
        eig_d(ii)  = ew_d(ii)
      END DO
@@ -308,6 +345,7 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
   END DO ParO_loop
 
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
   DO ii = 1, npwx
     DO jj = 1, nbnd
       evc_d(ii,jj) = psi_d(ii,jj)
@@ -316,9 +354,16 @@ SUBROUTINE paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, ove
 
   CALL mp_sum(nhpsi,inter_bgrp_comm)
 
+#if defined(__OPENMP_GPU)
+  ENDASSOCIATE
+  !$omp target exit data map(delete:ew, conv, psi, hpsi, spsi)
+  DEALLOCATE ( ew, conv )
+  DEALLOCATE ( psi, hpsi, spsi )
+#else
   DEALLOCATE ( ew_d, conv )
   DEALLOCATE ( conv_d )
   DEALLOCATE ( psi_d, hpsi_d, spsi_d )
+#endif
 
   CALL mp_type_free( column_type )
 

@@ -11,6 +11,9 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
   !
 #if defined(__CUDA)
   USE cudafor
+#elif defined(__OPENMP_GPU)
+  USE omp_lib
+  USE mp,                 ONLY : mp_sum_mapped
 #endif
   USE util_param,         ONLY : DP, stdout
   USE mp,                 ONLY : mp_bcast, mp_root_sum, mp_sum
@@ -32,11 +35,13 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
   ! the number of plane waves
   ! number of bands
   ! maximum number of iterations
-  COMPLEX (DP) :: psi(npwx,nbnd)
   INTEGER,      INTENT(IN)    :: btype(nbnd) ! one if the corresponding state has to be
                                              ! ...converged to full accuracy, zero otherwise (src/pwcom.f90)
+#if !defined(__OPENMP_GPU)
+  COMPLEX (DP) :: psi(npwx,nbnd)
   REAL (DP) :: e(nbnd)
   REAL (DP) :: precondition(npw)
+#endif
   REAL (DP),    INTENT(IN)    :: ethr
   ! the diagonal preconditioner
   ! the convergence threshold for eigenvalues
@@ -101,21 +106,22 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
   INTEGER :: ii, jj
   COMPLEX (DP), INTENT(INOUT) :: psi_d(npwx,nbnd)
   REAL (DP),  INTENT(INOUT) :: e_d(nbnd)
-  REAL (DP), INTENT(IN)    :: precondition_d(npw)
-  COMPLEX(DP), ALLOCATABLE ::  hpsi_d(:,:), spsi_d(:,:)
-  COMPLEX(DP), ALLOCATABLE :: w_d(:,:), hw_d(:,:), sw_d(:,:)
+  REAL (DP), INTENT(INOUT)    :: precondition_d(npw)
+  COMPLEX(DP), ALLOCATABLE :: hw_d(:,:), sw_d(:,:), p_d(:,:), hp_d(:,:), sp_d(:,:)
+  REAL (DP)  ::  coord_psi_d(sbsize,sbsize), coord_w_d(sbsize,sbsize), coord_p_d(sbsize,sbsize)
+#if !defined(__OPENMP_GPU)
+  COMPLEX(DP), ALLOCATABLE ::  hpsi_d(:,:), spsi_d(:,:), w_d(:,:)
   REAL(DP), ALLOCATABLE :: G_d(:,:)
   INTEGER :: act_idx_d(nbnd)
   COMPLEX(DP) :: buffer_d(npwx,nbnd), buffer1_d(npwx,nbnd)
-  COMPLEX(DP), ALLOCATABLE :: p_d(:,:), hp_d(:,:), sp_d(:,:)
   REAL(DP), ALLOCATABLE    ::  K_d(:,:), M_d(:,:)
   INTEGER :: col_idx_d(sbsize)
   INTEGER :: idx_d(nbnd)
-  REAL (DP)  ::  coord_psi_d(sbsize,sbsize), coord_w_d(sbsize,sbsize), coord_p_d(sbsize,sbsize)
   REAL (DP), ALLOCATABLE    ::  Gl_d(:,:)
 #if defined(__CUDA)
   attributes(device) :: psi_d, e_d, precondition_d, hpsi_d, spsi_d, w_d, hw_d, sw_d, G_d, act_idx_d
   attributes(device) :: buffer_d, buffer1_d, p_d, hp_d, sp_d, K_d, M_d, col_idx_d, idx_d, coord_psi_d, coord_w_d, coord_p_d, Gl_d
+#endif
 #endif
 
   nblock = (npw -1) /blocksz + 1      ! used to optimize some omp parallel do loops
@@ -124,9 +130,13 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
   !
   CALL start_clock( 'ppcg_gamma' )
   ! ... these alignments should be eventually removed
+#if defined(__OPENMP_GPU)
+  !$omp target update from(precondition_d, e_d, psi_d)
+#else
   precondition = precondition_d
   e = e_d
   psi = psi_d
+#endif
   !
   !  ... Initialization and validation
   !
@@ -155,17 +165,28 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
   force_repmat = .FALSE.
   !
   CALL allocate_all
+#if defined(__OPENMP_GPU)
+  !$omp target enter data map(alloc:buffer, buffer1, col_idx, act_idx, idx, G)
+  ASSOCIATE(precondition=>precondition_d, e=>e_d, psi=>psi_d,        &
+            hpsi_d=>hpsi, spsi_d=>spsi, w_d=>w, G_d=>G, M_d=>M,      &
+            K_d=>K, buffer_d=>buffer, buffer1_d=>buffer1, Gl_d=> Gl, &
+            col_idx_d=>col_idx, act_idx_d=>act_idx, idx_d=>idx)
+#endif
   !
   ! ... Compute block residual w = hpsi - psi*(psi'hpsi) (psi is orthonormal on input)
   !
   !    set Im[ psi(G=0) ] -  needed for numerical stability
   call start_clock('ppcg:hpsi')
   IF ( gstart == 2 ) psi(1,1:nbnd) = CMPLX( DBLE( psi(1,1:nbnd) ), 0.D0, kind=DP)
+#if defined(__OPENMP_GPU)
+  !$omp target update to(psi_d)
+#else
   psi_d = psi
+#endif
   CALL h_psi_gpu( npwx, npw, nbnd, psi_d, hpsi_d )
   if (overlap) CALL s_psi_gpu( npwx, npw, nbnd, psi_d, spsi_d)
   avg_iter = 1.d0
-  call stop_clock('ppcg:hpsi')  
+  call stop_clock('ppcg:hpsi')
   !
   !     G = psi'hpsi
   call start_clock('ppcg:dgemm')
@@ -174,8 +195,13 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
   if (n_start .le. n_end) &
   CALL gpu_DGEMM('T','N', nbnd, my_n, npw2, 2.D0, psi_d, npwx2, hpsi_d(1,n_start), npwx2, 0.D0, G_d(1,n_start), nbnd)
   IF ( gstart == 2 ) CALL gpu_DGER( nbnd, my_n, -1.D0, psi_d, npwx2, hpsi_d(1,n_start), npwx2, G_d(1,n_start), nbnd )
+#if defined(__OPENMP_GPU)
+  CALL mp_sum_mapped( G_d, inter_bgrp_comm )
+  CALL mp_sum_mapped( G_d, intra_bgrp_comm )
+#else
   CALL mp_sum( G_d, inter_bgrp_comm )
   CALL mp_sum( G_d, intra_bgrp_comm )
+#endif
   call stop_clock('ppcg:dgemm')
   !
   !    w = hpsi - spsi*G
@@ -189,22 +215,38 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
      if (n_start .le. n_end) &
      CALL gpu_DGEMM('N','N',npw2, nbnd, my_n, -ONE,  psi_d(1,n_start), npwx2, G_d(n_start,1), nbnd, ONE, w_d, npwx2)
   end if
+#if defined(__OPENMP_GPU)
+  CALL mp_sum_mapped( w_d, inter_bgrp_comm )
+#else
   CALL mp_sum( w_d, inter_bgrp_comm )
+#endif
   call stop_clock('ppcg:dgemm')
   !
   !
   ! ... Lock converged eigenpairs (set up act_idx and nact and store current nact in nact_old)
   call start_clock('ppcg:lock')
+#if defined(__OPENMP_GPU)
+  !$omp target update from(w)
+#else
   w = w_d
+#endif
   nact_old = nact;
   CALL lock_epairs(npw, nbnd, btype, w, npwx, lock_tol, nact, act_idx)
+#if defined(__OPENMP_GPU)
+  !$omp target update to(act_idx)
+#else
   act_idx_d = act_idx
+#endif
   call stop_clock('ppcg:lock')
   !
   ! ... Set up iteration parameters after locking
   CALL setup_param
   !
+#if defined(__OPENMP_GPU)
+  !$omp target update from(G)
+#else
   G = G_d
+#endif
   G1(1:nact,1:nact) = G(act_idx(1:nact), act_idx(1:nact))
   trG = get_trace( G1, nbnd, nact )
   !
@@ -226,15 +268,23 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
      !
      ! ... apply the diagonal preconditioner
      !
+#if defined(__OPENMP_GPU)
+     !$omp target update from(w)
+#else
      w = w_d
-     DO j = 1, nact 
+#endif
+     DO j = 1, nact
        DO i=1,nblock
-        w(1+(i-1)*blocksz:MIN(i*blocksz,npw), act_idx(j)) = & 
+        w(1+(i-1)*blocksz:MIN(i*blocksz,npw), act_idx(j)) = &
                 w(1+(i-1)*blocksz:MIN(i*blocksz,npw), act_idx(j)) / &
                       precondition(1+(i-1)*blocksz:MIN(i*blocksz,npw))
-       END DO 
+       END DO
      END DO
+#if defined(__OPENMP_GPU)
+     !$omp target update to(w)
+#else
      w_d = w
+#endif
      call start_clock('ppcg:dgemm')
      call gpu_threaded_assign( buffer_d, w_d, npwx, nact, .true., act_idx_d, .false.)
      call gpu_threaded_memset( G_d, ZERO, nbnd*nact ) ! G(1:nbnd,1:nact) = ZERO
@@ -248,10 +298,15 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
         CALL gpu_DGEMM( 'T','N', my_n, nact, npw2, 2.D0, psi_d(1,n_start), npwx2, buffer_d, npwx2, 0.D0, G_d(n_start,1), nbnd )
         IF ( gstart == 2 ) CALL gpu_DGER( my_n, nact, -1.D0, psi_d(1,n_start), npwx2, buffer_d, npwx2, G_d(n_start,1), nbnd )
      end if
+#if defined(__OPENMP_GPU)
+     CALL mp_sum_mapped( G(1:nbnd,1:nact), inter_bgrp_comm )
+     CALL mp_sum_mapped( G(1:nbnd,1:nact), intra_bgrp_comm )
+#else
      G = G_d
      CALL mp_sum( G(1:nbnd,1:nact), inter_bgrp_comm )
      CALL mp_sum( G(1:nbnd,1:nact), intra_bgrp_comm )
      G_d = G
+#endif
      call stop_clock('ppcg:dgemm')
      !
      !     w = w - psi*G
@@ -259,20 +314,25 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
      call gpu_threaded_assign( buffer_d, w_d, npwx, nact, .true., act_idx_d, .true. )
      if (n_start .le. n_end) &
      CALL gpu_DGEMM('N','N', npw2, nact, my_n, -ONE, psi_d(1,n_start), npwx2, G_d(n_start,1), nbnd, ONE, buffer_d, npwx2)
+#if defined(__OPENMP_GPU)
+     CALL mp_sum_mapped( buffer_d(:,1:nact), inter_bgrp_comm )
+#else
      buffer = buffer_d
      CALL mp_sum( buffer(:,1:nact), inter_bgrp_comm )
      buffer_d = buffer
+#endif
 !     w(:,act_idx(1:nact)) = buffer(:,1:nact)
      call gpu_threaded_backassign( w_d, act_idx_d, buffer_d, npwx, nact, .false., w_d  )
      call stop_clock('ppcg:dgemm')
      !
      ! ... Compute h*w
      call start_clock('ppcg:hpsi')
-     IF ( gstart == 2 ) THEN 
+     IF ( gstart == 2 ) THEN
 !$cuf kernel DO(1)
-       DO ii = 1, nact 
+!$omp target teams distribute parallel do
+       DO ii = 1, nact
          w_d(1,act_idx_d(ii)) = CMPLX( DBLE( w_d(1,act_idx_d(ii)) ), 0.D0, kind=DP)
-       END DO 
+       END DO
      END IF
      call gpu_threaded_assign( buffer1_d, w_d, npwx, nact, .true., act_idx_d, .false. )
      CALL h_psi_gpu( npwx, npw, nact, buffer1_d, buffer_d )
@@ -302,10 +362,15 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
         if (n_start .le. n_end) &
         CALL gpu_DGEMM('T','N', my_n, nact, npw2, 2.D0, buffer_d(1,n_start), npwx2, buffer1_d, npwx2, 0.D0, G_d(n_start,1), nbnd)
         IF ( gstart == 2 ) CALL gpu_DGER( my_n, nact, -1.D0, buffer_d(1,n_start), npwx2, buffer1_d, npwx2, G_d(n_start,1), nbnd )
+#if defined(__OPENMP_GPU)
+        CALL mp_sum_mapped( G(1:nact,1:nact), inter_bgrp_comm )
+        CALL mp_sum_mapped( G(1:nact,1:nact), intra_bgrp_comm )
+#else
         G = G_d
         CALL mp_sum( G(1:nact,1:nact), inter_bgrp_comm )
         CALL mp_sum( G(1:nact,1:nact), intra_bgrp_comm )
         G_d = G
+#endif
         call stop_clock('ppcg:dgemm')
         !
         ! p = p - psi*G, hp = hp - hpsi*G, sp = sp - spsi*G
@@ -314,9 +379,13 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
         call gpu_threaded_assign( buffer1_d,  psi_d, npwx, nact, .true., act_idx_d, .false. )
         if (n_start .le. n_end) & ! could be done differently
         CALL gpu_DGEMM('N','N', npw2, nact, my_n,-ONE, buffer1_d(1,n_start), npwx2, G_d(n_start,1), nbnd, ONE, buffer_d, npwx2)
+#if defined(__OPENMP_GPU)
+        CALL mp_sum_mapped( buffer_d(:,1:nact), inter_bgrp_comm )
+#else
         buffer = buffer_d
         CALL mp_sum( buffer(:,1:nact), inter_bgrp_comm )
         buffer_d = buffer
+#endif
 !        p(:,act_idx(1:nact)) = buffer(:,1:nact)
         call gpu_threaded_backassign( p_d, act_idx_d, buffer_d, npwx, nact, .false., p_d )
         call stop_clock('ppcg:dgemm')
@@ -326,9 +395,13 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
         call gpu_threaded_assign( buffer1_d,  hpsi_d, npwx, nact, .true., act_idx_d, .false. )
         if (n_start .le. n_end) &
         CALL gpu_DGEMM('N','N', npw2, nact, my_n,-ONE, buffer1_d(1,n_start), npwx2, G_d(n_start,1), nbnd, ONE, buffer_d, npwx2)
+#if defined(__OPENMP_GPU)
+        CALL mp_sum_mapped( buffer_d(:,1:nact), inter_bgrp_comm )
+#else
         buffer = buffer_d
         CALL mp_sum( buffer(:,1:nact), inter_bgrp_comm )
         buffer_d = buffer
+#endif
 !        hp(:,act_idx(1:nact)) = buffer(:,1:nact)
         call gpu_threaded_backassign( hp_d, act_idx_d, buffer_d, npwx, nact, .false., hp_d )
         call stop_clock('ppcg:dgemm')
@@ -339,9 +412,13 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
            call gpu_threaded_assign( buffer1_d,  spsi_d, npwx, nact, .true., act_idx_d, .false. )
            if (n_start .le. n_end) &
            CALL gpu_DGEMM('N','N', npw2, nact, my_n,-ONE, buffer1_d(1,n_start), npwx2, G_d(n_start,1), nbnd, ONE, buffer_d, npwx2)
+#if defined(__OPENMP_GPU)
+           CALL mp_sum_mapped( buffer_d(:,1:nact), inter_bgrp_comm )
+#else
            buffer = buffer_d
            CALL mp_sum( buffer(:,1:nact), inter_bgrp_comm )
            buffer_d = buffer
+#endif
 !           sp(:,act_idx(1:nact)) = buffer(:,1:nact)
            call gpu_threaded_backassign( sp_d, act_idx_d, buffer_d, npwx, nact, .false., sp_d )
            call stop_clock('ppcg:dgemm')
@@ -364,11 +441,25 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
            l = sbsize_last
         END IF
         col_idx(1:l) = act_idx(  (/ (i, i = (j-1)*sbsize + 1, (j-1)*sbsize + l) /) )
+#if defined(__OPENMP_GPU)
+        !$omp target update to(col_idx)
+#else
         col_idx_d = col_idx
+#endif
         !
         ! ... form the local Gramm matrices (K,M)
+#if defined(__OPENMP_GPU)
+        !$omp target teams distribute parallel do collapse(2)
+        do jj=1, sbsize3
+           do i=1, sbsize3
+              K_d(i,jj) = ZERO
+              M_d(i,jj) = ZERO
+           enddo
+        enddo
+#else
         K_d = ZERO
         M_d = ZERO
+#endif
         !
         call start_clock('ppcg:dgemm')
         call gpu_threaded_assign( buffer_d,  psi_d, npwx, l, .true., col_idx_d, .false. )
@@ -466,8 +557,18 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
         END IF
         !
         ! ... store the projected matrices
+#if defined(__OPENMP_GPU)
+        !$omp target teams distribute parallel do collapse(2) map(from:K_store, M_store)
+        do jj=1,sbsize3
+          do ii=1,sbsize3
+             K_store(ii,(j-1)*sbsize3+jj) = K_d(ii,jj)
+             M_store(ii,(j-1)*sbsize3+jj) = M_d(ii,jj)
+          enddo
+        enddo
+#else
         K_store( :, (j-1)*sbsize3 + 1 : j*sbsize3 ) = K_d
         M_store( :, (j-1)*sbsize3 + 1 : j*sbsize3 ) = M_d
+#endif
         !
      END DO
      CALL mp_sum(K_store,inter_bgrp_comm)
@@ -477,16 +578,18 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
      CALL mp_sum(M_store,intra_bgrp_comm)
      !
      ! ... perform nsb 'separate RQ minimizations' and update approximate subspace
-     idx_d = 0  ! find the inactive columns to be kept by root_bgrp_id only 
+     idx_d = 0  ! find the inactive columns to be kept by root_bgrp_id only
      if (my_bgrp_id == root_bgrp_id) then
 !$cuf kernel do(1)
-        DO ii = 1, nbnd 
+!$omp target teams distribute parallel do
+        DO ii = 1, nbnd
           idx_d(ii) = 1
-        END DO 
+        END DO
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
         DO ii = 1, nact
           idx_d(act_idx_d(ii)) = 0
-        END DO 
+        END DO
      end if
 
      DO j = n_start, n_end
@@ -498,10 +601,25 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
           l = sbsize_last
        END IF
        col_idx(1:l) = act_idx( (/ (i, i = (j-1)*sbsize + 1, (j-1)*sbsize + l) /)  )
+#if defined(__OPENMP_GPU)
+       !$omp target update to(col_idx)
+#else
        col_idx_d = col_idx
+#endif
        !
+#if defined(__OPENMP_GPU)
+        !$omp target teams distribute parallel do collapse(2) map(to:K_store, M_store)
+        do jj=1,sbsize3
+          do ii=1,sbsize3
+             K_d(ii,jj) = K_store(ii,(j-1)*sbsize3+jj)
+             M_d(ii,jj) = M_store(ii,(j-1)*sbsize3+jj)
+          enddo
+        enddo
+        !$omp end target teams distribute parallel do
+#else
        K_d = K_store(:, (j-1)*sbsize3 + 1 : j*sbsize3)
        M_d = M_store(:, (j-1)*sbsize3 + 1 : j*sbsize3)
+#endif
        !
        lwork  =  1 + 18*sbsize + 18*sbsize**2
        liwork =  3 + 15*sbsize
@@ -512,30 +630,49 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
           dimp = 2*l
        END IF
        !
+#if !defined(__OPENMP_GPU)
        K = K_d
        M = M_d
+#endif
+       !$omp target variant dispatch use_device_ptr(K, M, D)
        CALL DSYGVD(1, 'V','U', dimp, K, sbsize3, M, sbsize3, D, work, lwork, iwork, liwork, info)
+       !$omp end target variant dispatch
        IF (info /= 0) THEN
           ! reset the matrix and try again with psi and w only
+#if defined(__OPENMP_GPU)
+          !$omp target teams distribute parallel do collapse(2) map(to:K_store, M_store)
+          do jj=1,sbsize3
+            do ii=1,sbsize3
+               K_d(ii,jj) = K_store(ii,(j-1)*sbsize3+jj)
+               M_d(ii,jj) = M_store(ii,(j-1)*sbsize3+jj)
+            enddo
+          enddo
+#else
           K = K_store(:, (j-1)*sbsize3 + 1 : j*sbsize3)
           M = M_store(:, (j-1)*sbsize3 + 1 : j*sbsize3)
+#endif
           dimp = 2*l
+          !$omp target variant dispatch use_device_ptr(K, M, D)
           CALL DSYGVD(1, 'V','U', dimp, K, sbsize3, M, sbsize3, D, work, lwork, iwork, liwork, info)
+          !$omp end target variant dispatch
           IF (info /= 0) THEN
              CALL errore( 'ppcg ',' dsygvd failed ', info )
              STOP
           END IF
        END IF
+#if !defined(__OPENMP_GPU)
        K_d = K
-       M_d = M 
+       M_d = M
+#endif
        !
 !$cuf kernel DO(2)
-       DO ii = 1, l  
+!$omp target teams distribute parallel do collapse(2)
+       DO ii = 1, l
          DO jj = 1, l
            coord_psi_d(ii, jj) = K_d(ii, jj)
            coord_w_d(ii, jj) = K_d(l+ii, jj)
-         END DO        
-       END DO        
+         END DO
+       END DO
        !
        ! ... update the sub-block of P and AP
 !ev       IF ( MOD(iter, rr_step) /= 1 ) THEN
@@ -543,11 +680,12 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
        IF ( dimp == 3*l ) THEN
           !
 !$cuf kernel do(2)
-          DO ii = 1, l  
+!$omp target teams distribute parallel do collapse(2)
+          DO ii = 1, l
             DO jj = 1, l
               coord_p_d(ii, jj) = K_d(2*l+ii, jj)
-            END DO        
-          END DO        
+            END DO
+          END DO
           !
           call start_clock('ppcg:dgemm')
           call gpu_threaded_assign( buffer1_d,  p_d, npwx, l, .true., col_idx_d, .false. )
@@ -628,33 +766,51 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
        end if
        !
 !$cuf kernel do(1)
-       DO ii = 1, l 
+!$omp target teams distribute parallel do
+       DO ii = 1, l
          idx_d(col_idx_d(ii)) = 1 ! keep track of which columns this bgrp has acted on
-       END DO 
+       END DO
      END DO  ! end 'separate RQ minimizations'
      ! set to zero the columns not assigned to this bgrp, inactive colums are assigned to root_bgrp
+#if defined(__OPENMP_GPU)
+     !$omp target update from(idx)
+#else
      idx = idx_d
+#endif
      do j=1,nbnd
         if (idx(j)==0) then
 !$cuf kernel do(1)
+!$omp target teams distribute parallel do
            DO ii = 1, npwx
-             psi_d (ii,j) = C_ZERO 
-             hpsi_d (ii,j) = C_ZERO 
-             p_d(ii,j) = C_ZERO 
+             psi_d (ii,j) = C_ZERO
+             hpsi_d (ii,j) = C_ZERO
+             p_d(ii,j) = C_ZERO
              hp_d(ii,j) = C_ZERO
              if (overlap) then
-                spsi_d (ii,j) = C_ZERO 
+                spsi_d (ii,j) = C_ZERO
                 sp_d(ii,j) = C_ZERO
              end if
            END DO
         end if
      end do
+#if defined(__OPENMP_GPU)
+     CALL mp_sum_mapped(psi_d ,inter_bgrp_comm)
+     CALL mp_sum_mapped(hpsi_d,inter_bgrp_comm)
+#else
      CALL mp_sum(psi_d ,inter_bgrp_comm)
      CALL mp_sum(hpsi_d,inter_bgrp_comm)
+#endif
+     !$omp dispatch
      CALL mp_sum(p_d ,inter_bgrp_comm)
+     !$omp dispatch
      CALL mp_sum(hp_d,inter_bgrp_comm)
      if (overlap) then
+#if defined(__OPENMP_GPU)
+        CALL mp_sum_mapped(spsi_d,inter_bgrp_comm)
+#else
         CALL mp_sum(spsi_d,inter_bgrp_comm)
+#endif
+        !$omp dispatch
         CALL mp_sum(sp_d,inter_bgrp_comm)
      end if
     !
@@ -664,20 +820,33 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
     IF ( MOD(iter, rr_step) == 0 ) THEN
        !
        call start_clock('ppcg:RR')
+#if defined(__OPENMP_GPU)
+       !$omp target update from(psi_d, hpsi, spsi)
+       CALL extract_epairs_dmat(npw, nbnd, npwx, e, psi_d, hpsi, spsi)
+#else
        psi = psi_d
        hpsi = hpsi_d
        spsi = spsi_d
        CALL extract_epairs_dmat(npw, nbnd, npwx, e, psi, hpsi, spsi )
+#endif
+#if defined(__OPENMP_GPU)
+       !$omp target update to(psi_d, hpsi, spsi)
+#else
        psi_d = psi
        hpsi_d = hpsi
        spsi_d = spsi
+#endif
        call stop_clock('ppcg:RR')
        !
        IF (print_info >= 2) WRITE(stdout, *) 'RR has been invoked.' ; !CALL flush( stdout )
        !
        ! ... Compute the new residual vector block by evaluating
        !     residuals for individual eigenpairs in psi and e
+#if defined(__OPENMP_GPU)
+       !$omp target update from(w)
+#else
        w = w_d
+#endif
        if (overlap) then
           !$omp parallel do collapse(2)
           DO j = 1, nbnd ; DO i=1,nblock
@@ -693,13 +862,21 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
           END DO ; END DO
           !$omp end parallel do
        end if
+#if defined(__OPENMP_GPU)
+       !$omp target update to(w)
+#else
        w_d = w
+#endif
        !
        ! ... Lock converged eigenpairs (set up act_idx and nact)
        call start_clock('ppcg:lock')
        nact_old = nact;
        CALL lock_epairs(npw, nbnd, btype, w, npwx, lock_tol, nact, act_idx)
-       act_idx_d = act_idx 
+#if defined(__OPENMP_GPU)
+       !$omp target update to(act_idx)
+#else
+       act_idx_d = act_idx
+#endif
        call stop_clock('ppcg:lock')
        !
        ! ... Set up iteration parameters after locking
@@ -724,13 +901,21 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
          end if
          !
          call start_clock('ppcg:cholQR')
+#if defined(__OPENMP_GPU)
+       !$omp target update from(buffer, buffer1, Gl)
+#else
          Gl = Gl_d
          buffer = buffer_d
          buffer1 = buffer1_d
+#endif
          CALL cholQR_dmat(npw, nact, buffer, buffer1, npwx, Gl, idesc)
+#if defined(__OPENMP_GPU)
+       !$omp target update to(buffer, buffer1, Gl)
+#else
          Gl_d = Gl
          buffer_d = buffer
          buffer1_d = buffer1
+#endif
          call stop_clock('ppcg:cholQR')
          !
 !         psi(:,act_idx(1:nact)) = buffer(:,1:nact)
@@ -763,13 +948,21 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
          end if
          !
          call start_clock('ppcg:cholQR')
+#if defined(__OPENMP_GPU)
+         !$omp target update from(buffer, buffer1, G)
+#else
          buffer = buffer_d
          buffer1 = buffer1_d
          G = G_d
+#endif
          CALL cholQR(npw, nact, buffer, buffer1, npwx, G, nbnd)
+#if defined(__OPENMP_GPU)
+         !$omp target update to(buffer, buffer1, G)
+#else
          buffer_d = buffer
          buffer1_d = buffer1_d
          G_d = G
+#endif
          call stop_clock('ppcg:cholQR')
          !
 !         psi(:,act_idx(1:nact)) = buffer(:,1:nact)
@@ -777,12 +970,18 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
          !
          call gpu_threaded_assign( buffer_d,  hpsi_d, npwx, nact, .true., act_idx_d, .false. )
          !
+#if !defined(__OPENMP_GPU)
          G = G_d
          buffer = buffer_d
+#endif
          call start_clock('ppcg:DTRSM')
+         !$omp target variant dispatch use_device_ptr(G, buffer)
          CALL DTRSM('R', 'U', 'N', 'N', npw2, nact, ONE, G, nbnd, buffer, npwx2)
+         !$omp end target variant dispatch
+#if !defined(__OPENMP_GPU)
          G_d = G
          buffer_d = buffer
+#endif
          call stop_clock('ppcg:DTRSM')
          !
 !         hpsi(:,act_idx(1:nact)) = buffer(:,1:nact)
@@ -792,11 +991,17 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
             call gpu_threaded_assign( buffer_d,  spsi_d, npwx, nact, .true., act_idx_d, .false. )
             !
             call start_clock('ppcg:DTRSM')
+#if !defined(__OPENMP_GPU)
             G = G_d
             buffer = buffer_d
+#endif
+            !$omp target variant dispatch use_device_ptr(G, buffer)
             CALL DTRSM('R', 'U', 'N', 'N', npw2, nact, ONE, G, nbnd, buffer, npwx2)
+            !$omp end target variant dispatch
+#if !defined(__OPENMP_GPU)
             G_d = G
             buffer_d = buffer
+#endif
             call stop_clock('ppcg:DTRSM')
             !
 !            spsi(:,act_idx(1:nact)) = buffer(:,1:nact)
@@ -816,11 +1021,15 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
        if (n_start .le. n_end) &
        CALL gpu_DGEMM('T','N', nact, my_n, npw2, 2.D0, buffer_d, npwx2, buffer1_d(1,n_start), npwx2, 0.D0, G_d(1,n_start), nbnd)
        IF ( gstart == 2 ) CALL gpu_DGER( nact, my_n, -1.D0, buffer_d, npwx2, buffer1_d(1,n_start), npwx2, G_d(1,n_start), nbnd )
+#if defined(__OPENMP_GPU)
+       CALL mp_sum_mapped(G(1:nact,1:nact), inter_bgrp_comm)
+       CALL mp_sum_mapped(G(1:nact,1:nact), intra_bgrp_comm)
+#else
        G = G_d
        CALL mp_sum(G(1:nact,1:nact), inter_bgrp_comm)
-       !
-       CALL mp_sum(G(1:nact,1:nact), intra_bgrp_comm) 
+       CALL mp_sum(G(1:nact,1:nact), intra_bgrp_comm)
        G_d = G
+#endif
        call stop_clock('ppcg:dgemm')
        !
        ! w = hpsi - spsi*G
@@ -833,16 +1042,24 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
        call start_clock('ppcg:dgemm')
        if (n_start .le. n_end) &
        CALL gpu_DGEMM('N','N',npw2, nact, my_n, -ONE, buffer1_d(1,n_start), npwx2, G_d(n_start,1), nbnd, ONE, buffer_d, npwx2)
+#if defined(__OPENMP_GPU)
+       CALL mp_sum_mapped( buffer_d(:,1:nact), inter_bgrp_comm )
+#else
        buffer = buffer_d
        CALL mp_sum( buffer(:,1:nact), inter_bgrp_comm )
        buffer_d = buffer
+#endif
 !       w(:,act_idx(1:nact)) = buffer(:,1:nact);
        call gpu_threaded_backassign( w_d, act_idx_d, buffer_d, npwx, nact, .false., w_d )
        call stop_clock('ppcg:dgemm')
        !
        ! ... Compute trace of the projected matrix on current iteration
        ! trG1  = get_trace( G(1:nact, 1:nact), nact )
+#if defined(__OPENMP_GPU)
+       !$omp target update from(G)
+#else
        G = G_d
+#endif
        trG1  = get_trace( G, nbnd, nact )
        trdif = ABS(trG1 - trG)
        trG   = trG1
@@ -870,48 +1087,78 @@ SUBROUTINE ppcg_gamma_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
  ! if nact==0 then the RR has just been performed
  ! in the main loop
     call start_clock('ppcg:RR')
+#if defined(__OPENMP_GPU)
+    !$omp target update from(psi_d, spsi, hpsi)
+    CALL extract_epairs_dmat(npw, nbnd, npwx, e, psi_d, hpsi, spsi)
+#else
     psi = psi_d
     hpsi = hpsi_d
     spsi = spsi_d
     CALL extract_epairs_dmat(npw, nbnd, npwx, e, psi, hpsi, spsi )
+#endif
+#if defined(__OPENMP_GPU)
+    !$omp target update from(psi_d, spsi, hpsi)
+#else
     psi_d = psi
     hpsi_d = hpsi
     spsi_d = spsi
+#endif
     call stop_clock('ppcg:RR')
     !
     ! ... Compute residuals
-    e_d = e
+#if defined(__OPENMP_GPU)
+    !$omp target update from(w)
+#else
     w = w_d
+#endif
     if (overlap) then
-       DO j = 1, nbnd 
+       DO j = 1, nbnd
          DO i=1,nblock
           w( 1+(i-1)*blocksz:MIN(i*blocksz,npw), j ) = hpsi( 1+(i-1)*blocksz:MIN(i*blocksz,npw), j ) &
                                               - spsi( 1+(i-1)*blocksz:MIN(i*blocksz,npw), j )*e( j )
-         END DO 
+         END DO
        END DO
     else
-       DO j = 1, nbnd 
+       DO j = 1, nbnd
          DO i=1,nblock
           w( 1+(i-1)*blocksz:MIN(i*blocksz,npw), j ) = hpsi( 1+(i-1)*blocksz:MIN(i*blocksz,npw), j ) &
                                               -  psi( 1+(i-1)*blocksz:MIN(i*blocksz,npw), j )*e( j )
-         END DO 
+         END DO
        END DO
     end if
+#if defined(__OPENMP_GPU)
+    !$omp target update to(w)
+#else
     w_d = w
+#endif
     !
     ! ... Get the number of converged eigenpairs and their indices
     !     Note: The tolerance is 10*lock_tol, i.e., weaker tham lock_tol
 ! E.V. notconv issue should be addressed
     call start_clock('ppcg:lock')
+#if defined(__OPENMP_GPU)
+    !$omp target update from(w)
+#else
     w = w_d
+#endif
     CALL lock_epairs(npw, nbnd, btype, w, npwx, 10*lock_tol, nact, act_idx)
-    act_idx_d = act_idx 
+#if defined(__OPENMP_GPU)
+    !$omp target update to(act_idx)
+#else
+    act_idx_d = act_idx
+#endif
     call stop_clock('ppcg:lock')
     !
  END IF
  !
  ! ... these alignments should be eventually removed
+#if defined(__OPENMP_GPU)
+ !$omp target exit data map(delete:buffer, buffer1, col_idx, act_idx, idx, G)
+ !$omp target update to(e_d)
+ ENDASSOCIATE
+#else
  e_d = e
+#endif
  ! E.V. notconv issue comment
  notconv = 0 ! nact
  !
@@ -944,6 +1191,7 @@ CONTAINS
     ! maximum local block dimension
     !
     ! device memory allocations
+#if !defined(__OPENMP_GPU)
     ALLOCATE ( G_d(nbnd,nbnd), stat = ierr )
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate G_d ', ABS(ierr) )
     ALLOCATE ( hpsi_d(npwx,nbnd), stat = ierr )
@@ -952,33 +1200,56 @@ CONTAINS
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate spsi_d ', ABS(ierr) )
     ALLOCATE ( w_d(npwx,nbnd), hw_d(npwx,nbnd), stat = ierr )
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate w_d and hw_d ', ABS(ierr) )
-    if (overlap) ALLOCATE ( sw_d(npwx,nbnd), stat = ierr )
-    IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate sw_d ', ABS(ierr) )
-    ALLOCATE ( p_d(npwx,nbnd), hp_d(npwx,nbnd), stat = ierr )
-    IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate p_d and hp_d ', ABS(ierr) )
-    if (overlap) ALLOCATE ( sp_d(npwx,nbnd), stat = ierr )
-    IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate sp_d ', ABS(ierr) )
     ALLOCATE ( K_d(sbsize3, sbsize3), M_d(sbsize3,sbsize3), stat = ierr )
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate K_d and M_d ', ABS(ierr) )
+#endif
+    if (overlap) THEN
+       !$omp allocate allocator(omp_target_device_mem_alloc)
+       ALLOCATE ( sw_d(npwx,nbnd), stat = ierr )
+       IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate sw_d ', ABS(ierr) )
+       !$omp allocate allocator(omp_target_device_mem_alloc)
+       ALLOCATE ( sw_d(npwx,nbnd), stat = ierr )
+       IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate sw_d ', ABS(ierr) )
+
+    endif
+    !$omp allocate allocator(omp_target_device_mem_alloc)
+    ALLOCATE ( p_d(npwx,nbnd), hp_d(npwx,nbnd), stat = ierr )
+    IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate p_d and hp_d ', ABS(ierr) )
     !
     ! host memory allocations
     ALLOCATE ( hpsi(npwx,nbnd), stat = ierr )
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate hpsi ', ABS(ierr) )
-    if (overlap) ALLOCATE ( spsi(npwx,nbnd), stat = ierr )
+    !$omp target enter data map(alloc:hpsi)
+    if (overlap) then
+       ALLOCATE ( spsi(npwx,nbnd), stat = ierr )
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate spsi ', ABS(ierr) )
+       !$omp target enter data map(alloc:spsi)
+    endif
     ALLOCATE ( w(npwx,nbnd), stat = ierr )
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate w ', ABS(ierr) )
+    !$omp target enter data map(alloc:w)
     ALLOCATE ( K(sbsize3, sbsize3), M(sbsize3,sbsize3), stat = ierr )
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate K and M ', ABS(ierr) )
+    !$omp target enter data map(alloc:K, M)
     ALLOCATE ( work( 1 + 18*sbsize + 18*sbsize**2 ), iwork(3 + 15*sbsize), stat = ierr )
     IF (ierr /= 0) CALL errore( 'ppcg ',' cannot allocate lapack work arrays ', ABS(ierr) )
     !
     CALL desc_init( nbnd, nx, la_proc, idesc, rank_ip, irc_ip, nrc_ip  )
     !
     IF ( la_proc ) THEN
+#if defined(__OPENMP_GPU)
+       ALLOCATE( Gl( nx, nx ), STAT=ierr )
+       !$omp target enter data map(alloc:Gl)
+#else
        ALLOCATE( Gl( nx, nx ), Gl_d( nx, nx ), STAT=ierr )
+#endif
     ELSE
+#if defined(__OPENMP_GPU)
+       ALLOCATE( Gl( 1, 1 ), STAT=ierr )
+       !$omp target enter data map(alloc:Gl)
+#else
        ALLOCATE( Gl( 1, 1 ), Gl_d( 1, 1 ), STAT=ierr )
+#endif
     END IF
     IF( ierr /= 0 ) CALL errore( 'ppcg ',' cannot allocate Gl and Gl_d', ABS(ierr) )
 
@@ -1011,16 +1282,29 @@ CONTAINS
     !
     ! ... do Cholesky QR unless X is rank deficient
     !
+    !$omp target enter data map(alloc:XTX)
+
+    !$omp target variant dispatch use_device_ptr(X, SX, XTX)
     CALL DGEMM('T','N', k, k, n2, 2.D0, X, ldx2, SX, ldx2, 0.D0, XTX, k)
-    IF ( gstart == 2 ) CALL DGER( k, k, -1.D0, X, ldx2, SX, ldx2, XTX, k )
+    !$omp end target variant dispatch
+    IF ( gstart == 2 ) THEN
+       !$omp target variant dispatch use_device_ptr(X, SX, XTX)
+       CALL DGER( k, k, -1.D0, X, ldx2, SX, ldx2, XTX, k )
+       !$omp end target variant dispatch
+    ENDIF
     !
+    !$omp dispatch
     CALL mp_sum( XTX, intra_bgrp_comm )
     !
+    !$omp target variant dispatch use_device_ptr(XTX)
     CALL DPOTRF('U', k, XTX, k, info)
+    !$omp end target variant dispatch
     IF ( info == 0 ) THEN
        !
        ! ... triangualar solve
+       !$omp target variant dispatch use_device_ptr(XTX, X)
        CALL DTRSM('R', 'U', 'N', 'N', n2, k, ONE, XTX, k, X, ldx2)
+       !$omp end target variant dispatch
        !
     ELSE
        ! TBD: QR
@@ -1043,8 +1327,11 @@ CONTAINS
     !
     ! ... also return R factor if needed
     !
+    !$omp target variant dispatch use_device_ptr(XTX, R)
     CALL DLACPY('U', k, k,  XTX, k,  R, ldr)
+    !$omp end target variant dispatch
     !
+    !$omp target exit data map(delete:XTX)
     RETURN
     !
   END SUBROUTINE cholQR
@@ -1202,7 +1489,11 @@ CONTAINS
         !
         IF ( (print_info >= 2) .AND. (iter > 1) )  THEN
           write(stdout, '( "Eigenvalue ", I5, " = ", 1pe12.4, ". Residual norm = ",  1pe9.2)') &
+#if defined(__OPENMP_GPU)
+                      j, e_d(j), rnrm_store(j)
+#else
                       j, e(j), rnrm_store(j)
+#endif
         END IF
         !
         IF ( rnrm_store(j) > band_tollerance ) THEN
@@ -1261,20 +1552,33 @@ CONTAINS
      !
      IF ( ( nact > act_thresh ) .AND. (nact /= nact_old) ) THEN
         !
+        !$omp target exit data map(delete:Gl)
         IF ( ALLOCATED(Gl) ) DEALLOCATE(Gl)
+#if !defined(__OPENMP_GPU)
         IF ( ALLOCATED(Gl_d) ) DEALLOCATE(Gl_d)
+#endif
         !
         CALL desc_init( nact, nx, la_proc, idesc, rank_ip, irc_ip, nrc_ip  )
         !
         IF ( la_proc ) THEN
            !
-           ALLOCATE( Gl( nx, nx ), Gl_d( nx, nx ), STAT=ierr )
+           ALLOCATE( Gl( nx, nx ), STAT=ierr )
+#if defined(__OPENMP_GPU)
+           !$omp target enter data map(alloc:Gl)
+#else
+           ALLOCATE( Gl_d( nx, nx ), STAT=ierr )
+#endif
            IF( ierr /= 0 ) &
               CALL errore( 'ppcg ',' cannot allocate Gl and Gl_d', ABS(ierr) )
            !
         ELSE
            !
-           ALLOCATE( Gl( 1, 1 ), Gl_d( 1, 1 ), STAT=ierr )
+           ALLOCATE( Gl( 1, 1 ), STAT=ierr )
+#if defined(__OPENMP_GPU)
+           !$omp target enter data map(alloc:Gl)
+#else
+           ALLOCATE( Gl_d( 1, 1 ), STAT=ierr )
+#endif
            IF( ierr /= 0 ) &
            CALL errore( 'ppcg ',' cannot allocate Gl and Gl_d', ABS(ierr) )
            !
@@ -1289,8 +1593,11 @@ CONTAINS
           !
           force_repmat = .TRUE.
           !
+          !$omp target exit data map(delete:Gl)
           IF ( ALLOCATED(Gl) ) DEALLOCATE(Gl)
+#if !defined(__OPENMP_GPU)
           IF ( ALLOCATED(Gl_d) ) DEALLOCATE(Gl_d)
+#endif
           !
         ELSE
           !
@@ -1479,24 +1786,41 @@ CONTAINS
     ! This subroutine releases the allocated memory
     !
     ! device allocations
+#if !defined(__OPENMP_GPU)
     IF ( ALLOCATED(G_d) )    DEALLOCATE ( G_d )
-    IF ( ALLOCATED(hpsi) )    DEALLOCATE ( hpsi_d )
+    IF ( ALLOCATED(hpsi_d) )    DEALLOCATE ( hpsi_d )
     IF ( ALLOCATED(spsi_d) )    DEALLOCATE ( spsi_d )
     IF ( ALLOCATED(w_d) )       DEALLOCATE ( w_d )
+    IF ( ALLOCATED(K_d) )       DEALLOCATE ( K_d )
+    IF ( ALLOCATED(M_d) )       DEALLOCATE ( M_d )
+#endif
     IF ( ALLOCATED(hw_d) )      DEALLOCATE ( hw_d )
     IF ( ALLOCATED(sw_d) )      DEALLOCATE ( sw_d )
     IF ( ALLOCATED(p_d) )       DEALLOCATE ( p_d )
     IF ( ALLOCATED(hp_d) )      DEALLOCATE ( hp_d )
     IF ( ALLOCATED(sp_d) )      DEALLOCATE ( sp_d )
-    IF ( ALLOCATED(K_d) )       DEALLOCATE ( K_d )
-    IF ( ALLOCATED(M_d) )       DEALLOCATE ( M_d )
-    ! 
+    !
     ! host allocations
-    IF ( ALLOCATED(hpsi) )    DEALLOCATE ( hpsi )
-    IF ( ALLOCATED(spsi) )    DEALLOCATE ( spsi )
-    IF ( ALLOCATED(w) )       DEALLOCATE ( w )
-    IF ( ALLOCATED(K) )       DEALLOCATE ( K )
-    IF ( ALLOCATED(M) )       DEALLOCATE ( M )
+    IF ( ALLOCATED(hpsi) ) THEN
+       !$omp target exit data map(delete:hpsi)
+       DEALLOCATE ( hpsi )
+    ENDIF
+    IF ( ALLOCATED(spsi) ) THEN
+       !$omp target exit data map(delete:spsi)
+       DEALLOCATE ( spsi )
+    ENDIF
+    IF ( ALLOCATED(w) ) THEN
+       !$omp target exit data map(delete:w)
+       DEALLOCATE ( w )
+    ENDIF
+    IF ( ALLOCATED(K) ) THEN
+       !$omp target exit data map(delete:K)
+       DEALLOCATE ( K )
+    ENDIF
+    IF ( ALLOCATED(M) ) THEN
+       !$omp target exit data map(delete:M)
+       DEALLOCATE ( M )
+    ENDIF
     IF ( ALLOCATED(K_store) ) DEALLOCATE ( K_store )
     IF ( ALLOCATED(M_store) ) DEALLOCATE ( M_store )
     IF ( ALLOCATED(work) )    DEALLOCATE ( work )
@@ -1504,7 +1828,10 @@ CONTAINS
     IF ( ALLOCATED(irc_ip) )  DEALLOCATE( irc_ip )
     IF ( ALLOCATED(nrc_ip) )  DEALLOCATE( nrc_ip )
     IF ( ALLOCATED(rank_ip) ) DEALLOCATE( rank_ip )
-    IF ( ALLOCATED(Gl) )      DEALLOCATE( Gl )
+    IF ( ALLOCATED(Gl) ) THEN
+       !$omp target exit data map(delete:Gl)
+       DEALLOCATE ( Gl )
+    ENDIF
 !    IF ( ALLOCATED(G) )       DEALLOCATE( G )
 !    IF ( ALLOCATED(Sl) )      DEALLOCATE( Sl )
     !
@@ -1700,7 +2027,7 @@ CONTAINS
      REAL(DP), ALLOCATABLE :: Gltmp( :, : )
      COMPLEX(DP), ALLOCATABLE :: Xtmp( :, : )
 #if defined(__CUDA)
-     attributes(device) :: Gltmp, Xtmp 
+     attributes(device) :: Gltmp, Xtmp
 #endif
      REAL(DP) :: gamm
      INTEGER :: n2, ld2
@@ -1709,8 +2036,8 @@ CONTAINS
      !
      nx = idesc(LAX_DESC_NRCX)
      !
-     ALLOCATE( Gltmp( nx, nx ) )
-     ALLOCATE( Xtmp( ld, k ) )
+     !$omp allocate allocator(omp_target_device_mem_alloc)
+     ALLOCATE( Gltmp( nx, nx ), Xtmp( ld, k ) )
      n2  = n*2
      ld2 = ld*2
      !
@@ -1735,12 +2062,14 @@ CONTAINS
                  !
                  !  this proc sends his block
                  !
+                 !$omp dispatch
                  CALL mp_bcast( Gl(:,1:nc), root, ortho_parent_comm )
                  CALL gpu_DGEMM( 'N','N', n2, nc, nr, ONE, X(1,ir), ld2, Gl, nx, gamm, Xtmp(1,ic), ld2 )
               ELSE
                  !
                  !  all other procs receive
                  !
+                 !$omp dispatch
                  CALL mp_bcast( Gltmp(:,1:nc), root, ortho_parent_comm )
                  CALL gpu_DGEMM( 'N','N', n2, nc, nr, ONE, X(1,ir), ld2, Gltmp, nx, gamm, Xtmp(1,ic), ld2 )
               END IF
@@ -1757,18 +2086,20 @@ CONTAINS
       !!!! NOTA BENE: a bug in old compilers identifies these as non-tightly nested loops!
       !!!!            to be fixed in next release.
 !$cuf kernel do(1)
-        DO jj = 1, k 
+!$omp target teams distribute parallel do
+        DO jj = 1, k
           DO ii = 1, ld
             Y(ii,jj) = alpha * Xtmp(ii,jj) + beta * Y(ii,jj)
-          END DO   
-        END DO   
+          END DO
+        END DO
      ELSE
 !$cuf kernel do(1)
-        DO jj = 1, k 
+!$omp target teams distribute parallel do
+        DO jj = 1, k
           DO ii = 1, ld
-            Y(ii,jj) = alpha * Xtmp(ii,jj) 
-          END DO   
-        END DO   
+            Y(ii,jj) = alpha * Xtmp(ii,jj)
+          END DO
+        END DO
      END IF
      !
      DEALLOCATE( Gltmp )
@@ -1823,7 +2154,11 @@ nguard = 0 ! 24 ! 50
 !  EV begin new
 !   Instead computing the norm of the whole residual, compute it for X(:,nbnd-nguard)
      nwanted = nbnd - nguard
+#if defined(__OPENMP_GPU)
+     psi_t(:,1:nwanted)  = psi_d(:,1:nwanted)
+#else
      psi_t(:,1:nwanted)  = psi(:,1:nwanted)
+#endif
      hpsi_t(:,1:nwanted) = hpsi(:,1:nwanted)
      !
      !     G = psi_t'hpsi_t
@@ -1858,7 +2193,7 @@ nguard = 0 ! 24 ! 50
 !- routines to perform threaded assignements
 
   SUBROUTINE threaded_assign(array_out, array_in, kdimx, nact, idx, bgrp_root_only)
-  ! 
+  !
   !  assign (copy) a complex array in a threaded way
   !
   !  array_out( 1:kdimx, 1:nact ) = array_in( 1:kdimx, 1:nact )       or
@@ -1867,7 +2202,7 @@ nguard = 0 ! 24 ! 50
   !
   !  if the index array idx is given
   !
-  !  if  bgrp_root_only is present and .true. the assignement is made only by the 
+  !  if  bgrp_root_only is present and .true. the assignement is made only by the
   !  MPI root process of the bgrp and array_out is zeroed otherwise
   !
   USE util_param,   ONLY : DP
@@ -1899,13 +2234,13 @@ nguard = 0 ! 24 ! 50
   IF (present(idx) ) THEN
      !$omp parallel do collapse(2)
      DO i=1, nact ; DO j=1,nblock
-        array_out(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i ) = array_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), idx( i ) ) 
+        array_out(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i ) = array_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), idx( i ) )
      ENDDO ; ENDDO
      !$omp end parallel do
   ELSE
      !$omp parallel do collapse(2)
      DO i=1, nact ; DO j=1,nblock
-        array_out(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i ) = array_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i ) 
+        array_out(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i ) = array_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i )
      ENDDO ; ENDDO
      !$omp end parallel do
   END IF
@@ -1913,7 +2248,7 @@ nguard = 0 ! 24 ! 50
   END SUBROUTINE threaded_assign
 
   SUBROUTINE threaded_backassign(array_out, idx, array_in, kdimx, nact, a2_in )
-  ! 
+  !
   !  assign (copy) a complex array in a threaded way
   !
   !  array_out( 1:kdimx, idx(1:nact) ) = array_in( 1:kdimx, 1:nact )      or
@@ -1947,14 +2282,14 @@ nguard = 0 ! 24 ! 50
      !$omp parallel do collapse(2)
      DO i=1, nact ; DO j=1,nblock
         array_out(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), idx( i ) ) = &
-            array_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i )     + & 
-                a2_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), idx( i ) ) 
+            array_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i )     + &
+                a2_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), idx( i ) )
      ENDDO ; ENDDO
      !$omp end parallel do
   ELSE
      !$omp parallel do collapse(2)
      DO i=1, nact ; DO j=1,nblock
-        array_out(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), idx( i ) ) = array_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i ) 
+        array_out(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), idx( i ) ) = array_in(1+(j-1)*blocksz:MIN(j*blocksz,kdimx), i )
      ENDDO ; ENDDO
      !$omp end parallel do
   END IF
