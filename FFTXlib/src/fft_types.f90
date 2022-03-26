@@ -384,8 +384,16 @@ CONTAINS
     !$omp target exit data map(delete:desc%ismap)
     !$omp target exit data map(delete:desc%ir1p, desc%ir1w, desc%ir1w_tg)
     !$omp target exit data map(delete:desc%indp, desc%indw, desc%indw_tg)
-    !$omp target exit data map(delete:desc%aux)
     !$omp target exit data map(delete:desc%srh)
+    IF ( ALLOCATED( desc%aux  ) ) THEN
+        !$omp target exit data map(delete:desc%aux)
+    ENDIF
+    IF ( ALLOCATED( desc%nl ) ) THEN
+        !$omp target exit data map(delete:desc%nl)
+    ENDIF
+    IF ( ALLOCATED( desc%nlm ) ) THEN
+        !$omp target exit data map(delete:desc%nlm)
+    ENDIF
 #endif
     IF ( ALLOCATED( desc%aux  ) )   DEALLOCATE( desc%aux )
     IF ( ALLOCATED( desc%nr2p ) )   DEALLOCATE( desc%nr2p )
@@ -423,8 +431,6 @@ CONTAINS
     IF ( ALLOCATED( desc%tg_sdsp ) )DEALLOCATE( desc%tg_sdsp )
     IF ( ALLOCATED( desc%tg_rdsp ) )DEALLOCATE( desc%tg_rdsp )
 
-    !$omp target exit data map(delete:desc%nl)
-    !$omp target exit data map(delete:desc%nlm)
     IF ( ALLOCATED( desc%nl ) )  DEALLOCATE( desc%nl )
     IF ( ALLOCATED( desc%nlm ) ) DEALLOCATE( desc%nlm )
 
