@@ -12,14 +12,15 @@ fft_scatter_2d_gpu.o  \
 fft_ggen.o  \
 fft_fwinv.o  \
 fft_scalar.o  \
+fft_scalar.cuFFT.o  \
 fft_scalar.DFTI.o  \
 fft_scalar.ESSL.o  \
 fft_scalar.FFTW.o  \
-fft_scatter.o  \
-fft_scalar.cuFFT.o  \
-fftw_interfaces.o  \
 fft_scalar.FFTW3.o  \
+fft_scalar.hipFFT.o  \
 fft_scalar.SX6.o  \
+fft_scatter.o  \
+fftw_interfaces.o  \
 fft_parallel.o  \
 fft_parallel_2d.o  \
 fft_interfaces.o  \
@@ -45,7 +46,7 @@ libqefft.a: 	$(FFTX)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
-fft_scalar.o : fft_scalar.f90  fft_scalar.FFTW3.f90  fft_scalar.FFTW.f90  fft_scalar.SX6.f90 fft_scalar.DFTI.f90  fft_scalar.ESSL.f90
+fft_scalar.o : fft_scalar.f90  fft_scalar.FFTW3.f90  fft_scalar.FFTW.f90  fft_scalar.SX6.f90 fft_scalar.DFTI.f90  fft_scalar.ESSL.f90 fft_scalar.hipFFT.f90
 
 fft_stick.o : fft_stick.c fftw_sp.h fftw_dp.h
 
