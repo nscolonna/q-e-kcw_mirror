@@ -15,6 +15,7 @@ set(src_modules
     control_flags.f90 
     coulomb_vcut.f90  
     dist.f90 
+    distools.f90 
     electrons_base.f90 
     environment.f90 
     fd_gradient.f90 
