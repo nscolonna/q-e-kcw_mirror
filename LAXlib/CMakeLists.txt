@@ -1,5 +1,4 @@
 set(src_lax
-    distools.f90
     dspev_drv.f90
     la_error.f90
     la_helper.f90
