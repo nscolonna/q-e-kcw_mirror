@@ -23,6 +23,7 @@ MODULE fft_types
   USE fft_support, ONLY : good_fft_order, good_fft_dimension
   USE fft_param
   USE omp_lib
+  USE iso_c_binding
   IMPLICIT NONE
   PRIVATE
   SAVE
@@ -321,10 +322,15 @@ CONTAINS
     ALLOCATE( desc%tg_rdsp( desc%nproc2) ) ; desc%tg_rdsp = 0
 
 #if defined (__OPENMP_GPU)
-    !$omp target enter data map(alloc:desc%nsp, desc%nsw)
+    !$omp target enter data map(alloc:desc%nsp)
+    !$omp target enter data map(alloc:desc%nsw)
     !$omp target enter data map(alloc:desc%ismap)
-    !$omp target enter data map(alloc:desc%ir1p, desc%ir1w, desc%ir1w_tg)
-    !$omp target enter data map(alloc:desc%indp, desc%indw, desc%indw_tg)
+    !$omp target enter data map(alloc:desc%ir1p)
+    !$omp target enter data map(alloc:desc%ir1w) 
+    !$omp target enter data map(alloc:desc%ir1w_tg)
+    !$omp target enter data map(alloc:desc%indp)
+    !$omp target enter data map(alloc:desc%indw)
+    !$omp target enter data map(alloc:desc%indw_tg)
 
     nsubbatches = ceiling(real(desc%batchsize)/desc%subbatchsize)
     ALLOCATE( desc%srh(2*nproc, nsubbatches))
@@ -376,25 +382,64 @@ CONTAINS
   END SUBROUTINE fft_type_allocate
 
   SUBROUTINE fft_type_deallocate( desc )
-    TYPE (fft_type_descriptor) :: desc
+    TYPE (fft_type_descriptor), target :: desc
     INTEGER :: i, ierr, nsubbatches
+
      !write (6,*) ' inside fft_type_deallocate' ; FLUSH(6)
 #if defined(__OPENMP_GPU)
-    !$omp target exit data map(delete:desc%nsp, desc%nsw)
-    !$omp target exit data map(delete:desc%ismap)
-    !$omp target exit data map(delete:desc%ir1p, desc%ir1w, desc%ir1w_tg)
-    !$omp target exit data map(delete:desc%indp, desc%indw, desc%indw_tg)
-    !$omp target exit data map(delete:desc%srh)
-    IF ( ALLOCATED( desc%aux  ) ) THEN
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%nsp), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%nsp)
+    ENDIF
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%nsw), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%nsw)
+    ENDIF
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%ismap), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%ismap)
+    ENDIF
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%ir1p), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%ir1p)
+    ENDIF
+    
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%ir1w), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%ir1w)
+    ENDIF
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%ir1w_tg), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%ir1w_tg)
+    ENDIF
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%indp), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%indp)
+    ENDIF
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%indw), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%indw)
+    ENDIF
+    
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%indw_tg), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%indw_tg)
+    ENDIF
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%srh), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+        !$omp target exit data map(delete:desc%srh)
+    ENDIF
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%aux), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
         !$omp target exit data map(delete:desc%aux)
     ENDIF
-    IF ( ALLOCATED( desc%nl ) ) THEN
+
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%nl), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
         !$omp target exit data map(delete:desc%nl)
     ENDIF
-    IF ( ALLOCATED( desc%nlm ) ) THEN
+    
+    IF (OMP_TARGET_IS_PRESENT(c_loc(desc%nlm), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
         !$omp target exit data map(delete:desc%nlm)
     ENDIF
 #endif
+
     IF ( ALLOCATED( desc%aux  ) )   DEALLOCATE( desc%aux )
     IF ( ALLOCATED( desc%nr2p ) )   DEALLOCATE( desc%nr2p )
     IF ( ALLOCATED( desc%nr2p_offset ) )   DEALLOCATE( desc%nr2p_offset )
@@ -943,7 +988,7 @@ CONTAINS
     IF (nmany > 1) THEN
        ALLOCATE(desc%aux(nmany * desc%nnr))
 #if defined (__OPENMP_GPU)
-       !$omp target enter data map(alloc:desc%aux)
+       !$omp target enter data map(alloc:desc%aux(1:nmany * desc%nnr))
 #endif
     ENDIF
 
