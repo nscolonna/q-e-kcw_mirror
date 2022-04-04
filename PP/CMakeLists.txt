@@ -493,7 +493,18 @@ target_link_libraries(qe_pp_st_ef_exe
         qe_openmp_fortran)
 
 ###########################################################
-
+# pp_test.x 
+############################################################
+set(src_pptest_x src/pp_test.f90)
+qe_add_executable(qe_pp_test_exe ${src_pptest_x})
+set_target_properties(qe_pp_test_exe PROPERTIES OUTPUT_NAME test_hpsi.x) 
+target_link_libraries(qe_pp_test_exe
+	PRIVATE 
+		qe_pw
+		qe_modules
+		qe_lax
+		qe_pp)
+#############################################################################3
 set(PP_EXE_TARGETS
     qe_pp_exe
     qe_pp_opengrid_exe
@@ -523,6 +534,7 @@ set(PP_EXE_TARGETS
     qe_pp_fermisurface_exe
     qe_pp_fermiproj_exe
     qe_pp_ppacf_exe
+    qe_pp_test_exe
     # Simple Transport
     qe_pp_st_ef_exe
     qe_pp_st_dos_exe
