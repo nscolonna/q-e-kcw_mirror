@@ -137,7 +137,7 @@ SUBROUTINE write_casino_wfn(gather,blip,multiplicity,binwrite,single_precision_b
       ELSE
          IF(gather)THEN
             WRITE (6,'(a)')'Writing file '//trim(prefix)//'.pwfn.data'//trim(postfix)//' for program CASINO.'
-            OPEN( io, file=trim(tmp_dir)//trim(prefix)//'.pwfn.data'//trim(postfix), & 
+            OPEN( io, file=trim(tmp_dir)//trim(prefix)//'.pwfn.data'//trim(postfix), &
                   form='formatted', action='write', access='sequential')
          ELSE
             WRITE (6,'(a)')'Writing one file per node '//trim(prefix)//'.pwfn.data'//trim(postfix)//'.XX for program CASINO'
@@ -359,7 +359,7 @@ CONTAINS
          !      bring rho to G-space
          !
          aux(:) = cmplx( rho%of_r(:,ispin), 0.d0,kind=DP)
-         CALL fwfft ('Rho', aux, dfftp)
+         CALL fwfft (1, aux, dfftp)
          !
          DO nt=1,ntyp
             DO ig = 1, ngm
@@ -494,15 +494,14 @@ CONTAINS
       WRITE (stdout,*) 'Ewald energy     ', ewld/e2, ' au  =  ', ewld, ' Ry'
       WRITE (stdout,*) 'xc contribution  ',(etxc-etxcc)/e2, ' au  =  ', etxc-etxcc, ' Ry'
       WRITE (stdout,*) 'hartree energy   ', ehart/e2, ' au  =  ', ehart, ' Ry'
-      IF(xclib_dft_is('hybrid')) & 
-           WRITE (stdout,*) 'EXX energy       ', fock2/e2, ' au  =  ', fock2, ' Ry' 
+      IF(xclib_dft_is('hybrid')) &
+           WRITE (stdout,*) 'EXX energy       ', fock2/e2, ' au  =  ', fock2, ' Ry'
       IF( degauss > 0.0_dp ) &
          WRITE (stdout,*) 'Smearing (-TS)   ', demet/e2, ' au  =  ', demet, ' Ry'
       WRITE (stdout,*) 'Total energy     ', etot/e2, ' au  =  ', etot, ' Ry'
       WRITE (stdout,*)
 
    END SUBROUTINE calc_energies
-
 
    SUBROUTINE test_overlap
 ! Carry out the overlap test described in the CASINO manual.
@@ -567,7 +566,6 @@ CONTAINS
 
    END SUBROUTINE test_overlap
 
-
    SUBROUTINE pweval(r,val,grad,lap)
       DOUBLE PRECISION,INTENT(in) :: r(3)
       COMPLEX(dp),INTENT(out) :: val,grad(3),lap
@@ -612,7 +610,6 @@ CONTAINS
       lap=lap*(tpi/alat)**2
    END SUBROUTINE pweval
 
-
    SUBROUTINE print_overlap(inode,whichband)
 !-------------------------------------------------------------------------!
 ! Write out the overlaps of the value, gradient and Laplacian of the blip !
@@ -645,7 +642,6 @@ CONTAINS
       ENDDO ! k
       WRITE(stdout,'(2(1x,a),2x,3(1x,a))')char12_arr(1:5)
    END SUBROUTINE print_overlap
-
 
    FUNCTION to_c80(c)
       CHARACTER(*),INTENT(in) :: c
@@ -825,7 +821,6 @@ CONTAINS
 
    END SUBROUTINE write_header
 
-
    SUBROUTINE write_gvecs(g,indx)
       REAL(DP),INTENT(in) :: g(:,:)
       INTEGER,INTENT(in) :: indx(:)
@@ -846,7 +841,6 @@ CONTAINS
       WRITE(io,'(a)') ' '
    END SUBROUTINE write_gvecs
 
-
    SUBROUTINE write_gvecs_blip
       IF(binwrite)RETURN
 
@@ -861,7 +855,6 @@ CONTAINS
       WRITE(io,'(a)') ' '
    END SUBROUTINE write_gvecs_blip
 
-
    SUBROUTINE write_wfn_head
       IF(binwrite)RETURN
 
@@ -870,7 +863,6 @@ CONTAINS
       WRITE(io,'(a)') ' Number of k-points'
       WRITE(io,*) nk
    END SUBROUTINE write_wfn_head
-
 
    SUBROUTINE write_pwfn_data(ik,ispin,ibnd,evc,indx)
       INTEGER,INTENT(in) :: ik,ispin,ibnd
@@ -902,7 +894,6 @@ CONTAINS
          WRITE(io,*)evc(indx(ig))
       ENDDO
    END SUBROUTINE write_pwfn_data
-
 
    SUBROUTINE write_bwfn_data(ik,ispin,ibnd)
       INTEGER,INTENT(in) :: ik,ispin,ibnd
@@ -949,7 +940,6 @@ CONTAINS
          ENDDO ! ly
       ENDDO ! lx
    END SUBROUTINE write_bwfn_data
-
 
    SUBROUTINE write_bwfn_data_gamma(re_im,ik,ispin,ibnd)
       INTEGER,INTENT(in) :: ik,ispin,ibnd,re_im
@@ -1011,7 +1001,6 @@ CONTAINS
       ENDDO ! lx
    END SUBROUTINE write_bwfn_data_gamma
 
-
    SUBROUTINE create_index2(y,x_index)
       DOUBLE PRECISION,INTENT(in) :: y(:,:)
       INTEGER,INTENT(out) :: x_index(size(y,2))
@@ -1022,7 +1011,6 @@ CONTAINS
       ENDDO
       CALL create_index(y2,x_index)
    END SUBROUTINE create_index2
-
 
    SUBROUTINE create_index(y,x_index)
  !-----------------------------------------------------------------------------!
@@ -1110,7 +1098,6 @@ CONTAINS
       ENDDO
    END SUBROUTINE create_index
 
-
    CHARACTER(20) FUNCTION i2s(n)
       INTEGER,INTENT(in) :: n
       INTEGER m,j
@@ -1129,7 +1116,6 @@ CONTAINS
 
       i2s=i2s(j:len(i2s))
    END FUNCTION i2s
-
 
    CHARACTER(72) FUNCTION write_mean(av,std_err_in_mean,err_prec_in)
 !-----------------------------------------------------------------------------!
@@ -1221,7 +1207,6 @@ CONTAINS
 
    END FUNCTION write_mean
 
-
    INTEGER FUNCTION no_digits_int(i)
    !----------------------------------------------------------------------!
    ! Calculate the number of digits in integer i.  For i>0 this should be !
@@ -1238,8 +1223,6 @@ CONTAINS
       ENDDO
       no_digits_int=k
    END FUNCTION no_digits_int
-
-
 
    SUBROUTINE init_rng(seed)
 !--------------------------------------------!
@@ -1295,7 +1278,6 @@ CONTAINS
       ran_array_idx=Nkeep
    END SUBROUTINE init_rng
 
-
    REAL(dp) FUNCTION ranx()
 !------------------------------------------------------------------------------!
 ! Return a random number uniformly distributed in [0,1).                       !
@@ -1312,7 +1294,6 @@ CONTAINS
       ran_array_idx=ran_array_idx+1
       ranx=ran_array(ran_array_idx)
    END FUNCTION ranx
-
 
    SUBROUTINE gen_ran_array(ran_array,N)
 !---------------------------------------------------------------!
@@ -1332,6 +1313,5 @@ CONTAINS
          ranstate(j)=mod(ran_array(N+j-KK)+ranstate(j-LL),1.d0)
       ENDDO ! j
    END SUBROUTINE gen_ran_array
-
 
 END SUBROUTINE write_casino_wfn

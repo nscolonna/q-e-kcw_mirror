@@ -9,7 +9,7 @@
 !----------------------------------------------------------------------------
 SUBROUTINE sum_band_gpu()
   !----------------------------------------------------------------------------
-  !! Calculates the symmetrized charge density and related quantities.  
+  !! Calculates the symmetrized charge density and related quantities.
   !! Also computes the occupations and the sum of occupied eigenvalues.
   !
 #if defined(__CUDA)
@@ -118,7 +118,7 @@ SUBROUTINE sum_band_gpu()
           CALL new_ns(rho%ns)
        ENDIF
        !
-    ELSEIF (lda_plus_u_kind.EQ.2) THEN 
+    ELSEIF (lda_plus_u_kind.EQ.2) THEN
        !
        CALL new_nsg()
        !
@@ -136,7 +136,7 @@ SUBROUTINE sum_band_gpu()
   IF ( okvan ) CALL using_becp_auto(2)
   IF (xclib_dft_is('meta') .OR. lxdm) ALLOCATE (kplusg(npwx))
   !
-  ! ... specialized routines are called to sum at Gamma or for each k point 
+  ! ... specialized routines are called to sum at Gamma or for each k point
   ! ... the contribution of the wavefunctions to the charge
   ! ... The band energy contribution eband is computed together with the charge
   !
@@ -171,7 +171,7 @@ SUBROUTINE sum_band_gpu()
   DO is = 1, nspin
      psic(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
      psic(dffts%nnr+1:) = 0.0_dp
-     CALL fwfft ('Rho', psic, dffts)
+     CALL fwfft (1, psic, dffts)
      rho%of_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
      rho%of_g(dffts%ngm+1:,is) = (0.0_dp,0.0_dp)
   END DO
@@ -182,7 +182,7 @@ SUBROUTINE sum_band_gpu()
      ! ... and over k-points (but it is not symmetrized)
      !
      ! use host copy to do the comunication. This avoids going back an forth GPU data
-     ! becsum=becsum_d     not needed 
+     ! becsum=becsum_d     not needed
      ! since becsum is already uptodate, see sum_band*gpu
      !
      CALL mp_sum(becsum, inter_bgrp_comm )
@@ -212,7 +212,7 @@ SUBROUTINE sum_band_gpu()
      !
   ENDIF
   !
-  ! ... symmetrize rho(G) 
+  ! ... symmetrize rho(G)
   !
   CALL start_clock_gpu( 'sum_band:sym_rho' )
   CALL sym_rho ( nspin_mag, rho%of_g )
@@ -223,7 +223,7 @@ SUBROUTINE sum_band_gpu()
      psic(:) = ( 0.D0, 0.D0 )
      psic(dfftp%nl(:)) = rho%of_g(:,is)
      IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho%of_g(:,is) )
-     CALL invfft ('Rho', psic, dfftp)
+     CALL invfft (1, psic, dfftp)
      rho%of_r(:,is) = psic(:)
   END DO
   !
@@ -237,7 +237,7 @@ SUBROUTINE sum_band_gpu()
      DO is = 1, nspin
         psic(1:dffts%nnr) = rho%kin_r(1:dffts%nnr,is)
         psic(dffts%nnr+1:) = 0.0_dp
-        CALL fwfft ('Rho', psic, dffts)
+        CALL fwfft (1, psic, dffts)
         rho%kin_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
      END DO
      !
@@ -247,7 +247,7 @@ SUBROUTINE sum_band_gpu()
         psic(:) = ( 0.D0, 0.D0 )
         psic(dfftp%nl(:)) = rho%kin_g(:,is)
         IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho%kin_g(:,is) )
-        CALL invfft ('Rho', psic, dfftp)
+        CALL invfft (1, psic, dfftp)
         rho%kin_r(:,is) = psic(:)
      END DO
      !
@@ -315,7 +315,7 @@ SUBROUTINE sum_band_gpu()
 
        IF( use_tg ) THEN
           !
-          v_siz = dffts%nnr_tg 
+          v_siz = dffts%nnr_tg
           !
           ALLOCATE( tg_psi_d( v_siz ) )
           ALLOCATE( tg_rho_d( v_siz ) )
@@ -396,7 +396,7 @@ SUBROUTINE sum_band_gpu()
 
                 END DO
                 !
-                CALL invfft ('tgWave', tg_psi_d, dffts )
+                CALL invfft (3, tg_psi_d, dffts )
                 !
                 ! Now the first proc of the group holds the first two bands
                 ! of the 2*ntgrp bands that we are processing at the same time,
@@ -455,7 +455,7 @@ SUBROUTINE sum_band_gpu()
                    !
                 END IF
                 !
-                CALL invfft ('Wave', psic_d, dffts)
+                CALL invfft (2, psic_d, dffts)
                 !
                 w1 = wg(ibnd,ik) / omega
                 !
@@ -499,7 +499,7 @@ SUBROUTINE sum_band_gpu()
                                        CONJG( evc(1:npw,ibnd) )
                    END IF
                    !
-                   CALL invfft ('Wave', psic, dffts)
+                   CALL invfft (2, psic, dffts)
                    !
                    ! ... increment the kinetic energy density ...
                    !
@@ -524,7 +524,7 @@ SUBROUTINE sum_band_gpu()
           !
           ! ... If we have a US pseudopotential we compute here the becsum term
           !
-          IF ( okvan ) CALL sum_bec_gpu ( ik, current_spin, ibnd_start,ibnd_end,this_bgrp_nbnd ) 
+          IF ( okvan ) CALL sum_bec_gpu ( ik, current_spin, ibnd_start,ibnd_end,this_bgrp_nbnd )
           !
        END DO k_loop
        !
@@ -708,8 +708,8 @@ SUBROUTINE sum_band_gpu()
 
                    END DO
                    !
-                   CALL invfft ('tgWave', tg_psi_nc_d(:,1), dffts)
-                   CALL invfft ('tgWave', tg_psi_nc_d(:,2), dffts)
+                   CALL invfft (3, tg_psi_nc_d(:,1), dffts)
+                   CALL invfft (3, tg_psi_nc_d(:,2), dffts)
                    !
                    ! Now the first proc of the group holds the first band
                    ! of the ntgrp bands that we are processing at the same time,
@@ -717,7 +717,7 @@ SUBROUTINE sum_band_gpu()
                    !
                    ! Compute the proper factor for each band
                    !
-                   idx = fftx_tgpe(dffts) + 1 
+                   idx = fftx_tgpe(dffts) + 1
                    !
                    ! Remember
                    ! proc 0 has bands ibnd
@@ -753,8 +753,8 @@ SUBROUTINE sum_band_gpu()
                                                  evc_d( j+npwx, ibnd )
                    END DO
                    !
-                   CALL invfft ('Wave', psic_nc_d(:,1), dffts)
-                   CALL invfft ('Wave', psic_nc_d(:,2), dffts)
+                   CALL invfft (2, psic_nc_d(:,1), dffts)
+                   CALL invfft (2, psic_nc_d(:,2), dffts)
                    !
                    ! increment the charge density ...
                    !
@@ -802,7 +802,7 @@ SUBROUTINE sum_band_gpu()
 
                    END DO
                    !
-                   CALL invfft ('tgWave', tg_psi_d, dffts)
+                   CALL invfft (3, tg_psi_d, dffts)
                    !
                    ! Now the first proc of the group holds the first band
                    ! of the ntgrp bands that we are processing at the same time,
@@ -840,7 +840,7 @@ SUBROUTINE sum_band_gpu()
                       END DO
                    END DO
                    !
-                   CALL invfft ('Wave', psic_d, dffts, howmany=group_size)
+                   CALL invfft (2, psic_d, dffts, howmany=group_size)
                    !
                    ! ... increment the charge density ...
                    !
@@ -857,7 +857,7 @@ SUBROUTINE sum_band_gpu()
                       psic_d(dffts_nl_d(igk_k_d(j,ik))) = evc_d(j,ibnd)
                    END DO
                    !
-                   CALL invfft ('Wave', psic_d, dffts)
+                   CALL invfft (2, psic_d, dffts)
                    !
                    ! ... increment the charge density ...
                    !
@@ -873,7 +873,7 @@ SUBROUTINE sum_band_gpu()
                       psic(dffts%nl(igk_k(1:npw,ik)))=CMPLX(0d0,kplusg(1:npw),kind=DP) * &
                                               evc(1:npw,ibnd)
                       !
-                      CALL invfft ('Wave', psic, dffts)
+                      CALL invfft (2, psic, dffts)
                       !
                       ! ... increment the kinetic energy density ...
                       !
@@ -897,7 +897,7 @@ SUBROUTINE sum_band_gpu()
           !
           ! ... If we have a US pseudopotential we compute here the becsum term
           !
-          IF ( okvan ) CALL sum_bec_gpu ( ik, current_spin, ibnd_start,ibnd_end,this_bgrp_nbnd ) 
+          IF ( okvan ) CALL sum_bec_gpu ( ik, current_spin, ibnd_start,ibnd_end,this_bgrp_nbnd )
           !
        END DO k_loop
        !
@@ -907,7 +907,7 @@ SUBROUTINE sum_band_gpu()
        !
        ! ... with distributed <beta|psi>, sum over bands
        !
-       IF ( okvan .AND. becp%comm /= mp_get_comm_null() .AND. nhm>0 ) THEN 
+       IF ( okvan .AND. becp%comm /= mp_get_comm_null() .AND. nhm>0 ) THEN
           !becsum=becsum_d     not needed, since already updated in sum_bec_gpu
           CALL mp_sum( becsum, becp%comm )
           becsum_d=becsum
@@ -1005,7 +1005,6 @@ SUBROUTINE sum_band_gpu()
 
      END SUBROUTINE get_rho_gamma_gpu
 
-
      SUBROUTINE get_rho_domag_gpu(rho_loc_d, nrxxs_loc, w1_loc, psic_loc_d)
 
         IMPLICIT NONE
@@ -1025,7 +1024,7 @@ SUBROUTINE sum_band_gpu()
            rho_loc_d(ir,2) = rho_loc_d(ir,2) + w1_loc*2.D0* &
                           (DBLE(psic_loc_d(ir,1))* DBLE(psic_loc_d(ir,2)) + &
                           AIMAG(psic_loc_d(ir,1))*AIMAG(psic_loc_d(ir,2)))
- 
+
            rho_loc_d(ir,3) = rho_loc_d(ir,3) + w1_loc*2.D0* &
                           (DBLE(psic_loc_d(ir,1))*AIMAG(psic_loc_d(ir,2)) - &
                            DBLE(psic_loc_d(ir,2))*AIMAG(psic_loc_d(ir,1)))
@@ -1041,15 +1040,15 @@ SUBROUTINE sum_band_gpu()
 END SUBROUTINE sum_band_gpu
 
 !----------------------------------------------------------------------------
-SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd ) 
+SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd )
   !----------------------------------------------------------------------------
   !
   !! This routine computes the sum over bands:
   !
   !! \[ \sum_i \langle\psi_i|\beta_l\rangle w_i \langle\beta_m|\psi_i\rangle \]
   !
-  !! for point "ik" and, for LSDA, spin "current_spin".  
-  !! Calls calbec to compute \(\text{"becp"}=\langle \beta_m|\psi_i \rangle\).  
+  !! for point "ik" and, for LSDA, spin "current_spin".
+  !! Calls calbec to compute \(\text{"becp"}=\langle \beta_m|\psi_i \rangle\).
   !! Output is accumulated (unsymmetrized) into "becsum", module "uspp".
   !
   !! Routine used in sum_band (if okvan) and in compute_becsum, called by hinit1 (if okpaw).
@@ -1110,7 +1109,7 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
   CALL start_clock_gpu( 'sum_band:calbec' )
   npw = ngk(ik)
   IF ( .NOT. real_space ) THEN
-     CALL using_evc_d(0) 
+     CALL using_evc_d(0)
      CALL using_becp_d_auto(2)
      ! calbec computes becp = <vkb_i|psi_j>
 !$acc data present(vkb(:,:))
@@ -1119,11 +1118,11 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
 !$acc end host_data
 !$acc end data
   ELSE
-     CALL using_evc(0) 
+     CALL using_evc(0)
      CALL using_becp_auto(2)
      if (gamma_only) then
         do ibnd = ibnd_start, ibnd_end, 2
-           call invfft_orbital_gamma(evc,ibnd,ibnd_end) 
+           call invfft_orbital_gamma(evc,ibnd,ibnd_end)
            call calbec_rs_gamma(ibnd,ibnd_end,becp%r)
         enddo
         call mp_sum(becp%r,inter_bgrp_comm)
@@ -1131,7 +1130,7 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
         current_k = ik
         becp%k = (0.d0,0.d0)
         do ibnd = ibnd_start, ibnd_end
-           call invfft_orbital_k(evc,ibnd,ibnd_end) 
+           call invfft_orbital_k(evc,ibnd,ibnd_end)
            call calbec_rs_k(ibnd,ibnd_end)
         enddo
        call mp_sum(becp%k,inter_bgrp_comm)
@@ -1142,7 +1141,7 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
   ! In the EXX case with ultrasoft or PAW, a copy of becp will be
   ! saved in a global variable to be rotated later
   IF(xclib_dft_is('hybrid')) THEN       ! This if condition is not present in the CPU code!! Add it?
-     CALL using_becp_auto(0)            ! this is very important to save useless memory copies from GPU to CPU 
+     CALL using_becp_auto(0)            ! this is very important to save useless memory copies from GPU to CPU
      CALL store_becxx0(ik, becp)
   ENDIF
   !
@@ -1163,10 +1162,10 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
                      auxk2_d( ibnd_start:ibnd_end, nh(np)*npol ) )
         END IF
         IF ( noncolin ) THEN
-           ALLOCATE ( aux_nc_d( nh(np)*npol,nh(np)*npol ) ) 
+           ALLOCATE ( aux_nc_d( nh(np)*npol,nh(np)*npol ) )
         ELSE
-           ALLOCATE ( aux_gk_d( nh(np),nh(np) ) ) 
-           if (tqr) ALLOCATE ( aux_egk_d( nh(np),nh(np) ) ) 
+           ALLOCATE ( aux_gk_d( nh(np),nh(np) ) )
+           if (tqr) ALLOCATE ( aux_egk_d( nh(np),nh(np) ) )
         END IF
         !
         !   In becp=<vkb_i|psi_j> terms corresponding to atom na of type nt
@@ -1187,8 +1186,8 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
                  DO is = 1, npol
                     DO ih = 1, nhnt
                        ikb = ofsbeta_d(na) + ih
-                       DO kbnd = 1, this_bgrp_nbnd 
-                          ibnd = ibnd_start + kbnd -1 
+                       DO kbnd = 1, this_bgrp_nbnd
+                          ibnd = ibnd_start + kbnd -1
                           auxk1_d(ibnd,ih+(is-1)*nhnt)= becp_d_nc_d(ikb,is,kbnd)
                           auxk2_d(ibnd,ih+(is-1)*nhnt)= wg_d(ibnd,ik) * &
                                                         becp_d_nc_d(ikb,is,kbnd)
@@ -1237,9 +1236,9 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
                  !$cuf kernel do(2) <<<*,*>>>
                  DO ih = 1, nhnt
                     DO kbnd = 1, this_bgrp_nbnd ! ibnd_start, ibnd_end
-                       ibnd = ibnd_start + kbnd -1 
+                       ibnd = ibnd_start + kbnd -1
                        ikb = ofsbeta_d(na) + ih
-                       auxk1_d(ibnd,ih) = becp_d_k_d(ikb,kbnd) 
+                       auxk1_d(ibnd,ih) = becp_d_k_d(ikb,kbnd)
                        auxk2_d(ibnd,ih) = wg_d(ibnd,ik)*becp_d_k_d(ikb,kbnd)
                     END DO
                  END DO
@@ -1305,8 +1304,8 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
         IF ( noncolin ) THEN
            DEALLOCATE ( aux_nc_d )
         ELSE
-           DEALLOCATE ( aux_gk_d  ) 
-           if (tqr) DEALLOCATE ( aux_egk_d  ) 
+           DEALLOCATE ( aux_gk_d  )
+           if (tqr) DEALLOCATE ( aux_egk_d  )
         END IF
         IF ( gamma_only ) THEN
            DEALLOCATE( auxg_d )
@@ -1318,7 +1317,7 @@ SUBROUTINE sum_bec_gpu ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd 
      !
   END DO
   !
-  ! sync 
+  ! sync
   if (nhm > 0) then
      becsum=becsum_d
      if (tqr) ebecsum=ebecsum_d
@@ -1332,7 +1331,7 @@ END SUBROUTINE sum_bec_gpu
 SUBROUTINE add_becsum_nc_gpu ( na, np, becsum_nc_d, becsum_d )
 !----------------------------------------------------------------------------
   !! This routine multiplies \(\text{becsum_nc}\) by the identity and the
-  !! Pauli matrices, saves it in \(\text{becsum}\) for the calculation of 
+  !! Pauli matrices, saves it in \(\text{becsum}\) for the calculation of
   !! augmentation charge and magnetization.
   !
 #if defined(__CUDA)
@@ -1385,14 +1384,14 @@ SUBROUTINE add_becsum_nc_gpu ( na, np, becsum_nc_d, becsum_d )
         END IF
      END DO
   END DO
-  
+
 END SUBROUTINE add_becsum_nc_gpu
 !
 !----------------------------------------------------------------------------
 SUBROUTINE add_becsum_so_gpu( na, np, becsum_nc_d, becsum_d )
   !----------------------------------------------------------------------------
   !! This routine multiplies \(\text{becsum_nc}\) by the identity and the Pauli
-  !! matrices, rotates it as appropriate for the spin-orbit case, saves it in 
+  !! matrices, rotates it as appropriate for the spin-orbit case, saves it in
   !! \(\text{becsum}\) for the calculation of augmentation charge and magnetization.
   !
 #if defined(__CUDA)
@@ -1405,7 +1404,7 @@ SUBROUTINE add_becsum_so_gpu( na, np, becsum_nc_d, becsum_d )
   USE uspp,                 ONLY : ijtoh_d, nhtol_d, nhtoj_d, indv_d
   USE upf_spinorb,          ONLY : fcoef_d
   IMPLICIT NONE
-  
+
   INTEGER, INTENT(IN) :: na, np
   COMPLEX(DP), INTENT(IN) :: becsum_nc_d(nh(np),npol,nh(np),npol)
   REAL(DP), INTENT(INOUT) :: becsum_d(nhm*(nhm+1)/2,nat,nspin_mag)

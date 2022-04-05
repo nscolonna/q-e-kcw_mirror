@@ -80,7 +80,7 @@ CONTAINS
     !
     eh_corr =  0._dp
     DO ig = 1, ngm
-       v(ig) = e2 * wg_corr(ig) * rho(ig) 
+       v(ig) = e2 * wg_corr(ig) * rho(ig)
        eh_corr = eh_corr + ABS(rho(ig))**2 * wg_corr(ig)
     ENDDO
     IF (gamma_only) v(gstart:ngm) = 0.5_dp * v(gstart:ngm)
@@ -180,7 +180,7 @@ CONTAINS
     force(:,:) = 0._dp
     DO na = 1, nat
        DO ig = 1, ngm
-          arg = tpi * SUM ( g(:,ig)*tau(:, na) ) 
+          arg = tpi * SUM ( g(:,ig)*tau(:, na) )
           force(:,na) = force(:,na) + g(:,ig) * CMPLX(SIN(arg),-COS(ARG), KIND=dp) * v(ig)
        ENDDO
        force(:,na) = - force(:,na) * zv(ityp(na))  * tpiba
@@ -228,8 +228,8 @@ CONTAINS
     !
     alpha = 2.9d0
     upperbound = 1._dp
-    DO WHILE ( upperbound > 1.e-7_dp) 
-       alpha = alpha - 0.1_dp  
+    DO WHILE ( upperbound > 1.e-7_dp)
+       alpha = alpha - 0.1_dp
        IF (alpha<=0._dp) CALL errore( 'init_wg_corr', 'optimal alpha not found', 1 )
        upperbound = e2 * SQRT(2.d0 * alpha / tpi) * &
                          erfc( SQRT( ecutrho / 4.d0 / alpha) )
@@ -268,8 +268,8 @@ CONTAINS
        !
     ENDDO
     !
-    CALL fwfft( 'Rho', aux, dfftp )
-    ! 
+    CALL fwfft( 1, aux, dfftp )
+    !
     DO ig = 1, ngm
        wg_corr(ig) = omega * REAL(aux(dfftp%nl(ig))) - smooth_coulomb_g( tpiba2*gg(ig))
     ENDDO
@@ -284,7 +284,7 @@ CONTAINS
        ALLOCATE( plot(dfftp%nnr) )
        !
        filplot = 'wg_corr_r'
-       CALL invfft( 'Rho', aux, dfftp )
+       CALL invfft( 1, aux, dfftp )
        plot(:) = REAL(aux(:))
        CALL write_wg_on_file( filplot, plot )
        !
@@ -295,7 +295,7 @@ CONTAINS
        ENDDO
        IF (gamma_only) aux(dfftp%nlm(1:ngm)) = CONJG( aux(dfftp%nl(1:ngm)) )
        !
-       CALL invfft( 'Rho', aux, dfftp )
+       CALL invfft( 1, aux, dfftp )
        plot(:) = REAL(aux(:))
        CALL write_wg_on_file( filplot, plot )
        !
@@ -303,10 +303,10 @@ CONTAINS
        aux(:) = (0._dp,0._dp)
        aux(dfftp%nl(1:ngm)) = wg_corr(1:ngm) / omega
        IF (gamma_only) THEN
-          aux(:) = 0.5_dp * aux(:) 
+          aux(:) = 0.5_dp * aux(:)
           aux(dfftp%nlm(1:ngm)) = aux(dfftp%nlm(1:ngm)) + CONJG( aux(dfftp%nl(1:ngm)) )
        ENDIF
-       CALL invfft( 'Rho', aux, dfftp )
+       CALL invfft( 1, aux, dfftp )
        plot(:) = REAL(aux(:))
        CALL write_wg_on_file( filplot, plot )
        !
@@ -320,7 +320,7 @@ CONTAINS
     !
     RETURN
     !
-  END SUBROUTINE init_wg_corr 
+  END SUBROUTINE init_wg_corr
   !
   !
   !----------------------------------------------------------------------------
@@ -370,7 +370,7 @@ CONTAINS
     wg_corr_ewald = 0._dp
     DO ig = 1, ngm
        rhoion = SUM(zv(1:ntyp)* strf(ig,1:ntyp) ) / omega
-       wg_corr_ewald = wg_corr_ewald + ABS(rhoion)**2 * wg_corr(ig) 
+       wg_corr_ewald = wg_corr_ewald + ABS(rhoion)**2 * wg_corr(ig)
     ENDDO
     wg_corr_ewald = 0.5_dp * e2 * wg_corr_ewald * omega
     ! write(*,*) "ewald correction   = ", wg_corr_ewald
@@ -407,7 +407,7 @@ CONTAINS
     !  smooth_coulomb_g = exp(-q2/4._dp/alpha) ! to be modified
     IF (q2 > 1.e-6_dp) THEN
        smooth_coulomb_g = fpi * EXP(-q2/4._dp/alpha)/q2 ! to be modified
-    ELSE 
+    ELSE
        smooth_coulomb_g = - 1._dp * fpi * (1._dp/4._dp/alpha + 2._dp*beta/4._dp)
     ENDIF
     !

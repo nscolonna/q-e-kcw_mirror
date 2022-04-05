@@ -5,7 +5,7 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-! Written by Lorenzo Paulatto (2012-2013) 
+! Written by Lorenzo Paulatto (2012-2013)
 ! Gamma-only tricks by Simon Binnie
 ! G-space code based on addusdens.f90 and compute_becsum.f90,
 ! modified by Paolo Giannozzi (2015) for speed
@@ -15,10 +15,10 @@ MODULE us_exx
   !-----------------------------------------------------------------------
   !! It contains most of the USPP+EXX code (Ultra-Soft PP + Exact Exchange).
   !
-  ! Notes:  
+  ! Notes:
   ! * compute_becxx is still in exx.f90 as it uses plenty of global variables
   !   from there;
-  ! * some tests and loops are done directly in exx.f90;  
+  ! * some tests and loops are done directly in exx.f90;
   ! * PAW specific parts are in paw_exx.f90;
   ! * USPP terms in G-space are now computed on the "custom" grid (cutoff
   !   ecutfock), the same used in exx.f90, instead of the "smooth" grid
@@ -167,7 +167,7 @@ MODULE us_exx
     !! Add US contribution to \(\text{rhoc}\) for hybrid functionals:
     !
     !! * \(\text{flag}\) = 'c': add complex contribution;
-    !! * \(\text{flag}\) = 'r': add real contribution to the real part of 
+    !! * \(\text{flag}\) = 'r': add real contribution to the real part of
     !!   \(\text{rhoc}\);
     !! * \(\text{flag}\) = 'i': add real contribution to the imaginary part.
     !
@@ -183,9 +183,9 @@ MODULE us_exx
     USE fft_types,           ONLY : fft_type_descriptor
     IMPLICIT NONE
     !
-    TYPE(fft_type_descriptor), INTENT(IN) :: dfftt 
-    !! In input it gets a slice of \(\langle\text{beta}|\text{left}\rangle\) 
-    !! and \(\langle\text{beta}|\text{right}\rangle\) only for this 
+    TYPE(fft_type_descriptor), INTENT(IN) :: dfftt
+    !! In input it gets a slice of \(\langle\text{beta}|\text{left}\rangle\)
+    !! and \(\langle\text{beta}|\text{right}\rangle\) only for this
     !! \(\text{kpoint}\) and this \(\text{band}\).
     COMPLEX(DP), INTENT(INOUT) :: rhoc(dfftt%nnr)
     !! charge density.
@@ -262,7 +262,7 @@ MODULE us_exx
                 !
                 ! ijkb0 points to the manifold of beta functions for atom na
                 !
-                ijkb0 = ofsbeta(na) 
+                ijkb0 = ofsbeta(na)
                 !
                 aux2(:) = (0.0_dp, 0.0_dp)
                 DO ih = 1, nh(nt)
@@ -295,7 +295,7 @@ MODULE us_exx
                          eigts3(mill(3,offset+1:offset+realblocksize), na)
                 !
                 IF ( add_complex ) THEN
-                   rhoc(dfftt%nl(offset+1:offset+realblocksize)) =           & 
+                   rhoc(dfftt%nl(offset+1:offset+realblocksize)) =           &
                                rhoc(dfftt%nl(offset+1:offset+realblocksize)) &
                                + aux2(1:realblocksize)
                 !
@@ -343,7 +343,7 @@ MODULE us_exx
   !-----------------------------------------------------------------------
   SUBROUTINE newdxx_g( dfftt, vc, xkq, xk, flag, deexx, becphi_r, becphi_c )
     !-----------------------------------------------------------------------
-    !! This subroutine computes some sort of EXX contribution to the non-local 
+    !! This subroutine computes some sort of EXX contribution to the non-local
     !! part of the hamiltonian:
     !! \[ \alpha_{Ii} = \int \sum_{Jj} Q_{IJ}(r) V^{i,j}_\text{Fock}
     !! \langle\beta_J|\phi_j\rangle dr^3 \]
@@ -356,7 +356,7 @@ MODULE us_exx
     !! * flag = 'i': \(V(G)=v_1(G)+i\ v_2(G)\): select \(v_2(G)\).
     !
     !! The two latter cases are used together with gamma tricks.
-    ! 
+    !
     USE constants,      ONLY : tpi
     USE ions_base,      ONLY : nat, ntyp => nsp, ityp, tau
     USE uspp,           ONLY : nkb, vkb,  okvan, ofsbeta, ijtoh
@@ -368,9 +368,9 @@ MODULE us_exx
     !
     IMPLICIT NONE
     !
-    TYPE ( fft_type_descriptor ), INTENT(IN) :: dfftt 
+    TYPE ( fft_type_descriptor ), INTENT(IN) :: dfftt
     COMPLEX(DP), INTENT(IN) :: vc(dfftt%nnr)
-    ! In input I get a slice of <beta|left> and <beta|right> 
+    ! In input I get a slice of <beta|left> and <beta|right>
     ! only for this kpoint and this band
     COMPLEX(DP), INTENT(IN), OPTIONAL :: becphi_c(nkb)
     REAL(DP),    INTENT(IN), OPTIONAL :: becphi_r(nkb)
@@ -440,7 +440,7 @@ MODULE us_exx
           auxvc(ig) = CMPLX( AIMAG(fp), -DBLE(fm), KIND=dp)
        ENDDO
        fact=2.0_dp*omega
-    ENDIF 
+    ENDIF
     !
     ! setting cache blocking size
     numblock  = (ngms+blocksize-1)/blocksize
@@ -515,13 +515,13 @@ MODULE us_exx
   !-------------------------------------------------------------------------------
   SUBROUTINE add_nlxx_pot( lda, hpsi, xkp, npwp, igkp, deexx, eps_occ, exxalfa )
     !----------------------------------------------------------------------------
-    !! This subroutine computes some sort of EXX contribution to the non-local 
+    !! This subroutine computes some sort of EXX contribution to the non-local
     !! part of the hamiltonian:
     !! \[ \alpha_{Ii} = \int \sum_{Jj} Q_{IJ}(r) V^{i,j}_\text{Fock}
     !!    \langle\beta_J|\phi_j\rangle d^3(r) \]
     !! The actual contribution will be (summed outside):
     !! \[ H = H+\sum_I |\beta_I\rangle \alpha_{Ii} \]
-    ! 
+    !
     USE ions_base,           ONLY : nat, ntyp => nsp, ityp
     USE uspp,                ONLY : nkb, okvan,ofsbeta
     USE uspp_param,          ONLY : upf, nh
@@ -588,7 +588,7 @@ MODULE us_exx
             ENDIF
           ENDDO ! nat
       ENDIF &
-      ONLY_FOR_USPP 
+      ONLY_FOR_USPP
     ENDDO
     !
     DEALLOCATE( vkbp )
@@ -602,9 +602,9 @@ MODULE us_exx
   !------------------------------------------------------------------------
   SUBROUTINE addusxx_r( rho, becphi, becpsi )
     !------------------------------------------------------------------------
-    !! This routine adds to the two wavefunctions density (in real space) 
-    !! the part that is due to the US augmentation.  
-    !! NOTE: the density in this case is NOT real and NOT normalized to 1, 
+    !! This routine adds to the two wavefunctions density (in real space)
+    !! the part that is due to the US augmentation.
+    !! NOTE: the density in this case is NOT real and NOT normalized to 1,
     !!       except when (bec-)\(\text{phi}\) and (bec-)\(\text{psi}\) are equal,
     !!       or with gamma tricks.
     !
@@ -685,12 +685,12 @@ MODULE us_exx
     !
     ! ... In input I get a slice of <beta|left> and <beta|right>
     !
-    TYPE(fft_type_descriptor), INTENT(IN) :: dfftt 
+    TYPE(fft_type_descriptor), INTENT(IN) :: dfftt
     !! ...
     COMPLEX(DP), INTENT(IN) :: vr(:)
     !! the potential
     COMPLEX(DP), INTENT(IN) :: becphi(nkb)
-    !! ... 
+    !! ...
     COMPLEX(DP), INTENT(INOUT) :: deexx(nkb)
     !! contribution to integral
     !
@@ -777,7 +777,7 @@ MODULE us_exx
   !-----------------------------------------------------------------------
   SUBROUTINE rotate_becxx( nkqs, index_xk, index_sym, xkq_collect )
     !-----------------------------------------------------------------------
-    !! Collect \(\text{becxx0}\) (the product \(\langle\beta|\psi\rangle\) on 
+    !! Collect \(\text{becxx0}\) (the product \(\langle\beta|\psi\rangle\) on
     !! the irreducible wedge) among pools, then rotate them to reconstruct the
     !! k+q grid. In order to have the necessary data in \(\text{becxx0}\), you
     !! must call \(\texttt{store_becxx0}\) in \(\texttt{sum_bands}\).
@@ -812,7 +812,7 @@ MODULE us_exx
     !
     ! ... local variables
     !
-    INTEGER :: ikq, ik, ik_global  
+    INTEGER :: ikq, ik, ik_global
     INTEGER :: isym, sgn_sym, ibnd
     TYPE(bec_type), ALLOCATABLE :: becxx0_global(:)
     REAL(dp), ALLOCATABLE :: xk_collect(:,:)
@@ -843,7 +843,7 @@ MODULE us_exx
     !
     IF (gamma_only) THEN
       ! In the Gamma-only case, only one k-point, no need to rotate anything
-      ! I copy over instead of using pointer of stuff, because it makes the 
+      ! I copy over instead of using pointer of stuff, because it makes the
       ! rest much simpler (we may have spin)
       DO ik = 1, nks
         becxx(ik)%r = becxx0(ik)%r
@@ -869,7 +869,7 @@ MODULE us_exx
       ik = local_kpoint_index(nkstot, ik_global)
       IF (ik > 0) THEN
         becxx0_global(ik_global)%k = becxx0(ik)%k
-        ! ... my_pool_id is also the index of the possible roots when doing an mp_bcast with 
+        ! ... my_pool_id is also the index of the possible roots when doing an mp_bcast with
         ! inter_pool_comm, this is confusing but logical
         bec_working_pool = my_pool_id
       ELSE
@@ -879,7 +879,7 @@ MODULE us_exx
       CALL mp_sum( bec_working_pool, inter_pool_comm )
       IF ( me_pool == root_pool ) &
         CALL mp_bcast( becxx0_global(ik_global)%k, bec_working_pool, inter_pool_comm )
-      ! No need to broadcast inside the pool which had the data already 
+      ! No need to broadcast inside the pool which had the data already
       IF (my_pool_id /= bec_working_pool ) &
         CALL mp_bcast( becxx0_global(ik_global)%k, root_pool, intra_pool_comm )
     ENDDO
@@ -931,9 +931,9 @@ MODULE us_exx
   SUBROUTINE becp_rotate_k( becp0, becp, isym, sgn_sym, xk0, xk )
     !------------------------------------------------------------------------
     !! Rotate \(\langle\beta|\psi_k\rangle\) for every bands with symmetry
-    !! operation \(\text{isym}\).  
-    !! If \(\text{sgn_sym} < 0\), the initial matrix was computed for 
-    !! \(-\text{xk0}\).  
+    !! operation \(\text{isym}\).
+    !! If \(\text{sgn_sym} < 0\), the initial matrix was computed for
+    !! \(-\text{xk0}\).
     !! This subroutine comes from \(\texttt{PAW_symmetrize}\).
     !
     USE kinds,        ONLY : DP
@@ -968,7 +968,7 @@ MODULE us_exx
     INTEGER :: ma                    ! atom symmetric to na
     INTEGER :: ih, ikb, oh, okb      ! counters for augmentation channels
     INTEGER :: lm_i, l_i,m_i, m_o
-    REAL(DP) :: tau_phase !dtau(3), rtau(3), 
+    REAL(DP) :: tau_phase !dtau(3), rtau(3),
     COMPLEX(DP) :: tau_fact
     LOGICAL :: do_r, do_k
     !
@@ -1018,15 +1018,15 @@ MODULE us_exx
 !       ma = irt(isym,ia)
 !       WRITE(100001, '(a,3f12.6,5x,1f12.6)') "tau_f", tau(:,ma), SUM(rau(:,ia)-tau(:,ma))
 !     ENDDO
-    
+
     becp = 0._dp
     !DO ibnd = 1, nbnd
     DO ia = 1,nat !ia_s, ia_e
       nt = ityp(ia)
       ma = irt(isym,ia)
-      ! We have two phases to keep in account, one comes from translating 
+      ! We have two phases to keep in account, one comes from translating
       !  <beta_I| -> <beta_sI+R| (I is the atom position)
-      ! the other from the wavefunction 
+      ! the other from the wavefunction
       !  |psi_k> -> |psi_sk+G> .
       tau_phase = -tpi*( sgn_sym*SUM(tau(:,ia)*xk0) - SUM(tau(:,ma)*xk) )
       !tau_phase = -tpi*( sgn_sym*SUM(tau(:,ia)*xk0) - SUM(rau(:,ia)*xk) )
@@ -1072,16 +1072,16 @@ MODULE us_exx
     !
   END SUBROUTINE becp_rotate_k
 #if defined (__UNUSED_SUBROUTINE_LEAVE_FOR_TESTING)
-! Note: in order to work, this subroutine must be place in exx.f90, 
+! Note: in order to work, this subroutine must be place in exx.f90,
 ! as it uses a load of global variables from there and we cannot have a cross
 ! dependency between this file an that
   !
   !-----------------------------------------------------------------------
   SUBROUTINE compute_becxx( )
     !-----------------------------------------------------------------------
-    !! It prepares the necessary quantities, then calls \(\texttt{calbec}\) to 
-    !! compute \(\langle\beta_I|\phi_j,k+q\rangle\) and store it in 
-    !! \(\text{becxx(ikq)}\).  
+    !! It prepares the necessary quantities, then calls \(\texttt{calbec}\) to
+    !! compute \(\langle\beta_I|\phi_j,k+q\rangle\) and store it in
+    !! \(\text{becxx(ikq)}\).
     !! This must be called AFTER \(\texttt{exxbuff}\) and \(\texttt{xkq_collected}\)
     !! are done (i.e. at the end of \(\texttt{exxinit}\)).
     !
@@ -1157,7 +1157,7 @@ MODULE us_exx
          DO ibnd = ibnd_loop_start, ibnd_end, 2
             h_ibnd = h_ibnd + 1
             phi(:) = exxbuff(:,h_ibnd,ikq)
-            CALL fwfft( 'Wave', phi, dfftt )
+            CALL fwfft( 2, phi, dfftt )
             IF (ibnd < ibnd_end) THEN
                ! two ffts at the same time
                DO j = 1, ngkq(ikq)
@@ -1175,7 +1175,7 @@ MODULE us_exx
       ELSE
          DO ibnd = ibnd_start,ibnd_end
             phi(:) = exxbuff(:,ibnd,ikq)
-            CALL fwfft( 'Wave', phi, dfftt )
+            CALL fwfft( 2, phi, dfftt )
             DO j = 1, ngkq(ikq)
                evcq(j,ibnd) = phi(dfftt%nl(igkq(j)))
             ENDDO

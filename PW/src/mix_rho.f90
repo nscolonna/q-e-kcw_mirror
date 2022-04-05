@@ -21,7 +21,7 @@ SUBROUTINE mix_rho( input_rhout, rhoin, alphamix, dr2, tr2_min, iter, n_iter,&
   !!   PRB 64,121101 (2001) ;
   !! * Extended to mix also quantities needed for PAW, meta-GGA, DFT+U(+V) ;
   !! * Electric field (all these are included into \(\text{mix_type}\)) ;
-  !! * On output: the mixed density is in \(\text{rhoin}\), 
+  !! * On output: the mixed density is in \(\text{rhoin}\),
   !!   \(\text{input_rhout}\) is unchanged.
   !
   USE kinds,          ONLY : DP
@@ -59,7 +59,7 @@ SUBROUTINE mix_rho( input_rhout, rhoin, alphamix, dr2, tr2_min, iter, n_iter,&
   !! mixing factor
   REAL(DP), INTENT(IN) :: tr2_min
   !! estimated error in diagonalization. If the estimated
-  !! scf error is smaller than this, exit: a more accurate 
+  !! scf error is smaller than this, exit: a more accurate
   !! diagonalization is needed
   REAL(DP), INTENT(OUT) :: dr2
   !! the estimated error on the energy
@@ -190,7 +190,7 @@ SUBROUTINE mix_rho( input_rhout, rhoin, alphamix, dr2, tr2_min, iter, n_iter,&
         nsgnew(:,:,:,:,:) = deltansg(:,:,:,:,:) + nsg(:,:,:,:,:)
         DEALLOCATE(deltansg)
      ENDIF
-     ! 
+     !
      CALL stop_clock( 'mix_rho' )
      !
      RETURN
@@ -283,7 +283,7 @@ SUBROUTINE mix_rho( input_rhout, rhoin, alphamix, dr2, tr2_min, iter, n_iter,&
      CALL davcio_mix_type( dv(ipos), iunmix, 2*ipos+2, write_ )
   END IF
   !
-  IF (lda_plus_u .AND. lda_plus_u_kind.EQ.2) THEN 
+  IF (lda_plus_u .AND. lda_plus_u_kind.EQ.2) THEN
      !
      ALLOCATE( nsginsave(  ldim,ldim,max_num_neighbors,nat,nspin ), &
                nsgoutsave( ldim,ldim,max_num_neighbors,nat,nspin ) )
@@ -538,7 +538,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
   !
   ! ... calculate alpha from density
   !
-  CALL invfft ('Rho', psic, dffts)
+  CALL invfft (1, psic, dffts)
   !
   avg_rsm1 = 0.D0
   !
@@ -582,7 +582,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
      ENDIF
   !$omp end parallel
   !
-  CALL invfft ('Rho', psic, dffts)
+  CALL invfft (1, psic, dffts)
   !
   !$omp parallel do
   DO ir = 1, dffts%nnr
@@ -590,7 +590,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
   ENDDO
   !$omp end parallel do
   !
-  CALL fwfft ('Rho', psic, dffts)
+  CALL fwfft (1, psic, dffts)
   !
   IF ( lgcscf ) THEN
      !
@@ -619,7 +619,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
   repeat_loop: DO
      !
      ! ... generate the vector w
-     !     
+     !
      !$omp parallel
         CALL threaded_barrier_memset(psic, 0.0_DP, dffts%nnr*2)
         !$omp do
@@ -640,7 +640,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
         ENDIF
      !$omp end parallel
      !
-     CALL invfft ('Rho', psic, dffts)
+     CALL invfft (1, psic, dffts)
      !
      !$omp parallel do
      DO ir = 1, dffts%nnr
@@ -648,7 +648,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
      ENDDO
      !$omp end parallel do
      !
-     CALL fwfft ('Rho', psic, dffts)
+     CALL fwfft (1, psic, dffts)
      !
      IF ( lgcscf ) THEN
         !
@@ -704,7 +704,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
      !
      CALL DSYTRI( 'U', m, invaa, mmx, iwork, work, info )
      CALL errore( 'broyden', 'DSYTRI', info )
-     !     
+     !
      FORALL( i = 1:m, j = 1:m, j > i ) invaa(j,i) = invaa(i,j)
      !
      FORALL( i = 1:m ) vec(i) = SUM( invaa(i,:)*bb(:) )

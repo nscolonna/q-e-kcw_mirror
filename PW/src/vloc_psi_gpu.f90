@@ -56,7 +56,7 @@ SUBROUTINE vloc_psi_gamma_gpu(lda, n, m, psi_d, v_d, hpsi_d)
   CALL start_clock_gpu ('vloc_psi')
   incr = 2 * many_fft
   !
-  use_tg = dffts%has_task_groups 
+  use_tg = dffts%has_task_groups
   !
   IF( use_tg ) THEN
      !
@@ -79,7 +79,7 @@ SUBROUTINE vloc_psi_gamma_gpu(lda, n, m, psi_d, v_d, hpsi_d)
   dffts_nl_d => dffts%nl_d
   dffts_nlm_d => dffts%nlm_d
   ! End Sync
-  
+
   !
   ! the local potential V_Loc psi. First bring psi to real space
   !
@@ -176,7 +176,7 @@ SUBROUTINE vloc_psi_gamma_gpu(lda, n, m, psi_d, v_d, hpsi_d)
      !
      IF( use_tg ) THEN
         !
-        CALL invfft ('tgWave', tg_psic_d, dffts )
+        CALL invfft (3, tg_psic_d, dffts )
         !
         CALL tg_get_group_nr3( dffts, right_nr3 )
         !
@@ -185,11 +185,11 @@ SUBROUTINE vloc_psi_gamma_gpu(lda, n, m, psi_d, v_d, hpsi_d)
            tg_psic_d (j) = tg_psic_d (j) * tg_v_d(j)
         ENDDO
         !
-        CALL fwfft ('tgWave', tg_psic_d, dffts )
+        CALL fwfft (3, tg_psic_d, dffts )
         !
      ELSE IF ( many_fft > 1 ) THEN
         !
-        CALL invfft ('Wave', psic_d, dffts, howmany=howmany)
+        CALL invfft (2, psic_d, dffts, howmany=howmany)
         !
         !$cuf kernel do(1) <<<,>>>
         DO j = 1, v_siz
@@ -199,18 +199,18 @@ SUBROUTINE vloc_psi_gamma_gpu(lda, n, m, psi_d, v_d, hpsi_d)
            END DO
         ENDDO
         !
-        CALL fwfft ('Wave', psic_d, dffts, howmany=howmany)
+        CALL fwfft (2, psic_d, dffts, howmany=howmany)
         !
      ELSE
         !
-        CALL invfft ('Wave', psic_d, dffts)
+        CALL invfft (2, psic_d, dffts)
         !
         !$cuf kernel do(1) <<<,>>>
         DO j = 1, dffts%nnr
            psic_d (j) = psic_d (j) * v_d(j)
         ENDDO
         !
-        CALL fwfft ('Wave', psic_d, dffts)
+        CALL fwfft (2, psic_d, dffts)
         !
      ENDIF
      !
@@ -358,7 +358,7 @@ SUBROUTINE vloc_psi_k_gpu(lda, n, m, psi_d, v_d, hpsi_d)
   INTEGER :: v_siz, idx, ioff
   INTEGER :: ierr
   INTEGER :: group_size
-  
+
   CALL start_clock_gpu ('vloc_psi')
   use_tg = dffts%has_task_groups
   !
@@ -405,8 +405,8 @@ SUBROUTINE vloc_psi_k_gpu(lda, n, m, psi_d, v_d, hpsi_d)
            ioff = ioff + right_nnr
         ENDDO
         !
-        CALL  invfft ('tgWave', tg_psic_d, dffts )
-        !write (6,*) 'wfc R ' 
+        CALL  invfft (3, tg_psic_d, dffts )
+        !write (6,*) 'wfc R '
         !write (6,99) (tg_psic(i), i=1,400)
         !
         CALL tg_get_group_nr3( dffts, right_nr3 )
@@ -416,10 +416,10 @@ SUBROUTINE vloc_psi_k_gpu(lda, n, m, psi_d, v_d, hpsi_d)
            tg_psic_d (j) = tg_psic_d (j) * tg_v_d(j)
         ENDDO
 !
-        !write (6,*) 'v psi R ' 
+        !write (6,*) 'v psi R '
         !write (6,99) (tg_psic(i), i=1,400)
         !
-        CALL fwfft ('tgWave',  tg_psic_d, dffts )
+        CALL fwfft (3,  tg_psic_d, dffts )
         !
         !   addition to the total product
         !
@@ -460,7 +460,7 @@ SUBROUTINE vloc_psi_k_gpu(lda, n, m, psi_d, v_d, hpsi_d)
            END DO
         END DO
         !
-        CALL invfft ('Wave', psic_d, dffts, howmany=group_size)
+        CALL invfft (2, psic_d, dffts, howmany=group_size)
         !
 !$cuf kernel do(1) <<<,>>>
         DO j = 1, v_siz
@@ -470,7 +470,7 @@ SUBROUTINE vloc_psi_k_gpu(lda, n, m, psi_d, v_d, hpsi_d)
            END DO
         ENDDO
         !
-        CALL fwfft ('Wave', psic_d, dffts, howmany=group_size)
+        CALL fwfft (2, psic_d, dffts, howmany=group_size)
         !
         !   addition to the total product
         !
@@ -495,8 +495,8 @@ SUBROUTINE vloc_psi_k_gpu(lda, n, m, psi_d, v_d, hpsi_d)
         !write (6,*) 'wfc G ', ibnd
         !write (6,99) (psic(i), i=1,400)
         !
-        CALL invfft ('Wave', psic_d, dffts)
-        !write (6,*) 'wfc R ' 
+        CALL invfft (2, psic_d, dffts)
+        !write (6,*) 'wfc R '
         !write (6,99) (psic(i), i=1,400)
         !
 !$cuf kernel do(1) <<<,>>>
@@ -504,10 +504,10 @@ SUBROUTINE vloc_psi_k_gpu(lda, n, m, psi_d, v_d, hpsi_d)
            psic_d (j) = psic_d (j) * v_d(j)
         ENDDO
 !
-        !write (6,*) 'v psi R ' 
+        !write (6,*) 'v psi R '
         !write (6,99) (psic(i), i=1,400)
         !
-        CALL fwfft ('Wave', psic_d, dffts)
+        CALL fwfft (2, psic_d, dffts)
         !
         !   addition to the total product
         !
@@ -586,7 +586,7 @@ SUBROUTINE vloc_psi_nc_gpu (lda, n, m, psi_d, v_d, hpsi_d)
   !
   incr = 1
   !
-  use_tg = dffts%has_task_groups 
+  use_tg = dffts%has_task_groups
   !
   IF( use_tg ) THEN
      CALL start_clock_gpu ('vloc_psi:tg_gather')
@@ -636,7 +636,7 @@ SUBROUTINE vloc_psi_nc_gpu (lda, n, m, psi_d, v_d, hpsi_d)
 
            ENDDO
            !
-           CALL invfft ('tgWave', tg_psic_d(:,ipol), dffts )
+           CALL invfft (3, tg_psic_d(:,ipol), dffts )
            !
         ENDDO
         !
@@ -647,7 +647,7 @@ SUBROUTINE vloc_psi_nc_gpu (lda, n, m, psi_d, v_d, hpsi_d)
            DO j = 1, n
               psic_nc_d(dffts_nl_d(igk_k_d(j, current_k)),ipol) = psi_d(j+(ipol-1)*lda,ibnd)
            ENDDO
-           CALL invfft ('Wave', psic_nc_d(:,ipol), dffts)
+           CALL invfft (2, psic_nc_d(:,ipol), dffts)
         ENDDO
      ENDIF
 
@@ -697,7 +697,7 @@ SUBROUTINE vloc_psi_nc_gpu (lda, n, m, psi_d, v_d, hpsi_d)
         !
         DO ipol = 1, npol
 
-           CALL fwfft ('tgWave', tg_psic_d(:,ipol), dffts )
+           CALL fwfft (3, tg_psic_d(:,ipol), dffts )
            !
            ioff   = 0
            !
@@ -722,7 +722,7 @@ SUBROUTINE vloc_psi_nc_gpu (lda, n, m, psi_d, v_d, hpsi_d)
      ELSE
 
         DO ipol=1,npol
-           CALL fwfft ('Wave', psic_nc_d(:,ipol), dffts)
+           CALL fwfft (2, psic_nc_d(:,ipol), dffts)
         ENDDO
         !
         !   addition to the total product

@@ -66,7 +66,7 @@ SUBROUTINE newq( vr, deeq, skip_vltot )
   ! With k-point parallelization, distribute G-vectors across processors
   ! ngm_s = index of first G-vector for this processor
   ! ngm_e = index of last  G-vector for this processor
-  ! ngm_l = local number of G-vectors 
+  ! ngm_l = local number of G-vectors
   !
   CALL divide( inter_pool_comm, ngm, ngm_s, ngm_e )
   ngm_l = ngm_e-ngm_s+1
@@ -85,7 +85,7 @@ SUBROUTINE newq( vr, deeq, skip_vltot )
   !
   DO is = 1, nspin_mag
      !
-     IF ( (nspin_mag == 4 .AND. is /= 1) .OR. skip_vltot ) THEN 
+     IF ( (nspin_mag == 4 .AND. is /= 1) .OR. skip_vltot ) THEN
         !$omp parallel do default(shared) private(ig)
         DO ig = 1, dfftp%nnr
            psic(ig) = vr(ig,is)
@@ -98,7 +98,7 @@ SUBROUTINE newq( vr, deeq, skip_vltot )
         ENDDO
         !$omp end parallel do
      ENDIF
-     CALL fwfft( 'Rho', psic, dfftp )
+     CALL fwfft( 1, psic, dfftp )
      !$omp parallel do default(shared) private(ig)
      DO ig = 1, ngm_l
         vaux(ig,is) = psic(dfftp%nl(ngm_s+ig-1))
@@ -116,7 +116,7 @@ SUBROUTINE newq( vr, deeq, skip_vltot )
         nij = nh(nt)*(nh(nt)+1)/2
         ALLOCATE( qgm(ngm_l,nij) )
         !
-        ! ... Compute and store Q(G) for this atomic species 
+        ! ... Compute and store Q(G) for this atomic species
         ! ... (without structure factor)
         !
         ijh = 0
@@ -214,7 +214,7 @@ SUBROUTINE newd( )
   ! counters on g vectors, atom type, beta functions x 2,
   !   atoms, spin, aux, aux, beta func x2 (again)
   !
-  ! Note: lspinorb implies noncolin. 
+  ! Note: lspinorb implies noncolin.
   !
   IF ( .NOT. okvan ) THEN
      !
@@ -395,7 +395,7 @@ SUBROUTINE newd( )
                            deeq_nc(ih,jh,na,ijs) = deeq_nc(ih,jh,na,ijs) +   &
                                 deeq (kh,lh,na,1)*            &
                              (fcoef(ih,kh,is1,1,nt)*fcoef(lh,jh,1,is2,nt)  + &
-                             fcoef(ih,kh,is1,2,nt)*fcoef(lh,jh,2,is2,nt) ) 
+                             fcoef(ih,kh,is1,2,nt)*fcoef(lh,jh,2,is2,nt) )
                            !
                         ENDDO
                         !
@@ -431,24 +431,24 @@ SUBROUTINE newd( )
             IF (lspinorb) THEN
                deeq_nc(ih,jh,na,1) = dvan_so(ih,jh,1,nt) + &
                                      deeq(ih,jh,na,1) + deeq(ih,jh,na,4)
-               !                      
+               !
                deeq_nc(ih,jh,na,4) = dvan_so(ih,jh,4,nt) + &
                                      deeq(ih,jh,na,1) - deeq(ih,jh,na,4)
                !
             ELSE
                deeq_nc(ih,jh,na,1) = dvan(ih,jh,nt) + &
                                      deeq(ih,jh,na,1) + deeq(ih,jh,na,4)
-               !                      
+               !
                deeq_nc(ih,jh,na,4) = dvan(ih,jh,nt) + &
                                      deeq(ih,jh,na,1) - deeq(ih,jh,na,4)
                !
             ENDIF
             deeq_nc(ih,jh,na,2) = deeq(ih,jh,na,2) - &
                                   ( 0.D0, 1.D0 ) * deeq(ih,jh,na,3)
-            !                      
+            !
             deeq_nc(ih,jh,na,3) = deeq(ih,jh,na,2) + &
                                   ( 0.D0, 1.D0 ) * deeq(ih,jh,na,3)
-            !                      
+            !
          ENDDO
       ENDDO
       !

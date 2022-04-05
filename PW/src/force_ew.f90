@@ -17,7 +17,8 @@ SUBROUTINE force_ew( alat, nat, ntyp, ityp, zv, at, bg, tau, omega, &
   USE constants,    ONLY : tpi, e2
   USE mp_bands,     ONLY : intra_bgrp_comm, me_bgrp, nproc_bgrp
   USE mp,           ONLY : mp_sum
-  USE Coul_cut_2D,  ONLY : do_cutoff_2D, cutoff_force_ew 
+  USE Coul_cut_2D,  ONLY : do_cutoff_2D, cutoff_force_ew
+  USE distools,     ONLY : block_distribute
   !
   IMPLICIT NONE
   !
@@ -116,7 +117,7 @@ SUBROUTINE force_ew( alat, nat, ntyp, ityp, zv, at, bg, tau, omega, &
      ENDDO
   ENDDO
   !
-  IF (do_cutoff_2D) THEN 
+  IF (do_cutoff_2D) THEN
      CALL cutoff_force_ew( aux, alpha )
   ELSE
 !$omp parallel do default(none) shared(gstart, ngm, aux, gg, tpiba2, alpha)

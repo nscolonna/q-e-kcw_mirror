@@ -12,6 +12,7 @@ MODULE paw_symmetry
     USE kinds,          ONLY : DP
     USE mp_images,      ONLY : nproc_image, me_image, intra_image_comm
     USE mp,             ONLY : mp_sum
+    USE distools,       ONLY : block_distribute
     !
     IMPLICIT NONE
     !
@@ -52,7 +53,7 @@ SUBROUTINE PAW_symmetrize( becsum )
     REAL(DP) :: pref, usym, segno
     REAL(DP) :: mb(3)
     !
-    INTEGER :: ia,mykey,ia_s,ia_e 
+    INTEGER :: ia,mykey,ia_s,ia_e
     !                       ! atoms counters and indexes
     INTEGER :: is, nt       ! counters on spin, atom-type
     INTEGER :: ma           ! atom symmetric to na
@@ -116,37 +117,37 @@ SUBROUTINE PAW_symmetrize( becsum )
              !ijh = nh(nt)*(ih-1) - ih*(ih-1)/2 + jh
              ijh = ijtoh(ih,jh,nt)
              !
-             lm_i  = nhtolm(ih,nt)  
-             lm_j  = nhtolm(jh,nt)  
-             !  
-             l_i   = nhtol(ih,nt)  
-             l_j   = nhtol(jh,nt)  
-             !  
-             m_i   = lm_i - l_i**2  
-             m_j   = lm_j - l_j**2  
-             !  
-             DO isym = 1,nsym  
-                ma = irt(isym,ia)  
-                DO m_o = 1, 2*l_i +1  
-                DO m_u = 1, 2*l_j +1  
-                   oh = ih - m_i + m_o  
-                   uh = jh - m_j + m_u  
-                   ouh = ijtoh(oh,uh,nt)  
-                   ! In becsum off-diagonal terms are multiplied by 2, I have  
-                   ! to neutralize this factor and restore it later  
-                   IF ( oh == uh ) THEN  
-                      pref = 2._dp * usym  
-                   ELSE  
-                      pref = usym  
-                   ENDIF  
-                   !  
-                   becsym(ijh, ia, is) = becsym(ijh, ia, is) &  
-                       + D(l_i)%d(m_o,m_i, isym) * D(l_j)%d(m_u,m_j, isym) &  
-                         * pref * becsum(ouh, ma, is)  
-                ENDDO ! m_o  
-                ENDDO ! m_u  
-             ENDDO ! isym  
-             ! Put the prefactor back in:  
+             lm_i  = nhtolm(ih,nt)
+             lm_j  = nhtolm(jh,nt)
+             !
+             l_i   = nhtol(ih,nt)
+             l_j   = nhtol(jh,nt)
+             !
+             m_i   = lm_i - l_i**2
+             m_j   = lm_j - l_j**2
+             !
+             DO isym = 1,nsym
+                ma = irt(isym,ia)
+                DO m_o = 1, 2*l_i +1
+                DO m_u = 1, 2*l_j +1
+                   oh = ih - m_i + m_o
+                   uh = jh - m_j + m_u
+                   ouh = ijtoh(oh,uh,nt)
+                   ! In becsum off-diagonal terms are multiplied by 2, I have
+                   ! to neutralize this factor and restore it later
+                   IF ( oh == uh ) THEN
+                      pref = 2._dp * usym
+                   ELSE
+                      pref = usym
+                   ENDIF
+                   !
+                   becsym(ijh, ia, is) = becsym(ijh, ia, is) &
+                       + D(l_i)%d(m_o,m_i, isym) * D(l_j)%d(m_u,m_j, isym) &
+                         * pref * becsum(ouh, ma, is)
+                ENDDO ! m_o
+                ENDDO ! m_u
+             ENDDO ! isym
+             ! Put the prefactor back in:
              IF ( ih == jh ) becsym(ijh,ia,is) = .5_dp * becsym(ijh,ia,is)
              !
           ENDDO ! ih
@@ -168,14 +169,14 @@ SUBROUTINE PAW_symmetrize( becsum )
           IF ( .NOT. upf(nt)%tpawp ) CYCLE
           !
           !  Bring the magnetization in the basis of the crystal
-          !        
+          !
           DO ijh=1,(nh(nt)*(nh(nt)+1))/2
              DO ipol=1,3
                 mb(ipol) = becsum(ijh,ia,ipol+1)
              ENDDO
              DO ipol=1,3
                 becsum(ijh,ia,ipol+1) = bg(1,ipol)*mb(1)+bg(2,ipol)*mb(2) + &
-                                        bg(3,ipol)*mb(3) 
+                                        bg(3,ipol)*mb(3)
              ENDDO
           ENDDO
        ENDDO
@@ -191,46 +192,46 @@ SUBROUTINE PAW_symmetrize( becsum )
              ijh = ijtoh(ih,jh,nt)
              !
              lm_i  = nhtolm(ih,nt)
-             lm_j  = nhtolm(jh,nt)  
-             !  
-             l_i   = nhtol(ih,nt)  
-             l_j   = nhtol(jh,nt)  
-             !  
-             m_i   = lm_i - l_i**2  
-             m_j   = lm_j - l_j**2  
-             !  
-             DO isym = 1, nsym  
-                ma = irt(isym,ia)  
-                DO m_o = 1, 2*l_i +1  
-                DO m_u = 1, 2*l_j +1  
-                   oh = ih - m_i + m_o  
-                   uh = jh - m_j + m_u  
+             lm_j  = nhtolm(jh,nt)
+             !
+             l_i   = nhtol(ih,nt)
+             l_j   = nhtol(jh,nt)
+             !
+             m_i   = lm_i - l_i**2
+             m_j   = lm_j - l_j**2
+             !
+             DO isym = 1, nsym
+                ma = irt(isym,ia)
+                DO m_o = 1, 2*l_i +1
+                DO m_u = 1, 2*l_j +1
+                   oh = ih - m_i + m_o
+                   uh = jh - m_j + m_u
                    ouh = ijtoh(oh,uh,nt)
-                   ! In becsum off-diagonal terms are multiplied by 2, I have  
-                   ! to neutralize this factor and restore it later  
-                   IF ( oh == uh ) THEN  
-                       pref = 2._dp * usym  
-                   ELSE  
-                       pref = usym  
-                   ENDIF  
-                   !  
-                   segno=1.0_DP  
-                   IF (sname(isym)(1:3)=='inv') segno = -segno  
-                   IF (t_rev(isym)==1)  segno = -segno  
-                   !  
-                   DO is = 1, 3  
-                   DO kpol = 1, 3  
-                      becsym(ijh,ia,is+1) = becsym(ijh,ia,is+1)            &  
-                         + D(l_i)%d(m_o,m_i,isym) * D(l_j)%d(m_u,m_j,isym) &  
-                           * pref * becsum(ouh,ma,kpol+1)                  &  
-                           * s(kpol,is,invs(isym)) * segno  
-                   ENDDO  
-                   ENDDO  
-                ENDDO ! m_o  
-                ENDDO ! m_u  
-             ENDDO ! isym  
-             !  
-             ! Put the prefactor back in:  
+                   ! In becsum off-diagonal terms are multiplied by 2, I have
+                   ! to neutralize this factor and restore it later
+                   IF ( oh == uh ) THEN
+                       pref = 2._dp * usym
+                   ELSE
+                       pref = usym
+                   ENDIF
+                   !
+                   segno=1.0_DP
+                   IF (sname(isym)(1:3)=='inv') segno = -segno
+                   IF (t_rev(isym)==1)  segno = -segno
+                   !
+                   DO is = 1, 3
+                   DO kpol = 1, 3
+                      becsym(ijh,ia,is+1) = becsym(ijh,ia,is+1)            &
+                         + D(l_i)%d(m_o,m_i,isym) * D(l_j)%d(m_u,m_j,isym) &
+                           * pref * becsum(ouh,ma,kpol+1)                  &
+                           * s(kpol,is,invs(isym)) * segno
+                   ENDDO
+                   ENDDO
+                ENDDO ! m_o
+                ENDDO ! m_u
+             ENDDO ! isym
+             !
+             ! Put the prefactor back in:
              IF ( ih == jh ) becsym(ijh,ia,2:4) = .5_dp * becsym(ijh,ia,2:4)
              !
           ENDDO ! ih
@@ -243,7 +244,7 @@ SUBROUTINE PAW_symmetrize( becsum )
           IF ( .NOT. upf(nt)%tpawp ) CYCLE
           !
           !  ... Bring the magnetization in cartesian basis
-          !        
+          !
           DO ijh = 1, (nh(nt)*(nh(nt)+1))/2
              DO ipol = 1, 3
                 mb(ipol) = becsym(ijh,ia,ipol+1)
@@ -315,7 +316,7 @@ SUBROUTINE PAW_symmetrize_ddd( ddd )
     REAL(DP) :: usym, segno
     REAL(DP) :: mb(3)
     !
-    INTEGER :: ia, mykey, ia_s, ia_e 
+    INTEGER :: ia, mykey, ia_s, ia_e
     !                       ! atoms counters and indexes
     INTEGER :: is, nt       ! counters on spin, atom-type
     INTEGER :: ma           ! atom symmetric to na
@@ -419,14 +420,14 @@ SUBROUTINE PAW_symmetrize_ddd( ddd )
           IF ( .NOT. upf(nt)%tpawp ) CYCLE
           !
           !  Bring the magnetization in the basis of the crystal
-          !        
+          !
           DO ijh = 1, (nh(nt)*(nh(nt)+1))/2
              DO ipol = 1, 3
                 mb(ipol) = ddd(ijh,ia,ipol+1)
              ENDDO
              DO ipol = 1, 3
                 ddd(ijh,ia,ipol+1) = bg(1,ipol)*mb(1) + bg(2,ipol)*mb(2) + &
-                                     bg(3,ipol)*mb(3) 
+                                     bg(3,ipol)*mb(3)
              ENDDO
           ENDDO
        ENDDO
@@ -483,7 +484,7 @@ SUBROUTINE PAW_symmetrize_ddd( ddd )
           IF ( .NOT. upf(nt)%tpawp ) CYCLE
           !
           !  Bring the magnetization in cartesian basis
-          !        
+          !
           DO ijh = 1, (nh(nt)*(nh(nt)+1))/2
              DO ipol = 1, 3
                 mb(ipol) = dddsym(ijh,ia,ipol+1)
@@ -531,8 +532,8 @@ END SUBROUTINE PAW_symmetrize_ddd
 !-----------------------------------------------------------------------
 SUBROUTINE PAW_desymmetrize( dbecsum )
     !-------------------------------------------------------------------
-    !! This routine, similar to PAW_symmetrize, symmetrizes the change of 
-    !! dbecsum due to an electric field perturbation. 
+    !! This routine, similar to PAW_symmetrize, symmetrizes the change of
+    !! dbecsum due to an electric field perturbation.
     !
     USE lsda_mod,          ONLY : nspin
     USE uspp_param,        ONLY : nhm
@@ -671,7 +672,7 @@ SUBROUTINE PAW_desymmetrize( dbecsum )
           IF ( .NOT. upf(nt)%tpawp ) CYCLE
           !
           !  Bring the magnetization in the basis of the crystal
-          !        
+          !
           DO ijh = 1, (nh(nt)*(nh(nt)+1))/2
              DO ipol = 1, 3
                 DO jpol = 1, 3
@@ -734,7 +735,7 @@ SUBROUTINE PAW_desymmetrize( dbecsum )
                             segno*s(kpol,is,invs(isym))
                             !
                          ENDDO
-                      ENDDO   
+                      ENDDO
                       !
                    ENDDO
                    ENDDO
@@ -757,7 +758,7 @@ SUBROUTINE PAW_desymmetrize( dbecsum )
           IF ( .NOT. upf(nt)%tpawp ) CYCLE
           !
           !  Bring the magnetization in cartesian basis
-          !        
+          !
           DO ijh = 1,(nh(nt)*(nh(nt)+1))/2
              DO ipol = 1, 3
                 DO jpol = 1, 3
@@ -812,8 +813,8 @@ END SUBROUTINE PAW_desymmetrize
 !---------------------------------------------------------------------------
 SUBROUTINE PAW_dusymmetrize( dbecsum, npe, irr, npertx, nsymq, rtau, xq, t )
     !-----------------------------------------------------------------------
-    !! This routine, similar to PAW_symmetrize, symmetrizes the change of 
-    !! dbecsum due to an electric field perturbation. 
+    !! This routine, similar to PAW_symmetrize, symmetrizes the change of
+    !! dbecsum due to an electric field perturbation.
     !
     USE noncollin_module,  ONLY : nspin_mag, nspin_lsda, domag
     USE lsda_mod,          ONLY : nspin
@@ -984,7 +985,7 @@ SUBROUTINE PAW_dusymmetrize( dbecsum, npe, irr, npertx, nsymq, rtau, xq, t )
           IF ( .NOT. upf(nt)%tpawp ) CYCLE
           !
           !  Bring the magnetization in the basis of the crystal
-          !        
+          !
           DO ijh = 1, (nh(nt)*(nh(nt)+1))/2
              DO ipol = 1, npe
                 DO jpol = 1, 3
@@ -1071,7 +1072,7 @@ SUBROUTINE PAW_dusymmetrize( dbecsum, npe, irr, npertx, nsymq, rtau, xq, t )
           IF ( .NOT. upf(nt)%tpawp ) CYCLE
           !
           !  Bring the magnetization in cartesian basis
-          !        
+          !
           DO ijh = 1, (nh(nt)*(nh(nt)+1))/2
              DO ipol = 1, npe
                 DO jpol = 1, 3
@@ -1125,8 +1126,8 @@ END SUBROUTINE PAW_dusymmetrize
 !-------------------------------------------------------------------------------
 SUBROUTINE PAW_dumqsymmetrize( dbecsum, npe, irr, npertx, isymq, rtau, xq, tmq )
     !---------------------------------------------------------------------------
-    !! This routine similar to PAW_symmetrize, symmetrize the change of 
-    !! dbecsum due to an electric field perturbation. 
+    !! This routine similar to PAW_symmetrize, symmetrize the change of
+    !! dbecsum due to an electric field perturbation.
     !
     USE noncollin_module,  ONLY : nspin_lsda, nspin_mag
     USE lsda_mod,          ONLY : nspin
@@ -1250,7 +1251,7 @@ SUBROUTINE PAW_dumqsymmetrize( dbecsum, npe, irr, npertx, isymq, rtau, xq, tmq )
                 ! In becsum off-diagonal terms are multiplied by 2, I have
                 ! to neutralize this factor and restore it later
                 IF ( oh == uh ) THEN
-                   pref = 2._dp 
+                   pref = 2._dp
                 ELSE
                    pref = 1._DP
                 ENDIF

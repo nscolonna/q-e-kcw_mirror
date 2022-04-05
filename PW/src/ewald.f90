@@ -10,7 +10,7 @@
 FUNCTION ewald( alat, nat, ntyp, ityp, zv, at, bg, tau, omega, g, &
                 gg, ngm, gcutm, gstart, gamma_only, strf )
   !-----------------------------------------------------------------------
-  !! Calculates Ewald energy with both G- and R-space terms. 
+  !! Calculates Ewald energy with both G- and R-space terms.
   !! Determines optimal alpha. Should hopefully work for any structure.
   !
   USE kinds
@@ -19,6 +19,7 @@ FUNCTION ewald( alat, nat, ntyp, ityp, zv, at, bg, tau, omega, g, &
   USE mp,                ONLY : mp_sum
   USE martyna_tuckerman, ONLY : wg_corr_ewald, do_comp_mt
   USE Coul_cut_2D,       ONLY : do_cutoff_2D, cutoff_ewald
+  USE distools,          ONLY : block_distribute
   !
   IMPLICIT NONE
   !

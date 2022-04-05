@@ -57,7 +57,7 @@ subroutine force_corr (forcescc)
   ndm = MAXVAL ( msh(1:ntyp) )
   allocate ( rhocgnt(ngl) )
 
-  CALL fwfft ('Rho', psic, dfftp)
+  CALL fwfft (1, psic, dfftp)
 
   if (gamma_only) then
      fact = 2.d0

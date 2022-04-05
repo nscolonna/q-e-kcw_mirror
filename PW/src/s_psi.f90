@@ -9,14 +9,14 @@
 !----------------------------------------------------------------------
 SUBROUTINE s_psi( lda, n, m, psi, spsi )
   !--------------------------------------------------------------------
-  !! This routine applies the S matrix to m wavefunctions psi and puts 
+  !! This routine applies the S matrix to m wavefunctions psi and puts
   !! the results in spsi.
-  !! Requires the products of psi with all beta functions in array 
+  !! Requires the products of psi with all beta functions in array
   !! becp(nkb,m) (calculated in h_psi or by calbec).
   !
-  !! \(\textit{Wrapper routine}\): performs bgrp parallelization on 
+  !! \(\textit{Wrapper routine}\): performs bgrp parallelization on
   !! non-distributed bands if suitable and required, calls old S\psi
-  !! routine s_psi_ . See comments in h_psi.f90 about band 
+  !! routine s_psi_ . See comments in h_psi.f90 about band
   !! parallelization.
   !
   USE kinds,            ONLY : DP
@@ -77,9 +77,9 @@ END SUBROUTINE s_psi
 !----------------------------------------------------------------------------
 SUBROUTINE s_psi_( lda, n, m, psi, spsi )
   !----------------------------------------------------------------------------
-  !! This routine applies the S matrix to m wavefunctions psi and puts 
+  !! This routine applies the S matrix to m wavefunctions psi and puts
   !! the results in spsi.
-  !! Requires the products of psi with all beta functions in array 
+  !! Requires the products of psi with all beta functions in array
   !! becp(nkb,m) (calculated in h_psi or by calbec).
   !
   USE kinds,            ONLY: DP
@@ -87,7 +87,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
   USE uspp,             ONLY: vkb, nkb, okvan, qq_at, qq_so, ofsbeta
   USE uspp_param,       ONLY: upf, nh, nhm
   USE ions_base,        ONLY: nat, nsp, ityp
-  USE control_flags,    ONLY: gamma_only 
+  USE control_flags,    ONLY: gamma_only
   USE noncollin_module, ONLY: npol, noncolin, lspinorb
   USE realus,           ONLY: real_space, invfft_orbital_gamma,     &
                               fwfft_orbital_gamma, calbec_rs_gamma, &
@@ -120,7 +120,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
   !
   IF ( nkb == 0 .OR. .NOT. okvan ) RETURN
   !
-  CALL start_clock( 's_psi' )  
+  CALL start_clock( 's_psi' )
   !
   ! ... The product with the beta functions
   !
@@ -130,7 +130,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
         !
         DO ibnd = 1, m, 2
 !SdG: the becp are already computed ! no need to invfft psi to real space.
-!           CALL invfft_orbital_gamma( psi, ibnd, m ) 
+!           CALL invfft_orbital_gamma( psi, ibnd, m )
 !SdG: we just need to clean psic in real space ...
            CALL threaded_barrier_memset(psic, 0.D0, dffts%nnr*2)
 !SdG: ... before computing the us-only contribution ...
@@ -149,7 +149,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
      !
      CALL s_psi_nc()
      !
-  ELSE 
+  ELSE
      !
      IF ( real_space ) THEN
         !
@@ -168,9 +168,9 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
         !
         CALL s_psi_k()
         !
-     ENDIF    
+     ENDIF
      !
-  ENDIF    
+  ENDIF
   !
   CALL stop_clock( 's_psi' )
   !
@@ -186,8 +186,9 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        !
        USE mp,            ONLY : mp_get_comm_null, mp_circular_shift_left
        USE becmod_gpum,   ONLY : using_becp_r
+       USE distools,      ONLY : ldim_block, gind_block
        !
-       IMPLICIT NONE  
+       IMPLICIT NONE
        !
        ! ... local variables
        !
@@ -195,7 +196,6 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        ! counters
        INTEGER :: nproc, mype, m_loc, m_begin, ibnd_loc, icyc, icur_blk, m_max
        ! data distribution indexes
-       INTEGER, EXTERNAL :: ldim_block, gind_block
        ! data distribution functions
        REAL(DP), ALLOCATABLE :: ps(:,:)
        ! the product vkb and psi
@@ -224,7 +224,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        ALLOCATE( ps( nkb, m_max ), STAT=ierr )
        IF( ierr /= 0 ) &
           CALL errore( ' s_psi_gamma ', ' cannot allocate memory (ps) ', ABS(ierr) )
-       !    
+       !
        ps(:,:) = 0.0_DP
        !
        !   In becp=<vkb_i|psi_j> terms corresponding to atom na of type nt
@@ -285,7 +285,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
           !
        ENDIF
        !
-       DEALLOCATE( ps ) 
+       DEALLOCATE( ps )
        !
        !
        RETURN
@@ -362,7 +362,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        !
        RETURN
        !
-     END SUBROUTINE s_psi_k     
+     END SUBROUTINE s_psi_k
      !
      !
      !-----------------------------------------------------------------------

@@ -92,7 +92,7 @@ SUBROUTINE newq_gpu(vr,deeq_d,skip_vltot)
   ! With k-point parallelization, distribute G-vectors across processors
   ! ngm_s = index of first G-vector for this processor
   ! ngm_e = index of last  G-vector for this processor
-  ! ngm_l = local number of G-vectors 
+  ! ngm_l = local number of G-vectors
   !
   CALL divide (inter_pool_comm, ngm, ngm_s, ngm_e)
   ngm_l = ngm_e-ngm_s+1
@@ -113,7 +113,7 @@ SUBROUTINE newq_gpu(vr,deeq_d,skip_vltot)
   dfftp_nl_d => dfftp%nl_d
   DO is = 1, nspin_mag
      !
-     IF ( (nspin_mag == 4 .AND. is /= 1) .or. skip_vltot ) THEN 
+     IF ( (nspin_mag == 4 .AND. is /= 1) .or. skip_vltot ) THEN
 
         psic_d(1:dfftp%nnr) = vr(1:dfftp%nnr,is)
 
@@ -125,7 +125,7 @@ SUBROUTINE newq_gpu(vr,deeq_d,skip_vltot)
         !$omp end parallel do
         psic_d(1:dfftp%nnr) = psic(1:dfftp%nnr)
      END IF
-     CALL fwfft ('Rho', psic_d, dfftp)
+     CALL fwfft (1, psic_d, dfftp)
      !
      !$cuf kernel do
      do ig=1,ngm_l
@@ -159,7 +159,7 @@ SUBROUTINE newq_gpu(vr,deeq_d,skip_vltot)
         nij = nh(nt)*(nh(nt)+1)/2
         ALLOCATE ( qgm_d(ngm_l,nij) )
         !
-        ! ... Compute and store Q(G) for this atomic species 
+        ! ... Compute and store Q(G) for this atomic species
         ! ... (without structure factor)
         !
         ijh = 0
@@ -228,7 +228,7 @@ SUBROUTINE newq_gpu(vr,deeq_d,skip_vltot)
 END SUBROUTINE newq_gpu
   !
 !----------------------------------------------------------------------------
-SUBROUTINE newd_gpu( ) 
+SUBROUTINE newd_gpu( )
   !----------------------------------------------------------------------------
   !! This routine computes the integral of the effective potential with
   !! the Q function and adds it to the bare ionic D term which is used
@@ -456,7 +456,7 @@ SUBROUTINE newd_gpu( )
                                    fcoef_d(ih,kh,is1,2,nt)*fcoef_d(lh,jh,1,is2,nt)) + &
                                    deeq_d (kh,lh,na,4)*            &
                                    (fcoef_d(ih,kh,is1,1,nt)*fcoef_d(lh,jh,1,is2,nt)  - &
-                                   fcoef_d(ih,kh,is1,2,nt)*fcoef_d(lh,jh,2,is2,nt))   
+                                   fcoef_d(ih,kh,is1,2,nt)*fcoef_d(lh,jh,2,is2,nt))
                                  !
                               END DO
                               !
@@ -489,7 +489,7 @@ SUBROUTINE newd_gpu( )
                                  deeq_nc_d(ih,jh,na,ijs) = deeq_nc_d(ih,jh,na,ijs) +   &
                                       deeq_d (kh,lh,na,1)*            &
                                    (fcoef_d(ih,kh,is1,1,nt)*fcoef_d(lh,jh,1,is2,nt)  + &
-                                   fcoef_d(ih,kh,is1,2,nt)*fcoef_d(lh,jh,2,is2,nt) ) 
+                                   fcoef_d(ih,kh,is1,2,nt)*fcoef_d(lh,jh,2,is2,nt) )
                                  !
                               END DO
                               !
@@ -538,21 +538,21 @@ SUBROUTINE newd_gpu( )
                   IF (lspinorb) THEN
                      deeq_nc_d(ih,jh,na,1) = dvan_so_d(ih,jh,1,nt) + &
                                            deeq_d(ih,jh,na,1) + deeq_d(ih,jh,na,4)
-                     !                      
+                     !
                      deeq_nc_d(ih,jh,na,4) = dvan_so_d(ih,jh,4,nt) + &
                                            deeq_d(ih,jh,na,1) - deeq_d(ih,jh,na,4)
                      !
                   ELSE
                      deeq_nc_d(ih,jh,na,1) = dvan_d(ih,jh,nt) + &
                                            deeq_d(ih,jh,na,1) + deeq_d(ih,jh,na,4)
-                     !                      
+                     !
                      deeq_nc_d(ih,jh,na,4) = dvan_d(ih,jh,nt) + &
                                            deeq_d(ih,jh,na,1) - deeq_d(ih,jh,na,4)
                      !
                   END IF
                   deeq_nc_d(ih,jh,na,2) = deeq_d(ih,jh,na,2) - &
                                         ( 0.D0, 1.D0 ) * deeq_d(ih,jh,na,3)
-                  !                      
+                  !
                   deeq_nc_d(ih,jh,na,3) = deeq_d(ih,jh,na,2) + &
                                         ( 0.D0, 1.D0 ) * deeq_d(ih,jh,na,3)
                   !

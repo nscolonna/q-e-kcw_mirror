@@ -25,7 +25,7 @@ subroutine stres_loc (sigmaloc)
   USE uspp_param,           ONLY : upf
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
-  USE Coul_cut_2D,          ONLY : do_cutoff_2D, cutoff_stres_evloc, cutoff_stres_sigmaloc 
+  USE Coul_cut_2D,          ONLY : do_cutoff_2D, cutoff_stres_evloc, cutoff_stres_sigmaloc
   !
   implicit none
   !
@@ -42,7 +42,7 @@ subroutine stres_loc (sigmaloc)
   sigmaloc(:,:) = 0.d0
   psic(:) = CMPLX(rho%of_r(:,1), KIND=dp)
 
-  CALL fwfft ('Rho', psic, dfftp)
+  CALL fwfft (1, psic, dfftp)
   ! psic contains now the charge density in G space
   if (gamma_only) then
      fact = 2.d0

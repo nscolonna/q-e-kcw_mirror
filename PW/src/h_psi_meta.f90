@@ -64,15 +64,15 @@ SUBROUTINE h_psi_meta( ldap, np, mp, psip, hpsi )
               psic(dffts%nlm(1:np)) = -ci * kplusg(1:np) * &
                         CONJG( psip (1:np,im) - ci * psip(1:np,im+1) )
            ELSE
-              psic(dffts%nl (1:np)) =  ci * kplusg(1:np) *       psip(1:np,im) 
+              psic(dffts%nl (1:np)) =  ci * kplusg(1:np) *       psip(1:np,im)
               psic(dffts%nlm(1:np)) = -ci * kplusg(1:np) * CONJG(psip(1:np,im))
            ENDIF
            !
-           CALL invfft( 'Wave', psic, dffts )
+           CALL invfft( 2, psic, dffts )
            !
-           psic(1:nrxxs) = kedtau(1:nrxxs,current_spin) * psic(1:nrxxs) 
+           psic(1:nrxxs) = kedtau(1:nrxxs,current_spin) * psic(1:nrxxs)
            !
-           CALL fwfft( 'Wave', psic, dffts )
+           CALL fwfft( 2, psic, dffts )
            !
            IF ( im < mp ) THEN
               hpsi(1:np,im) = hpsi(1:np,im)   - ci * kplusg(1:np) * 0.5d0 * &
@@ -100,11 +100,11 @@ SUBROUTINE h_psi_meta( ldap, np, mp, psip, hpsi )
            psic(dffts%nl(igk_k(1:np,current_k))) = CMPLX(0d0, kplusg(1:np), KIND=DP) &
                                                    * psip(1:np,im)
            !
-           CALL invfft( 'Wave', psic, dffts )
+           CALL invfft( 2, psic, dffts )
            !
-           psic(1:nrxxs) = kedtau(1:nrxxs,current_spin) * psic(1:nrxxs) 
+           psic(1:nrxxs) = kedtau(1:nrxxs,current_spin) * psic(1:nrxxs)
            !
-           CALL fwfft( 'Wave', psic, dffts )
+           CALL fwfft( 2, psic, dffts )
            !
            hpsi(1:np,im) = hpsi(1:np,im) - CMPLX(0d0, kplusg(1:np), KIND=DP) &
                                          * psic(dffts%nl(igk_k(1:np,current_k)))

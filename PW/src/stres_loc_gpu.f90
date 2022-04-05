@@ -69,9 +69,9 @@ SUBROUTINE stres_loc_gpu( sigmaloc )
   !
   CALL using_psic_d(1)
   !
-  CALL fwfft( 'Rho', psic_d, dfftp )
+  CALL fwfft( 1, psic_d, dfftp )
   !
-  !CALL using_psic_d(0) ; 
+  !CALL using_psic_d(0) ;
   CALL using_psic(0)
   !
   gl_d = gl ; igtongl_d = igtongl
@@ -104,7 +104,7 @@ SUBROUTINE stres_loc_gpu( sigmaloc )
      evloc = evloc + evloc_d * fact
      !
   ENDDO
-  !  
+  !
   !
   CALL dev_buf%release_buffer( vloc_d, ierrs(2) )
   !
@@ -162,7 +162,7 @@ SUBROUTINE stres_loc_gpu( sigmaloc )
        sigma31 = sigma31 + spart * g_d(3,ng) * g_d(1,ng)
        sigma32 = sigma32 + spart * g_d(3,ng) * g_d(2,ng)
        sigma33 = sigma33 + spart * g_d(3,ng) * g_d(3,ng)
-     ENDDO  
+     ENDDO
      !
      sigmaloc(1,1) = sigmaloc(1,1) + sigma11 * fact * tpiba2
      sigmaloc(2,1) = sigmaloc(2,1) + sigma21 * fact * tpiba2

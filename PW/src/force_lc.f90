@@ -72,7 +72,7 @@ SUBROUTINE force_lc( nat, tau, ityp, alat, omega, ngm, ngl, &
   !
   aux(:) = CMPLX( rho(:), 0.0_DP, KIND=DP )
   !
-  CALL fwfft( 'Rho', aux, dfftp )
+  CALL fwfft( 1, aux, dfftp )
   !
   ! aux contains now  n(G)
   !
