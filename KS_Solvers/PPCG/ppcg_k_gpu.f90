@@ -197,7 +197,6 @@ SUBROUTINE ppcg_k_gpu( h_psi_gpu, s_psi_gpu, overlap, precondition_d, &
   CALL h_psi_gpu( npwx, npw, nbnd, psi_d, hpsi_d )
   if (clean) then
 #if defined(__OPENMP_GPU)
-    call omp_target_init(hpsi_d(npw+1:npwx,:), C_ZERO)
      !$omp target teams distribute parallel do
      do i=1, nbnd
         hpsi_d(npw+1:npwx,i) = C_ZERO

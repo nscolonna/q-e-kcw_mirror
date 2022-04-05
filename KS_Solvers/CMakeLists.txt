@@ -21,6 +21,12 @@ set(src_davidson
     Davidson/cegterg_gpu.f90)
 qe_enable_cuda_fortran("${src_davidson}")
 
+if(QE_ENABLE_OPENMP_OFFLOAD)
+    set(src_davidson
+        ${src_davidson}
+        onemkl_omp_offload.f90)
+endif()
+
 set(src_davidson_rci
     Davidson_RCI/david_rci.f90)
 
@@ -32,6 +38,12 @@ set(src_cg
     CG/ccgdiagg_gpu.f90)
 qe_enable_cuda_fortran("${src_cg}")
 
+if(QE_ENABLE_OPENMP_OFFLOAD)
+    set(src_cg
+        ${src_cg}
+        onemkl_omp_offload.f90)
+endif()
+
 set(src_ppcg
     PPCG/ppcg_gamma.f90
     PPCG/ppcg_k.f90
@@ -40,6 +52,12 @@ set(src_ppcg
     PPCG/ppcg_k_gpu.f90
     PPCG/generic_blas_gpu.f90)
 qe_enable_cuda_fortran("${src_ppcg}")
+
+if(QE_ENABLE_OPENMP_OFFLOAD)
+    set(src_ppcg
+        ${src_ppcg}
+        onemkl_omp_offload.f90)
+endif()
 
 set(src_dense
     DENSE/rotate_HSpsi_gamma.f90
