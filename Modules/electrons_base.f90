@@ -85,7 +85,6 @@
   CONTAINS
 !------------------------------------------------------------------------------!
 
-
     SUBROUTINE electrons_base_initval( zv_ , na_ , nsp_ , nbnd_ , nspin_ , &
           occupations_ , f_inp, tot_charge_, tot_magnetization_ )
       !
@@ -111,7 +110,7 @@
       nelec = 0.0_DP
       DO i = 1, nsp_
          nelec = nelec + na_ ( i ) * zv_ ( i )
-      END DO 
+      END DO
       nelec = nelec - tot_charge_
       !
       ! ... set nelup/neldw
@@ -131,7 +130,6 @@
       ELSE
         nbnd  = NINT( MAX( nelup, neldw ) )    ! take the maximum between up and down states
       END IF
-
 
       IF( nelec < 1 ) THEN
          CALL errore(' electrons_base_initval ',' nelec less than 1 ', 1 )
@@ -198,7 +196,7 @@
          ELSE
             nelup = SUM ( f_inp ( :, 1 ) )
             neldw = SUM ( f_inp ( :, 2 ) )
-            nelec = nelup + neldw 
+            nelec = nelup + neldw
          END IF
          !
          ! consistency check
@@ -276,7 +274,7 @@
 !         if( (nspin == 1) .and. MOD( nint(nelec), 2 ) /= 0 ) &
 !              CALL errore(' electrons_base_initval ', &
 !              ' must use nspin=2 for odd number of electrons', 1 )
-         
+
          ! ocp = 2 for spinless systems, ocp = 1 for spin-polarized systems
          ocp = 2.0_DP / nspin
          !
@@ -331,7 +329,6 @@
          CALL errore(' electrons_base_initval ',' occupation method not implemented', 1 )
       END SELECT
 
-
       do iss = 1, nspin
          do in = iupdwn(iss), iupdwn(iss) - 1 + nupdwn(iss)
             ispin(in) = iss
@@ -342,7 +339,7 @@
       nudx  = nupdwn (1)
       nbsp  = nupdwn (1) + nupdwn (2)
 
-      IF ( nspin == 1 ) THEN 
+      IF ( nspin == 1 ) THEN
         nelt = nel(1)
       ELSE
         nelt = nel(1) + nel(2)
@@ -430,7 +427,6 @@
 
 !----------------------------------------------------------------------------
 
-
     SUBROUTINE deallocate_elct()
       IF( ALLOCATED( f ) ) DEALLOCATE( f )
       IF( ALLOCATED( ispin ) ) DEALLOCATE( ispin )
@@ -445,8 +441,10 @@
 !----------------------------------------------------------------------------
 
     SUBROUTINE distribute_bands( nbgrp, my_bgrp_id )
+      !
+      USE distools, ONLY : ldim_block, gind_block
+      !
       INTEGER, INTENT(IN) :: nbgrp, my_bgrp_id
-      INTEGER, EXTERNAL :: ldim_block, gind_block
       INTEGER :: iss, n1, n2, m1, m2, ilocal, iglobal
       !
       IF( .NOT. telectrons_base_initval ) &
@@ -497,11 +495,10 @@
 #if defined (__CUDA)
       ALLOCATE( f_d, SOURCE = f_bgrp )
 #endif
-      
+
       RETURN
 
     END SUBROUTINE distribute_bands
-
 
 !------------------------------------------------------------------------------!
   END MODULE electrons_base
