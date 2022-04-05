@@ -7,18 +7,15 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 #if defined(__DFTI)
-#if !defined(__OPENMP_GPU)
-#include "mkl_dfti.f90"
-#endif
 !=----------------------------------------------------------------------=!
    MODULE fft_scalar_dfti
 !=----------------------------------------------------------------------=!
 
 #if defined(__OPENMP_GPU)
-       USE onemkl_dfti_gpu ! -- this can be found in the MKL include directory
+       USE onemkl_dfti_omp_offload
        USE, intrinsic :: ISO_C_BINDING
 #else
-       USE MKL_DFTI ! -- this can be found in the MKL include directory
+       USE onemkl_dfti
 #endif
        USE fft_param
 
