@@ -93,7 +93,7 @@ SUBROUTINE local_dos_mag(spin_component, kpoint, kband, raux)
            psic_nc(dffts%nl(igk_k(ig,ik)),2)=evc(ig+npwx,ibnd)
         ENDDO
         DO ipol=1,npol
-           CALL invfft ('Wave', psic_nc(:,ipol), dffts)
+           CALL invfft (2, psic_nc(:,ipol), dffts)
         ENDDO
         IF (spin_component==1) THEN
            DO ir = 1,dffts%nnr

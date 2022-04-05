@@ -41,7 +41,6 @@ SUBROUTINE add_shift_cc (shift_cc)
   ! counter on types of atoms
   ! counter on atoms
 
-
   real(DP), ALLOCATABLE :: vxc (:,:), rhocg (:), shift_(:)
   ! exchange-correlation potential
   ! radial fourier transform of rho core
@@ -75,7 +74,7 @@ SUBROUTINE add_shift_cc (shift_cc)
      ENDDO
   ENDIF
   DEALLOCATE (vxc)
-  CALL fwfft ('Rho', psic, dfftp)
+  CALL fwfft (1, psic, dfftp)
   !
   ! psic contains now Vxc(G)
   !

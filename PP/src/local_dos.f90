@@ -180,7 +180,7 @@ SUBROUTINE local_dos (iflag, lsign, kpoint, kband, spin_component, &
                     psic_nc(dffts%nl(igk_k(ig,ik)),2)=evc(ig+npwx,ibnd)
                  ENDDO
                  DO ipol=1,npol
-                    CALL invfft ('Wave', psic_nc(:,ipol), dffts)
+                    CALL invfft (2, psic_nc(:,ipol), dffts)
                  ENDDO
               ELSE
                  psic(1:dffts%nnr) = (0.d0,0.d0)
@@ -192,7 +192,7 @@ SUBROUTINE local_dos (iflag, lsign, kpoint, kband, spin_component, &
                        psic (dffts%nlm(igk_k (ig,ik) ) ) = conjg(evc (ig, ibnd))
                     ENDDO
                  ENDIF
-                 CALL invfft ('Wave', psic, dffts)
+                 CALL invfft (2, psic, dffts)
               ENDIF
               w1 = wg (ibnd, ik) / omega
 !
@@ -355,7 +355,7 @@ SUBROUTINE local_dos (iflag, lsign, kpoint, kband, spin_component, &
               ENDDO
            ENDIF
         ENDDO ! loop over bands
-    ENDIF 
+    ENDIF
   ENDDO ! loop over k-points
 
   IF (gamma_only) THEN
@@ -377,7 +377,7 @@ SUBROUTINE local_dos (iflag, lsign, kpoint, kband, spin_component, &
   DO is = 1, nspin
      psic(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
      psic(dffts%nnr+1:) = 0.0_dp
-     CALL fwfft ('Rho', psic, dffts)
+     CALL fwfft (1, psic, dffts)
      rho%of_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
      rho%of_g(dffts%ngm+1:,is) = (0.0_dp,0.0_dp)
   END DO
@@ -405,7 +405,7 @@ SUBROUTINE local_dos (iflag, lsign, kpoint, kband, spin_component, &
      ENDIF
   ENDIF
   !
-  CALL invfft ('Rho', psic, dfftp)
+  CALL invfft (1, psic, dfftp)
   !
   dos(:) = DBLE ( psic(:) )
   !
@@ -421,14 +421,14 @@ SUBROUTINE local_dos (iflag, lsign, kpoint, kband, spin_component, &
   CALL sym_rho_init (gamma_only )
   !
   psic(:) = cmplx ( dos(:), 0.0_dp, kind=dp)
-  CALL fwfft ('Rho', psic, dfftp)
+  CALL fwfft (1, psic, dfftp)
   rho%of_g(:,1) = psic(dfftp%nl(:))
   !
   CALL sym_rho (1, rho%of_g)
   !
   psic(:) = (0.0_dp, 0.0_dp)
   psic(dfftp%nl(:)) = rho%of_g(:,1)
-  CALL invfft ('Rho', psic, dfftp)
+  CALL invfft (1, psic, dfftp)
   dos(:) = dble(psic(:))
   !
   CALL sym_rho_deallocate()

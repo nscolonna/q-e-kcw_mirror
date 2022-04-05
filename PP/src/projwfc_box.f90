@@ -161,7 +161,7 @@ SUBROUTINE projwave_boxes( filpdos, filproj, n_proj_boxes, irmin, irmax, plotbox
 #if defined(__MPI)
      CALL scatter_grid ( dfftp, thetabox(:), thetathisproc(:,ibox) )
 #else
-     thetathisproc(:,ibox) = thetabox(1:dfftp%nnr)      
+     thetathisproc(:,ibox) = thetabox(1:dfftp%nnr)
 #endif
      !
   ENDDO
@@ -236,7 +236,7 @@ SUBROUTINE projwave_boxes( filpdos, filproj, n_proj_boxes, irmin, irmax, plotbox
            ENDDO
            raux=0._DP
            DO ipol=1,npol
-              CALL invfft ('Rho', psic_nc(:,ipol), dfftp)
+              CALL invfft (1, psic_nc(:,ipol), dfftp)
               raux(:) = raux(:)+dble( psic_nc(:,ipol) )**2 &
                              + aimag( psic_nc(:,ipol) )**2
            ENDDO
@@ -252,7 +252,7 @@ SUBROUTINE projwave_boxes( filpdos, filproj, n_proj_boxes, irmin, irmax, plotbox
                  caux (dfftp%nlm(igk_k (ig,ik) ) ) = conjg(evc (ig, ibnd))
               ENDDO
            ENDIF
-           CALL invfft ('Rho', caux, dfftp)
+           CALL invfft (1, caux, dfftp)
            !
            raux(:) = dble( caux(:) )**2 + aimag( caux(:) )**2
            !

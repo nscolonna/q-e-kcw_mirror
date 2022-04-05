@@ -1,13 +1,13 @@
 !-----------------------------------------------------------------------
 ! Program written by Yang Jiao,  Oct 2016, GPL, No warranties.
-! 
+!
 ! This module is adapted from MODULE vdW_DF
 ! ----------------------------------------------------------------------
 MODULE vdW_DF_scale
 !-----------------------------------------------------------------------
 !
 ! ... This module calculates the coupling constant dependancy of
-!     non-local correlation 
+!     non-local correlation
 !     E_{c,\lambda}^{nl},    \lambda \in [0:1]
 ! ... Eq. (48) of PRB 97, 085115 (2018).
 !
@@ -27,11 +27,7 @@ implicit none
 
 REAL(DP), PARAMETER :: epsr =1.d-12  ! a small number to cut off densities
 
-
 CONTAINS
-
-
-
 
   FUNCTION Fs(s)
      IMPLICIT NONE
@@ -42,9 +38,6 @@ CONTAINS
      Fs = 1.0D0 - Z_ab * s**2 / 9.0D0
   END FUNCTION Fs
 
-
-
-
   FUNCTION kF(rho)
      IMPLICIT NONE
      REAL(DP) :: rho, kF
@@ -52,12 +45,9 @@ CONTAINS
      kF = ( 3.0D0 * pi**2 * rho )**(1.0D0/3.0D0)
   END FUNCTION kF
 
-
-
-
   SUBROUTINE saturate_q (q, q_cutoff, q0, dq0_dq)
 
-     IMPLICIT NONE 
+     IMPLICIT NONE
      REAL(DP),  INTENT(IN)      :: q             ! Input q.
      REAL(DP),  INTENT(IN)      :: q_cutoff      ! Cutoff q.
      REAL(DP),  INTENT(OUT)     :: q0            ! Output saturated q.
@@ -79,15 +69,12 @@ CONTAINS
 
   END SUBROUTINE saturate_q
 
-
-
-
   ! ####################################################################
   !                           |                 |
   !                           |  XC_VDW_DF_ncc  |
   !                           |_________________|
 
-  SUBROUTINE xc_vdW_DF_ncc(cc,lecnl_qx,etcnlccc) 
+  SUBROUTINE xc_vdW_DF_ncc(cc,lecnl_qx,etcnlccc)
 
   USE gvect,                 ONLY : ngm, g
   USE cell_base,             ONLY : omega, tpiba
@@ -102,7 +89,6 @@ CONTAINS
   real(dp), intent(IN) :: cc                     !
   logical, intent(IN)  :: lecnl_qx               !  PPACF input variables
   real(dp), intent(inout) :: etcnlccc            !_
-
 
   integer :: i_grid, theta_i, i_proc             ! Indexing variables over grid points,
                                                  ! theta functions, and processors.
@@ -133,14 +119,10 @@ CONTAINS
   LOGICAL, SAVE :: first_iteration = .TRUE.      ! Whether this is the first time this
                                                  ! routine has been called.
 
-
-
-
   ! --------------------------------------------------------------------
   ! Check that the requested non-local functional is implemented.
 
   if ( inlc > 5 ) call errore('xc_vdW_DF','E^nl_c not implemented',1)
-
 
   ! --------------------------------------------------------------------
   ! Initialize the calculation.
@@ -148,14 +130,12 @@ CONTAINS
   IF ( first_iteration ) CALL generate_kernel
   first_iteration = .FALSE.
 
-
   ! --------------------------------------------------------------------
   ! Allocate arrays. nnr is a PWSCF variable that holds the number of
   ! points assigned to a given processor.
 
   allocate( q0(dfftp%nnr), grad_rho(3,dfftp%nnr) )
   allocate( total_rho(dfftp%nnr), thetas(dfftp%nnr, Nqs) )
-
 
   ! --------------------------------------------------------------------
   ! Add together the valence and core charge densities to get the total
@@ -165,12 +145,10 @@ CONTAINS
 
   total_rho = rho%of_r(:,1) + rho_core(:)
 
-
   ! --------------------------------------------------------------------
   ! Here we calculate the gradient in reciprocal space using FFT.
 
   call fft_gradient_r2r (dfftp, total_rho, g, grad_rho)
-
 
   ! --------------------------------------------------------------------
   ! Find the value of q0 for all assigned grid points. q is defined in
@@ -181,7 +159,6 @@ CONTAINS
   ! calculated below. This routine also calculates the thetas.
 
   CALL get_q0cc_on_grid (cc,lecnl_qx,total_rho, grad_rho, q0, thetas)
-
 
   ! --------------------------------------------------------------------
   ! Carry out the integration in equation 8 of SOLER. This also turns
@@ -196,13 +173,6 @@ CONTAINS
   deallocate ( q0, grad_rho, total_rho, thetas )
 
   END SUBROUTINE xc_vdW_DF_ncc
-
-
-
-
-
-
-
 
   ! ####################################################################
   !                          |                      |
@@ -227,7 +197,6 @@ CONTAINS
   real(dp), intent(IN) :: cc                    !
   logical, intent(IN)  :: lecnl_qx              !  PPACF input variables
   real(dp), intent(inout) :: etcnlccc           !_
-
 
   integer :: i_grid, theta_i, i_proc            ! Indexing variables over grid points,
                                                 ! theta functions, and processors, and a
@@ -269,21 +238,16 @@ CONTAINS
   LOGICAL, SAVE :: first_iteration = .TRUE.     ! Whether this is the first time this
                                                 ! routine has been called.
 
-
-
-
   ! --------------------------------------------------------------------
   ! Check that the requested non-local functional is implemented.
 
   if ( inlc > 5 ) call errore('xc_vdW_DF','E^nl_c not implemented',1)
-
 
   ! --------------------------------------------------------------------
   ! Initialize the calculation.
 
   IF ( first_iteration ) CALL generate_kernel
   first_iteration = .FALSE.
-
 
   ! --------------------------------------------------------------------
   ! Allocate arrays. nnr is a PWSCF variable that holds the number of
@@ -293,7 +257,6 @@ CONTAINS
   allocate( rho_up(dfftp%nnr), rho_down(dfftp%nnr) )
   allocate( grad_rho_up(3,dfftp%nnr), grad_rho_down(3,dfftp%nnr) )
   allocate( thetas(dfftp%nnr, Nqs) )
-
 
   ! --------------------------------------------------------------------
   ! Add together the valence and core charge densities to get the total
@@ -330,7 +293,6 @@ CONTAINS
   CALL get_q0cc_on_grid_spin (cc,lecnl_qx,total_rho, rho_up, rho_down, &
        grad_rho, grad_rho_up, grad_rho_down, q0, thetas)
 
-
   ! --------------------------------------------------------------------
   ! Carry out the integration in equation 8 of SOLER. This also turns
   ! the thetas array into the precursor to the u_i(k) array which is
@@ -346,21 +308,14 @@ CONTAINS
 
   END SUBROUTINE xc_vdW_DF_spin_ncc
 
-
-
-
-
-
-
-
   ! ####################################################################
   !                       |                    |
   !                       |  GET_Q0CC_ON_GRID  |
   !                       |____________________|
   !
-  ! This routine calculates the scaling of the inverse length scale of 
-  ! q value defined in (DION equations 11 and 12), then saturates it 
-  ! according to (SOLER equation 5). More specifically it calculates 
+  ! This routine calculates the scaling of the inverse length scale of
+  ! q value defined in (DION equations 11 and 12), then saturates it
+  ! according to (SOLER equation 5). More specifically it calculates
   ! Eq. (45) of PRB 97, 085115 (2018).
   !
 
@@ -391,9 +346,6 @@ CONTAINS
   real(dp)                  :: dqc_drho
   integer                   :: i_grid, idx                         ! Indexing variables.
 
-
-
-
   ! --------------------------------------------------------------------
   ! Initialize q0-related arrays.
 
@@ -402,7 +354,6 @@ CONTAINS
   do i_grid = 1, dfftp%nnr
 
      rho = total_rho(i_grid)
-
 
      ! -----------------------------------------------------------------
      ! This prevents numerical problems. If the charge density is
@@ -414,7 +365,6 @@ CONTAINS
 
      if ( rho < epsr ) cycle
 
-
      ! -----------------------------------------------------------------
      ! Calculate some intermediate values needed to find q.
 
@@ -422,7 +372,6 @@ CONTAINS
 
      s   = sqrt( grad_rho(1,i_grid)**2 + grad_rho(2,i_grid)**2 + grad_rho(3,i_grid)**2 ) &
          / (2.0D0 * kF(rho) * rho )
-
 
      ! -----------------------------------------------------------------
      ! This is the q value defined in equations 11 and 12 of DION.
@@ -435,7 +384,6 @@ CONTAINS
        q=kF(rho) * Fs(s)/cc
      endif
 
-
      ! -----------------------------------------------------------------
      ! Bring q into its proper bounds.
 
@@ -443,7 +391,6 @@ CONTAINS
      if (q0(i_grid) < q_min) q0(i_grid) = q_min
 
   end do
-
 
   ! --------------------------------------------------------------------
   ! Here we calculate the theta functions of SOLER equation 8. These are
@@ -471,17 +418,10 @@ CONTAINS
   end do
 
   do idx = 1, Nqs
-     CALL fwfft ('Rho', thetas(:,idx), dfftp)
+     CALL fwfft (1, thetas(:,idx), dfftp)
   end do
 
   END SUBROUTINE get_q0cc_on_grid
-
-
-
-
-
-
-
 
   ! ####################################################################
   !                       |                         |
@@ -519,24 +459,18 @@ CONTAINS
   !
   real(dp) :: vc_v(2)                                                    ! auxiliary array for pw_spin call
 
-
-
-
   fac = 2.0D0**(-1.0D0/3.0D0)
-
 
   ! --------------------------------------------------------------------
   ! Initialize q0-related arrays.
 
   q0(:)                = q_cut
 
-
   do i_grid = 1, dfftp%nnr
 
      rho  = total_rho(i_grid)
      up   = rho_up(i_grid)
      down = rho_down(i_grid)
-
 
      ! -----------------------------------------------------------------
      ! This prevents numerical problems. If the charge density is
@@ -554,7 +488,6 @@ CONTAINS
      if ( up   < epsr/2.0D0 ) calc_qx_up   = .FALSE.
      if ( down < epsr/2.0D0 ) calc_qx_down = .FALSE.
 
-
      ! -----------------------------------------------------------------
      ! The spin case is numerically even more tricky and we have to
      ! saturate each spin channel separately. Note that we are
@@ -565,7 +498,6 @@ CONTAINS
      q0x_down      = 0.0D0
      dqx_drho_up   = 0.0D0
      dqx_drho_down = 0.0D0
-
 
      if (calc_qx_up) then
         s_up    = sqrt( grad_rho_up(1,i_grid)**2 + grad_rho_up(2,i_grid)**2 + &
@@ -580,7 +512,6 @@ CONTAINS
         qx_down = kF(2.0D0*down) * Fs(fac*s_down)
         CALL saturate_q (qx_down, 4.0D0*q_cut, q0x_down, dq0x_down_dq)
      end if
-
 
      ! -----------------------------------------------------------------
      ! This is the q value defined in equations 11 and 12 of DION and
@@ -600,16 +531,13 @@ CONTAINS
         q=qx
      endif
 
-
      ! -----------------------------------------------------------------
      ! Bring q into its proper bounds.
 
      CALL saturate_q (q*cc, q_cut, q0(i_grid), dq0_dq)
      if (q0(i_grid) < q_min) q0(i_grid) = q_min
 
-
   end do
-
 
   ! --------------------------------------------------------------------
   ! Here we calculate the theta functions of SOLER equation 8. These are
@@ -637,12 +565,9 @@ CONTAINS
   end do
 
   do idx = 1, Nqs
-     CALL fwfft ('Rho', thetas(:,idx), dfftp)
+     CALL fwfft (1, thetas(:,idx), dfftp)
   end do
 
   END SUBROUTINE get_q0cc_on_grid_spin
-
-
-
 
 END MODULE vdW_DF_scale

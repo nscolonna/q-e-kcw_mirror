@@ -60,10 +60,10 @@ SUBROUTINE add_shift_lc (nat, tau, ityp, alat, omega, ngm, ngl, &
   !
   ALLOCATE (aux(nrxx), shift_(nat) )
   shift_(:) = 0.d0
-  
+
   aux(:) = CMPLX ( rho(:,1), 0.0_dp, KIND=dp )
-  
-  CALL fwfft ('Rho', aux, dfftp)
+
+  CALL fwfft (1, aux, dfftp)
   !
   !    aux contains now  n(G)
   !
@@ -91,7 +91,6 @@ SUBROUTINE add_shift_lc (nat, tau, ityp, alat, omega, ngm, ngl, &
   shift_lc(:) = shift_lc(:) + shift_(:)
 
   DEALLOCATE (aux,shift_)
-
 
   RETURN
 END SUBROUTINE add_shift_lc
