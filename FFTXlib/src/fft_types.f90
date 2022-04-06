@@ -988,7 +988,7 @@ CONTAINS
     IF (nmany > 1) THEN
        ALLOCATE(desc%aux(nmany * desc%nnr))
 #if defined (__OPENMP_GPU)
-       !$omp target enter data map(alloc:desc%aux(1:nmany * desc%nnr))
+       !$omp target enter data map(alloc:desc%aux)
 #endif
     ENDIF
 
