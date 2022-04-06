@@ -571,7 +571,7 @@ END SUBROUTINE laxlib_multi_init_desc_x
    SUBROUTINE diagonalize_serial_gpu( m, rhos, rhod, s, info )
 #if defined(__OPENMP_GPU)
       use omp_lib
-      use onemkl_lapack_gpu
+      use onemkl_lapack_omp_offload
       !use dmr
       IMPLICIT NONE
       include 'laxlib_kinds.fh'

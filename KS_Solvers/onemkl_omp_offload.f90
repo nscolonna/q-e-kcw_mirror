@@ -1,0 +1,27 @@
+#if defined(MKL_ILP64)
+
+include "mkl_blas_omp_offload_ilp64.f90"
+include "mkl_blas_omp_offload_ilp64_no_array_check.f90"
+
+module onemkl_blas_omp_offload
+  use onemkl_blas_omp_offload_ilp64
+endmodule onemkl_blas_omp_offload
+
+module onemkl_blas_no_array_check_omp_offload
+  use onemkl_blas_omp_offload_ilp64_no_array_check
+endmodule onemkl_blas_no_array_check_omp_offload
+
+#else
+
+include "mkl_blas_omp_offload_lp64.f90"
+include "mkl_blas_omp_offload_lp64_no_array_check.f90"
+
+module onemkl_blas_omp_offload
+  use onemkl_blas_omp_offload_lp64
+endmodule onemkl_blas_omp_offload
+
+module onemkl_blas_no_array_check_omp_offload
+  use onemkl_blas_omp_offload_lp64_no_array_check
+endmodule onemkl_blas_no_array_check_omp_offload
+
+#endif

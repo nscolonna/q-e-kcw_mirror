@@ -23,7 +23,7 @@ SUBROUTINE stres_mgga( sigmaxc )
   USE klist,                  ONLY : nks, xk, ngk
   USE buffers,                ONLY : get_buffer
   USE io_files,               ONLY : iunwfc, nwordwfc
-  USE wvfct,                  ONLY : nbnd, npwx, wg 
+  USE wvfct,                  ONLY : nbnd, npwx, wg
   USE lsda_mod,               ONLY : lsda, nspin, current_spin, isk
   USE fft_interfaces,         ONLY : fwfft, invfft
   USE fft_base,               ONLY : dfftp, dffts
@@ -39,7 +39,7 @@ SUBROUTINE stres_mgga( sigmaxc )
   ! Internal variables
   !
   INTEGER                   :: ix, iy, ir, iss, ipol, incr, ibnd, ik, npw
-  INTEGER                   :: ipol2xy(3,3) 
+  INTEGER                   :: ipol2xy(3,3)
   !! ipol2xy(i,j) = ipol2x(j,i) is a collapsed symmetric index
   DATA ipol2xy / 1, 2, 3, 2, 4, 5, 3, 5, 6/
   REAL(DP), PARAMETER       :: epsr = 1.0d-6, epsg = 1.0d-10, e2 = 2.d0
@@ -58,13 +58,13 @@ SUBROUTINE stres_mgga( sigmaxc )
   !
   ! Initialization of a set of variables
   !
-  allocate (gradwfc( dffts%nnr, 3))    
-  allocate (crosstaus( dffts%nnr,6,nspin))    
+  allocate (gradwfc( dffts%nnr, 3))
+  allocate (crosstaus( dffts%nnr,6,nspin))
   !
   ! For gamma_only efficiency
   !
   incr=1
-  IF ( gamma_only ) incr=2 
+  IF ( gamma_only ) incr=2
   !
   crosstaus(:,:,:) = 0.d0
   gradwfc(:,:) = 0.d0
@@ -78,7 +78,7 @@ SUBROUTINE stres_mgga( sigmaxc )
     !
     npw = ngk(ik)
     !
-    ! Read the wavefunctions 
+    ! Read the wavefunctions
     !
     IF ( nks > 1 ) THEN
        !
@@ -87,11 +87,11 @@ SUBROUTINE stres_mgga( sigmaxc )
        !
     END IF
     !
-    do ibnd = 1, nbnd, incr 
+    do ibnd = 1, nbnd, incr
        !
        ! w1, w2: weights for each k point and band
        !
-       w1 = wg(ibnd,ik) / omega 
+       w1 = wg(ibnd,ik) / omega
        !
        IF ( (ibnd < nbnd) .and. (gamma_only) ) THEN
           !
@@ -106,7 +106,7 @@ SUBROUTINE stres_mgga( sigmaxc )
        END IF
        !
        ! Gradient of the wavefunction in real space
-       ! 
+       !
        CALL wfc_gradient( ibnd, ik, npw, gradwfc )
        !
        ! Cross terms of kinetic energy density
@@ -131,13 +131,13 @@ SUBROUTINE stres_mgga( sigmaxc )
        !
     end do
     !
-  END DO k_loop 
+  END DO k_loop
   !
   call mp_sum(  crosstaus, inter_pool_comm )
   !
   ! gradwfc not used anymore
   !
-  deallocate (gradwfc)    
+  deallocate (gradwfc)
   !
   sigma_mgga(:,:) = 0.D0
   !
@@ -173,13 +173,13 @@ SUBROUTINE stres_mgga( sigmaxc )
                  (dffts%nr1 * dffts%nr2 * dffts%nr3)
   !
  return
- !  
+ !
 END SUBROUTINE stres_mgga
 
 SUBROUTINE wfc_gradient ( ibnd, ik, npw, gradpsi )
   !
   ! Returns the gradient of the wavefunction in real space
-  ! Slightly adapted from sum_bands.f90 
+  ! Slightly adapted from sum_bands.f90
   !
   USE kinds,                  ONLY : DP
   USE control_flags,          ONLY : gamma_only
@@ -192,10 +192,10 @@ SUBROUTINE wfc_gradient ( ibnd, ik, npw, gradpsi )
   USE fft_interfaces,         ONLY : invfft
   USE wavefunctions_gpum,   ONLY : using_evc
   !
-  IMPLICIT NONE 
+  IMPLICIT NONE
   !
-  INTEGER                   :: ibnd, ik, npw 
-  COMPLEX(DP)               :: gradpsi(dffts%nnr,3)  
+  INTEGER                   :: ibnd, ik, npw
+  COMPLEX(DP)               :: gradpsi(dffts%nnr,3)
   !
   ! Internal variables
   !
@@ -238,7 +238,7 @@ SUBROUTINE wfc_gradient ( ibnd, ik, npw, gradpsi )
         !
         ! Gradient of the wavefunction in real space
         !
-        CALL invfft ('Wave', psic, dffts)
+        CALL invfft (2, psic, dffts)
         !
         gradpsi(:,ipol) = psic
         !
@@ -256,11 +256,11 @@ SUBROUTINE wfc_gradient ( ibnd, ik, npw, gradpsi )
          !
          ! Gradient of the wavefunction in real space
          !
-         CALL invfft ('Wave', psic, dffts)
+         CALL invfft (2, psic, dffts)
          !
          gradpsi(:,ipol) = psic
          !
-     END DO 
+     END DO
      !
   END IF
   !

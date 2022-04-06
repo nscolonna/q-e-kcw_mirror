@@ -9,9 +9,9 @@
 !
 MODULE becmod_subs_gpum
   !! GPU version of the \(\texttt{becmod}\)-routines.
-  
+
   ! NOTA BENE : THE SUBROUTINES IN THIS FILE ARE ONLY PARTIALLY TESTED!
-   
+
   !
   ! ... *bec* contain <beta|psi> - used in h_psi, s_psi, many other places
   ! ... calbec( npw, beta, psi, betapsi [, nbnd ] ) is an interface calculating
@@ -52,6 +52,7 @@ CONTAINS
     !_
     USE mp_bands, ONLY: intra_bgrp_comm
     USE mp,       ONLY: mp_get_comm_null
+    USE distools, ONLY : ldim_block, gind_block
     !
     IMPLICIT NONE
     COMPLEX (DP), INTENT (in) :: beta_d(:,:), psi_d(:,:)
@@ -64,7 +65,6 @@ CONTAINS
 #endif
     !
     INTEGER :: local_nbnd
-    INTEGER, EXTERNAL :: ldim_block, gind_block
     INTEGER :: m_loc, m_begin, ip
     REAL(DP), ALLOCATABLE :: dtmp_d(:,:)   ! replace this with buffers !
     INTEGER :: i, j, nkb
@@ -165,7 +165,7 @@ CONTAINS
     REAL (DP), INTENT (out) :: betapsi_d(:,:)
     INTEGER, INTENT (in) :: npw
     INTEGER, INTENT (in) :: nbnd
-    INTEGER, INTENT (in) :: comm 
+    INTEGER, INTENT (in) :: comm
     !
 #if defined(__CUDA)
     attributes(DEVICE) :: beta_d, psi_d, betapsi_d
@@ -359,13 +359,13 @@ CONTAINS
   SUBROUTINE allocate_bec_type_gpu ( nkb, nbnd, bec_d, comm )
     !-----------------------------------------------------------------------
     USE mp, ONLY: mp_size, mp_rank, mp_get_comm_null
+    USE distools, ONLY : ldim_block, gind_block
     USE device_memcpy_m, ONLY : dev_memset
     IMPLICIT NONE
     TYPE (bec_type_d) :: bec_d
     INTEGER, INTENT (in) :: nkb, nbnd
     INTEGER, INTENT (in), OPTIONAL :: comm
     INTEGER :: ierr, nbnd_siz
-    INTEGER, EXTERNAL :: ldim_block, gind_block
     !
     nbnd_siz = nbnd
     bec_d%comm = mp_get_comm_null()
@@ -605,6 +605,5 @@ CONTAINS
        !
     ENDIF
   END SUBROUTINE using_becp_d_auto
-
 
 END MODULE becmod_subs_gpum

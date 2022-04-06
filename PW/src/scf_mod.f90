@@ -9,7 +9,7 @@
 MODULE scf
   !--------------------------------------------------------------------------
   !! This module contains variables and auxiliary routines needed for
-  !! the self-consistent cycle.  
+  !! the self-consistent cycle.
   !
   USE kinds,           ONLY : DP
   USE lsda_mod,        ONLY : nspin
@@ -75,7 +75,7 @@ MODULE scf
      REAL(DP),    ALLOCATABLE :: nsb(:,:,:,:)
      !! the DFT+U occupation matrix (background states)
      COMPLEX(DP), ALLOCATABLE :: ns_nc(:,:,:,:)
-     !! the DFT+U occupation matrix noncollinear case 
+     !! the DFT+U occupation matrix noncollinear case
      REAL(DP),    ALLOCATABLE :: bec(:,:,:)
      !! PAW corrections to hamiltonian
      REAL(DP) :: el_dipole
@@ -90,7 +90,7 @@ MODULE scf
   !! used to correct the forces
   !
   REAL(DP) :: v_of_0
-  !! vltot(G=0)      
+  !! vltot(G=0)
   REAL(DP), ALLOCATABLE :: vltot(:)
   !! the local potential in real space
   REAL(DP), ALLOCATABLE :: vrs(:,:)
@@ -122,7 +122,7 @@ CONTAINS
  !----------------------------------------------------------
  SUBROUTINE create_scf_type( rho, do_not_allocate_becsum )
    !----------------------------------------------------------
-   !! Creates an \(\text{scf_type}\) object by allocating all the 
+   !! Creates an \(\text{scf_type}\) object by allocating all the
    !! different terms.
    !
    IMPLICIT NONE
@@ -305,7 +305,7 @@ CONTAINS
  !-----------------------------------------------------------------
  SUBROUTINE assign_mix_to_scf_type( rho_m, rho_s )
    !----------------------------------------------------------------
-   !! It fills a \(\text{scf_type}\) object starting from a 
+   !! It fills a \(\text{scf_type}\) object starting from a
    !! \(\text{mix_type}\) one.
    !
    USE wavefunctions,        ONLY : psic
@@ -317,26 +317,26 @@ CONTAINS
    TYPE(scf_type), INTENT(INOUT) :: rho_s
    !
    INTEGER :: is
-   !   
+   !
    rho_s%of_g(1:ngms,:) = rho_m%of_g(1:ngms,:)
-   ! define rho_s%of_r 
+   ! define rho_s%of_r
    !
    DO is = 1, nspin
       psic(:) = ( 0.D0, 0.D0 )
       psic(dfftp%nl(:)) = rho_s%of_g(:,is)
       IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho_s%of_g(:,is) )
-      CALL invfft( 'Rho', psic, dfftp )
+      CALL invfft( 1, psic, dfftp )
       rho_s%of_r(:,is) = psic(:)
    ENDDO
    !
    IF (xclib_dft_is('meta') .OR. lxdm) THEN
       rho_s%kin_g(1:ngms,:) = rho_m%kin_g(:,:)
-      ! define rho_s%kin_r 
+      ! define rho_s%kin_r
       DO is = 1, nspin
          psic(:) = ( 0.D0, 0.D0 )
          psic(dfftp%nl(:)) = rho_s%kin_g(:,is)
          IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho_s%kin_g(:,is) )
-         CALL invfft( 'Rho', psic, dfftp )
+         CALL invfft( 1, psic, dfftp )
          rho_s%kin_r(:,is) = psic(:)
       ENDDO
    ENDIF
@@ -438,7 +438,7 @@ CONTAINS
  !----------------------------------------------------------------------------
  SUBROUTINE mix_type_SCAL( A, X )
   !----------------------------------------------------------------------------
-  !! Works like DSCAL for \(\text{mix_type}\) copy variables: \(X = A \cdot X\)  
+  !! Works like DSCAL for \(\text{mix_type}\) copy variables: \(X = A \cdot X\)
   !! NB: A is a REAL(DP) number
   !
   USE kinds, ONLY : DP
@@ -483,24 +483,24 @@ CONTAINS
       !
       rhoin%of_g = rhoin%of_g + alphamix * (input_rhout%of_g-rhoin%of_g)
       rhoin%of_g(1:ngms,1:nspin) = (0.d0,0.d0)
-      ! define rho_s%of_r 
+      ! define rho_s%of_r
       DO is = 1, nspin
          psic(:) = ( 0.D0, 0.D0 )
          psic(dfftp%nl(:)) = rhoin%of_g(:,is)
          IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rhoin%of_g(:,is) )
-         CALL invfft( 'Rho', psic, dfftp )
+         CALL invfft( 1, psic, dfftp )
          rhoin%of_r(:,is) = psic(:)
       ENDDO
       !
       IF (xclib_dft_is('meta') .OR. lxdm) THEN
          rhoin%kin_g = rhoin%kin_g + alphamix * ( input_rhout%kin_g-rhoin%kin_g)
          rhoin%kin_g(1:ngms,1:nspin) = (0.d0,0.d0)
-         ! define rho_s%of_r 
+         ! define rho_s%of_r
          DO is = 1, nspin
             psic(:) = ( 0.D0, 0.D0 )
             psic(dfftp%nl(:)) = rhoin%kin_g(:,is)
             IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rhoin%kin_g(:,is) )
-            CALL invfft( 'Rho', psic, dfftp )
+            CALL invfft( 1, psic, dfftp )
             rhoin%kin_r(:,is) = psic(:)
          ENDDO
       ENDIF
@@ -522,7 +522,7 @@ CONTAINS
    !
    RETURN
    !
- END SUBROUTINE high_frequency_mixing 
+ END SUBROUTINE high_frequency_mixing
  !
  !
  !------------------------------------------------------------------------
@@ -588,7 +588,7 @@ CONTAINS
    !
    DEALLOCATE( io_buffer )
    !
-   CALL close_buffer( iunit, TRIM(stat) ) 
+   CALL close_buffer( iunit, TRIM(stat) )
    !
    RETURN
    !
@@ -616,7 +616,7 @@ CONTAINS
       !
       IF (dipfield) io_buffer(start_dipole) = CMPLX( rho%el_dipole, 0.0_dp )
       !
-      CALL save_buffer( io_buffer, record_length, iunit, record )   
+      CALL save_buffer( io_buffer, record_length, iunit, record )
       !
    ELSEIF (iflag < 0 ) THEN
       !
@@ -740,7 +740,7 @@ FUNCTION rho_ddot( rho1, rho2, gf, g0 )
   !
   IF (xclib_dft_is('meta')) rho_ddot = rho_ddot + tauk_ddot( rho1, rho2, gf )
   IF (lda_plus_u )   rho_ddot = rho_ddot + ns_ddot( rho1, rho2 )
-  ! 
+  !
   ! Beware: paw_ddot has a hidden parallelization on all processors
   !         it must be called on all processors or else it will hang
   ! Beware: commented out because it yields too often negative values
@@ -790,7 +790,7 @@ FUNCTION tauk_ddot( rho1, rho2, gf )
   !  if (.true. ) stop
   !
   DO ig = gstart, gf
-     tauk_ddot = tauk_ddot + DBLE( CONJG( rho1%kin_g(ig,1) )*rho2%kin_g(ig,1) ) 
+     tauk_ddot = tauk_ddot + DBLE( CONJG( rho1%kin_g(ig,1) )*rho2%kin_g(ig,1) )
   ENDDO
   !
   IF ( nspin==1 .AND. gamma_only ) tauk_ddot = 2.D0 * tauk_ddot
@@ -815,7 +815,7 @@ FUNCTION tauk_ddot( rho1, rho2, gf )
           SUM(REAL(CONJG( rho1%kin_g(1,1:nspin))*(rho2%kin_g(1,1:nspin) ), DP))
      ENDIF
      !
-     IF ( nspin == 2 ) tauk_ddot = 0.5D0 *  tauk_ddot 
+     IF ( nspin == 2 ) tauk_ddot = 0.5D0 *  tauk_ddot
   ENDIF
   !
   fac = e2 * fpi / tpi**2  ! lambda = 1 a.u.
@@ -840,7 +840,7 @@ FUNCTION ns_ddot( rho1, rho2 )
                         lda_plus_u_kind, is_hubbard, is_hubbard_back
   USE ions_base, ONLY : nat, ityp
   !
-  IMPLICIT NONE  
+  IMPLICIT NONE
   !
   TYPE(mix_type), INTENT(IN) :: rho1
   !! first Hubbard ns
@@ -898,7 +898,7 @@ END FUNCTION ns_ddot
 FUNCTION nsg_ddot( nsg1, nsg2, nspin )
   !----------------------------------------------------------------------------
   !! Calculates \(U/2 \sum_i \text{nsg1}(i) \text{nsg2}(i)\)
-  !! used as an estimate of the self-consistency error on the 
+  !! used as an estimate of the self-consistency error on the
   !! DFT+U+V correction to the energy
   !
   USE kinds,     ONLY : DP
@@ -953,7 +953,7 @@ END FUNCTION nsg_ddot
 FUNCTION local_tf_ddot( rho1, rho2, ngm0, g0 )
   !----------------------------------------------------------------------------
   !! Calculates \(4\pi/G^2\ \rho_1(-G)\ \rho_2(G) = V1_\text{Hartree}(-G)\ \rho_2(G)\)
-  !! used as an estimate of the self-consistency error on the energy - version 
+  !! used as an estimate of the self-consistency error on the energy - version
   !! for the case with local-density dependent TF preconditioning to drho.
   !
   USE kinds,           ONLY : DP
@@ -1090,7 +1090,7 @@ SUBROUTINE rhoz_or_updw( rho, sp, dir )
   !
   IF ( sp /= 'only_g' ) THEN
      !
-     DO ir = 1, dfftp%nnr  
+     DO ir = 1, dfftp%nnr
         rho%of_r(ir,1) = ( rho%of_r(ir,1) + rho%of_r(ir,nspin) ) * vi
         rho%of_r(ir,nspin) = rho%of_r(ir,1) - rho%of_r(ir,nspin) * vi * 2._dp
      ENDDO

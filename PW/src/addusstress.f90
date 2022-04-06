@@ -50,8 +50,8 @@ END SUBROUTINE addusstress
 SUBROUTINE addusstress_g( sigmanlc )
   !----------------------------------------------------------------------
   !! This routine computes the part of the crystal stress which is due
-  !! to the dependence of the Q function on the atomic position.  
-  !! It adds contribution to input \(\text{sigmanlc}\), it does not sum 
+  !! to the dependence of the Q function on the atomic position.
+  !! It adds contribution to input \(\text{sigmanlc}\), it does not sum
   !! contributions from various processors (sum is performed by calling
   !! routine).
   !
@@ -101,7 +101,7 @@ SUBROUTINE addusstress_g( sigmanlc )
      ELSE
         aux(:) = vltot(:) + v%of_r(:,is)
      ENDIF
-     CALL fwfft( 'Rho', aux, dfftp )
+     CALL fwfft( 1, aux, dfftp )
      DO ig = 1, ngm
         vg(ig, is) = aux( dfftp%nl (ig) )
      ENDDO
@@ -111,7 +111,7 @@ SUBROUTINE addusstress_g( sigmanlc )
   ! With k-point parallelization, distribute G-vectors across processors
   ! ngm_s = index of first G-vector for this processor
   ! ngm_e = index of last  G-vector for this processor
-  ! ngm_l = local number of G-vectors 
+  ! ngm_l = local number of G-vectors
   !
   CALL divide( inter_pool_comm, ngm, ngm_s, ngm_e )
   ngm_l = ngm_e-ngm_s+1
@@ -172,7 +172,7 @@ SUBROUTINE addusstress_g( sigmanlc )
                 ENDDO
 !$omp end parallel do
                 CALL DGEMM('T','N', 3, nspin, 2*ngm_l, 1.0_dp, aux1, 2*ngm_l, &
-                           aux2, 2*ngm_l, 0.0_dp, fac, 3 )    
+                           aux2, 2*ngm_l, 0.0_dp, fac, 3 )
                 DO is = 1, nspin
                    DO jpol = 1, 3
                       sus(ipol, jpol) = sus(ipol, jpol) - omega * fac(jpol, is)

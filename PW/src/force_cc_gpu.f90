@@ -52,14 +52,14 @@ SUBROUTINE force_cc_gpu( forcecc )
   ! radial fourier transform of rho core
   REAL(DP) ::  prod, arg, fact
   !
-  real(DP), pointer :: rhocg_d (:),r_d(:), rab_d(:), rhoc_d(:) 
+  real(DP), pointer :: rhocg_d (:),r_d(:), rab_d(:), rhoc_d(:)
   complex(DP), pointer :: psic_d(:)
   integer, pointer :: nl_d(:)
   real(DP):: forcelc_x, forcelc_y, forcelc_z, tau1, tau2, tau3
   integer           :: ierrs(5)
   integer           :: maxmesh
 #if defined(__CUDA)
-  attributes(DEVICE) :: rhocg_d, psic_d, nl_d, r_d, rab_d, rhoc_d 
+  attributes(DEVICE) :: rhocg_d, psic_d, nl_d, r_d, rab_d, rhoc_d
   !
   nl_d => dfftp%nl_d
   !
@@ -97,7 +97,7 @@ SUBROUTINE force_cc_gpu( forcecc )
   CALL dev_buf%lock_buffer(psic_d, dfftp%nnr, ierrs(1))
   IF (ierrs(1) /= 0) CALL errore( 'force_cc_gpu', 'cannot allocate buffers', ABS(ierrs(1)) )
   CALL dev_memcpy( psic_d, psic, (/ 1, dfftp%nnr /) )
-  CALL fwfft ('Rho', psic_d, dfftp)
+  CALL fwfft (1, psic_d, dfftp)
   !
   ! ... psic contains now Vxc(G)
   !
@@ -106,7 +106,7 @@ SUBROUTINE force_cc_gpu( forcecc )
   ! ... core correction term: sum on g of omega*ig*exp(-i*r_i*g)*n_core(g)*vxc
   ! g = 0 term gives no contribution
   !
-  maxmesh = MAXVAL(msh(1:ntyp)) 
+  maxmesh = MAXVAL(msh(1:ntyp))
   CALL dev_buf%lock_buffer(rhocg_d, ngl, ierrs(2) )
   CALL dev_buf%lock_buffer(r_d, maxmesh, ierrs(3) )
   CALL dev_buf%lock_buffer(rab_d, maxmesh, ierrs(4) )
@@ -118,9 +118,9 @@ SUBROUTINE force_cc_gpu( forcecc )
   !
   DO nt = 1, ntyp
      IF ( upf(nt)%nlcc ) THEN
-        r_d(1:msh(nt)) = rgrid(nt)%r(1:msh(nt)) 
+        r_d(1:msh(nt)) = rgrid(nt)%r(1:msh(nt))
         rab_d(1:msh(nt)) = rgrid(nt)%rab(1:msh(nt))
-        rhoc_d(1:msh(nt)) = upf(nt)%rho_atc 
+        rhoc_d(1:msh(nt)) = upf(nt)%rho_atc
         !
         CALL drhoc_gpu( ngl, gl_d, omega, tpiba2, msh(nt), r_d, &
                          rab_d, rhoc_d, rhocg_d)

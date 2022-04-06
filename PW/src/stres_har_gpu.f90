@@ -55,7 +55,7 @@ SUBROUTINE stres_har_gpu( sigmahar )
   !
   CALL using_psic_d(1)
   !
-  CALL fwfft( 'Rho', psic_d, dfftp )
+  CALL fwfft( 1, psic_d, dfftp )
   ! psic contains now the charge density in G space
   ! the  G=0 component is not computed
   !
@@ -101,7 +101,7 @@ SUBROUTINE stres_har_gpu( sigmahar )
      sigmahar(3,2) = sigmahar(3,2) + sigmahar32 / tpiba2
      sigmahar(3,3) = sigmahar(3,3) + sigmahar33 / tpiba2
      !
-  ENDIF 
+  ENDIF
   !
   CALL mp_sum( sigmahar, intra_bgrp_comm )
   !

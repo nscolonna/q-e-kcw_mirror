@@ -11,7 +11,7 @@ if(DEVXLIB_ROOT)
         PATH_SUFFIXES "lib" "src")
 
     if(NOT DEVXLIB_LIB)
-        message(FATAL_ERROR "Failed in locating devXlib library file at <DEVXLIB_ROOT>/lib")
+        message(FATAL_ERROR "Failed in locating devXlib library file at ${DEVXLIB_ROOT}/lib")
     endif()
 
     find_path(
@@ -21,7 +21,7 @@ if(DEVXLIB_ROOT)
         PATH_SUFFIXES "include" "mod" "src")
 
     if(NOT DEVXLIB_MOD_PATH)
-        message(FATAL_ERROR "Failed in locating device_fbuff_m.mod file at <DEVXLIB_ROOT>/(include.mod,src)")
+        message(FATAL_ERROR "Failed in locating device_fbuff_m.mod file at ${DEVXLIB_ROOT}/(include.mod,src)")
     endif()
 
     target_link_libraries(qe_devxlib INTERFACE ${DEVXLIB_LIB})

@@ -39,10 +39,10 @@ SUBROUTINE stres_har( sigmahar )
   sigmahar(:,:) = 0.0_DP
   psic(:) = CMPLX( rho%of_r(:,1), KIND=DP )
   !
-  CALL fwfft('Rho', psic, dfftp)
+  CALL fwfft(1, psic, dfftp)
   ! psic contains now the charge density in G space
   ! the  G=0 component is not computed
-  IF (do_cutoff_2D) THEN  
+  IF (do_cutoff_2D) THEN
      CALL cutoff_stres_sigmahar( psic, sigmahar )
   ELSE
      DO ig = gstart, ngm
@@ -55,7 +55,7 @@ SUBROUTINE stres_har( sigmahar )
            ENDDO
         ENDDO
      ENDDO
-  ENDIF 
+  ENDIF
   !
   CALL mp_sum( sigmahar, intra_bgrp_comm )
   !

@@ -114,7 +114,7 @@ SUBROUTINE compute_sigma_avg(sigma_avg,becp_nc,ik,lsigma)
         psic_nc(dffts%nl(igk_k(ig,ik)), 2)=evc(ig+npwx,ibnd)
      ENDDO
      DO ipol=1,npol
-        CALL invfft ('Wave', psic_nc(:,ipol), dffts)
+        CALL invfft (2, psic_nc(:,ipol), dffts)
      ENDDO
      !
      ! Calculate the three components of the magnetization
@@ -156,8 +156,8 @@ SUBROUTINE compute_sigma_avg(sigma_avg,becp_nc,ik,lsigma)
                 (0.d0,1.d0)*evc(npwi:npwf,ibnd)
            dfy(dffts%nl(igk_k(1:npw,ik))) = (xk(2,ik)+g(2,igk_k(1:npw,ik)))*tpiba* &
                 (0.d0,1.d0)*evc(npwi:npwf,ibnd)
-           CALL invfft ('Wave', dfx, dffts)
-           CALL invfft ('Wave', dfy, dffts)
+           CALL invfft (2, dfx, dffts)
+           CALL invfft (2, dfy, dffts)
            DO i = 1, dffts%nr1
               xx = (i-1)*dx - x0
               DO j = 1, dffts%my_nr2p

@@ -195,7 +195,7 @@ SUBROUTINE laxlib_rdiaghg_gpu( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_
   ! ... LAPACK version - uses both DSYGV and DSYGVX
   !
   USE laxlib_parallel_include
-  USE onemkl_lapack_gpu
+  USE onemkl_lapack_omp_offload
   !USE dmr
 #define __USE_GLOBAL_BUFFER
 #if defined(__USE_GLOBAL_BUFFER)

@@ -42,10 +42,11 @@ SUBROUTINE stres_hub ( sigmah )
                                   us_dy, us_dj
    USE wavefunctions_gpum, ONLY : using_evc
    USE uspp_init,          ONLY : init_us_2, gen_us_dj, gen_us_dy
+   USE distools,           ONLY : block_distribute
    !
    IMPLICIT NONE
    !
-   REAL(DP), INTENT(OUT) :: sigmah(3,3) 
+   REAL(DP), INTENT(OUT) :: sigmah(3,3)
    !! the Hubbard contribution to stresses
    !
    ! ... local variables
@@ -154,7 +155,7 @@ SUBROUTINE stres_hub ( sigmah )
       CALL s_psi  (npwx, npw, nbnd, evc, spsi)
       CALL deallocate_bec_type (becp)
       !
-      ! Set up various quantities, in particular wfcU which 
+      ! Set up various quantities, in particular wfcU which
       ! contains Hubbard-U (ortho-)atomic wavefunctions (without ultrasoft S)
       CALL orthoUwfc2 (ik)
       !
@@ -167,22 +168,22 @@ SUBROUTINE stres_hub ( sigmah )
       xyz(:,:) = 0.d0
       DO i=1,3
          xyz(i,i) = 1.d0
-      ENDDO 
+      ENDDO
       ! The derivative of spherical Bessel functions (for atomic functions)
       CALL gen_at_dj (ik, at_dj)
       ! The derivative of spherical Bessel functions (for beta functions)
       IF (okvan) CALL gen_us_dj (ik, us_dj)
       !
-      ! NB: both ipol and jpol must run from 1 to 3 because this stress 
-      !     contribution is not in general symmetric when computed only 
-      !     from k-points in the irreducible wedge of the BZ. 
-      !     It is (must be) symmetric after symmetrization but this requires 
+      ! NB: both ipol and jpol must run from 1 to 3 because this stress
+      !     contribution is not in general symmetric when computed only
+      !     from k-points in the irreducible wedge of the BZ.
+      !     It is (must be) symmetric after symmetrization but this requires
       !     the full stress tensor not only its upper triangular part.
       !
       DO ipol = 1, 3
          !
          ! The derivative of spherical harmonics (for atomic functions)
-         CALL gen_at_dy (ik, xyz(1,ipol), at_dy) 
+         CALL gen_at_dy (ik, xyz(1,ipol), at_dy)
          ! The derivative of spherical harmonics (for beta functions)
          IF (okvan) CALL gen_us_dy (ik, xyz(1,ipol), us_dy)
          !
@@ -198,16 +199,16 @@ SUBROUTINE stres_hub ( sigmah )
                   CALL dndepsilon_gamma(ipol,jpol,ldim,proj%r,spsi,ik,nb_s,nb_e,mykey,1,dns)
                ELSE
                   CALL dndepsilon_k(ipol,jpol,ldim,proj%k,spsi,ik,nb_s,nb_e,mykey,1,dns)
-               ENDIF  
+               ENDIF
                !
-               DO na = 1, nat                 
+               DO na = 1, nat
                   nt = ityp(na)
                   IF ( is_hubbard(nt) ) THEN
                      DO is = 1, nspin
                         DO m2 = 1, 2 * Hubbard_l(nt) + 1
                            DO m1 = 1, 2 * Hubbard_l(nt) + 1
                               sigmah(ipol,jpol) = sigmah(ipol,jpol) - &
-                                 v%ns(m2,m1,is,na) * dns(m1,m2,is,na) 
+                                 v%ns(m2,m1,is,na) * dns(m1,m2,is,na)
                            ENDDO
                         ENDDO
                      ENDDO
@@ -226,7 +227,7 @@ SUBROUTINE stres_hub ( sigmah )
                      CALL dndepsilon_k(ipol,jpol,ldimb,proj%k,spsi,ik,nb_s,nb_e,mykey,2,dnsb)
                   ENDIF
                   !
-                  DO na = 1, nat                 
+                  DO na = 1, nat
                      nt = ityp(na)
                      IF ( is_hubbard_back(nt) ) THEN
                         DO is = 1, nspin
@@ -239,7 +240,7 @@ SUBROUTINE stres_hub ( sigmah )
                         ENDDO
                      ENDIF
                   ENDDO
-                  ! 
+                  !
                ENDIF
                !
             ELSEIF (lda_plus_u_kind.EQ.2) THEN
@@ -272,15 +273,15 @@ SUBROUTINE stres_hub ( sigmah )
                                   DO m2 = 1, ldim2
                                      i_type = type_interaction(na1, m1, equiv_na2, m2)
                                      sigmah(ipol,jpol) = sigmah(ipol,jpol) - &
-                                           DBLE(v_nsg(m2,m1,viz,na1,is) * dnsg(m2,m1,viz,na1,is)) 
-                                  ENDDO 
-                               ENDDO 
+                                           DBLE(v_nsg(m2,m1,viz,na1,is) * dnsg(m2,m1,viz,na1,is))
+                                  ENDDO
+                               ENDDO
                            ENDIF
                         ENDDO
                      ENDIF
                   ENDDO
-               ENDDO 
-               ! 
+               ENDDO
+               !
             ENDIF
             !
          ENDDO ! jpol
@@ -295,7 +296,7 @@ SUBROUTINE stres_hub ( sigmah )
    IF (nspin.EQ.1) sigmah(:,:) = 2.d0 * sigmah(:,:)
    !
    ! Symmetrization
-   ! 
+   !
    CALL symmatrix ( sigmah )
    !
    ! Impose symmetry s(i,j) = s(j,i) to the stress tensor.
@@ -359,7 +360,7 @@ SUBROUTINE dndepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,dns )
    !
    IMPLICIT NONE
    !
-   ! I/O variables 
+   ! I/O variables
    !
    INTEGER, INTENT(IN) :: ipol
    !! component index 1 to 3
@@ -379,9 +380,9 @@ SUBROUTINE dndepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,dns )
    !! ending band number (for band parallelization)
    INTEGER, INTENT(IN) :: mykey
    !! If each band appears more than once
-   !! compute its contribution only once (i.e. when mykey=0) 
+   !! compute its contribution only once (i.e. when mykey=0)
    INTEGER, INTENT(IN) :: lpuk
-   !! index to control the standard (lpuk=1) or 
+   !! index to control the standard (lpuk=1) or
    !! background (lpuk=2) contribution to the force
    REAL(DP), INTENT(OUT) :: dns(ldim,ldim,nspin,nat)
    !! the derivative of the ns atomic occupations
@@ -405,7 +406,7 @@ SUBROUTINE dndepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,dns )
    ! D_Sl for l=1 and l=2 are already initialized, for l=0 D_S0 is 1
    !
    ! Offset of atomic wavefunctions initialized in setup and stored in offsetU
-   ! 
+   !
    dns(:,:,:,:) = 0.d0
    !
    npw = ngk(ik)
@@ -423,7 +424,7 @@ SUBROUTINE dndepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,dns )
       !
       nt = ityp(na)
       !
-      IF ( is_hubbard(nt) .AND. lpuk.EQ.1 ) THEN        
+      IF ( is_hubbard(nt) .AND. lpuk.EQ.1 ) THEN
          DO m1 = 1, 2 * Hubbard_l(nt) + 1
             DO m2 = m1, 2 * Hubbard_l(nt) + 1
                DO ibnd = nb_s, nb_e
@@ -440,7 +441,7 @@ SUBROUTINE dndepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,dns )
       !
       ! The background part
       !
-      IF ( is_hubbard_back(nt) .AND. lpuk.EQ.2 ) THEN        
+      IF ( is_hubbard_back(nt) .AND. lpuk.EQ.2 ) THEN
          DO m1 = 1, ldim_back(nt)
             off1 = offsetU_back(na)
             m11 = m1
@@ -471,7 +472,7 @@ SUBROUTINE dndepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,dns )
    !
 10 CALL mp_sum(dns, intra_pool_comm)
    !
-   ! In nspin=1 k-point weight wg is normalized to 2 el/band 
+   ! In nspin=1 k-point weight wg is normalized to 2 el/band
    ! in the whole BZ but we are interested in dns of one spin component
    !
    IF (nspin.EQ.1) dns = 0.5d0 * dns
@@ -481,8 +482,8 @@ SUBROUTINE dndepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,dns )
    DO na = 1, nat
       nt = ityp(na)
       DO is = 1, nspin
-         DO m1 = 1, ldim 
-            DO m2 = m1+1, ldim 
+         DO m1 = 1, ldim
+            DO m2 = m1+1, ldim
                dns(m2,m1,is,na) = dns(m1,m2,is,na)
             ENDDO
          ENDDO
@@ -513,10 +514,10 @@ SUBROUTINE dndepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,d
    USE ldaU,              ONLY : nwfcU, offsetU, Hubbard_l, is_hubbard,  &
                                  ldim_back, offsetU_back, offsetU_back1, &
                                  is_hubbard_back, Hubbard_l_back, backall
- 
+
    IMPLICIT NONE
    !
-   ! I/O variables 
+   ! I/O variables
    !
    INTEGER, INTENT(IN) :: ipol
    !! component index 1 to 3
@@ -536,9 +537,9 @@ SUBROUTINE dndepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,d
    !! ending band number (for band parallelization)
    INTEGER, INTENT(IN) :: mykey
    !! If each band appears more than once
-   !! compute its contribution only once (i.e. when mykey=0) 
+   !! compute its contribution only once (i.e. when mykey=0)
    INTEGER, INTENT(IN) :: lpuk
-   !! index to control the standard (lpuk=1) or 
+   !! index to control the standard (lpuk=1) or
    !! background (lpuk=2) contribution to the force
    REAL(DP), INTENT(OUT) :: dns(ldim,ldim,nspin,nat)
    !! the derivative of the ns atomic occupations
@@ -553,13 +554,13 @@ SUBROUTINE dndepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,d
               m1, m2, m11, m22, & ! indices of magnetic quantum numbers
               off1, off2, off22   ! indices for the offsets
    TYPE (bec_type) :: dproj
-   ! 
+   !
    CALL allocate_bec_type ( nwfcU,nbnd, dproj )
    !
    ! D_Sl for l=1 and l=2 are already initialized, for l=0 D_S0 is 1
    !
    ! Offset of atomic wavefunctions initialized in setup and stored in offsetU
-  
+
    dns(:,:,:,:) = 0.d0
    !
    npw = ngk(ik)
@@ -577,7 +578,7 @@ SUBROUTINE dndepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,d
       !
       nt = ityp(na)
       !
-      IF ( is_hubbard(nt) .AND. lpuk.EQ.1 ) THEN        
+      IF ( is_hubbard(nt) .AND. lpuk.EQ.1 ) THEN
          DO m1 = 1, 2 * Hubbard_l(nt) + 1
             DO m2 = m1, 2 * Hubbard_l(nt) + 1
                DO ibnd = nb_s, nb_e
@@ -594,7 +595,7 @@ SUBROUTINE dndepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,d
       !
       ! The background part
       !
-      IF ( is_hubbard_back(nt) .AND. lpuk.EQ.2 ) THEN        
+      IF ( is_hubbard_back(nt) .AND. lpuk.EQ.2 ) THEN
          DO m1 = 1, ldim_back(nt)
             off1 = offsetU_back(na)
             m11 = m1
@@ -625,7 +626,7 @@ SUBROUTINE dndepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,d
    !
 10 CALL mp_sum(dns, intra_pool_comm)
    !
-   ! In nspin=1 k-point weight wg is normalized to 2 el/band 
+   ! In nspin=1 k-point weight wg is normalized to 2 el/band
    ! in the whole BZ but we are interested in dns of one spin component
    !
    IF (nspin.EQ.1) dns = 0.5d0 * dns
@@ -636,7 +637,7 @@ SUBROUTINE dndepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,lpuk,d
       nt = ityp(na)
       DO is = 1, nspin
          DO m1 = 1, ldim
-            DO m2 = m1+1, ldim 
+            DO m2 = m1+1, ldim
                dns(m2,m1,is,na) = dns(m1,m2,is,na)
             ENDDO
          ENDDO
@@ -653,7 +654,7 @@ END SUBROUTINE dndepsilon_gamma
 SUBROUTINE dngdepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg )
    !-----------------------------------------------------------------------
    !! This routine computes the derivative of the nsg atomic occupations with
-   !! respect to the strain epsilon(ipol,jpol) used to obtain the generalized 
+   !! respect to the strain epsilon(ipol,jpol) used to obtain the generalized
    !! Hubbard contribution to the internal stres tensor.
    !
    USE kinds,             ONLY : DP
@@ -668,10 +669,10 @@ SUBROUTINE dngdepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg )
                                  ldim_u, at_sc, neighood, max_num_neighbors,   &
                                  phase_fac, backall, offsetU, offsetU_back,    &
                                  offsetU_back1
-   
+
    IMPLICIT NONE
    !
-   ! I/O variables 
+   ! I/O variables
    !
    INTEGER, INTENT(IN) :: ipol
    !! component index 1 to 3
@@ -691,7 +692,7 @@ SUBROUTINE dngdepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg )
    !! ending band number (for band parallelization)
    INTEGER, INTENT(IN) :: mykey
    !! If each band appears more than once
-   !! compute its contribution only once (i.e. when mykey=0) 
+   !! compute its contribution only once (i.e. when mykey=0)
    COMPLEX (DP), INTENT (OUT) :: dnsg(ldim,ldim,max_num_neighbors,nat,nspin)
    !! the derivative of the nsg atomic occupations
    !
@@ -741,7 +742,7 @@ SUBROUTINE dngdepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg )
             eq_na2 = at_sc(na2)%at
             nt2 = ityp(eq_na2)
             ldim2 = ldim_u(nt2)
-            IF (na1.GT.na2) THEN 
+            IF (na1.GT.na2) THEN
                DO m1 = 1, ldim1
                   DO m2 = 1, ldim2
                      dnsg(m2,m1,viz,na1,current_spin) = &
@@ -759,7 +760,7 @@ SUBROUTINE dngdepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg )
                             2*(Hubbard_l(nt1)+Hubbard_l_back(nt1)+1)
                   DO m2 = 1, ldim2
                      off2 = offsetU(eq_na2) + m2
-                     IF (m2.GT.2*Hubbard_l(nt2)+1) & 
+                     IF (m2.GT.2*Hubbard_l(nt2)+1) &
                         off2 = offsetU_back(eq_na2)+ m2 - 2*Hubbard_l(nt2) - 1
                      IF (backall(nt2) .AND. &
                         m2.GT.2*(Hubbard_l(nt2)+Hubbard_l_back(nt2)+1) ) &
@@ -772,16 +773,16 @@ SUBROUTINE dngdepsilon_k ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg )
                             (proj(off1,ibnd) * CONJG(dproj%k(off2,ibnd))  + &
                              dproj%k(off1,ibnd) * CONJG(proj(off2,ibnd)) )
                      ENDDO
-                  ENDDO 
-               ENDDO  
-            ENDIF 
-         ENDDO           
-      ENDIF 
-   ENDDO 
+                  ENDDO
+               ENDDO
+            ENDIF
+         ENDDO
+      ENDIF
+   ENDDO
    !
 10 CALL mp_sum(dnsg, intra_pool_comm)
    !
-   ! In nspin=1 k-point weight wg is normalized to 2 el/band 
+   ! In nspin=1 k-point weight wg is normalized to 2 el/band
    ! in the whole BZ but we are interested in dnsg of one spin component
    !
    IF (nspin.EQ.1) dnsg = 0.5d0 * dnsg
@@ -796,7 +797,7 @@ END SUBROUTINE dngdepsilon_k
 SUBROUTINE dngdepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg )
    !-----------------------------------------------------------------------
    !! This routine computes the derivative of the nsg atomic occupations with
-   !! respect to the strain epsilon(ipol,jpol) used to obtain the generalized 
+   !! respect to the strain epsilon(ipol,jpol) used to obtain the generalized
    !! Hubbard contribution to the internal stres tensor.
    !
    USE kinds,             ONLY : DP
@@ -814,7 +815,7 @@ SUBROUTINE dngdepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg 
 
    IMPLICIT NONE
    !
-   ! I/O variables 
+   ! I/O variables
    !
    INTEGER, INTENT(IN) :: ipol
    !! component index 1 to 3
@@ -834,7 +835,7 @@ SUBROUTINE dngdepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg 
    !! ending band number (for band parallelization)
    INTEGER, INTENT(IN) :: mykey
    !! If each band appears more than once
-   !! compute its contribution only once (i.e. when mykey=0) 
+   !! compute its contribution only once (i.e. when mykey=0)
    COMPLEX (DP), INTENT (OUT) :: dnsg(ldim,ldim,max_num_neighbors,nat,nspin)
    !! the derivative of the nsg atomic occupations
    !
@@ -884,7 +885,7 @@ SUBROUTINE dngdepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg 
             eq_na2 = at_sc(na2)%at
             nt2 = ityp(eq_na2)
             ldim2 = ldim_u(nt2)
-            IF (na1.GT.na2) THEN 
+            IF (na1.GT.na2) THEN
                DO m1 = 1, ldim1
                   DO m2 = 1, ldim2
                      dnsg(m2,m1,viz,na1,current_spin) = &
@@ -902,7 +903,7 @@ SUBROUTINE dngdepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg 
                             2*(Hubbard_l(nt1)+Hubbard_l_back(nt1)+1)
                   DO m2 = 1, ldim2
                      off2 = offsetU(eq_na2) + m2
-                     IF (m2.GT.2*Hubbard_l(nt2)+1) & 
+                     IF (m2.GT.2*Hubbard_l(nt2)+1) &
                         off2 = offsetU_back(eq_na2) + m2 - 2*Hubbard_l(nt2) - 1
                      IF (backall(nt2) .AND. &
                         m2.GT.2*(Hubbard_l(nt2)+Hubbard_l_back(nt2)+1) ) &
@@ -915,16 +916,16 @@ SUBROUTINE dngdepsilon_gamma ( ipol,jpol,ldim,proj,spsi,ik,nb_s,nb_e,mykey,dnsg 
                             (proj(off1,ibnd) * dproj%r(off2,ibnd) +     &
                              dproj%r(off1,ibnd) * proj(off2,ibnd) ) )
                      ENDDO
-                  ENDDO 
-               ENDDO  
-            ENDIF 
-         ENDDO           
-      ENDIF 
-   ENDDO 
+                  ENDDO
+               ENDDO
+            ENDIF
+         ENDDO
+      ENDIF
+   ENDDO
    !
 10 CALL mp_sum(dnsg, intra_pool_comm)
    !
-   ! In nspin=1 k-point weight wg is normalized to 2 el/band 
+   ! In nspin=1 k-point weight wg is normalized to 2 el/band
    ! in the whole BZ but we are interested in dnsg of one spin component
    !
    IF (nspin.EQ.1) dnsg = 0.5d0 * dnsg
@@ -969,7 +970,7 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
    !
    IMPLICIT NONE
    !
-   ! I/O variables 
+   ! I/O variables
    !
    COMPLEX(DP), INTENT(IN)  :: spsi(npwx,nbnd)
    !! S|evc>
@@ -984,8 +985,8 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
    INTEGER, INTENT(IN) :: nb_e
    !! band number end
    INTEGER, INTENT(IN) :: mykey
-   !! labels how many times each band appears (mykey=0 first time etc.)  
-   COMPLEX(DP), INTENT(OUT) :: dproj(nwfcU,nbnd)     
+   !! labels how many times each band appears (mykey=0 first time etc.)
+   COMPLEX(DP), INTENT(OUT) :: dproj(nwfcU,nbnd)
    !! the derivative of the projection
    !
    ! ... local variables
@@ -998,16 +999,16 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
    dproj0(:,:),       & ! derivative of the projector
    dproj_us(:,:),     & ! USPP contribution to dproj0
    dwfc(:,:),         & ! the derivative of the (ortho-atomic) wavefunction
-   doverlap(:,:),     & ! derivative of the overlap matrix  
+   doverlap(:,:),     & ! derivative of the overlap matrix
    doverlap_us(:,:),  & ! USPP contribution to doverlap
-   doverlap_inv(:,:)    ! derivative of (O^{-1/2})_JI (note the transposition)   
+   doverlap_inv(:,:)    ! derivative of (O^{-1/2})_JI (note the transposition)
    REAL (DP), ALLOCATABLE :: &
    gk(:,:), & ! k+G
    qm1(:)     ! 1/|k+G|
    !
    CALL using_evc(0)
    CALL start_clock('dprojdepsilon')
-   ! 
+   !
    ! Number of plane waves at the k point with the index ik
    npw = ngk(ik)
    !
@@ -1090,7 +1091,7 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
       doverlap_inv(:,:) = (0.0d0, 0.0d0)
       !
       ! Calculate:
-      ! doverlap = < dphi_I/d\epsilon(ipol,jpol) | S | phi_J > 
+      ! doverlap = < dphi_I/d\epsilon(ipol,jpol) | S | phi_J >
       !            + < phi_I | S | dphi_J/d\epsilon(ipol,jpol) >
       !
       DO ig = 1, npw
@@ -1136,15 +1137,15 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
       !
       ! Now compute dO^{-1/2}_JI/d\epsilon(ipol,jpol) using dO_IJ/d\epsilon(ipol,jpol)
       ! Note the transposition!
-      ! 
+      !
       CALL calculate_doverlap_inv (natomwfc, eigenval, eigenvect, &
                                      doverlap, doverlap_inv)
       !
       ! Now compute \sum_J dO^{-1/2}_JI/d\epsilon(ipol,jpol) \phi_J
       ! and add it to another term (see above).
-      ! Note, doverlap_inv is d(O^{-1/2}) not transposed. The transposition 
+      ! Note, doverlap_inv is d(O^{-1/2}) not transposed. The transposition
       ! of d(O^{-1/2}) is taken into account via a proper usage of the order
-      ! of indices in doverlap_inv: 
+      ! of indices in doverlap_inv:
       ! dwfc(ig,offpmU+m1) = dwfc(ig,offpmU+m1) + wfcatom(ig,m2) * doverlap_inv(m2,offpm+m1)
       ! where m1=1,ldim_u(nt); m2=1,natomwfc; ig=1,npw
       !
@@ -1290,7 +1291,7 @@ SUBROUTINE matrix_element_of_dSdepsilon (ik, ipol, jpol, lA, A, lB, B, A_dS_B, l
                ENDDO
             ENDDO
             !
-            ! Calculate dbetaB = <dbeta|B> 
+            ! Calculate dbetaB = <dbeta|B>
             CALL calbec(npw, aux, B, dbetaB )
             !
             ! Calculate Adbeta = <A|dbeta>
@@ -1312,7 +1313,7 @@ SUBROUTINE matrix_element_of_dSdepsilon (ik, ipol, jpol, lA, A, lB, B, A_dS_B, l
             DEALLOCATE ( aux )
             !
             ALLOCATE ( aux(nh(nt), lB) )
-            ! 
+            !
             ! Calculate \sum_jh qq(ih,jh) * dbetaB(jh)
             CALL ZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt), (1.0d0,0.0d0), &
                        qq, nh(nt), dbetaB(1,lB_s),    nh(nt), (0.0d0,0.0d0), &
@@ -1330,7 +1331,7 @@ SUBROUTINE matrix_element_of_dSdepsilon (ik, ipol, jpol, lA, A, lB, B, A_dS_B, l
             ijkb0 = ijkb0 + nh(nt)
             !
             ! A_dS_B(iA,iB) = \sum_ih [Adbeta(iA,ih) * betapsi(ih,iB) +
-            !                          Abeta(iA,ih)  * dbetaB(ih,iB)] 
+            !                          Abeta(iA,ih)  * dbetaB(ih,iB)]
             ! Only A_dS_B(:,lB_s:lB_e) are calculated
             !
             IF ( mykey == 0 ) THEN
@@ -1347,7 +1348,7 @@ SUBROUTINE matrix_element_of_dSdepsilon (ik, ipol, jpol, lA, A, lB, B, A_dS_B, l
       ENDDO
       !
       DEALLOCATE (dbetaB, betaB, Abeta, Adbeta, qq)
-      ! 
+      !
    ENDDO
    !
    DEALLOCATE ( qm1, gk )
@@ -1561,7 +1562,7 @@ SUBROUTINE dprojdepsilon_gamma ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj 
             ijkb0 = ijkb0 + nh(nt)
             !
             ! dproj(iwf,ibnd) = \sum_ih wfatdbeta(iwf,ih)*betapsi(ih,ibnd) +
-            !                           wfatbeta(iwf,ih)*dbetapsi(ih,ibnd) 
+            !                           wfatbeta(iwf,ih)*dbetapsi(ih,ibnd)
             !
             IF ( mykey == 0 .AND. nh(nt) > 0 ) THEN
                CALL DGEMM('N','N',nwfcU, nb_e-nb_s+1, nh(nt), 1.0_dp,  &
@@ -1576,7 +1577,7 @@ SUBROUTINE dprojdepsilon_gamma ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj 
       ENDDO
       DEALLOCATE (dbeta, dbetapsi, betapsi, wfatbeta, wfatdbeta, betapsi0)
     ENDDO
-    ! 
+    !
    ENDIF
    !
    DEALLOCATE ( qm1, gk )

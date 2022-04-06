@@ -82,7 +82,7 @@ subroutine force_corr_gpu (forcescc)
   !
   tau_d(1:3,1:nat)=tau(1:3,1:nat)
   !
-  CALL fwfft ('Rho', psic_d, dfftp)
+  CALL fwfft (1, psic_d, dfftp)
   if (gamma_only) then
      fact = 2.d0
   else

@@ -60,17 +60,17 @@ MODULE paw_init
     !
     IF (ALLOCATED(rad)) THEN
        !
-       DO nt = 1,ntyp  
-          IF (ASSOCIATED(rad(nt)%ww))       DEALLOCATE( rad(nt)%ww  )  
-          IF (ASSOCIATED(rad(nt)%ylm))      DEALLOCATE( rad(nt)%ylm )  
-          IF (ASSOCIATED(rad(nt)%wwylm))    DEALLOCATE( rad(nt)%wwylm )  
-          IF (ASSOCIATED(rad(nt)%dylmt))    DEALLOCATE( rad(nt)%dylmt )  
-          IF (ASSOCIATED(rad(nt)%dylmp))    DEALLOCATE( rad(nt)%dylmp )  
-          IF (ASSOCIATED(rad(nt)%cotg_th))  DEALLOCATE( rad(nt)%cotg_th )  
-          IF (ASSOCIATED(rad(nt)%cos_phi))  DEALLOCATE( rad(nt)%cos_phi )  
-          IF (ASSOCIATED(rad(nt)%sin_phi))  DEALLOCATE( rad(nt)%sin_phi )  
-          IF (ASSOCIATED(rad(nt)%cos_th))   DEALLOCATE( rad(nt)%cos_th )  
-          IF (ASSOCIATED(rad(nt)%sin_th))   DEALLOCATE( rad(nt)%sin_th )  
+       DO nt = 1,ntyp
+          IF (ASSOCIATED(rad(nt)%ww))       DEALLOCATE( rad(nt)%ww  )
+          IF (ASSOCIATED(rad(nt)%ylm))      DEALLOCATE( rad(nt)%ylm )
+          IF (ASSOCIATED(rad(nt)%wwylm))    DEALLOCATE( rad(nt)%wwylm )
+          IF (ASSOCIATED(rad(nt)%dylmt))    DEALLOCATE( rad(nt)%dylmt )
+          IF (ASSOCIATED(rad(nt)%dylmp))    DEALLOCATE( rad(nt)%dylmp )
+          IF (ASSOCIATED(rad(nt)%cotg_th))  DEALLOCATE( rad(nt)%cotg_th )
+          IF (ASSOCIATED(rad(nt)%cos_phi))  DEALLOCATE( rad(nt)%cos_phi )
+          IF (ASSOCIATED(rad(nt)%sin_phi))  DEALLOCATE( rad(nt)%sin_phi )
+          IF (ASSOCIATED(rad(nt)%cos_th))   DEALLOCATE( rad(nt)%cos_th )
+          IF (ASSOCIATED(rad(nt)%sin_th))   DEALLOCATE( rad(nt)%sin_th )
        ENDDO
        !
        DEALLOCATE( rad )
@@ -91,7 +91,7 @@ MODULE paw_init
   !---------------------------------------------------------------------------------
   SUBROUTINE PAW_post_init()
     !--------------------------------------------------------------------------------
-    !! Deallocate variables that are used only at init and then no more necessary. 
+    !! Deallocate variables that are used only at init and then no more necessary.
     !! This is only useful in parallel, as each node only does a limited number of atoms.
     !
     ! this routine does nothing at the moment...
@@ -103,6 +103,7 @@ MODULE paw_init
     USE io_global,          ONLY : stdout, ionode
     USE control_flags,      ONLY : iverbosity
     USE xc_lib,             ONLY : xclib_dft_is
+    USE distools,           ONLY : block_distribute
     !
     INTEGER :: nt, np, ia, ia_s, ia_e, mykey, nnodes
     INTEGER :: info(0:nproc_image-1,ntyp)
@@ -148,7 +149,7 @@ MODULE paw_init
         ENDDO
 #else
         DO nt = 1,ntyp
-          nnodes = SUM( info(:,nt) ) 
+          nnodes = SUM( info(:,nt) )
           IF ( nnodes>0 ) WRITE(stdout,'(7x,"PAW data deallocated on ",&
                   &                     i4," nodes for type:",i3)')   &
                   &         nnodes,nt
@@ -162,7 +163,7 @@ MODULE paw_init
   !-----------------------------------------------------------------------------
   SUBROUTINE PAW_atomic_becsum()
     !--------------------------------------------------------------------------
-    !! Initialize becsum with atomic occupations (for PAW atoms only).  
+    !! Initialize becsum with atomic occupations (for PAW atoms only).
     !! NOTE: requires exact correspondence chi <--> beta in the atom,
     !! that is that all wavefunctions considered for PAW generation are
     !! counted in chi (otherwise the array "oc" does not correspond to beta).
@@ -259,7 +260,7 @@ MODULE paw_init
   !-------------------------------------------------------------------
   SUBROUTINE PAW_init_onecenter()
     !-----------------------------------------------------------------
-    !! This allocates space to store onecenter potential and 
+    !! This allocates space to store onecenter potential and
     !! calls PAW_rad_init to initialize onecenter integration.
     !
     USE ions_base,          ONLY : nat, ityp, ntyp => nsp
@@ -274,6 +275,7 @@ MODULE paw_init
     USE xc_lib,             ONLY : xclib_dft_is
     USE mp_images,          ONLY : me_image, nproc_image
     USE mp,                 ONLY : mp_sum
+    USE distools,           ONLY : block_distribute
     !
     ! ... local variables
     !
@@ -335,7 +337,7 @@ MODULE paw_init
                lmax_safe = 0
                lmax_add  = 0
             ELSE
-                ! 
+                !
                 IF ( xclib_dft_is('gradient') ) THEN
                    ! Integrate up to a higher maximum lm if using gradient
                    ! correction check expression for d(y_lm)/d\theta for details
@@ -344,7 +346,7 @@ MODULE paw_init
                 ELSE
                    ! no gradient correction:
                    lmax_safe = lm_fact*upf(nt)%lmax_rho
-                   lmax_add  = 0 
+                   lmax_add  = 0
                 ENDIF
             ENDIF
             !
@@ -374,6 +376,7 @@ MODULE paw_init
     USE paw_variables,      ONLY : rad, paw_is_init
     USE mp_images,          ONLY : me_image, nproc_image, intra_image_comm
     USE io_global,          ONLY : stdout, ionode
+    USE distools,           ONLY : block_distribute
     !
     INTEGER, INTENT(IN) :: incr
     !! required increase in lm precision
@@ -435,7 +438,7 @@ MODULE paw_init
   !----------------------------------------------------------------------------------
   SUBROUTINE PAW_rad_init( l, ls, rad )
     !--------------------------------------------------------------------------------
-    !! Initialize several quantities related to radial integration: spherical harmonics and their 
+    !! Initialize several quantities related to radial integration: spherical harmonics and their
     !! gradients along a few (depending on lmaxq) directions, weights for spherical integration.
     !
     ! IMPORTANT: routine PW/summary.f90 has the initialization parameters hardcoded in it
@@ -521,7 +524,7 @@ MODULE paw_init
     !
     ALLOCATE( rad%ylm(rad%nx,rad%lm_max) )
     CALL ylmr2( rad%lm_max, rad%nx, r, r2, rad%ylm )
-    ! As I will mostly use the product ww*ylm I can 
+    ! As I will mostly use the product ww*ylm I can
     ! precompute it here:
     ALLOCATE( rad%wwylm(rad%nx,rad%lm_max) )
     !
@@ -631,7 +634,7 @@ MODULE paw_init
       !
     END SUBROUTINE gauss_weights
     !
-  END SUBROUTINE PAW_rad_init 
+  END SUBROUTINE PAW_rad_init
   !
   !
 END MODULE paw_init

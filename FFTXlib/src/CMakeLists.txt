@@ -32,6 +32,19 @@ if(QE_ENABLE_CUDA)
 endif()
 qe_enable_cuda_fortran("${f_src_fftx}")
 
+if(QE_ENABLE_OPENMP_OFFLOAD)
+    set(f_src_fftx
+        ${f_src_fftx}
+	onemkl_dfti_omp_offload.f90
+        fft_buffers.f90
+        fft_scatter_gpu.f90
+        fft_scatter_2d_gpu.f90)
+elseif(QE_FFTW_VENDOR STREQUAL "Intel_DFTI")
+    set(f_src_fftx
+        ${f_src_fftx}
+	onemkl_dfti.f90)
+endif()
+
 set(c_src_fftx
     fft_stick.c
     fftw.c

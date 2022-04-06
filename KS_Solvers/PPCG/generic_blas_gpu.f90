@@ -1,77 +1,8 @@
-#if defined(__OPENMP_GPU)
-subroutine gpu_DGEMM (transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-  use onemkl_blas_gpu
-  implicit none
-  character*1 transa, transb
-  integer :: m, n, k, lda, ldb, ldc
-  DOUBLE PRECISION :: alpha, beta
-  DOUBLE PRECISION, dimension(lda, *)  :: A
-  DOUBLE PRECISION, dimension(ldb, *)  :: B
-  DOUBLE PRECISION, dimension(ldc, *)  :: C
-  !$omp target variant dispatch use_device_ptr(A,B,C)
-  call DGEMM(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-  !$omp end target variant dispatch
-  return
-end subroutine gpu_DGEMM
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine gpu_ZGEMM (transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-  use onemkl_blas_gpu
-  implicit none
-  character*1 transa, transb
-  integer :: m, n, k, lda, ldb, ldc
-  DOUBLE COMPLEX :: alpha, beta
-  DOUBLE COMPLEX, dimension(lda, *)  :: A
-  DOUBLE COMPLEX, dimension(ldb, *)  :: B
-  DOUBLE COMPLEX, dimension(ldc, *)  :: C
-  !$omp target variant dispatch use_device_ptr(A,B,C)
-  call ZGEMM(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-  !$omp end target variant dispatch
-  return
-end subroutine gpu_ZGEMM
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine gpu_DGER (m, n, alpha, x, incx, y, incy, a, lda)
-  use onemkl_blas_gpu
-  implicit none
-  integer :: m, n, lda, incx, incy
-  DOUBLE PRECISION :: alpha
-  DOUBLE PRECISION, dimension(lda, *)  :: A
-  DOUBLE PRECISION, dimension(*)  :: x, y
-  !$omp target variant dispatch use_device_ptr(A,x,y)
-  call DGER(m, n, alpha, x, incx, y, incy, a, lda)
-  !$omp end target variant dispatch
-  return
-end subroutine gpu_DGER
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function gpu_DDOT (n, dx, incx, dy, incy)
-  use onemkl_blas_gpu
-  implicit none
-  DOUBLE PRECISION :: gpu_DDOT
-  integer :: n, incx, incy
-  DOUBLE PRECISION, dimension(*)  :: dx, dy
-  !$omp target variant dispatch use_device_ptr(dx,dy)
-  gpu_DDOT=DDOT(n, dx, incx, dy, incy)
-  !$omp end target variant dispatch
-  return
-end function gpu_DDOT
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine gpu_DTRSM(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
-  use onemkl_blas_gpu
-  implicit none
-  character*1 :: side, uplo, transa, diag
-  integer :: m, n, lda, ldb
-  DOUBLE PRECISION :: alpha
-  DOUBLE PRECISION, dimension(lda, *) :: a
-  DOUBLE PRECISION, dimension(ldb, *) :: b
-  !$omp target variant dispatch use_device_ptr(a,b)
-  call DTRSM(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
-  !$omp end target variant dispatch
-  return
-end subroutine gpu_DTRSM
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#else
 subroutine gpu_DGEMM (transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 implicit none
   character*1 transa, transb
@@ -83,6 +14,10 @@ implicit none
 #if defined(__CUDA)
   attributes(device) :: A, B, C
   call cublasDGEMM(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(A,B,C)
+  call DGEMM(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+  !$omp end target variant dispatch
 #endif
   return
 end subroutine gpu_DGEMM
@@ -90,6 +25,8 @@ end subroutine gpu_DGEMM
 subroutine gpu_ZGEMM (transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 implicit none
   character*1 transa, transb
@@ -101,6 +38,10 @@ implicit none
 #if defined(__CUDA)
   attributes(device) :: A, B, C
   call cublasZGEMM(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(A,B,C)
+  call ZGEMM(transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+  !$omp end target variant dispatch
 #endif
   return
 end subroutine gpu_ZGEMM
@@ -108,6 +49,8 @@ end subroutine gpu_ZGEMM
 subroutine gpu_DGER (m, n, alpha, x, incx, y, incy, a, lda)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 implicit none
   integer :: m, n, lda, incx, incy
@@ -117,6 +60,10 @@ implicit none
 #if defined(__CUDA)
   attributes(device) :: A, x, y
   call cublasDGER(m, n, alpha, x, incx, y, incy, a, lda)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(A,x,y)
+  call DGER(m, n, alpha, x, incx, y, incy, a, lda)
+  !$omp end target variant dispatch
 #endif
   return
 end subroutine gpu_DGER
@@ -124,6 +71,8 @@ end subroutine gpu_DGER
 function gpu_DDOT (n, dx, incx, dy, incy)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 implicit none
   DOUBLE PRECISION :: gpu_DDOT
@@ -132,6 +81,10 @@ implicit none
 #if defined(__CUDA)
   attributes(device) :: dx, dy
   gpu_DDOT=cublasDDOT(n, dx, incx, dy, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(dx,dy)
+  gpu_DDOT=DDOT(n, dx, incx, dy, incy)
+  !$omp end target variant dispatch
 #endif
   return
 end function gpu_DDOT
@@ -139,6 +92,8 @@ end function gpu_DDOT
 subroutine gpu_DTRSM(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 implicit none
   character*1 :: side, uplo, transa, diag
@@ -149,6 +104,10 @@ implicit none
 #if defined(__CUDA)
   attributes(device) :: a, b
   call cublasDTRSM(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(a,b)
+  call DTRSM(side, uplo, transa, diag, m, n, alpha, a, lda, b, ldb)
+  !$omp end target variant dispatch
 #endif
   return
 end subroutine gpu_DTRSM
@@ -156,6 +115,8 @@ end subroutine gpu_DTRSM
 DOUBLE COMPLEX function ZDOTC_gpu(n, zx, incx, zy, incy)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 implicit none
   integer :: n, incx, incy
@@ -163,6 +124,10 @@ implicit none
 #if defined(__CUDA)
   attributes(device) :: zx, zy
   ZDOTC_gpu = cublasZDOTC(n, zx, incx, zy, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(zx,zy)
+  ZDOTC_gpu = ZDOTC(n, zx, incx, zy, incy)
+  !$omp end target variant dispatch
 #endif
   return
 end function ZDOTC_gpu
@@ -170,6 +135,8 @@ end function ZDOTC_gpu
 SUBROUTINE ZSWAP_gpu(n, zx, incx, zy, incy)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 implicit none
   integer :: n, incx, incy
@@ -177,6 +144,10 @@ implicit none
 #if defined(__CUDA)
   attributes(device) :: zx, zy
   CALL cublasZSWAP(n, zx, incx, zy, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(zx,zy)
+  CALL ZSWAP(n, zx, incx, zy, incy)
+  !$omp end target variant dispatch
 #endif
   return
 END SUBROUTINE ZSWAP_gpu
@@ -184,6 +155,8 @@ END SUBROUTINE ZSWAP_gpu
 SUBROUTINE ZCOPY_gpu(n, zx, incx, zy, incy)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   INTEGER :: n, incx, incy
@@ -191,6 +164,10 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: zx, zy
   CALL cublasZCOPY(n, zx, incx, zy, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(zx,zy)
+  CALL ZCOPY(n, zx, incx, zy, incy)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE ZCOPY_gpu
@@ -198,6 +175,8 @@ END SUBROUTINE ZCOPY_gpu
 SUBROUTINE ZAXPY_gpu(n, za, zx, incx, zy, incy)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   INTEGER :: n, incx, incy
@@ -206,6 +185,10 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: zx, zy
   CALL cublasZAXPY(n, za, zx, incx, zy, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(zx,zy)
+  CALL ZAXPY(n, za, zx, incx, zy, incy)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE ZAXPY_gpu
@@ -213,6 +196,8 @@ END SUBROUTINE ZAXPY_gpu
 SUBROUTINE ZGEMV_gpu(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   CHARACTER :: trans
@@ -223,6 +208,10 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: a, x, y
   CALL cublasZGEMV(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(a,x,y)
+  CALL ZGEMV(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE ZGEMV_gpu
@@ -230,6 +219,8 @@ END SUBROUTINE ZGEMV_gpu
 SUBROUTINE ZDSCAL_gpu(n, da, zx, incx)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   INTEGER :: n, incx
@@ -238,6 +229,10 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: zx
   CALL cublasZDSCAL(n, da, zx, incx)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(zx)
+  CALL ZDSCAL(n, da, zx, incx)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE ZDSCAL_gpu
@@ -245,6 +240,8 @@ END SUBROUTINE ZDSCAL_gpu
 SUBROUTINE ZSCAL_gpu(n, za, zx, incx)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   INTEGER :: n, incx
@@ -253,6 +250,10 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: zx
   CALL cublasZSCAL(n, za, zx, incx)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(zx)
+  CALL ZSCAL(n, za, zx, incx)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE ZSCAL_gpu
@@ -260,6 +261,8 @@ END SUBROUTINE ZSCAL_gpu
 SUBROUTINE DGEMV_gpu(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
 #if defined(__CUDA)
 use cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   DOUBLE PRECISION :: ALPHA,BETA
@@ -269,13 +272,39 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: A, X, Y
   call cublasDGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(a,x,y)
+  call DGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE DGEMV_gpu
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+SUBROUTINE DSWAP_gpu(n, zx, incx, zy, incy)
+#if defined(__CUDA)
+USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
+#endif
+implicit none
+  integer :: n, incx, incy
+  DOUBLE PRECISION, dimension(*) :: zx, zy
+#if defined(__CUDA)
+  attributes(device) :: zx, zy
+  CALL cublasDSWAP(n, zx, incx, zy, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(zx,zy)
+  CALL DSWAP(n, zx, incx, zy, incy)
+  !$omp end target variant dispatch
+#endif
+  return
+END SUBROUTINE DSWAP_gpu
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE DCOPY_gpu(n, x, incx, y, incy)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   INTEGER :: n, incx, incy
@@ -284,6 +313,10 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: x, y
   call cublasDCOPY(n, x, incx, y, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(x,y)
+  call DCOPY(n, x, incx, y, incy)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE DCOPY_gpu
@@ -291,6 +324,8 @@ END SUBROUTINE DCOPY_gpu
 SUBROUTINE DAXPY_gpu(n, a, x, incx, y, incy)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   INTEGER :: n, incx, incy
@@ -300,6 +335,10 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: x, y
   call cublasDAXPY( n, a, x, incx, y, incy)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(x,y)
+  call DAXPY( n, a, x, incx, y, incy)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE DAXPY_gpu
@@ -307,6 +346,8 @@ END SUBROUTINE DAXPY_gpu
 SUBROUTINE DSCAL_gpu(n, a, x, incx)
 #if defined(__CUDA)
 USE cublas
+#elif defined(__OPENMP_GPU)
+use onemkl_blas_omp_offload
 #endif
 IMPLICIT NONE
   integer :: n, incx
@@ -315,10 +356,14 @@ IMPLICIT NONE
 #if defined(__CUDA)
   attributes(device) :: x
   call cublasDSCAL(n, a, x, incx)
+#elif defined(__OPENMP_GPU)
+  !$omp target variant dispatch use_device_ptr(x)
+  call DSCAL(n, a, x, incx)
+  !$omp end target variant dispatch
 #endif
   RETURN
 END SUBROUTINE DSCAL_gpu
-#endif
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE gpu_threaded_memset(array, val, length)
   !
 #if defined(__CUDA)

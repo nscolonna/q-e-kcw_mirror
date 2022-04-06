@@ -57,7 +57,7 @@ SUBROUTINE external_wg_corr_force( rhor, force )
   !
   allocate(auxr(dfftp%nnr))
   auxr = cmplx(rhor,0.0_dp)
-  call fwfft ("Rho", auxr, dfftp)
+  call fwfft (1, auxr, dfftp)
   !
   allocate(auxg(ngm))
   auxg = cmplx(0.0_dp,0.0_dp)

@@ -11,9 +11,9 @@ MODULE loc_scdm_k
   !! Variables and subroutines for localizing molecular orbitals based
   !! on a modified SCDM approach. Original SCDM method:
   !
-  !! A. Damle, L. Lin, L. Ying: J. Comput. Phys., 334 (2017) 1-5 
+  !! A. Damle, L. Lin, L. Ying: J. Comput. Phys., 334 (2017) 1-5
   !
-  !! Ivan Carnimeo: SCDM has been implemented with a parallel prescreening algorithm 
+  !! Ivan Carnimeo: SCDM has been implemented with a parallel prescreening algorithm
   !! in order to save CPU time and memory for large grids.
   !
   USE kinds,                ONLY : DP
@@ -35,13 +35,13 @@ SUBROUTINE localize_orbitals_k( )
   !----------------------------------------------------------------------
   !! Driver for SCDM_k orbital localization:
   !
-  !! * \(\texttt{SCDM_PGG_k}\): performs SCDM localization using the 
+  !! * \(\texttt{SCDM_PGG_k}\): performs SCDM localization using the
   !!                            parallel prescreening algorithm;
   !! * \(\texttt{measure_localization_k}\): computes the absolute overlap
   !!                     integrals required by \(\texttt{vexx_loc_k in}\)
   !!                     exx.f90 and puts them in \(\texttt{exxmat}\).
   !
-  !! NOTE: \(\texttt{localize_orbitals_k}\) does not have iscdm/nscdm because 
+  !! NOTE: \(\texttt{localize_orbitals_k}\) does not have iscdm/nscdm because
   !! alignment is not implemented for K-Points.
   !
   USE noncollin_module,     ONLY : npol
@@ -50,12 +50,12 @@ SUBROUTINE localize_orbitals_k( )
   USE wvfct,                ONLY : nbnd
   USE mp_bands,             ONLY : me_bgrp
   USE control_flags,        ONLY : lmd
-  !   
+  !
   IMPLICIT NONE
   !
   INTEGER :: NGrid, ikq, jk, k, NBands, nnk
   CHARACTER(LEN=1) :: HowTo
-  REAL(DP) :: Tot1, Tot2, Ave1, tot, ave 
+  REAL(DP) :: Tot1, Tot2, Ave1, tot, ave
   !
   IF ( n_scdm /= 1 ) CALL errore( 'localize_orbitals_k','nscdm for K-points NYI.', 1 )
   IF ( lmd ) CALL errore( 'localize_orbitals_k', 'localization with K-points not tested.', 1 )
@@ -64,18 +64,18 @@ SUBROUTINE localize_orbitals_k( )
   HowTo = 'G'  ! How to compute the absolute overlap integrals (only G for k)
   !
   exxmat = One ! initialized to one because the absolute overlaps between
-  !              occupied and virtual orbitals are assumed always large 
+  !              occupied and virtual orbitals are assumed always large
   !              and all ov integrals will be computed by vexx_loc_k.
   !
-  NBands = INT(SUM(x_occupation(:,1))) 
+  NBands = INT(SUM(x_occupation(:,1)))
   !
   WRITE (stdout,*) ' '
   WRITE (stdout,*) 'NBands = ', NBands, ' nks = ', nks, ' nkqs = ', nkqs
   WRITE (stdout,'(5X,A)') 'Canonical Orbitals '
   !
-  Tot1 = Zero 
-  Ave1 = Zero 
-  Tot2 = Zero 
+  Tot1 = Zero
+  Ave1 = Zero
+  Tot2 = Zero
   nnk = 0
   !
   DO ikq = 1, nkqs
@@ -98,26 +98,26 @@ SUBROUTINE localize_orbitals_k( )
   ENDDO
   !
   Ave1 = Ave1/DBLE(nkqs)
-  WRITE (stdout,'(7X,A,f24.6)') 'Total AbsOv          =', Tot2 
+  WRITE (stdout,'(7X,A,f24.6)') 'Total AbsOv          =', Tot2
   WRITE (stdout,'(7X,A,f24.6)') 'Aver. AbsOv          =', Tot2/DBLE(nnk)
-  WRITE (stdout,'(7X,A,f24.6)') 'Total Spread [A**2]  =', Tot1 
-  WRITE (stdout,'(7X,A,f24.6)') 'Aver. Spread [A**2]  =', Ave1 
+  WRITE (stdout,'(7X,A,f24.6)') 'Total Spread [A**2]  =', Tot1
+  WRITE (stdout,'(7X,A,f24.6)') 'Aver. Spread [A**2]  =', Ave1
   !
   ! IF (me_bgrp == 0) THEN
   !   CALL AbsOv_histogram_k( NBands, 'hist1.dat' )
-  ! ENDIF 
+  ! ENDIF
   !
   WRITE (stdout,'(5X,A)') 'SCDM-PGG_k localization'
   DO ikq = 1, nkqs
      CALL SCDM_PGG_k( NGrid, NBands, ikq )
-  ENDDO 
-  WRITE (stdout,'(7X,A)') 'SCDM-PGG_k done ' 
+  ENDDO
+  WRITE (stdout,'(7X,A)') 'SCDM-PGG_k done '
   !
   WRITE (stdout,'(5X,A)') 'Localized Orbitals '
   !
-  Tot1 = Zero 
-  Ave1 = Zero 
-  Tot2 = Zero 
+  Tot1 = Zero
+  Ave1 = Zero
+  Tot2 = Zero
   nnk = 0
   !
   DO ikq = 1, nkqs
@@ -135,9 +135,9 @@ SUBROUTINE localize_orbitals_k( )
        !
        Tot2 = Tot2 + tot
        !
-    ENDDO 
+    ENDDO
     !
-  ENDDO 
+  ENDDO
   !
   Ave1 = Ave1 / DBLE(nkqs)
   WRITE (stdout,'(7X,A,f24.6)') 'Total AbsOv         =', Tot2
@@ -161,7 +161,7 @@ SUBROUTINE measure_localization_k( NBands, IK, TotSpread, AveSpread )
   USE noncollin_module,    ONLY : npol
   USE cell_base,           ONLY : alat, omega, at, bg
   USE exx,                 ONLY : compute_density_k
-  USE constants,           ONLY : bohr_radius_angs 
+  USE constants,           ONLY : bohr_radius_angs
   !
   IMPLICIT NONE
   !
@@ -194,11 +194,11 @@ SUBROUTINE measure_localization_k( NBands, IK, TotSpread, AveSpread )
   ENDDO
   !
   TotSpread = TotSpread * bohr_radius_angs**2
-  AveSpread = TotSpread / DBLE(NBands) 
+  AveSpread = TotSpread / DBLE(NBands)
   !
   ! WRITE (stdout,'(7X,A,I3)')  'IK = ', IK
-  ! WRITE (stdout,'(7X,A,f12.6,I3)') 'Total Spread [A**2]   =', TotSpread 
-  ! WRITE (stdout,'(7X,A,f12.6,I3)') 'Aver. Spread [A**2]   =', AveSpread 
+  ! WRITE (stdout,'(7X,A,f12.6,I3)') 'Total Spread [A**2]   =', TotSpread
+  ! WRITE (stdout,'(7X,A,f12.6,I3)') 'Aver. Spread [A**2]   =', AveSpread
   !
   CALL stop_clock( 'measure' )
   !
@@ -208,7 +208,7 @@ END SUBROUTINE measure_localization_k
 !---------------------------------------------------------------------
 SUBROUTINE AbsOvG_k( NBands, IKQ, JK, loc_diag, loc_off )
   !--------------------------`----------------------------------------
-  !! Computes the Absolute Overlap in G-space (cutoff might not be 
+  !! Computes the Absolute Overlap in G-space (cutoff might not be
   !! accurate for the moduli of the wavefunctions).
   !
   USE noncollin_module,    ONLY : npol
@@ -240,7 +240,7 @@ SUBROUTINE AbsOvG_k( NBands, IKQ, JK, loc_diag, loc_off )
   !
   CALL start_clock( 'measure' )
   !
-  ! WRITE (stdout, '(5X,A)') ' ' 
+  ! WRITE (stdout, '(5X,A)') ' '
   ! WRITE (stdout, '(5X,A)') 'Absolute Overlap calculated in G-space (K)'
   !
   kk = global_kpoint_index ( nks, JK )
@@ -248,28 +248,28 @@ SUBROUTINE AbsOvG_k( NBands, IKQ, JK, loc_diag, loc_off )
   ALLOCATE( Mat(NBands,NBands) )
   ALLOCATE( buffer(dfftt%nnr*npol), GorbtI(npwx,NBands), GorbtJ(npwx,NBands) )
   !
-  GorbtJ = (Zero,Zero) 
-  GorbtI = (Zero,Zero) 
+  GorbtJ = (Zero,Zero)
+  GorbtI = (Zero,Zero)
   npw = ngk(JK)
   !
-  DO jbnd = 1, NBands 
+  DO jbnd = 1, NBands
      !
-     buffer(:) = ABS(exxbuff(:,jbnd,JK)) 
+     buffer(:) = ABS(exxbuff(:,jbnd,JK))
      ! buffer(:) = exxbuff(:,jbnd,JK)
      !
-     CALL fwfft( 'Wave' , buffer, dfftt )
+     CALL fwfft( 2 , buffer, dfftt )
      !
      DO ig = 1, npw
-       GorbtJ(ig,jbnd) = buffer(dfftt%nl(igk_exx(ig,kk))) 
+       GorbtJ(ig,jbnd) = buffer(dfftt%nl(igk_exx(ig,kk)))
      ENDDO
      !
-     buffer(:) = ABS(exxbuff(:,jbnd,IKQ)) 
+     buffer(:) = ABS(exxbuff(:,jbnd,IKQ))
      ! buffer(:) = exxbuff(:,jbnd,IKQ)
      !
-     CALL fwfft( 'Wave' , buffer, dfftt )
+     CALL fwfft( 2 , buffer, dfftt )
      !
      DO ig = 1, npw
-       GorbtI(ig,jbnd) = buffer(dfftt%nl(igk_exx(ig,kk)))  
+       GorbtI(ig,jbnd) = buffer(dfftt%nl(igk_exx(ig,kk)))
      ENDDO
      !
   ENDDO
@@ -278,16 +278,16 @@ SUBROUTINE AbsOvG_k( NBands, IKQ, JK, loc_diag, loc_off )
   !   CALL matcalc_k( 'AbsOv-',.FALSE., 2, 0, npwx, NBands, NBands, GorbtI, GorbtJ, Mat, tmp )
   ! ELSE
   CALL matcalc_k( 'AbsOv-',.FALSE., 0, 0, npwx, NBands, NBands, GorbtI, GorbtJ, Mat, tmp )
-  ! END IF 
+  ! END IF
   !
-  loc_diag = Zero 
+  loc_diag = Zero
   loc_off  = Zero
   !
   DO ibnd = 1, NBands
      !
      loc_diag = loc_diag + DBLE(Mat(ibnd,ibnd))
      !
-     DO jbnd = 1, ibnd-1 
+     DO jbnd = 1, ibnd-1
         !
         loc_off = loc_off + DBLE(Mat(ibnd,jbnd)) + DBLE(Mat(jbnd,ibnd))
         exxmat(ibnd, IKQ, jbnd, JK) = DBLE(Mat(ibnd,jbnd))
@@ -297,12 +297,12 @@ SUBROUTINE AbsOvG_k( NBands, IKQ, JK, loc_diag, loc_off )
      !
   ENDDO
   !
-  WRITE (stdout,'(7X,5(A,I3),2(A,f12.6))')  'IKQ = ', IKQ, & 
+  WRITE (stdout,'(7X,5(A,I3),2(A,f12.6))')  'IKQ = ', IKQ, &
         '  JK = ', JK, '  kk = ', kk, ' NBands = ', NBands, ' size = ', SIZE(exxbuff,3), &
-        '  Total Charge =', loc_diag, '  Total Abs. Overlap =', loc_off 
+        '  Total Charge =', loc_diag, '  Total Abs. Overlap =', loc_off
   !
   DEALLOCATE( buffer, GorbtI, GorbtJ )
-  DEALLOCATE( Mat ) 
+  DEALLOCATE( Mat )
   !
   CALL stop_clock( 'measure' )
   !
@@ -347,31 +347,31 @@ SUBROUTINE AbsOv_histogram_k( n, filename )
   XHist = Zero
   histogram = 0
   !
-  DO k = 1, NHist 
-    XHist(k) = xstart + FLOAT(k-1)*xstep 
+  DO k = 1, NHist
+    XHist(k) = xstart + FLOAT(k-1)*xstep
   ENDDO
   !
-  DO i = 1, n 
-     DO iik = 1, nkqs 
+  DO i = 1, n
+     DO iik = 1, nkqs
         !
         DO j = 1, n
            DO jjk = 1, nks
               !
               integral = exxmat(i, iik, j, jjk)
               !
-              IF (integral < Zero) THEN 
+              IF (integral < Zero) THEN
                  CALL errore( 'AbsOv_histogram_k','Abs. Ov. < 0 found.', 1 )
               ELSE
-                 DO k = 1, NHist 
+                 DO k = 1, NHist
                     IF (integral >= (XHist(k)-xstart) .AND. integral < (XHist(k)+xstart)) &
                                                           histogram(k) = histogram(k) + 1
-                 ENDDO 
+                 ENDDO
               ENDIF
               !
            ENDDO
         ENDDO
         !
-     ENDDO 
+     ENDDO
   ENDDO
   !
   io_histogram = find_free_unit()
@@ -379,7 +379,7 @@ SUBROUTINE AbsOv_histogram_k( n, filename )
   !
   DO k = 1, NHist
     WRITE (io_histogram, '(f12.6,2I10)') XHist(k), histogram(k)
-  ENDDO 
+  ENDDO
   !
   CLOSE(io_histogram)
   !
@@ -429,7 +429,7 @@ SUBROUTINE SCDM_PGG_k( NGrid, NBands, IKQ )
   !
   CALL scdm_prescreening_k( NGrid, NBands, exxbuff(1,1,IKQ), den, grad_den, &
                             ThrDen, ThrGrd, cpu_npt, nptot, list, pivot )
-  DEALLOCATE( den, grad_den ) 
+  DEALLOCATE( den, grad_den )
   !
   ! Psi(pivot(1:NBands),:) in mat
   !
@@ -450,7 +450,7 @@ SUBROUTINE SCDM_PGG_k( NGrid, NBands, IKQ )
               NGrid, mat, NBands, (Zero,Zero), QRbuff, NGrid )
   !
   ! Orthonormalization
-  ! Pc(pivot(1:NBands),:) in mat 
+  ! Pc(pivot(1:NBands),:) in mat
   !
   mat = (Zero, Zero)
   !
@@ -458,7 +458,7 @@ SUBROUTINE SCDM_PGG_k( NGrid, NBands, IKQ )
   !
   DEALLOCATE( cpu_npt )
   !
-  ! Cholesky(psi)^(-1) in mat 
+  ! Cholesky(psi)^(-1) in mat
   CALL invchol_k(NBands,mat)
   !
   ! Phi = Pc * Chol^(-1) = QRbuff * mat
@@ -476,11 +476,11 @@ END SUBROUTINE SCDM_PGG_k
 !
 !-----------------------------------------------------------------------------------------------------
 SUBROUTINE scdm_prescreening_k( NGrid, NBands, psi, den, grad_den, ThrDen, ThrGrd, &
-                                cpu_npt, nptot, list, pivot ) 
+                                cpu_npt, nptot, list, pivot )
   !---------------------------------------------------------------------------------------------------
   !! Get List from ThrDen and ThrGrd, and Pivot from the QRCP of small.
   !
-  USE mp,                ONLY : mp_sum 
+  USE mp,                ONLY : mp_sum
   USE mp_bands,          ONLY : intra_bgrp_comm, me_bgrp, nproc_bgrp
   !
   IMPLICIT NONE
@@ -524,14 +524,14 @@ SUBROUTINE scdm_prescreening_k( NGrid, NBands, psi, den, grad_den, ThrDen, ThrGr
   DO ir = 1, ir_end
      grad = One
      IF (den(ir) > ThrDen) THEN
-        grad = SQRT( grad_den(1,ir)**2 + grad_den(2,ir)**2 + grad_den(3,ir)**2 ) 
+        grad = SQRT( grad_den(1,ir)**2 + grad_den(2,ir)**2 + grad_den(3,ir)**2 )
         IF (grad < ThrGrd) THEN
            n = n + 1
            ncpu_start = SUM(cpu_npt(0:me_bgrp-1))
            npt = ncpu_start+n
            small(:,npt) = psi(ir,:)
            list(npt) = ir
-        ENDIF 
+        ENDIF
      ENDIF
   ENDDO
   !
@@ -544,7 +544,7 @@ SUBROUTINE scdm_prescreening_k( NGrid, NBands, psi, den, grad_den, ThrDen, ThrGr
   tau = (Zero, Zero)
   work = (Zero, Zero)
   pivot = 0
-  INFO = -1 
+  INFO = -1
   CALL ZGEQP3( NBands, nptot, small, NBands, pivot, tau, work, lwork, rwork, INFO )
   DEALLOCATE( tau, work, rwork, small )
   !
@@ -584,11 +584,11 @@ SUBROUTINE scdm_fill_k( op, nptot, NGrid, NBands, CPUPts, Pivot, List, Vect, Mat
      IF (Pivot(i) <= NEnd .AND. Pivot(i) >= NStart+1) THEN
         IF (op) THEN
            Mat(:,i) = CONJG(Vect(List(pivot(i)),:))
-        ELSE 
+        ELSE
            Mat(:,i) = Vect(List(pivot(i)),:)
         ENDIF
-     ENDIF 
-  ENDDO 
+     ENDIF
+  ENDDO
   !
   CALL mp_sum( Mat, intra_bgrp_comm )
   !

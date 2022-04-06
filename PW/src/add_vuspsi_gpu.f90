@@ -10,7 +10,7 @@
 SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
   !----------------------------------------------------------------------------
   !! This routine applies the Ultra-Soft Hamiltonian to a
-  !! vector psi and puts the result in hpsi. 
+  !! vector psi and puts the result in hpsi.
   !! It requires the products of psi with all beta functions
   !! in array becp(nkb,m) (calculated by calbec).
   !
@@ -42,7 +42,7 @@ SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
   attributes(DEVICE) :: hpsi_d
   !
   !
-  CALL start_clock_gpu( 'add_vuspsi' )  
+  CALL start_clock_gpu( 'add_vuspsi' )
   !
   IF ( gamma_only ) THEN
      !
@@ -58,7 +58,7 @@ SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
      !
   END IF
   !
-  CALL stop_clock_gpu( 'add_vuspsi' )  
+  CALL stop_clock_gpu( 'add_vuspsi' )
   !
   RETURN
   !
@@ -71,6 +71,7 @@ SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
        !
        USE mp, ONLY: mp_get_comm_null, mp_circular_shift_left
        USE device_fbuff_m, ONLY : dev_buf
+       USE distools,       ONLY : ldim_block, gind_block
        !
 #if defined(__CUDA)
        USE cudafor
@@ -78,7 +79,6 @@ SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
 #endif
        !
        IMPLICIT NONE
-       INTEGER, EXTERNAL :: ldim_block, gind_block
        REAL(DP), POINTER :: ps_d (:,:)
        INTEGER :: ierr
        INTEGER :: nproc, mype, m_loc, m_begin, ibnd_loc, icyc, icur_blk, m_max
@@ -147,7 +147,7 @@ SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
        !
        IF( becp_d%comm == mp_get_comm_null() ) THEN
           !
-          ! Normal case: hpsi(n,i) = \sum_l beta(n,l) ps(l,i) 
+          ! Normal case: hpsi(n,i) = \sum_l beta(n,l) ps(l,i)
           ! (l runs from 1 to nkb)
           !
 !$acc data present(vkb(:,:))
@@ -272,7 +272,7 @@ SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
        RETURN
        !
      END SUBROUTINE add_vuspsi_k_gpu
-     !  
+     !
      !-----------------------------------------------------------------------
      SUBROUTINE add_vuspsi_nc_gpu()
        !-----------------------------------------------------------------------
@@ -321,11 +321,9 @@ SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
                            deeq_nc_d(1,1,na,2), nhm, becp_d%nc_d(ofsbeta(na)+1,2,1), 2*nkb, &
                           (1.0_dp, 0.0_dp), ps_d(ofsbeta(na)+1,1,1), 2*nkb )
 
-
                 CALL ZGEMM('N','N', nh(nt), m, nh(nt), (1.0_dp,0.0_dp), &
                            deeq_nc_d(1,1,na,3), nhm, becp_d%nc_d(ofsbeta(na)+1,1,1), 2*nkb, &
                           (0.0_dp, 0.0_dp), ps_d(ofsbeta(na)+1,2,1), 2*nkb )
-
 
                 CALL ZGEMM('N','N', nh(nt), m, nh(nt), (1.0_dp,0.0_dp), &
                            deeq_nc_d(1,1,na,4), nhm, becp_d%nc_d(ofsbeta(na)+1,2,1), 2*nkb, &
@@ -339,14 +337,14 @@ SUBROUTINE add_vuspsi_gpu( lda, n, m, hpsi_d )
 !                      DO ih = 1, nh(nt)
 !                         !
 !                         ikb = ijkb0 + ih
-!                         jkb = ijkb0 + jh   
+!                         jkb = ijkb0 + jh
 !                         becpup_jkb = becp_nc_d(jkb,1,ibnd)
 !                         becpdn_jkb = becp_nc_d(jkb,2,ibnd)
 !                         !
-!                         ps_d(ikb,1,ibnd) = ps_d(ikb,1,ibnd) +   & 
-!                              deeq_nc_d(ih,jh,na,1)*becpup_jkb + & 
+!                         ps_d(ikb,1,ibnd) = ps_d(ikb,1,ibnd) +   &
+!                              deeq_nc_d(ih,jh,na,1)*becpup_jkb + &
 !                              deeq_nc_d(ih,jh,na,2)*becpdn_jkb
-!                         ps_d(ikb,2,ibnd) = ps_d(ikb,2,ibnd) +   & 
+!                         ps_d(ikb,2,ibnd) = ps_d(ikb,2,ibnd) +   &
 !                              deeq_nc_d(ih,jh,na,3)*becpup_jkb + &
 !                              deeq_nc_d(ih,jh,na,4)*becpdn_jkb
 !                         !

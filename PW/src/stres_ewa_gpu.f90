@@ -11,7 +11,7 @@ SUBROUTINE stres_ewa_gpu( alat, nat, ntyp, ityp, zv, at, bg, tau,    &
                           omega, g_d, gg_d, ngm, gstart, gamma_only, &
                           gcutm, sigmaewa )
   !---------------------------------------------------------------------
-  !! Ewald contribution. Both real- and reciprocal-space terms are 
+  !! Ewald contribution. Both real- and reciprocal-space terms are
   !! present.
   !
   USE kinds
@@ -19,6 +19,8 @@ SUBROUTINE stres_ewa_gpu( alat, nat, ntyp, ityp, zv, at, bg, tau,    &
   USE mp_bands,            ONLY : intra_bgrp_comm, me_bgrp, nproc_bgrp
   USE mp,                  ONLY : mp_sum
   USE Coul_cut_2D,         ONLY : do_cutoff_2D, cutoff_stres_sigmaewa_gpu
+  !
+  USE distools,            ONLY : block_distribute
   !
   IMPLICIT NONE
   !
@@ -94,7 +96,7 @@ SUBROUTINE stres_ewa_gpu( alat, nat, ntyp, ityp, zv, at, bg, tau,    &
   !
 #if defined(__CUDA)
   attributes(DEVICE) :: g_d, gg_d, zv_d, ityp_d, tau_d
-#endif  
+#endif
   !
   tpiba2 = (tpi / alat)**2
   sigmaewa(:,:) = 0._DP
@@ -139,7 +141,7 @@ SUBROUTINE stres_ewa_gpu( alat, nat, ntyp, ityp, zv, at, bg, tau,    &
      fact = 1._DP
   ENDIF
   !
-  IF ( do_cutoff_2D ) THEN 
+  IF ( do_cutoff_2D ) THEN
      !
      CALL cutoff_stres_sigmaewa_gpu( alpha, sdewald, sigmaewa )
      !

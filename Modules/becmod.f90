@@ -9,9 +9,9 @@
 MODULE becmod
   !---------------------------------------------------------------------------
   !! This module contains \(\langle\text{beta}|\text{psi}\rangle\) - used
-  !! in \(\texttt{h_psi}\), \(\texttt{s_psi}\) and many other places.  
+  !! in \(\texttt{h_psi}\), \(\texttt{s_psi}\) and many other places.
   !! \(\texttt{calbec}\) is an interface calculating \(\text{betapsi}(i,j) =
-  !! \langle \text{beta}(i)|\text{psi}(j)\rangle \) (the sum is over \(\text{npw}\) 
+  !! \langle \text{beta}(i)|\text{psi}(j)\rangle \) (the sum is over \(\text{npw}\)
   !! components) or \( \text{betapsi}(i,s,j)= \langle\text{beta}(i)|\text{psi}(s,j)
   !! \rangle\) (s=polarization index).
   !
@@ -64,6 +64,7 @@ CONTAINS
     !_
     USE mp_bands, ONLY: intra_bgrp_comm
     USE mp,       ONLY: mp_get_comm_null
+    USE distools, ONLY : ldim_block, gind_block
     !
     IMPLICIT NONE
     COMPLEX (DP), INTENT (in) :: beta(:,:), psi(:,:)
@@ -73,7 +74,6 @@ CONTAINS
     INTEGER, OPTIONAL :: nbnd
     !
     INTEGER :: local_nbnd
-    INTEGER, EXTERNAL :: ldim_block, gind_block
     INTEGER :: m_loc, m_begin, ip
     REAL(DP), ALLOCATABLE :: dtmp(:,:)
     !
@@ -156,7 +156,7 @@ CONTAINS
     REAL (DP), INTENT (out) :: betapsi(:,:)
     INTEGER, INTENT (in) :: npw
     INTEGER, INTENT (in) :: nbnd
-    INTEGER, INTENT (in) :: comm 
+    INTEGER, INTENT (in) :: comm
     !
     INTEGER :: nkb, npwx, m
     !
@@ -328,12 +328,12 @@ CONTAINS
   SUBROUTINE allocate_bec_type ( nkb, nbnd, bec, comm )
     !-----------------------------------------------------------------------
     USE mp, ONLY: mp_size, mp_rank, mp_get_comm_null
+    USE distools, ONLY : ldim_block, gind_block
     IMPLICIT NONE
     TYPE (bec_type) :: bec
     INTEGER, INTENT (in) :: nkb, nbnd
     INTEGER, INTENT (in), OPTIONAL :: comm
     INTEGER :: ierr, nbnd_siz
-    INTEGER, EXTERNAL :: ldim_block, gind_block
     !
     nbnd_siz = nbnd
     bec%comm = mp_get_comm_null()

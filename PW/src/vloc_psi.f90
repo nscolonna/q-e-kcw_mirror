@@ -50,7 +50,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
   CALL start_clock ('vloc_psi')
   incr = 2
   !
-  use_tg = dffts%has_task_groups 
+  use_tg = dffts%has_task_groups
   !
   IF( use_tg ) THEN
      !
@@ -121,7 +121,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      !
      IF( use_tg ) THEN
         !
-        CALL invfft ('tgWave', tg_psic, dffts )
+        CALL invfft (3, tg_psic, dffts )
         !
         CALL tg_get_group_nr3( dffts, right_nr3 )
         !
@@ -129,17 +129,17 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
            tg_psic (j) = tg_psic (j) * tg_v(j)
         ENDDO
         !
-        CALL fwfft ('tgWave', tg_psic, dffts )
+        CALL fwfft (3, tg_psic, dffts )
         !
      ELSE
         !
-        CALL invfft ('Wave', psic, dffts)
+        CALL invfft (2, psic, dffts)
         !
         DO j = 1, dffts%nnr
            psic (j) = psic (j) * v(j)
         ENDDO
         !
-        CALL fwfft ('Wave', psic, dffts)
+        CALL fwfft (2, psic, dffts)
         !
      ENDIF
      !
@@ -258,7 +258,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
   INTEGER :: v_siz, idx
   !
   CALL start_clock ('vloc_psi')
-  use_tg = dffts%has_task_groups 
+  use_tg = dffts%has_task_groups
   !
   IF( use_tg ) THEN
      !
@@ -294,8 +294,8 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !$omp end do nowait
 !$omp end parallel
         !
-        CALL  invfft ('tgWave', tg_psic, dffts )
-        !write (6,*) 'wfc R ' 
+        CALL  invfft (3, tg_psic, dffts )
+        !write (6,*) 'wfc R '
         !write (6,99) (tg_psic(i), i=1,400)
         !
         CALL tg_get_group_nr3( dffts, right_nr3 )
@@ -305,10 +305,10 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
            tg_psic (j) = tg_psic (j) * tg_v(j)
         ENDDO
 !$omp end parallel do
-        !write (6,*) 'v psi R ' 
+        !write (6,*) 'v psi R '
         !write (6,99) (tg_psic(i), i=1,400)
         !
-        CALL fwfft ('tgWave',  tg_psic, dffts )
+        CALL fwfft (3,  tg_psic, dffts )
         !
         !   addition to the total product
         !
@@ -339,8 +339,8 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,*) 'wfc G ', ibnd
         !write (6,99) (psic(i), i=1,400)
         !
-        CALL invfft ('Wave', psic, dffts)
-        !write (6,*) 'wfc R ' 
+        CALL invfft (2, psic, dffts)
+        !write (6,*) 'wfc R '
         !write (6,99) (psic(i), i=1,400)
         !
 !$omp parallel do
@@ -348,10 +348,10 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
            psic (j) = psic (j) * v(j)
         ENDDO
 !$omp end parallel do
-        !write (6,*) 'v psi R ' 
+        !write (6,*) 'v psi R '
         !write (6,99) (psic(i), i=1,400)
         !
-        CALL fwfft ('Wave', psic, dffts)
+        CALL fwfft (2, psic, dffts)
         !
         !   addition to the total product
         !
@@ -428,7 +428,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
   !
   incr = 1
   !
-  use_tg = dffts%has_task_groups 
+  use_tg = dffts%has_task_groups
   !
   IF( use_tg ) THEN
      CALL start_clock ('vloc_psi:tg_gather')
@@ -474,7 +474,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
 
            ENDDO
            !
-           CALL invfft ('tgWave', tg_psic(:,ipol), dffts )
+           CALL invfft (3, tg_psic(:,ipol), dffts )
            !
         ENDDO
         !
@@ -484,7 +484,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
            DO j = 1, n
               psic_nc(dffts%nl(igk_k(j,current_k)),ipol) = psi(j+(ipol-1)*lda,ibnd)
            ENDDO
-           CALL invfft ('Wave', psic_nc(:,ipol), dffts)
+           CALL invfft (2, psic_nc(:,ipol), dffts)
         ENDDO
      ENDIF
 
@@ -530,7 +530,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         !
         DO ipol = 1, npol
 
-           CALL fwfft ('tgWave', tg_psic(:,ipol), dffts )
+           CALL fwfft (3, tg_psic(:,ipol), dffts )
            !
            ioff   = 0
            !
@@ -554,7 +554,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
      ELSE
 
         DO ipol=1,npol
-           CALL fwfft ('Wave', psic_nc(:,ipol), dffts)
+           CALL fwfft (2, psic_nc(:,ipol), dffts)
         ENDDO
         !
         !   addition to the total product

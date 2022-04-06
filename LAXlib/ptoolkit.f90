@@ -2906,7 +2906,7 @@ SUBROUTINE sqr_dmm_cannon_x_gpu( transa, transb, n, alpha, a, lda, b, ldb, beta,
    USE laxlib_descriptor
    USE laxlib_parallel_include
    USE distools, ONLY : grid2d_rank
-   use onemkl_blas_gpu
+   use onemkl_blas_omp_offload
    !use dmr
    use omp_lib
 
@@ -2994,7 +2994,7 @@ SUBROUTINE sqr_dmm_cannon_x_gpu( transa, transb, n, alpha, a, lda, b, ldb, beta,
    nc    = desc%nc
    nb    = desc%nrcx
    !
-   omp_device = omp_get_default_device()
+   !omp_device = omp_get_default_device()
    !
 #if defined (__MPI)
    CALL MPI_BARRIER( comm, ierr )
@@ -4250,7 +4250,7 @@ SUBROUTINE sqr_tr_cannon_x_gpu( n, a, lda, b, ldb, idesc )
    !
    USE laxlib_parallel_include
    USE distools, ONLY : grid2d_rank
-   use onemkl_blas_gpu
+   use onemkl_blas_omp_offload
    use omp_lib
    !
    IMPLICIT NONE
@@ -4268,12 +4268,11 @@ SUBROUTINE sqr_tr_cannon_x_gpu( n, a, lda, b, ldb, idesc )
    INTEGER :: np, rowid, colid
    INTEGER :: i, j, nr, nc, nb, ldx
    INTEGER :: comm
-   INTEGER :: omp_host, omp_device
+   !INTEGER :: omp_host, omp_device
    !
    REAL(DP) :: tmp
 #if defined (__GPU_MPI)
    !REAL(DP), POINTER, CONTIGUOUS :: ablk(:,:)
-   !INTEGER :: omp_device
 #else
    REAL(DP), ALLOCATABLE :: ablk(:,:)
 #endif
@@ -4284,8 +4283,8 @@ SUBROUTINE sqr_tr_cannon_x_gpu( n, a, lda, b, ldb, idesc )
    !
 #endif
    !
-   omp_host   = omp_get_initial_device()
-   omp_device = omp_get_default_device()
+   !omp_host   = omp_get_initial_device()
+   !omp_device = omp_get_default_device()
    IF( n < 2 ) THEN
      GOTO 1000
    END IF
