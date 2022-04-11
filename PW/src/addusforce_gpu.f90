@@ -26,7 +26,7 @@ SUBROUTINE addusforce_gpu( forcenl )
      CALL addusforce_g_gpu( forcenl )
   ENDIF
   !
-END SUBROUTINE addusforce_gpu 
+END SUBROUTINE addusforce_gpu
 !
 !----------------------------------------------------------------------
 SUBROUTINE addusforce_g_gpu( forcenl )
@@ -55,14 +55,14 @@ SUBROUTINE addusforce_g_gpu( forcenl )
   USE mp,                 ONLY : mp_sum
   USE control_flags,      ONLY : gamma_only
   USE fft_interfaces,     ONLY : fwfft
-#if defined(__CUDA) 
+#if defined(__CUDA)
   USE device_fbuff_m,     ONLY : dev_buf
-  USE cudafor 
+  USE cudafor
   USE cublas
 #else
 #define cublasDGEMM Dgemm
 #endif
- 
+
   !
   IMPLICIT NONE
   !
@@ -78,14 +78,14 @@ SUBROUTINE addusforce_g_gpu( forcenl )
   COMPLEX(DP) :: cfac
   ! work space
   COMPLEX(DP), POINTER :: aux_d(:), aux1_d(:,:,:), vg_d(:,:), qgm_d(:,:)
-  REAL(DP),    POINTER :: ddeeq_d(:,:,:,:), qmod_d(:), ylmk0_d(:,:) 
+  REAL(DP),    POINTER :: ddeeq_d(:,:,:,:), qmod_d(:), ylmk0_d(:,:)
   REAL(DP),    ALLOCATABLE ::  forceq(:,:)
-  INTEGER,POINTER          :: nl_d(:)  
-  INTEGER                  :: ierr 
+  INTEGER,POINTER          :: nl_d(:)
+  INTEGER                  :: ierr
   !
   REAL(DP)                 :: forceqx, forceqy, forceqz
-#if defined(__CUDA) 
-ATTRIBUTES (DEVICE) aux_d, aux1_d, vg_d, qgm_d, ddeeq_d, qmod_d, ylmk0_d,nl_d 
+#if defined(__CUDA)
+ATTRIBUTES (DEVICE) aux_d, aux1_d, vg_d, qgm_d, ddeeq_d, qmod_d, ylmk0_d,nl_d
 
   nl_d => dfftp%nl_d
   IF (.NOT.okvan) RETURN
@@ -112,11 +112,11 @@ ATTRIBUTES (DEVICE) aux_d, aux1_d, vg_d, qgm_d, ddeeq_d, qmod_d, ylmk0_d,nl_d
      ELSE
         aux_d(:) = vltot (:) + v%of_r (:, is)
      ENDIF
-     CALL fwfft( 'Rho', aux_d, dfftp )
+     CALL fwfft( 1, aux_d, dfftp )
      ! Note the factors -i and 2pi/a *units of G) here in V(G) !
      !
      !$cuf kernel do
-     do ir=1, ngm  
+     do ir=1, ngm
         vg_d(ir, is) = aux_d(nl_d(ir)) * tpiba * (0.d0, -1.d0)
      end do
   ENDDO
@@ -125,7 +125,7 @@ ATTRIBUTES (DEVICE) aux_d, aux1_d, vg_d, qgm_d, ddeeq_d, qmod_d, ylmk0_d,nl_d
   ! With k-point parallelization, distribute G-vectors across processors
   ! ngm_s = index of first G-vector for this processor
   ! ngm_e = index of last  G-vector for this processor
-  ! ngm_l = local number of G-vectors 
+  ! ngm_l = local number of G-vectors
   !
   CALL divide( inter_pool_comm, ngm, ngm_s, ngm_e )
   ngm_l = ngm_e-ngm_s+1
@@ -140,7 +140,7 @@ ATTRIBUTES (DEVICE) aux_d, aux1_d, vg_d, qgm_d, ddeeq_d, qmod_d, ylmk0_d,nl_d
   CALL dev_buf%lock_buffer( qmod_d, ngm_l, ierr  )
   IF (ierr /= 0) CALL errore( 'addusforce_gpu', 'cannot allocate buffers', ABS(ierr) )
   !
-  !$cuf kernel do 
+  !$cuf kernel do
   DO ig = 1, ngm_l
      qmod_d(ig) = SQRT( gg_d(ngm_s+ig-1) )*tpiba
   ENDDO
@@ -152,7 +152,7 @@ ATTRIBUTES (DEVICE) aux_d, aux1_d, vg_d, qgm_d, ddeeq_d, qmod_d, ylmk0_d,nl_d
         ! qgm contains the Q functions in G space
         !
         nij = nh(nt)*(nh(nt)+1)/2
-        CALL dev_buf%lock_buffer(qgm_d, [ngm_l, nij],ierr) 
+        CALL dev_buf%lock_buffer(qgm_d, [ngm_l, nij],ierr)
         IF (ierr /= 0) CALL errore( 'addusforce_gpu', 'cannot allocate buffers', ABS(ierr) )
         !
         ijh = 0
@@ -184,7 +184,7 @@ ATTRIBUTES (DEVICE) aux_d, aux1_d, vg_d, qgm_d, ddeeq_d, qmod_d, ylmk0_d,nl_d
                  !
                  ! aux1 = product of potential, structure factor and iG
                  !
-                 !$cuf kernel do 
+                 !$cuf kernel do
                  do ig = 1, ngm_l
                     cfac = vg_d(ngm_s+ig-1, is) * &
                          CONJG(eigts1_d(mill_d(1,ngm_s+ig-1),na) * &
@@ -221,10 +221,10 @@ ATTRIBUTES (DEVICE) aux_d, aux1_d, vg_d, qgm_d, ddeeq_d, qmod_d, ylmk0_d,nl_d
                  forceqy = 0
                  forceqz = 0
                  !$cuf kernel do
-                    DO ijh = 1, nij 
+                    DO ijh = 1, nij
                        forceqx = forceqx + ddeeq_d(ijh, nb, 1, is) * becsum_d(ijh, na, is)
-                       forceqy = forceqy + ddeeq_d(ijh, nb, 2, is) * becsum_d(ijh, na, is)                    
-                       forceqz = forceqz + ddeeq_d(ijh, nb, 3, is) * becsum_d(ijh, na, is)   
+                       forceqy = forceqy + ddeeq_d(ijh, nb, 2, is) * becsum_d(ijh, na, is)
+                       forceqz = forceqz + ddeeq_d(ijh, nb, 3, is) * becsum_d(ijh, na, is)
                     ENDDO
                 forceq(1,na) = forceq(1,na)+forceqx
                 forceq(2,na) = forceq(2,na)+forceqy

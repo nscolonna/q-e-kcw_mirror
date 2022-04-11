@@ -11,7 +11,7 @@ SUBROUTINE stres_ewa( alat, nat, ntyp, ityp, zv, at, bg, tau, &
                       omega, g, gg, ngm, gstart, gamma_only,  &
                       gcutm, sigmaewa )
   !---------------------------------------------------------------------
-  !! Ewald contribution. Both real- and reciprocal-space terms are 
+  !! Ewald contribution. Both real- and reciprocal-space terms are
   !! present.
   !
   USE kinds
@@ -19,6 +19,7 @@ SUBROUTINE stres_ewa( alat, nat, ntyp, ityp, zv, at, bg, tau, &
   USE mp_bands,     ONLY : intra_bgrp_comm, me_bgrp, nproc_bgrp
   USE mp,           ONLY : mp_sum
   USE Coul_cut_2D,  ONLY : do_cutoff_2D, cutoff_stres_sigmaewa
+  USE distools,     ONLY : block_distribute
   !
   IMPLICIT NONE
   !
@@ -123,7 +124,7 @@ SUBROUTINE stres_ewa( alat, nat, ntyp, ityp, zv, at, bg, tau, &
     fact = 1.d0
   ENDIF
   !
-  IF (do_cutoff_2D) THEN 
+  IF (do_cutoff_2D) THEN
      CALL cutoff_stres_sigmaewa( alpha, sdewald, sigmaewa )
   ELSE
 !$omp parallel do default(none) shared(gstart, ngm, g, gg, tpiba2, alpha, tau, zv, ityp, nat, omega, fact)&

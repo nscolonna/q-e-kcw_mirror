@@ -10,8 +10,8 @@
 !
 MODULE london_module
   !
-  !! Module for Dispersion Correction.  
-  !! [ V. Barone et al. J. Comp. Chem., 30, 934 (2009) ]  
+  !! Module for Dispersion Correction.
+  !! [ V. Barone et al. J. Comp. Chem., 30, 934 (2009) ]
   !! [ S. Grimme, J. Comp. Chem., 27, 1787 (2006) ].
   !
   USE kinds ,           ONLY : DP
@@ -52,7 +52,7 @@ MODULE london_module
   REAL ( DP ) :: r_cut
   !! cut-off radius in alat units
   REAL ( DP ) :: beta = 20.0_DP
-  !! damping function parameter 
+  !! damping function parameter
   !
   CONTAINS
    !
@@ -86,7 +86,7 @@ MODULE london_module
       ! First  column: C6, converted to Ry*Bohr^6 units
       ! (in the paper: J*nm^6/mol, conversion factor: 1 J*nm^6/mol = 34.69 Ry*Bohr^6)
       ! Second column: radii, in Bohr (in the paper they are in A)
-      ! 
+      !
       DATA vdw_coeffs / &
          4.857,    1.892,&
          2.775,    1.912,&
@@ -310,10 +310,13 @@ MODULE london_module
     !
     USE mp_images,    ONLY : me_image , nproc_image, intra_image_comm
     USE mp,           ONLY : mp_sum
+    USE distools,     ONLY : block_distribute
+    !
+    IMPLICIT NONE
     !
     INTEGER , INTENT ( IN ) :: nat
     !! number of atoms
-    INTEGER , INTENT ( IN ) :: ityp ( nat ) 
+    INTEGER , INTENT ( IN ) :: ityp ( nat )
     !! type of each atom
     REAL ( DP ) , INTENT ( IN ) :: alat
     !! the cell parameter
@@ -325,7 +328,7 @@ MODULE london_module
     !! reciprocal lattice vectors
     !
     INTEGER :: ata , atb , nrm , nr
-    ! locals : 
+    ! locals :
     ! ata , atb : atom counters
     ! nrm :       actual number of vectors computed by rgen
     ! nr :        counter
@@ -411,6 +414,9 @@ MODULE london_module
     !
     USE mp_images,    ONLY : me_image , nproc_image , intra_image_comm
     USE mp,           ONLY : mp_sum
+    USE distools,     ONLY : block_distribute
+    !
+    IMPLICIT NONE
     !
     INTEGER , INTENT ( IN ) :: nat
     !! number of atoms
@@ -500,7 +506,7 @@ MODULE london_module
                    END DO
                    !
                 END DO
-!$omp end parallel do 
+!$omp end parallel do
                 DO ipol = 1 , 3
                    force_london ( ipol , ata ) = force_london ( ipol , ata ) + aux(ipol)
                 ENDDO
@@ -529,10 +535,13 @@ MODULE london_module
     !
     USE mp_images,    ONLY : me_image , nproc_image , intra_image_comm
     USE mp,           ONLY : mp_sum
+    USE distools,     ONLY : block_distribute
+    !
+    IMPLICIT NONE
     !
     INTEGER , INTENT ( IN ) :: nat
     !! number of atoms
-    INTEGER , INTENT ( IN ) :: ityp ( nat ) 
+    INTEGER , INTENT ( IN ) :: ityp ( nat )
     !! type of each atom
     REAL ( DP ) , INTENT ( IN ) :: alat
     !! the cell parameter

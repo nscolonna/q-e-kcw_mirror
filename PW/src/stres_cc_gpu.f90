@@ -91,7 +91,7 @@ SUBROUTINE stres_cc_gpu( sigmaxcc )
   CALL using_psic(0)
   CALL using_psic_d(1)
   !
-  CALL fwfft( 'Rho', psic_d, dfftp )
+  CALL fwfft( 1, psic_d, dfftp )
   !
   CALL using_psic(0)
   ! psic contains now Vxc(G)
@@ -101,7 +101,7 @@ SUBROUTINE stres_cc_gpu( sigmaxcc )
   fact = 1._DP
   IF (gamma_only) fact = 2._DP
   !
-  maxmesh = MAXVAL(msh(1:ntyp)) 
+  maxmesh = MAXVAL(msh(1:ntyp))
   CALL dev_buf%lock_buffer( gl_d, ngl, ierrs(1) )
   CALL dev_memcpy( gl_d, gl, (/ 1, ngl /) )
   CALL dev_buf%lock_buffer( rhocg_d,   ngl, ierrs(2) )
@@ -139,7 +139,7 @@ SUBROUTINE stres_cc_gpu( sigmaxcc )
                         strf_d(ng)) * rhocg_d(igtongl_d(ng) ) * fact
         ENDDO
         !
-        
+
         !
         CALL deriv_drhoc_gpu( ngl, gl_d, omega, tpiba2, msh(nt), &
                               r_d, rab_d, rhoc_d, rhocg_d )
@@ -174,10 +174,10 @@ SUBROUTINE stres_cc_gpu( sigmaxcc )
   !
   DO l = 1, 3
      sigmaxcc(l,l) = sigmaxcc(l,l) + sigmadiag
-  ENDDO 
+  ENDDO
   !
   CALL mp_sum( sigmaxcc, intra_bgrp_comm )
-  !  
+  !
   CALL dev_buf%release_buffer( gl_d,   ierrs(1) )
   CALL dev_buf%release_buffer( rhocg_d,ierrs(2) )
   CALL dev_buf%release_buffer( r_d,    ierrs(3) )

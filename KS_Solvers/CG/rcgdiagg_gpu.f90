@@ -54,7 +54,7 @@ SUBROUTINE rcgdiagg_gpu( hs_1psi_gpu, s_1psi_gpu, precondition_d, &
   USE mp,             ONLY : mp_sum
 #if defined(__OPENMP_GPU)
   USE omp_lib
-  use onemkl_blas_no_array_check_gpu
+  use onemkl_blas_no_array_check_omp_offload
 #endif
 #if defined(__VERBOSE)
   USE util_param,     ONLY : stdout

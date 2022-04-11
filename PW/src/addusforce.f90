@@ -91,7 +91,7 @@ SUBROUTINE addusforce_g( forcenl )
      ELSE
         aux(:) = vltot (:) + v%of_r (:, is)
      ENDIF
-     CALL fwfft( 'Rho', aux, dfftp )
+     CALL fwfft( 1, aux, dfftp )
      ! Note the factors -i and 2pi/a *units of G) here in V(G) !
      vg(:, is) = aux(dfftp%nl(:)) * tpiba * (0.d0, -1.d0)
   ENDDO
@@ -100,7 +100,7 @@ SUBROUTINE addusforce_g( forcenl )
   ! With k-point parallelization, distribute G-vectors across processors
   ! ngm_s = index of first G-vector for this processor
   ! ngm_e = index of last  G-vector for this processor
-  ! ngm_l = local number of G-vectors 
+  ! ngm_l = local number of G-vectors
   !
   CALL divide( inter_pool_comm, ngm, ngm_s, ngm_e )
   ngm_l = ngm_e-ngm_s+1

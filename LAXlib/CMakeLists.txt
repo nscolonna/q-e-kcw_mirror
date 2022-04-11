@@ -1,7 +1,9 @@
 set(src_lax
+    distools.f90
     dspev_drv.f90
     la_error.f90
     la_helper.f90
+    la_module.f90
     la_param.f90
     la_types.f90
     mp_diag.f90
@@ -11,6 +13,12 @@ set(src_lax
     zhpev_drv.f90
     cdiaghg.f90)
 qe_enable_cuda_fortran("${src_lax}")
+
+if(QE_ENABLE_OPENMP_OFFLOAD)
+    set(src_lax
+        ${src_lax}
+        onemkl_omp_offload.f90)
+endif()
 
 qe_add_library(qe_lax ${src_lax})
 target_link_libraries(qe_lax

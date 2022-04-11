@@ -79,7 +79,7 @@ SUBROUTINE force_cc( forcecc )
   !
   DEALLOCATE( vxc )
   !
-  CALL fwfft( 'Rho', psic, dfftp )
+  CALL fwfft( 1, psic, dfftp )
   !
   ! ... psic contains now Vxc(G)
   !

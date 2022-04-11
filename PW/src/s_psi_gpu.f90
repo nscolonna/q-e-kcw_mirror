@@ -13,14 +13,14 @@
 !----------------------------------------------------------------------------
 SUBROUTINE s_psi_gpu( lda, n, m, psi_d, spsi_d )
   !--------------------------------------------------------------------
-  !! This routine applies the S matrix to m wavefunctions psi and puts 
+  !! This routine applies the S matrix to m wavefunctions psi and puts
   !! the results in spsi.
-  !! Requires the products of psi with all beta functions in array 
+  !! Requires the products of psi with all beta functions in array
   !! becp(nkb,m) (calculated in h_psi or by calbec).
   !
-  !! \(\textit{Wrapper routine}\): performs bgrp parallelization on 
+  !! \(\textit{Wrapper routine}\): performs bgrp parallelization on
   !! non-distributed bands if suitable and required, calls old S\psi
-  !! routine s_psi_ . See comments in h_psi.f90 about band 
+  !! routine s_psi_ . See comments in h_psi.f90 about band
   !! parallelization.
   !
 #if defined(__CUDA)
@@ -86,9 +86,9 @@ END SUBROUTINE s_psi_gpu
 !----------------------------------------------------------------------------
 SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
   !----------------------------------------------------------------------------
-  !! This routine applies the S matrix to m wavefunctions psi and puts 
+  !! This routine applies the S matrix to m wavefunctions psi and puts
   !! the results in spsi.
-  !! Requires the products of psi with all beta functions in array 
+  !! Requires the products of psi with all beta functions in array
   !! becp(nkb,m) (calculated in h_psi or by calbec).
   !
   USE kinds,            ONLY : DP
@@ -96,7 +96,7 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
   USE uspp,             ONLY : nkb, okvan, ofsbeta, vkb
   USE uspp_param,       ONLY : upf, nh, nhm
   USE ions_base,        ONLY : nat, nsp, ityp
-  USE control_flags,    ONLY : gamma_only 
+  USE control_flags,    ONLY : gamma_only
   USE noncollin_module, ONLY : npol, noncolin, lspinorb
   USE realus,           ONLY : real_space, invfft_orbital_gamma,     &
                                fwfft_orbital_gamma, calbec_rs_gamma, &
@@ -145,7 +145,7 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
       spsi_host = spsi_d
   END IF
   !
-  CALL start_clock_gpu( 's_psi' )  
+  CALL start_clock_gpu( 's_psi' )
   !
   ! ... The product with the beta functions
   !
@@ -155,7 +155,7 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
         !
         DO ibnd = 1, m, 2
 !SdG: the becp are already computed ! no need to invfft psi to real space.
-!           CALL invfft_orbital_gamma( psi_host, ibnd, m ) 
+!           CALL invfft_orbital_gamma( psi_host, ibnd, m )
 !SdG: we just need to clean psic in real space ...
            CALL threaded_barrier_memset(psic, 0.D0, dffts%nnr*2)
 !SdG: ... before computing the us-only contribution ...
@@ -175,7 +175,7 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
      !
      CALL s_psi_nc_gpu()
      !
-  ELSE 
+  ELSE
      !
      IF ( real_space ) THEN
         !
@@ -195,9 +195,9 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
         !
         CALL s_psi_k_gpu()
         !
-     ENDIF    
+     ENDIF
      !
-  ENDIF    
+  ENDIF
   !
   CALL stop_clock_gpu( 's_psi' )
 #else
@@ -215,10 +215,11 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
        !! Gamma version of \(\textrm{s_psi}\) routine.
        !
        USE mp,             ONLY : mp_get_comm_null, mp_circular_shift_left
+       USE distools,       ONLY : ldim_block, gind_block
        USE device_fbuff_m, ONLY : dev_buf
        USE uspp,           ONLY : qq_at_d
        !
-       IMPLICIT NONE  
+       IMPLICIT NONE
        !
        ! ... here the local variables
        !
@@ -226,7 +227,6 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
          ! counters
        INTEGER :: nproc, mype, m_loc, m_begin, ibnd_loc, icyc, icur_blk, m_max
          ! data distribution indexes
-       INTEGER, EXTERNAL :: ldim_block, gind_block
          ! data distribution functions
        REAL(DP), POINTER :: ps_d(:,:)
 #if defined(__CUDA)
@@ -255,7 +255,7 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
        END IF
        !
        CALL dev_buf%lock_buffer(ps_d, (/ nkb, m_max /), ierr)
-       
+
        IF( ierr /= 0 ) &
           CALL errore( ' s_psi_gamma_gpu ', ' cannot allocate buffer (ps_d) ', ABS(ierr) )
        !
@@ -417,7 +417,7 @@ SUBROUTINE s_psi__gpu( lda, n, m, psi_d, spsi_d )
        !
        RETURN
        !
-     END SUBROUTINE s_psi_k_gpu     
+     END SUBROUTINE s_psi_k_gpu
      !
      !
      !-----------------------------------------------------------------------

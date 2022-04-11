@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------
 !
-! 
+!
 ! Program written by Yang Jiao, Sep 2017, GPL, No warranties.
 !
 !--------------------------------------------------------------------
@@ -9,8 +9,8 @@
 !-----------------------------------------------------------------------
 MODULE vasp_read_chgcar
   !----------------------------------------------------------------------
-  ! 
-  ! ... this module contains methods to read data produced by VASP 
+  !
+  ! ... this module contains methods to read data produced by VASP
   ! ... tested on VASP.5.3.3
   !
   !
@@ -26,7 +26,7 @@ MODULE vasp_read_chgcar
   PRIVATE
   SAVE
   ! internal data to be set
-  ! 
+  !
   INTEGER          :: iunit !, ounit
   INTEGER          :: iunchg  = 41
   !
@@ -80,7 +80,7 @@ MODULE vasp_read_chgcar
                READ(iunchg,*,IOSTAT=ierr) (atomom(iat),iat=1,nat)
                DEALLOCATE(atomom)
             END IF
-            READ( iunchg, '(3I5)') ngxf, ngyf, ngzf   
+            READ( iunchg, '(3I5)') ngxf, ngyf, ngzf
             IF((ngxf.NE.dfftp%nr1).OR.(ngyf.NE.dfftp%nr2).OR.(ngzf.NE.dfftp%nr3)) THEN
                errmsg = 'Dimension in CHGCAR not compatible'
             END IF
@@ -101,7 +101,7 @@ MODULE vasp_read_chgcar
          END DO
 
          CLOSE(iunchg)
-      END IF 
+      END IF
 !      CALL mp_bcast( atm,             ionode_id, intra_image_comm )
       DO ispin = 1, nspin
          CALL scatter_grid(dfftp, rho_r_(:,ispin), rho%of_r(:,ispin))
@@ -113,7 +113,7 @@ MODULE vasp_read_chgcar
       Do ispin = 1, nspin
          !
          psic(:) = rho%of_r(:,ispin)
-         CALL fwfft ('Rho', psic, dfftp)
+         CALL fwfft (1, psic, dfftp)
          rho%of_g(:,ispin) = psic(dfftp%nl(:))
          !
       END DO
@@ -126,7 +126,7 @@ MODULE vasp_read_chgcar
         USE ions_base,     ONLY : nsp
         IMPLICIT NONE
         INTEGER,                 INTENT(out)  :: ierr
-        INTEGER              :: i 
+        INTEGER              :: i
         INTEGER              :: nityp(10)
         CHARACTER(LEN=3)     :: atm_(10)
         !
@@ -137,7 +137,7 @@ MODULE vasp_read_chgcar
         END DO
         READ( iunchg, '(20A5)' ) atm_(1:nsp)
         READ( iunchg, '(20I6)' ) nityp(1:nsp)
-        READ( iunchg, * ) 
+        READ( iunchg, * )
         DO i = 1, nat
            READ( iunchg, * )
         END DO
@@ -152,7 +152,7 @@ MODULE vasp_read_chgcar
         IMPLICIT NONE
         INTEGER,                 INTENT(out)  :: ierr
         INTEGER        :: i, iat
-        INTEGER        :: ni_read, nelements_read, lmmax 
+        INTEGER        :: ni_read, nelements_read, lmmax
         REAL(DP), ALLOCATABLE    :: buffer_f(:)
         !
         ierr = 0
@@ -172,7 +172,7 @@ MODULE vasp_read_chgcar
 
       END SUBROUTINE vaspread_rhoaugocc
     END SUBROUTINE vaspread_rho
-       
+
 END MODULE vasp_read_chgcar
 
     !

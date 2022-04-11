@@ -94,7 +94,7 @@ SUBROUTINE force_lc_gpu( nat, tau, ityp, alat, omega, ngm, ngl, &
   aux(:) = CMPLX( rho(:), 0.0_DP, KIND=DP )
   CALL dev_memcpy( aux_d, aux )
   !
-  CALL fwfft( 'Rho', aux_d, dfftp )
+  CALL fwfft( 1, aux_d, dfftp )
   IF ( ( do_comp_esm .AND. (esm_bc .NE. 'pbc') ) .or. do_cutoff_2D ) &
      CALL dev_memcpy( aux, aux_d )
   !

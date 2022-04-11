@@ -29,7 +29,7 @@ SUBROUTINE regterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
   use cublas
 #elif defined(__OPENMP_GPU)
   use omp_lib
-  use onemkl_blas_no_array_check_gpu
+  use onemkl_blas_no_array_check_omp_offload
   USE mp,            ONLY : mp_sum_mapped, mp_bcast_mapped
 #endif
   USE LAXlib,        ONLY : diaghg
@@ -40,6 +40,8 @@ SUBROUTINE regterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
   USE mp,            ONLY : mp_sum, mp_bcast
   !
   IMPLICIT NONE
+  !
+  !include 'laxlib.fh'
   !
   INTEGER, INTENT(IN) :: npw, npwx, nvec, nvecx
     ! dimension of the matrix to be diagonalized
@@ -1955,7 +1957,7 @@ SUBROUTINE KScudaDGER  ( M, N, ALPHA, X, INCX, Y, INCY, A, LDA )
     use cudafor
     use cublas
 #elif defined(__OPENMP_GPU)
-    use onemkl_blas_gpu
+    use onemkl_blas_omp_offload
 #endif
 !     .. Scalar Arguments ..
     DOUBLE PRECISION ::  ALPHA

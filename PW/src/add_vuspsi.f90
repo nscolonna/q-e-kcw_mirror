@@ -10,7 +10,7 @@
 SUBROUTINE add_vuspsi( lda, n, m, hpsi )
   !----------------------------------------------------------------------------
   !! This routine applies the Ultra-Soft Hamiltonian to a
-  !! vector psi and puts the result in hpsi. 
+  !! vector psi and puts the result in hpsi.
   !! It requires the products of psi with all beta functions
   !! in array becp(nkb,m) (calculated by calbec).
   !
@@ -43,7 +43,7 @@ SUBROUTINE add_vuspsi( lda, n, m, hpsi )
   ! counters
   !
   !
-  CALL start_clock( 'add_vuspsi' )  
+  CALL start_clock( 'add_vuspsi' )
   CALL using_becp_auto(0)
   !
   IF ( gamma_only ) THEN
@@ -60,7 +60,7 @@ SUBROUTINE add_vuspsi( lda, n, m, hpsi )
      !
   ENDIF
   !
-  CALL stop_clock( 'add_vuspsi' )  
+  CALL stop_clock( 'add_vuspsi' )
   !
   RETURN
   !
@@ -72,10 +72,10 @@ SUBROUTINE add_vuspsi( lda, n, m, hpsi )
        !! See comments inside
        !
        USE mp, ONLY: mp_get_comm_null, mp_circular_shift_left
+       USE distools, ONLY : ldim_block, gind_block
        !
        IMPLICIT NONE
        !
-       INTEGER, EXTERNAL :: ldim_block, gind_block
        REAL(DP), ALLOCATABLE :: ps (:,:)
        INTEGER :: ierr
        INTEGER :: nproc, mype, m_loc, m_begin, ibnd_loc, icyc, icur_blk, m_max
@@ -135,7 +135,7 @@ SUBROUTINE add_vuspsi( lda, n, m, hpsi )
        !
        IF( becp%comm == mp_get_comm_null() ) THEN
           !
-          ! Normal case: hpsi(n,i) = \sum_l beta(n,l) ps(l,i) 
+          ! Normal case: hpsi(n,i) = \sum_l beta(n,l) ps(l,i)
           ! (l runs from 1 to nkb)
           !
           CALL DGEMM( 'N', 'N', ( 2 * n ), m, nkb, 1.D0, vkb, &
@@ -221,8 +221,8 @@ SUBROUTINE add_vuspsi( lda, n, m, hpsi )
        !
        RETURN
        !
-     END SUBROUTINE add_vuspsi_k     
-     !  
+     END SUBROUTINE add_vuspsi_k
+     !
      !-----------------------------------------------------------------------
      SUBROUTINE add_vuspsi_nc()
        !-----------------------------------------------------------------------
@@ -258,12 +258,12 @@ SUBROUTINE add_vuspsi( lda, n, m, hpsi )
                          !
                          ikb = ofsbeta(na) + ih
                          !
-                         ps(ikb,1,ibnd) = ps(ikb,1,ibnd) +    & 
-                              deeq_nc(ih,jh,na,1)*becp%nc(jkb,1,ibnd)+ & 
-                              deeq_nc(ih,jh,na,2)*becp%nc(jkb,2,ibnd) 
-                         ps(ikb,2,ibnd) = ps(ikb,2,ibnd)  +   & 
+                         ps(ikb,1,ibnd) = ps(ikb,1,ibnd) +    &
+                              deeq_nc(ih,jh,na,1)*becp%nc(jkb,1,ibnd)+ &
+                              deeq_nc(ih,jh,na,2)*becp%nc(jkb,2,ibnd)
+                         ps(ikb,2,ibnd) = ps(ikb,2,ibnd)  +   &
                               deeq_nc(ih,jh,na,3)*becp%nc(jkb,1,ibnd)+&
-                              deeq_nc(ih,jh,na,4)*becp%nc(jkb,2,ibnd) 
+                              deeq_nc(ih,jh,na,4)*becp%nc(jkb,2,ibnd)
                          !
                       ENDDO
                       !
@@ -285,6 +285,6 @@ SUBROUTINE add_vuspsi( lda, n, m, hpsi )
        RETURN
        !
      END SUBROUTINE add_vuspsi_nc
-     !  
-     !  
+     !
+     !
 END SUBROUTINE add_vuspsi

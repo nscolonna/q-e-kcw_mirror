@@ -81,7 +81,7 @@ SUBROUTINE do_elf (elf)
                       conjg ( evc (i, ibnd) )
               ENDIF
            ENDDO
-           CALL invfft ('Wave', aux, dffts)
+           CALL invfft (2, aux, dffts)
            DO i = 1, dffts%nnr
               kkin(i) = kkin(i) + w1 * (dble(aux(i))**2 + aimag(aux(i))**2)
            ENDDO
@@ -115,7 +115,7 @@ SUBROUTINE do_elf (elf)
      CALL sym_rho_init ( gamma_only )
      !
      aux(:) =  cmplx ( kkin (:), 0.0_dp, kind=dp)
-     CALL fwfft ('Rho', aux, dfftp)
+     CALL fwfft (1, aux, dfftp)
      ALLOCATE (aux2(ngm))
      aux2(:) = aux(dfftp%nl(:))
      !
@@ -126,7 +126,7 @@ SUBROUTINE do_elf (elf)
      aux(:) = (0.0_dp, 0.0_dp)
      aux(dfftp%nl(:)) = aux2(:)
      DEALLOCATE (aux2)
-     CALL invfft ('Rho', aux, dfftp)
+     CALL invfft (1, aux, dfftp)
      kkin (:) = dble(aux(:))
      !
   ENDIF
@@ -147,7 +147,7 @@ SUBROUTINE do_elf (elf)
   DO k = 1, nspin
      tbos(:,k) = 0.d0
      aux(:) = cmplx( rho%of_r(:, k), 0.d0 ,kind=DP)
-     CALL fwfft ('Rho', aux, dfftp)
+     CALL fwfft (1, aux, dfftp)
      !
      DO j = 1, 3
         aux2(:) = (0.d0,0.d0)
@@ -160,7 +160,7 @@ SUBROUTINE do_elf (elf)
            ENDDO
         ENDIF
 
-        CALL invfft ('Rho', aux2, dfftp)
+        CALL invfft (1, aux2, dfftp)
         DO i = 1, dfftp%nnr
            tbos (i, k) = tbos (i, k) + dble(aux2(i))**2
         ENDDO
@@ -226,9 +226,9 @@ SUBROUTINE do_rdg (rdg)
                      / abs(rho%of_r(i,1))**(4.d0/3.d0)
      ENDIF
   ENDDO
-  
+
   DEALLOCATE( grho )
-  
+
   RETURN
 
 END SUBROUTINE do_rdg
@@ -281,13 +281,12 @@ SUBROUTINE do_sl2rho (sl2rho)
      ELSEIF (info < 0) THEN
         call errore('do_sl2rho','illegal arguments in DSYEVX',-info)
      ENDIF
-    
+
      sl2rho(i) = sign(1.d0,e(2))*rho%of_r(i,1)
   ENDDO
 
-
   DEALLOCATE( grho, hrho )
-  
+
   RETURN
 
 END SUBROUTINE do_sl2rho
@@ -297,7 +296,7 @@ SUBROUTINE do_dori (dori)
   !-----------------------------------------------------------------------
   ! D. Yang & Q.Liu
   ! density overlap regions indicator（DOI: 10.1021/ct500490b）
-  ! theta(r) = 4 * (laplacian(rho(r)) * grad(rho(r)) * rho(r) 
+  ! theta(r) = 4 * (laplacian(rho(r)) * grad(rho(r)) * rho(r)
   !            + | grad(rho(r)) |**2 * grad(rho(r)))
   !            / (| grad(rho(r)) |**2)**3
   ! DORI(r) = theta(r) / (1 + theta(r))
@@ -317,7 +316,6 @@ SUBROUTINE do_dori (dori)
   ALLOCATE( grho(3,dfftp%nnr), hrho(3,3,dfftp%nnr))
   ALLOCATE(sum_grho(dfftp%nnr), temp(2,3,dfftp%nnr))
 
-
   ! calculate hessian of rho (gradient is discarded)
   CALL fft_hessian( dfftp, rho%of_r(:,1), g, grho, hrho )
 
@@ -331,21 +329,19 @@ SUBROUTINE do_dori (dori)
      temp(1,i,:) = rho%of_r(:,1)*temp(1,i,:)
      temp(2,i,:) = grho(i,:)*sum_grho(:)
   ENDDO
-  dori(:) = 0.d0 
+  dori(:) = 0.d0
   DO i = 1, 3
      dori(:) = dori(:) + (temp(1,i,:)-temp(2,i,:))**2
   ENDDO
-  ! calculate dori(r) 
+  ! calculate dori(r)
   dori(:) = 4/(sum_grho(:)+1.d-5)**3*dori(:)
   dori(:) = dori(:) / (1 + dori(:))
-  
+
   DEALLOCATE( grho, hrho, temp )
   DEALLOCATE( sum_grho )
 
   RETURN
 
 END SUBROUTINE do_dori
-
-
 
 !-----------------------------------------------------------------------

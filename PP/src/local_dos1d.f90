@@ -92,7 +92,7 @@ SUBROUTINE local_dos1d (ik, kband, plan)
         psic_nc (dffts%nl (igk_k (ig,ik) ), 2 ) = evc (ig+npwx, kband)
      ENDDO
      DO ipol=1,npol
-        CALL invfft ('Wave', psic_nc(:,ipol), dffts)
+        CALL invfft (2, psic_nc(:,ipol), dffts)
      ENDDO
 
      w1 = wg (kband, ik) / omega
@@ -107,7 +107,7 @@ SUBROUTINE local_dos1d (ik, kband, plan)
      DO ig = 1, npw
         psic (dffts%nl (igk_k (ig,ik) ) ) = evc (ig, kband)
      ENDDO
-     CALL invfft ('Wave', psic, dffts)
+     CALL invfft (2, psic, dffts)
 
      w1 = wg (kband, ik) / omega
      DO ir = 1, dffts%nnr
@@ -216,7 +216,7 @@ SUBROUTINE local_dos1d (ik, kband, plan)
   DO ir = 1, dfftp%nnr
      prho (ir) = cmplx(aux (ir), 0.d0,kind=DP)
   ENDDO
-  CALL fwfft ('Rho', prho, dfftp)
+  CALL fwfft (1, prho, dfftp)
   !
   !    Here we add the US contribution to the charge for the atoms which n
   !    it. Or compute the planar average in the NC case.

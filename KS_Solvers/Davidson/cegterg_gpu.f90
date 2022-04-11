@@ -26,13 +26,16 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
   use cublas
 #elif defined(__OPENMP_GPU)
   use omp_lib
-  use onemkl_blas_gpu
+  use onemkl_blas_omp_offload
 #endif
   USE LAXlib,        ONLY : diaghg
   USE util_param,    ONLY : DP
   USE mp_bands_util, ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id,&
                             nbgrp, my_bgrp_id, me_bgrp, root_bgrp
   USE mp,            ONLY : mp_sum, mp_gather, mp_bcast, mp_size,&
+#if defined(__OPENMP_GPU)
+                            mp_sum_mapped, mp_bcast_mapped, &
+#endif
                             mp_type_create_column_section, mp_type_free
 #if defined(__OPENMP_GPU)
   USE device_fbuff_m,      ONLY : gbuf => pin_buf
@@ -40,6 +43,8 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
   USE device_memcpy_m, ONLY : dev_memcpy, dev_memset
   !
   IMPLICIT NONE
+  !
+  !include 'laxlib.fh'
   !
   INTEGER, INTENT(IN) :: npw, npwx, nvec, nvecx, npol
     ! dimension of the matrix to be diagonalized

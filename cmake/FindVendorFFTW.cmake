@@ -31,17 +31,31 @@ if(BLAS_FOUND OR LAPACK_FOUND)
         # Try to find the Intel MKL
         if(NOT VendorFFTW_FIND_COMPONENTS OR "MKL" IN_LIST VendorFFTW_FIND_COMPONENTS)
             if(_search_path MATCHES "mkl")
-                find_path(VendorFFTW_INCLUDE_MKL_DFTI
-                    NAMES
-                        "mkl_dfti.f90"
-                    HINTS
-                        ${_search_path}
-                    PATH_SUFFIXES
-                        "include"
-                        "fftw"
-                        "include/fftw"
-                    NO_DEFAULT_PATH
-                )
+		if(QE_ENABLE_OPENMP_OFFLOAD)
+                    find_path(VendorFFTW_INCLUDE_MKL_DFTI
+                        NAMES
+                            "mkl_dfti_omp_offload.f90"
+                        HINTS
+                            ${_search_path}
+                        PATH_SUFFIXES
+                            "include"
+                            "fftw"
+                            "include/fftw"
+                        NO_DEFAULT_PATH
+                    )
+	        else()
+	            find_path(VendorFFTW_INCLUDE_MKL_DFTI
+                        NAMES
+                            "mkl_dfti.f90"
+                        HINTS
+                            ${_search_path}
+                        PATH_SUFFIXES
+                            "include"
+                            "fftw"
+                            "include/fftw"
+                        NO_DEFAULT_PATH
+                    )
+	    	endif()
                 find_path(VendorFFTW_INCLUDE_FFTW3
                     NAMES
                         "fftw3.f"
