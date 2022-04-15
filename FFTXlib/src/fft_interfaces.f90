@@ -43,7 +43,6 @@ MODULE fft_interfaces
      !! invfft is the interface to both the standard fft **invfft_x**,
      !! and to the "box-grid" version **invfft_b**, used only in CP
      !! (the latter has an additional argument)
-
      SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
@@ -52,7 +51,7 @@ MODULE fft_interfaces
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
-#if defined(__DFTI)
+#ifndef __NO_OMP_TARGET_VARIANT_DISPATCH
        !$omp declare variant (invfft_y_gpu) match( construct={dispatch} )
 #endif
      END SUBROUTINE invfft_y
@@ -89,7 +88,7 @@ MODULE fft_interfaces
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
-#if defined(__DFTI)
+#ifndef __NO_OMP_TARGET_VARIANT_DISPATCH
        !$omp declare variant(fwfft_y_gpu) match(construct={dispatch} )
 #endif
      END SUBROUTINE fwfft_y
