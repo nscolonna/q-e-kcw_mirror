@@ -18,11 +18,10 @@ SUBROUTINE gram_schmidt_k_gpu( npwx, npw, nbnd, npol, psi_d, hpsi_d, spsi_d, e, 
   ! ... Gram-Schmidt orthogonalization, for k-point calculations.
   ! ... blocking algorithm is used.
   !
-  USE util_param,     ONLY : DP, eps16
-  USE mp,            ONLY : mp_sum, mp_max, mp_bcast
-  USE mp_bands_util, ONLY : inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id
-  USE device_fbuff_m,         ONLY : buffer => dev_buf
-  USE device_memcpy_m,        ONLY : dev_memcpy, dev_memset
+  USE util_param,      ONLY : DP, eps16
+  USE mp,              ONLY : mp_sum, mp_max, mp_bcast
+  USE mp_bands_util,   ONLY : inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id
+  USE devxlib_buffers, ONLY : buffer => gpu_buffer
   !
   IMPLICIT NONE
   !
@@ -50,7 +49,7 @@ SUBROUTINE gram_schmidt_k_gpu( npwx, npw, nbnd, npol, psi_d, hpsi_d, spsi_d, e, 
   INTEGER,     ALLOCATABLE :: owner_bgrp_id(:)
   INTEGER                  :: buf_start, buf_end, buf_size
   !
-  ! ... device variables 
+  ! ... device variables
   !
   INTEGER :: ii, jj, kk, info
   COMPLEX(DP), ALLOCATABLE :: phi_d(:,:), hphi_d(:,:), sphi_d(:,:)
@@ -62,7 +61,7 @@ SUBROUTINE gram_schmidt_k_gpu( npwx, npw, nbnd, npol, psi_d, hpsi_d, spsi_d, e, 
   COMPLEX(DP), ALLOCATABLE :: sc_d(:), sc2_d(:,:)
 #if defined (__CUDA)
   attributes(device) :: sc_d, sc2_d
-#endif 
+#endif
   !
   IF ( npol == 1 ) THEN
      !
@@ -103,29 +102,29 @@ SUBROUTINE gram_schmidt_k_gpu( npwx, npw, nbnd, npol, psi_d, hpsi_d, spsi_d, e, 
   ALLOCATE( owner_bgrp_id( nblock ) )
   !
 !$cuf kernel do(2)
-  DO ii = 1, kdmx  
+  DO ii = 1, kdmx
     DO jj = 1, nbnd
-      phi_d(ii, jj) = ZERO 
-    END DO 
-  END DO   
+      phi_d(ii, jj) = ZERO
+    END DO
+  END DO
   !
-  IF ( eigen_ ) THEN 
+  IF ( eigen_ ) THEN
 !$cuf kernel do(2)
-    DO ii = 1, kdmx  
+    DO ii = 1, kdmx
       DO jj = 1, nbnd
-        hphi_d(ii, jj) = ZERO 
-      END DO 
-    END DO   
-  END IF  
+        hphi_d(ii, jj) = ZERO
+      END DO
+    END DO
+  END IF
   !
-  IF ( uspp )   THEN 
+  IF ( uspp )   THEN
 !$cuf kernel do(2)
-    DO ii = 1, kdmx  
+    DO ii = 1, kdmx
       DO jj = 1, nbnd
-        sphi_d(ii, jj) = ZERO 
-      END DO 
-    END DO   
-  END IF  
+        sphi_d(ii, jj) = ZERO
+      END DO
+    END DO
+  END IF
   !
   ! ... Set owers of blocks
   !
@@ -151,10 +150,10 @@ SUBROUTINE gram_schmidt_k_gpu( npwx, npw, nbnd, npol, psi_d, hpsi_d, spsi_d, e, 
   CALL ZCOPY_gpu( kdmx * nbnd, spsi_d(1,1), 1, sphi_d(1,1), 1 )
   !
   !
-  ! ... Allocate buffers 
+  ! ... Allocate buffers
   !
-  ALLOCATE (sc_d(nbsize)) 
-  IF ( nbnd .GT. nbsize)  ALLOCATE (sc2_d(nbsize, nbnd - nbsize)) 
+  ALLOCATE (sc_d(nbsize))
+  IF ( nbnd .GT. nbsize)  ALLOCATE (sc2_d(nbsize, nbnd - nbsize))
   !
   !
   ! ... Blocking loop
@@ -198,8 +197,8 @@ SUBROUTINE gram_schmidt_k_gpu( npwx, npw, nbnd, npol, psi_d, hpsi_d, spsi_d, e, 
   !
   ! ... Buffer Realese
   !
-  DEALLOCATE (sc_d) 
-  IF (nbnd .GT. nbsize) DEALLOCATE (sc2_d) 
+  DEALLOCATE (sc_d)
+  IF (nbnd .GT. nbsize) DEALLOCATE (sc2_d)
   !
   !
   ! ... Copy psi <- phi
@@ -323,10 +322,10 @@ CONTAINS
     INTEGER, INTENT(IN)  :: jbnd_start, jbnd_end
     !
     INTEGER                  :: ibnd_size
-    INTEGER                  :: jbnd_size 
+    INTEGER                  :: jbnd_size
     !
     ibnd_size = ibnd_end - ibnd_start + 1
-    jbnd_size = jbnd_end - jbnd_start + 1  
+    jbnd_size = jbnd_end - jbnd_start + 1
     !
     ! ... <phi_i| S |psi_j>
     !

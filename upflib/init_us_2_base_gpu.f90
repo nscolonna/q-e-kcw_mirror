@@ -14,12 +14,12 @@ SUBROUTINE init_us_2_base_gpu( npw_, npwx, igk__d, q_, nat, tau, ityp, &
   !! Calculates beta functions (Kleinman-Bylander projectors), with
   !! structure factor, for all atoms, in reciprocal space.
   !
-  USE upf_kinds,    ONLY : DP
-  USE upf_const,    ONLY : tpi
-  USE uspp_data,    ONLY : nqx, dq, tab_d
-  USE uspp,         ONLY : nkb, nhtol, nhtolm, indv
-  USE uspp_param,   ONLY : upf, lmaxkb, nhm, nh, nsp
-  USE device_fbuff_m,   ONLY : dev_buf
+  USE upf_kinds,       ONLY : DP
+  USE upf_const,       ONLY : tpi
+  USE uspp_data,       ONLY : nqx, dq, tab_d
+  USE uspp,            ONLY : nkb, nhtol, nhtolm, indv
+  USE uspp_param,      ONLY : upf, lmaxkb, nhm, nh, nsp
+  USE devxlib_buffers, ONLY : gpu_buffer
   !
   implicit none
   !
@@ -78,7 +78,7 @@ SUBROUTINE init_us_2_base_gpu( npw_, npwx, igk__d, q_, nat, tau, ityp, &
   CALL start_clock( 'init_us_2:gpu' )
   !
   if (lmaxkb<0) return
-  
+
   ! JR Eventually replace with smarter allocation/deallocation of GPU temp arrays
   ! PB use buffer class here
   !allocate (vkb1_d( npw_,nhm))
@@ -87,12 +87,12 @@ SUBROUTINE init_us_2_base_gpu( npw_, npwx, igk__d, q_, nat, tau, ityp, &
   !allocate (  vq_d( npw_))
   !allocate ( ylm_d( npw_, (lmaxkb + 1) **2))
   !allocate (  gk_d( 3, npw_))
-  CALL dev_buf%lock_buffer(vkb1_d, (/ npw_, nhm /), istat(1) )
-  CALL dev_buf%lock_buffer(  sk_d, npw_, istat(2) )
-  CALL dev_buf%lock_buffer(  qg_d, npw_, istat(3) )
-  CALL dev_buf%lock_buffer(  vq_d, npw_, istat(4) )
-  CALL dev_buf%lock_buffer( ylm_d, (/ npw_, (lmaxkb + 1) **2 /), istat(5) )
-  CALL dev_buf%lock_buffer(  gk_d, (/ 3, npw_ /), istat(6) )
+  CALL gpu_buffer%lock_buffer(vkb1_d, (/ npw_, nhm /), istat(1) )
+  CALL gpu_buffer%lock_buffer(  sk_d, npw_, istat(2) )
+  CALL gpu_buffer%lock_buffer(  qg_d, npw_, istat(3) )
+  CALL gpu_buffer%lock_buffer(  vq_d, npw_, istat(4) )
+  CALL gpu_buffer%lock_buffer( ylm_d, (/ npw_, (lmaxkb + 1) **2 /), istat(5) )
+  CALL gpu_buffer%lock_buffer(  gk_d, (/ 3, npw_ /), istat(6) )
   IF (ANY(istat /= 0)) CALL upf_error( 'init_us_2_gpu', 'cannot allocate buffers', -1 )
   !
   q1 = q_(1)
@@ -136,10 +136,10 @@ SUBROUTINE init_us_2_base_gpu( npw_, npwx, igk__d, q_, nat, tau, ityp, &
            i3 = i0 + 3
            vq_d (ig) = ux * vx * (wx * tab_d(i0, nb, nt) + px * tab_d(i3, nb, nt)) / 6.d0 + &
                        px * wx * (vx * tab_d(i1, nb, nt) - ux * tab_d(i2, nb, nt)) * 0.5d0
-                          
+
         enddo
 
-        ! add spherical harmonic part  (Y_lm(q)*f_l(q)) 
+        ! add spherical harmonic part  (Y_lm(q)*f_l(q))
         do ih = 1, nh (nt)
            if (nb.eq.indv (ih, nt) ) then
               !l = nhtol (ih, nt)
@@ -195,12 +195,12 @@ SUBROUTINE init_us_2_base_gpu( npw_, npwx, igk__d, q_, nat, tau, ityp, &
   !deallocate(qg_d)
   !deallocate(sk_d)
   !deallocate(vkb1_d)
-  CALL dev_buf%release_buffer(vkb1_d, istat(1) )
-  CALL dev_buf%release_buffer(  sk_d, istat(2) )
-  CALL dev_buf%release_buffer(  qg_d, istat(3) )
-  CALL dev_buf%release_buffer(  vq_d, istat(4) )
-  CALL dev_buf%release_buffer( ylm_d, istat(5) )
-  CALL dev_buf%release_buffer(  gk_d, istat(6) )
+  CALL gpu_buffer%release_buffer(vkb1_d, istat(1) )
+  CALL gpu_buffer%release_buffer(  sk_d, istat(2) )
+  CALL gpu_buffer%release_buffer(  qg_d, istat(3) )
+  CALL gpu_buffer%release_buffer(  vq_d, istat(4) )
+  CALL gpu_buffer%release_buffer( ylm_d, istat(5) )
+  CALL gpu_buffer%release_buffer(  gk_d, istat(6) )
   !
   CALL stop_clock( 'init_us_2:gpu' )
 #endif

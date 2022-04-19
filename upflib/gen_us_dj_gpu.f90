@@ -17,17 +17,17 @@ SUBROUTINE gen_us_dj_gpu_ &
   ! AF: more gpu-resident variables can be used, avoiding local GPU-alloc
   !     and host2dev transfers
   !
-  USE upf_kinds,   ONLY: dp
-  USE upf_const,   ONLY: tpi
-  USE uspp,        ONLY: nkb, indv_d, nhtol_d, nhtolm_d
-  USE uspp_data,   ONLY: nqx, tab, tab_d, dq
-  USE uspp_param,  ONLY: upf, lmaxkb, nbetam, nh, nhm
-  USE device_fbuff_m,   ONLY: dev_buf
+  USE upf_kinds,       ONLY : dp
+  USE upf_const,       ONLY : tpi
+  USE uspp,            ONLY : nkb, indv_d, nhtol_d, nhtolm_d
+  USE uspp_data,       ONLY : nqx, tab, tab_d, dq
+  USE uspp_param,      ONLY : upf, lmaxkb, nbetam, nh, nhm
+  USE devxlib_buffers, ONLY : gpu_buffer
   !
   IMPLICIT NONE
   !
   INTEGER, INTENT(IN) :: npw
-  !! number ok plane waves 
+  !! number ok plane waves
   INTEGER, INTENT(IN) :: npwx
   !! max number ok plane waves across k-points
   INTEGER, INTENT(IN) :: igk_d(npw)
@@ -82,9 +82,9 @@ SUBROUTINE gen_us_dj_gpu_ &
   !
   IF (nkb == 0) RETURN
   !
-  CALL dev_buf%lock_buffer( ylm_d, (/ npw,(lmaxkb+1)**2 /), ierr(1) )
-  CALL dev_buf%lock_buffer( djl_d, (/ npw,nbetam,ntyp /), ierr(2) )
-  CALL dev_buf%lock_buffer( gk_d,  (/ 3,npw /), ierr(3) )
+  CALL gpu_buffer%lock_buffer( ylm_d, (/ npw,(lmaxkb+1)**2 /), ierr(1) )
+  CALL gpu_buffer%lock_buffer( djl_d, (/ npw,nbetam,ntyp /), ierr(2) )
+  CALL gpu_buffer%lock_buffer( gk_d,  (/ 3,npw /), ierr(3) )
   ALLOCATE( q_d(npw) )
   !
   xk1 = xk(1)
@@ -201,15 +201,15 @@ SUBROUTINE gen_us_dj_gpu_ &
       dvkb_d(ig,ikb) = CMPLX(djl_d(ig,nb,nt)) * sk_d(ig,na) * &
                        CMPLX(ylm_d(ig,lm))  * pref
     ENDDO
-  ENDDO  
+  ENDDO
   !
   DEALLOCATE( sk_d )
   !
   IF (ikb_t /= nkb) CALL upf_error( 'gen_us_dj', 'unexpected error', 1 )
   !
-  CALL dev_buf%release_buffer( ylm_d, ierr(1) )
-  CALL dev_buf%release_buffer( djl_d, ierr(2) )
-  CALL dev_buf%release_buffer( gk_d, ierr(3) )
+  CALL gpu_buffer%release_buffer( ylm_d, ierr(1) )
+  CALL gpu_buffer%release_buffer( djl_d, ierr(2) )
+  CALL gpu_buffer%release_buffer( gk_d, ierr(3) )
   !
   DEALLOCATE( ih_d, na_d, nas_d )
 #endif

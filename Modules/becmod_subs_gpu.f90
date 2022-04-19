@@ -360,7 +360,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     USE mp, ONLY: mp_size, mp_rank, mp_get_comm_null
     USE distools, ONLY : ldim_block, gind_block
-    USE device_memcpy_m, ONLY : dev_memset
+    USE devxlib_memset, ONLY : dev_memset=>devxlib_memory_set
     IMPLICIT NONE
     TYPE (bec_type_d) :: bec_d
     INTEGER, INTENT (in) :: nkb, nbnd

@@ -7,17 +7,17 @@
 !
 SUBROUTINE add_vhub_to_deeq_gpu( deeq_d )
 !-----------------------------------------------------------------
-  !! Add Hubbard contributions to the integral of V_eff and Q_{nm} when 
+  !! Add Hubbard contributions to the integral of V_eff and Q_{nm} when
   !! U_projection is pseudo.
   !
-  USE kinds,         ONLY : DP
-  USE ions_base,     ONLY : nat, ntyp => nsp, ityp
-  USE uspp_param,    ONLY : nh, nhm
-  USE lsda_mod,      ONLY : nspin
-  USE scf,           ONLY : v
-  USE ldaU,          ONLY : is_hubbard, Hubbard_l, offsetU, q_ae
+  USE kinds,          ONLY : DP
+  USE ions_base,      ONLY : nat, ntyp => nsp, ityp
+  USE uspp_param,     ONLY : nh, nhm
+  USE lsda_mod,       ONLY : nspin
+  USE scf,            ONLY : v
+  USE ldaU,           ONLY : is_hubbard, Hubbard_l, offsetU, q_ae
   !
-  USE device_memcpy_m, ONLY : dev_memcpy
+  USE devxlib_memcpy, ONLY : dev_memcpy => devxlib_memcpy_h2d
   !
   IMPLICIT NONE
   !
@@ -61,7 +61,7 @@ SUBROUTINE add_vhub_to_deeq_gpu( deeq_d )
                  deeq_aux_h(ih,jh,1:nspin) = deeq_aux_h(ih,jh,1:nspin) + &
                     v%ns(m1,m2,1:nspin,na)*q_ae(ow1,ih,na)*q_ae(ow2,jh,na)
                  !
-              ENDDO 
+              ENDDO
            ENDDO
            !
            deeq_aux_h(jh,ih,1:nspin) = deeq_aux_h(ih,jh,1:nspin)
@@ -81,7 +81,7 @@ SUBROUTINE add_vhub_to_deeq_gpu( deeq_d )
      END DO
      !
   ENDDO
-  
+
   DEALLOCATE(deeq_aux_h, deeq_aux_d)
   !
 END SUBROUTINE add_vhub_to_deeq_gpu

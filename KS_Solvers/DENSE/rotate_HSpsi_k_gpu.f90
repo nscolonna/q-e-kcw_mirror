@@ -16,11 +16,12 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
 #if defined (__CUDA)
   USE cudafor
 #endif
-  USE util_param,    ONLY : DP
-  USE mp_bands_util, ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id, &
-                            me_bgrp, root_bgrp
-  USE mp,            ONLY : mp_sum, mp_barrier, mp_allgather, mp_type_create_column_section, mp_type_free
-  USE device_memcpy_m,    ONLY: dev_memcpy, dev_memset
+  USE util_param,     ONLY : DP
+  USE mp_bands_util,  ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id, &
+                             me_bgrp, root_bgrp
+  USE mp,             ONLY : mp_sum, mp_barrier, mp_allgather, mp_type_create_column_section, mp_type_free
+  USE devxlib_memcpy, ONLY : dev_memcpy_d2d => devxlib_memcpy_d2d
+  USE devxlib_memset, ONLY : dev_memset => devxlib_memory_set
   !
   IMPLICIT NONE
   !
@@ -31,7 +32,7 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
   INTEGER, INTENT(IN) :: &
     npw,                 &         ! dimension of the matrices (psi,Hpsi,Spsi) to be rotated
     npwx,                &         ! leading dimension of the wavefunction-related matrices
-    nstart,              &         ! input number of states 
+    nstart,              &         ! input number of states
     nbnd,                &         ! output number of states
     npol                           ! number of spin polarizations
   COMPLEX(DP), INTENT(INOUT) :: psi_d(npwx*npol,nstart), hpsi_d(npwx*npol,nstart) ! input and output psi, Hpsi,
@@ -43,7 +44,7 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
   !
   INTEGER :: kdim, kdmx
   INTEGER :: n_start, n_end, my_n, recv_counts(nbgrp), displs(nbgrp), column_type
-  INTEGER :: ii, jj  ! indexes for cuf kernel loops 
+  INTEGER :: ii, jj  ! indexes for cuf kernel loops
   !
   ! ... device variables
   !
@@ -51,7 +52,7 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
   COMPLEX(DP), ALLOCATABLE :: hh_d(:,:), ss_d(:,:), vv_d(:,:)
   REAL(DP),    ALLOCATABLE :: en_d(:)
 #if defined (__CUDA)
-  attributes(device) :: aux_d, psi_d, hpsi_d, spsi_d 
+  attributes(device) :: aux_d, psi_d, hpsi_d, spsi_d
   attributes(device) :: hh_d, ss_d, vv_d, en_d, e_d
 #endif
   !
@@ -59,50 +60,50 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
   !
   call start_clock('rotHSw'); !write(*,*) 'start rotHSw' ; FLUSH(6)
   !
-  if (npol == 2 .and. npw < npwx ) then ! pack wfcs so that pw's are contiguous 
+  if (npol == 2 .and. npw < npwx ) then ! pack wfcs so that pw's are contiguous
     call start_clock('rotHSw:move'); !write(*,*) 'start rotHSw:move' ; FLUSH(6)
     ALLOCATE ( aux_d ( npwx, nstart ) )
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nstart 
+      DO jj = 1, nstart
         aux_d(ii,jj) = psi_d (npwx+ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nstart 
+      DO jj = 1, nstart
         psi_d (npw+ii,jj) = aux_d(ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nstart 
+      DO jj = 1, nstart
         aux_d(ii,jj) = hpsi_d(npwx+ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nstart 
+      DO jj = 1, nstart
         hpsi_d(npw+ii,jj) = aux_d(ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nstart 
+      DO jj = 1, nstart
         aux_d(ii,jj) = spsi_d(npwx+ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nstart 
+      DO jj = 1, nstart
         spsi_d(npw+ii,jj) = aux_d(ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
     DEALLOCATE( aux_d )
     call stop_clock('rotHSw:move'); !write(*,*) 'stop rotHSw:move' ; FLUSH(6)
   end if
 
-  kdim = npol * npw 
+  kdim = npol * npw
   kdmx = npol * npwx
   !
   ALLOCATE( hh_d( nstart, nstart ) )
@@ -160,7 +161,7 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
   !
   call start_clock('rotHSw:diag'); !write(*,*) 'start rotHSw:diag' ; FLUSH(6)
   CALL diaghg( nstart, nbnd, hh_d, ss_d, nstart, en_d, vv_d, me_bgrp, root_bgrp, intra_bgrp_comm )
-  CALL dev_memcpy(e_d, en_d, [1,nbnd])
+  CALL dev_memcpy_d2d(e_d, en_d, [1,nbnd])
   call stop_clock('rotHSw:diag'); !write(*,*) 'stop rotHSw:diag' ; FLUSH(6)
   !
   ! ... update the basis set
@@ -177,7 +178,7 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
     CALL gpu_ZGEMM( 'N','N', kdim, my_n, nstart, (1.D0,0.D0), psi_d, kdmx, vv_d(1,n_start), nstart, &
                                                                       (0.D0,0.D0), aux_d(1,n_start), kdmx )
 
-  CALL dev_memcpy(psi_d, aux_d, [1, kdmx], 1, [n_start,n_end])
+  CALL dev_memcpy_d2d(psi_d, aux_d, [1, kdmx], 1, [n_start,n_end])
   !call start_clock('rotHSw:ev:b3'); CALL mp_barrier( inter_bgrp_comm ); call stop_clock('rotHSw:ev:b3')
   call start_clock('rotHSw:ev:s5')
   CALL mp_allgather(psi_d(:,1:nbnd), column_type, recv_counts, displs, inter_bgrp_comm)
@@ -186,7 +187,7 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
   if (n_start .le. n_end) &
     CALL gpu_ZGEMM( 'N','N', kdim, my_n, nstart, (1.D0,0.D0), hpsi_d, kdmx, vv_d(1,n_start), nstart, &
                                                                        (0.D0,0.D0), aux_d(1,n_start), kdmx )
-  CALL dev_memcpy(hpsi_d, aux_d, [1, kdmx], 1, [n_start,n_end])  !call start_clock('rotHSw:ev:b4'); CALL mp_barrier( inter_bgrp_comm ); call stop_clock('rotHSw:ev:b4')
+  CALL dev_memcpy_d2d(hpsi_d, aux_d, [1, kdmx], 1, [n_start,n_end])  !call start_clock('rotHSw:ev:b4'); CALL mp_barrier( inter_bgrp_comm ); call stop_clock('rotHSw:ev:b4')
   call start_clock('rotHSw:ev:s6')
   CALL mp_allgather(hpsi_d(:,1:nbnd), column_type, recv_counts, displs, inter_bgrp_comm)
   call stop_clock('rotHSw:ev:s6')
@@ -195,14 +196,14 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
      if (n_start .le. n_end) &
        CALL gpu_ZGEMM( 'N','N', kdim, my_n, nstart, (1.D0,0.D0), spsi_d, kdmx, vv_d(1,n_start), &
                                                           nstart, (0.D0,0.D0), aux_d(1,n_start), kdmx )
-     CALL dev_memcpy(spsi_d, aux_d, [1, kdmx], 1, [n_start,n_end])     !call start_clock('rotHSw:ev:b5'); CALL mp_barrier( inter_bgrp_comm ); call stop_clock('rotHSw:ev:b5')
+     CALL dev_memcpy_d2d(spsi_d, aux_d, [1, kdmx], 1, [n_start,n_end])     !call start_clock('rotHSw:ev:b5'); CALL mp_barrier( inter_bgrp_comm ); call stop_clock('rotHSw:ev:b5')
      call start_clock('rotHSw:ev:s7')
      CALL mp_allgather(spsi_d(:,1:nbnd), column_type, recv_counts, displs, inter_bgrp_comm)
      call stop_clock('rotHSw:ev:s7')
 
   ELSE IF (present(spsi_d)) THEN
 
-     CALL dev_memcpy(spsi_d, psi_d, [1, kdmx], 1, [n_start,n_end])
+     CALL dev_memcpy_d2d(spsi_d, psi_d, [1, kdmx], 1, [n_start,n_end])
   END IF
 
   DEALLOCATE( aux_d )
@@ -225,58 +226,58 @@ SUBROUTINE rotate_HSpsi_k_gpu( npwx, npw, nstart, nbnd, npol, psi_d, hpsi_d, ove
     ALLOCATE ( aux_d ( npwx, nbnd ) )
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nbnd 
+      DO jj = 1, nbnd
         aux_d(ii,jj) = psi_d (npw+ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nbnd 
+      DO jj = 1, nbnd
         psi_d(npwx+ii,jj) = aux_d(ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nbnd 
+      DO jj = 1, nbnd
         aux_d(ii,jj) = hpsi_d(npw+ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nbnd 
+      DO jj = 1, nbnd
         hpsi_d(npwx+ii,jj) = aux_d(ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nbnd 
+      DO jj = 1, nbnd
         aux_d(ii,jj) = spsi_d(npw+ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = 1, npw
-      DO jj = 1, nbnd 
+      DO jj = 1, nbnd
         spsi_d(npwx+ii,jj) = aux_d(ii,jj)
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = npw+1, npwx
-      DO jj = 1, nbnd 
+      DO jj = 1, nbnd
         psi_d(ii,jj) = ZERO
-      END DO 
-    END DO 
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = npw+1, npwx
-      DO jj = 1, nbnd 
-        hpsi_d(ii,jj) = ZERO 
-      END DO 
-    END DO 
+      DO jj = 1, nbnd
+        hpsi_d(ii,jj) = ZERO
+      END DO
+    END DO
 !$cuf kernel do(2)
     DO ii = npw+1, npwx
-      DO jj = 1, nbnd 
+      DO jj = 1, nbnd
         spsi_d(ii,jj) = ZERO
-      END DO 
-    END DO 
+      END DO
+    END DO
     DEALLOCATE( aux_d )
     call stop_clock('rotHSw:move'); !write(*,*) 'stop rotHSw:move' ; FLUSH(6)
   end if

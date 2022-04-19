@@ -12,32 +12,32 @@ MODULE compute_drhocg_gpu_m
   USE cudafor
   !
   IMPLICIT NONE
-  TYPE(dim3) :: drhocg_threads = dim3(32,8,1) 
-  PUBLIC     :: drhocg_threads 
+  TYPE(dim3) :: drhocg_threads = dim3(32,8,1)
+  PUBLIC     :: drhocg_threads
   CONTAINS
       ATTRIBUTES(global) SUBROUTINE compute_drhocg_gpu( n, tpiba2, omega, gl, r, rhoc, rab, mesh, drhocg )
       !
       USE cudafor
-      USE kinds,     ONLY: DP 
+      USE kinds,     ONLY: DP
       USE constants, ONLY: pi, fpi, eps14
       !
-      IMPLICIT NONE 
+      IMPLICIT NONE
       !
-      INTEGER, VALUE :: n, mesh 
+      INTEGER, VALUE :: n, mesh
       REAL(DP),VALUE :: tpiba2, omega
       REAL(DP),DEVICE,INTENT(IN)  :: gl(n), r(mesh), rhoc(mesh), rab(mesh)
-      REAL(DP),DEVICE,INTENT(OUT) :: drhocg(n) 
-      !   
+      REAL(DP),DEVICE,INTENT(OUT) :: drhocg(n)
+      !
       INTEGER  :: tx, ty, igl, ir
       REAL(DP) :: mysum, val, gx, x
-      ! 
+      !
       tx = threadIdx%x
       ty = threadIdx%y
       !
       igl = (blockIdx%x - 1) * blockDim%y + ty
       !
-      IF (igl > n ) RETURN 
-      ! 
+      IF (igl > n ) RETURN
+      !
       gx = SQRT(gl(igl) * tpiba2)
       mysum = 0_dp
       !
@@ -74,7 +74,7 @@ MODULE compute_drhocg_gpu_m
     END SUBROUTINE compute_drhocg_gpu
     !
 #endif
-END MODULE compute_drhocg_gpu_m 
+END MODULE compute_drhocg_gpu_m
 !
 #if defined(__CUDA)
 !----------------------------------------------------------------------------
@@ -157,8 +157,7 @@ SUBROUTINE deriv_drhoc_gpu( ngl, gl_d, omega, tpiba2, mesh, r_d, rab_d, rhoc_d, 
 #if defined(__CUDA)
   USE cudafor
 #endif
-  USE simpsn_gpum,  ONLY: simpsn_gpu_dev
-  USE device_fbuff_m,     ONLY: dev_buf
+  USE simpsn_gpum,  ONLY : simpsn_gpu_dev
   !
   IMPLICIT NONE
   !

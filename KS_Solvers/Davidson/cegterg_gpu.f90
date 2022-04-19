@@ -37,10 +37,11 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
                             mp_sum_mapped, mp_bcast_mapped, &
 #endif
                             mp_type_create_column_section, mp_type_free
-#if defined(__OPENMP_GPU)
-  USE device_fbuff_m,      ONLY : gbuf => pin_buf
+#if !defined(__OPENMP_GPU)
+  USE devxlib_buffers,      ONLY : gbuf => pin_buffer
 #endif
-  USE device_memcpy_m, ONLY : dev_memcpy, dev_memset
+  USE devxlib_memcpy, ONLY : dev_memcpy_d2d => devxlib_memcpy_d2d
+  USE devxlib_memset, ONLY : dev_memset => devxlib_memory_set
   !
   IMPLICIT NONE
   !
@@ -229,7 +230,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
   enddo
   !$omp end target teams loop
 #else
-  CALL dev_memcpy(psi_d, evc_d, (/ 1 , npwx*npol /), 1, &
+  CALL dev_memcpy_d2d(psi_d, evc_d, (/ 1 , npwx*npol /), 1, &
                                 (/ 1 , nvec /), 1)
 #endif
 
@@ -271,7 +272,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
      enddo
      !$omp end target teams distribute parallel do
 #else
-     CALL dev_memcpy( pinned_buffer, hc_d, (/ 1, nbase /), 1, (/ n_start, n_end /), 1 )
+     CALL dev_memcpy_d2h( pinned_buffer, hc_d, (/ 1, nbase /), 1, (/ n_start, n_end /), 1 )
 #endif
      CALL mp_sum( pinned_buffer(1:nbase, n_start:n_end), intra_bgrp_comm )
      !hc_d( 1:nbase, n_start:n_end ) = pinned_buffer(1:nbase, n_start:n_end)
@@ -285,7 +286,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
      enddo
      !$omp end target teams distribute parallel do
 #else
-     CALL dev_memcpy( hc_d, pinned_buffer, (/ 1, nbase /), 1, (/ n_start, n_end /), 1 )
+     CALL dev_memcpy_h2d( hc_d, pinned_buffer, (/ 1, nbase /), 1, (/ n_start, n_end /), 1 )
 #endif
      !
   end if
@@ -324,7 +325,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
      enddo
      !$omp end target teams distribute parallel do
 #else
-     CALL dev_memcpy( pinned_buffer, sc_d, (/ 1, nbase /), 1, (/ n_start, n_end /), 1 )
+     CALL dev_memcpy_d2h( pinned_buffer, sc_d, (/ 1, nbase /), 1, (/ n_start, n_end /), 1 )
 #endif
      CALL mp_sum( pinned_buffer( 1:nbase, n_start:n_end ), intra_bgrp_comm )
      !sc_d( 1:nbase, n_start:n_end ) = pinned_buffer(1:nbase, n_start:n_end)
@@ -338,7 +339,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
      enddo
      !$omp end target teams distribute parallel do
 #else
-     CALL dev_memcpy( sc_d, pinned_buffer, (/ 1, nbase /), 1, (/ n_start, n_end /), 1 )
+     CALL dev_memcpy_h2d( sc_d, pinned_buffer, (/ 1, nbase /), 1, (/ n_start, n_end /), 1 )
 #endif
   end if
   !$omp dispatch
@@ -416,7 +417,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
      enddo
      !$omp end target teams loop
 #else
-     CALL dev_memcpy (e_d, ew_d, (/ 1, nvec /), 1 )
+     CALL dev_memcpy_d2d(e_d, ew_d, (/ 1, nvec /), 1 )
 #endif
      !
   END IF
@@ -616,7 +617,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
         enddo
         !$omp end target teams distribute parallel do
 #else
-        CALL dev_memcpy( pinned_buffer, hc_d, (/ nb1, nbase + notcnv /), 1, (/ n_start, n_end /), 1 )
+        CALL dev_memcpy_d2h( pinned_buffer, hc_d, (/ nb1, nbase + notcnv /), 1, (/ n_start, n_end /), 1 )
 #endif
         CALL mp_sum( pinned_buffer( nb1:nbase+notcnv, n_start:n_end ), intra_bgrp_comm )
         !hc_d( nb1:nbase+notcnv, n_start:n_end ) = pinned_buffer(nb1:nbase+notcnv, n_start:)
@@ -630,7 +631,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
         enddo
         !$omp end target teams distribute parallel do
 #else
-        CALL dev_memcpy( hc_d, pinned_buffer, (/ nb1, nbase + notcnv /), 1, (/ n_start, n_end /), 1 )
+        CALL dev_memcpy_h2d( hc_d, pinned_buffer, (/ nb1, nbase + notcnv /), 1, (/ n_start, n_end /), 1 )
 #endif
      end if
      !$omp dispatch
@@ -666,7 +667,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
         enddo
         !$omp end target teams distribute parallel do
 #else
-        CALL dev_memcpy( pinned_buffer, sc_d, (/ nb1, nbase + notcnv /), 1, (/ n_start, n_end /), 1 )
+        CALL dev_memcpy_d2h( pinned_buffer, sc_d, (/ nb1, nbase + notcnv /), 1, (/ n_start, n_end /), 1 )
 #endif
         CALL mp_sum( pinned_buffer( nb1:nbase+notcnv, n_start:n_end ), intra_bgrp_comm )
         !sc_d( nb1:nbase+notcnv, n_start:n_end ) = pinned_buffer( nb1:nbase+notcnv, n_start:n_end )
@@ -680,7 +681,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
         enddo
         !$omp end target teams distribute parallel do
 #else
-        CALL dev_memcpy( sc_d, pinned_buffer, (/ nb1, nbase + notcnv /), 1, (/ n_start, n_end /), 1 )
+        CALL dev_memcpy_h2d( sc_d, pinned_buffer, (/ nb1, nbase + notcnv /), 1, (/ n_start, n_end /), 1 )
 #endif
      end if
      !$omp dispatch
@@ -767,7 +768,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
      enddo
      !$omp end target teams loop
 #else
-     CALL dev_memcpy (e_d, ew_d, (/ 1, nvec /) )
+     CALL dev_memcpy_d2d(e_d, ew_d, (/ 1, nvec /) )
 #endif
      !
      ! ... if overall convergence has been achieved, or the dimension of
@@ -825,7 +826,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
         enddo
         !$omp end target teams loop
 #else
-        CALL dev_memcpy(psi_d, evc_d, (/ 1, npwx*npol /), 1, &
+        CALL dev_memcpy_d2d(psi_d, evc_d, (/ 1, npwx*npol /), 1, &
                                       (/ 1, nvec /), 1)
 #endif
         !
@@ -844,7 +845,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
            enddo
            !$omp end target teams loop
 #else
-           CALL dev_memcpy(spsi_d, psi_d(:,nvec+1:), &
+           CALL dev_memcpy_d2d(spsi_d, psi_d(:,nvec+1:), &
                                         (/1, npwx*npol/), 1, &
                                         (/1, nvec/), 1)
 #endif
@@ -866,7 +867,7 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
         enddo
         !$omp end target teams loop
 #else
-        CALL dev_memcpy(hpsi_d, psi_d(:,nvec+1:), &
+        CALL dev_memcpy_d2d(hpsi_d, psi_d(:,nvec+1:), &
                                         (/1, npwx*npol/), 1, &
                                         (/1, nvec/), 1)
 #endif
@@ -942,8 +943,8 @@ SUBROUTINE cegterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
 END SUBROUTINE cegterg_gpu
 
 SUBROUTINE reorder_evals_cevecs(nbase, nvec, nvecx, conv, e_d, ew_d, v_d)
-   USE util_param,    ONLY : DP
-   USE device_fbuff_m,  ONLY : buffer => dev_buf
+   USE util_param,      ONLY : DP
+   USE devxlib_buffers, ONLY : buffer => gpu_buffer
    implicit none
    INTEGER, INTENT(IN) :: nbase, nvec, nvecx
    LOGICAL, INTENT(IN) :: conv(nvec)
@@ -1043,8 +1044,11 @@ SUBROUTINE pcegterg_gpu(h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
 #if defined(__OPENMP_GPU)
   USE omp_lib
 #endif
-  USE device_memcpy_m,  ONLY : dev_memcpy, dev_memset
-  USE device_fbuff_m,   ONLY : buffer => dev_buf
+  USE devxlib_memcpy,  ONLY : dev_memcpy_d2d => devxlib_memcpy_d2d, &
+                              dev_memcpy_h2d => devxlib_memcpy_h2d, &
+                              dev_memcpy_d2h => devxlib_memcpy_d2h
+  USE devxlib_memset,  ONLY : dev_memset => devxlib_memory_set
+  USE devxlib_buffers, ONLY : buffer => gpu_buffer
 
   !
   IMPLICIT NONE
@@ -1297,7 +1301,7 @@ SUBROUTINE pcegterg_gpu(h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
 #else
   evc(:,1:nvec) = evc_d(:,1:nvec)
   psi(:,1:nvec) = evc(:,1:nvec)
-  CALL dev_memcpy(psi_d, evc_d, (/1, npwx*npol /), 1 , (/ 1, nvec /) )
+  CALL dev_memcpy_d2d(psi_d, evc_d, (/1, npwx*npol /), 1 , (/ 1, nvec /) )
 #endif
   !
   ! ... hpsi contains h times the basis vectors

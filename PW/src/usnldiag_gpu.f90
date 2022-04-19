@@ -15,14 +15,14 @@ SUBROUTINE usnldiag_gpu (npw, h_diag_d, s_diag_d)
   !
   !    Routine splitted for improving performance
   !
-  USE kinds,            ONLY: DP
-  USE ions_base,        ONLY: nat, ityp, ntyp => nsp
-  USE wvfct,            ONLY: npwx
-  USE uspp,             ONLY: ofsbeta, deeq_d, qq_at_d, qq_so_d, &
-                              deeq_nc_d
-  USE uspp_param,       ONLY: upf, nh
-  USE noncollin_module, ONLY: noncolin, npol, lspinorb
-  USE device_memcpy_m,  ONLY: dev_memset
+  USE kinds,            ONLY : DP
+  USE ions_base,        ONLY : nat, ityp, ntyp => nsp
+  USE wvfct,            ONLY : npwx
+  USE uspp,             ONLY : ofsbeta, deeq_d, qq_at_d, qq_so_d, &
+                               deeq_nc_d
+  USE uspp_param,       ONLY : upf, nh
+  USE noncollin_module, ONLY : noncolin, npol, lspinorb
+  USE devxlib_memset,   ONLY : dev_memset => devxlib_memory_set
   !
   IMPLICIT NONE
   !
@@ -49,13 +49,13 @@ SUBROUTINE usnldiag_gpu (npw, h_diag_d, s_diag_d)
   ELSE
      CALL usnldiag_collinear()
   END IF
-  
+
 CONTAINS
-  
+
   SUBROUTINE usnldiag_collinear()
      USE lsda_mod, ONLY: current_spin
      USE uspp,     ONLY: deeq_d, qq_at_d, vkb
-     
+
      IMPLICIT NONE
      !
      INTEGER :: ijkb_start, ikb, jkb, ih, jh, na, nt, ig, ipol
@@ -75,7 +75,7 @@ CONTAINS
                    !$acc data present(vkb(:,:)) deviceptr(h_diag_d(:,:), s_diag_d(:,:))
                    !$acc parallel vector_length(32)
                    !$acc loop gang reduction(+:sum_h,sum_s)
-                   DO ig = 1, npw 
+                   DO ig = 1, npw
                       sum_h = 0.d0
                       sum_s = 0.d0
                       !$acc loop vector collapse(2) private(ikb,cv,jkb,ar) reduction(+:sum_h,sum_s)
@@ -89,12 +89,12 @@ CONTAINS
                             sum_s = sum_s + dble(qq_at_d (ih, jh, na) * ar)
                          END DO
                       END DO
-                      !$acc atomic update 
+                      !$acc atomic update
                       h_diag_d (ig,1) = h_diag_d (ig,1) + sum_h
-                      !$acc end atomic 
-                      !$acc atomic update 
+                      !$acc end atomic
+                      !$acc atomic update
                       s_diag_d (ig,1) = s_diag_d (ig,1) + sum_s
-                      !$acc end atomic 
+                      !$acc end atomic
                    ENDDO
                    !$acc end parallel
                    !$acc end data
@@ -108,7 +108,7 @@ CONTAINS
                    !$acc data present(vkb(:,:)) deviceptr(h_diag_d(:,:), s_diag_d(:,:))
                    !$acc parallel vector_length(32)
                    !$acc loop gang reduction(+:sum_h,sum_s)
-                   DO ig = 1, npw 
+                   DO ig = 1, npw
                       sum_h = 0.d0
                       sum_s = 0.d0
                       !$acc loop vector private(ikb,ar) reduction(+:sum_h,sum_s)
@@ -120,10 +120,10 @@ CONTAINS
                       END DO
                       !$acc atomic update
                       h_diag_d (ig,1) = h_diag_d (ig,1) + sum_h
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,1) = s_diag_d (ig,1) + sum_s
-                      !$acc end atomic 
+                      !$acc end atomic
                    ENDDO
                    !$acc end parallel
                    !$acc end data
@@ -136,7 +136,7 @@ CONTAINS
   SUBROUTINE usnldiag_noncollinear()
      USE lsda_mod,  ONLY: current_spin
      USE uspp,      ONLY: vkb, qq_at_d, qq_so_d, deeq_nc_d
-     
+
      IMPLICIT NONE
      !
      INTEGER :: ijkb_start, ikb, jkb, ih, jh, na, nt, ig, ipol
@@ -154,7 +154,7 @@ CONTAINS
                    ijkb_start = ofsbeta(na)
                    nh_ = nh(nt)
                    !$acc data present(vkb(:,:)) deviceptr(h_diag_d(:,:), s_diag_d(:,:))
-                   !$acc parallel vector_length(32) 
+                   !$acc parallel vector_length(32)
                    !$acc loop gang reduction(+:sum_h1,sum_h4,sum_s)
                    DO ig = 1, npw   ! change this to 2*npw ?
                       sum_h1 = 0.d0
@@ -177,19 +177,19 @@ CONTAINS
                       !
                       !$acc atomic update
                       h_diag_d (ig,1) = h_diag_d (ig,1) + sum_h1
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       h_diag_d (ig,2) = h_diag_d (ig,2) + sum_h4
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,1) = s_diag_d (ig,1) + sum_s
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,2) = s_diag_d (ig,2) + sum_s
-                      !$acc end atomic 
+                      !$acc end atomic
                    ENDDO
                    !$acc end parallel
-                   !$acc end data 
+                   !$acc end data
               END IF
            END DO
         ELSE
@@ -198,9 +198,9 @@ CONTAINS
                    ijkb_start = ofsbeta(na)
                    nh_ = nh(nt)
                    !$acc data present(vkb(:,:)) deviceptr(h_diag_d(:,:), s_diag_d(:,:))
-                   !$acc parallel vector_length(32) 
+                   !$acc parallel vector_length(32)
                    !$acc loop gang reduction(+:sum_h1,sum_h4,sum_s)
-                   DO ig = 1, npw 
+                   DO ig = 1, npw
                       sum_h1 = 0.d0
                       sum_h4 = 0.d0
                       sum_s = 0.d0
@@ -217,19 +217,19 @@ CONTAINS
                       !
                       !$acc atomic update
                       h_diag_d (ig,1) = h_diag_d (ig,1) + sum_h1
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       h_diag_d (ig,2) = h_diag_d (ig,2) + sum_h4
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,1) = s_diag_d (ig,1) + sum_s
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,2) = s_diag_d (ig,2) + sum_s
-                      !$acc end atomic 
+                      !$acc end atomic
                    ENDDO
                    !$acc end parallel
-                   !$acc end data 
+                   !$acc end data
               END IF
            END DO
         END IF
@@ -264,7 +264,7 @@ CONTAINS
                       sum_h4 = 0.d0
                       sum_s1 = 0.d0
                       sum_s4 = 0.d0
-                      !$acc loop vector collapse(2) private(ikb,cv,jkb,ar) reduction(+:sum_h1,sum_h4,sum_s1,sum_s4) 
+                      !$acc loop vector collapse(2) private(ikb,cv,jkb,ar) reduction(+:sum_h1,sum_h4,sum_s1,sum_s4)
                       DO ih = 1, nh_
                          DO jh = 1, nh_
                             ikb = ijkb_start + ih
@@ -282,19 +282,19 @@ CONTAINS
                       !
                       !$acc atomic update
                       h_diag_d (ig,1) = h_diag_d (ig,1) + sum_h1
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       h_diag_d (ig,2) = h_diag_d (ig,2) + sum_h4
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,1) = s_diag_d (ig,1) + sum_s1
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,2) = s_diag_d (ig,2) + sum_s4
-                      !$acc end atomic 
+                      !$acc end atomic
                    ENDDO
                    !$acc end parallel
-                   !$acc end data 
+                   !$acc end data
               END IF
            END DO
         ELSE
@@ -305,12 +305,12 @@ CONTAINS
                    !$acc data present(vkb(:,:)) deviceptr(h_diag_d(:,:), s_diag_d(:,:))
                    !$acc parallel vector_length(32)
                    !$acc loop gang reduction(+:sum_h1,sum_h4,sum_s1,sum_s4)
-                   DO ig = 1, npw 
+                   DO ig = 1, npw
                       sum_h1 = 0.d0
                       sum_h4 = 0.d0
                       sum_s1 = 0.d0
                       sum_s4 = 0.d0
-                      !$acc loop vector private(ikb,ar) reduction(+:sum_h1,sum_h4,sum_s1,sum_s4) 
+                      !$acc loop vector private(ikb,ar) reduction(+:sum_h1,sum_h4,sum_s1,sum_s4)
                       DO ih = 1, nh_
                          ikb = ijkb_start + ih
                          ar = vkb (ig, ikb)*conjg(vkb (ig, ikb))
@@ -324,19 +324,19 @@ CONTAINS
                       !
                       !$acc atomic update
                       h_diag_d (ig,1) = h_diag_d (ig,1) + sum_h1
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       h_diag_d (ig,2) = h_diag_d (ig,2) + sum_h4
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,1) = s_diag_d (ig,1) + sum_s1
-                      !$acc end atomic 
+                      !$acc end atomic
                       !$acc atomic update
                       s_diag_d (ig,2) = s_diag_d (ig,2) + sum_s4
-                      !$acc end atomic 
+                      !$acc end atomic
                    ENDDO
                    !$acc end parallel
-                   !$acc end data 
+                   !$acc end data
               END IF
            END DO
         END IF

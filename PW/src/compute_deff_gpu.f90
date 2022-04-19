@@ -9,7 +9,7 @@
 SUBROUTINE compute_deff_gpu( deff_d, et )
   !-----------------------------------------------------------------------
   !! This routine computes the effective value of the D-eS coefficients
-  !! which appear often in many expressions in the US or PAW case. 
+  !! which appear often in many expressions in the US or PAW case.
   !! This routine is for the collinear case.
   !
   USE kinds,       ONLY: DP
@@ -31,7 +31,7 @@ SUBROUTINE compute_deff_gpu( deff_d, et )
   !
 #if defined(__CUDA)
   attributes(DEVICE) ::  deff_d
-#endif  
+#endif
   !
   IF (.NOT. okvan) THEN
      !
@@ -70,19 +70,19 @@ SUBROUTINE compute_deff_nc_gpu( deff_d, et )
   !! which appears often in many expressions. This routine is for the
   !! noncollinear case.
   !
-  USE kinds,            ONLY: DP
-  USE ions_base,        ONLY: nsp, nat, ityp
-  USE noncollin_module, ONLY: noncolin, npol, lspinorb
-  USE uspp,             ONLY: okvan, deeq_nc_d, qq_so_d, qq_at_d
-  USE uspp_param,       ONLY: nhm
-  USE lsda_mod,         ONLY: nspin
-  USE device_memcpy_m,  ONLY: dev_memcpy
+  USE kinds,            ONLY : DP
+  USE ions_base,        ONLY : nsp, nat, ityp
+  USE noncollin_module, ONLY : noncolin, npol, lspinorb
+  USE uspp,             ONLY : okvan, deeq_nc_d, qq_so_d, qq_at_d
+  USE uspp_param,       ONLY : nhm
+  USE lsda_mod,         ONLY : nspin
+  USE devxlib_memcpy,   ONLY : dev_memcpy => devxlib_memcpy_d2d
   !
   IMPLICIT NONE
   !
   REAL(DP), INTENT(IN) :: et
   !! The eigenvalues of the hamiltonian
-  COMPLEX(DP), INTENT(OUT) :: deff_d(nhm,nhm,nat,nspin) 
+  COMPLEX(DP), INTENT(OUT) :: deff_d(nhm,nhm,nat,nspin)
   !! Effective values of the D-eS coefficients
   !
   ! ... local variables
@@ -93,7 +93,7 @@ SUBROUTINE compute_deff_nc_gpu( deff_d, et )
   !
 #if defined(__CUDA)
   attributes(DEVICE) ::  deff_d, na_d, nt_d
-#endif  
+#endif
   !
   CALL dev_memcpy( deff_d, deeq_nc_d )
   !
@@ -126,7 +126,7 @@ SUBROUTINE compute_deff_nc_gpu( deff_d, et )
         ENDDO
       ENDDO
       !
-    ELSE  
+    ELSE
       !
       !$cuf kernel do (3) <<<*,*>>>
       DO ias = 1, nat
@@ -147,7 +147,7 @@ SUBROUTINE compute_deff_nc_gpu( deff_d, et )
     !
     DEALLOCATE( nt_d, na_d )
     !
-  ENDIF  
+  ENDIF
   !
   !
   RETURN

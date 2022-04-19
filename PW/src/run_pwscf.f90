@@ -6,16 +6,16 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !----------------------------------------------------------------------------
-SUBROUTINE run_pwscf( exit_status ) 
+SUBROUTINE run_pwscf( exit_status )
   !----------------------------------------------------------------------------
-  !! Author: Paolo Giannozzi  
-  !! License: GNU  
+  !! Author: Paolo Giannozzi
+  !! License: GNU
   !! Summary: Run an instance of the Plane Wave Self-Consistent Field code
   !
-  !! Run an instance of the Plane Wave Self-Consistent Field code 
-  !! MPI initialization and input data reading is performed in the 
-  !! calling code - returns in exit_status the exit code for pw.x, 
-  !! returned in the shell. Values are:  
+  !! Run an instance of the Plane Wave Self-Consistent Field code
+  !! MPI initialization and input data reading is performed in the
+  !! calling code - returns in exit_status the exit code for pw.x,
+  !! returned in the shell. Values are:
   !! * 0: completed successfully
   !! * 1: an error has occurred (value returned by the errore() routine)
   !! * 2-127: convergence error
@@ -60,7 +60,7 @@ SUBROUTINE run_pwscf( exit_status )
   USE ldaU,                 ONLY : lda_plus_u
   USE add_dmft_occ,         ONLY : dmft
   !
-  USE device_fbuff_m,             ONLY : dev_buf
+  USE devxlib_buffers,      ONLY : dev_buf => gpu_buffer
   !
   IMPLICIT NONE
   !
@@ -72,7 +72,7 @@ SUBROUTINE run_pwscf( exit_status )
   !
   ! ... local variables
   !
-  INTEGER :: idone 
+  INTEGER :: idone
   ! counter of electronic + ionic steps done in this run
   INTEGER :: ions_status
   ! ions_status =  3  not yet converged
@@ -94,7 +94,7 @@ SUBROUTINE run_pwscf( exit_status )
   !
   ! ... needs to come before iosys() so some input flags can be
   !     overridden without needing to write PWscf specific code.
-  ! 
+  !
   CALL qmmm_initialization()
   !
   ! ... convert to internal variables
@@ -245,7 +245,7 @@ SUBROUTINE run_pwscf( exit_status )
            ! ... final scf calculation with G-vectors for final cell
            !
            lbfgs=.FALSE.; lmd=.FALSE.
-           WRITE( UNIT = stdout, FMT=9020 ) 
+           WRITE( UNIT = stdout, FMT=9020 )
            !
            CALL reset_gvectors( )
            !
@@ -331,7 +331,7 @@ SUBROUTINE reset_gvectors( )
   !! Prepare a new scf calculation with newly recomputed grids,
   !! restarting from scratch, not from available data of previous
   !! steps (dimensions and file lengths will be different in general)
-  !! Useful as a check of variable-cell optimization: 
+  !! Useful as a check of variable-cell optimization:
   !! once convergence is achieved, compare the final energy with the
   !! energy computed with G-vectors and plane waves for the final cell
   !
@@ -340,7 +340,7 @@ SUBROUTINE reset_gvectors( )
   USE fft_base,   ONLY : dfftp
   USE fft_base,   ONLY : dffts
   USE xc_lib,     ONLY : xclib_dft_is
-  ! 
+  !
   IMPLICIT NONE
   !
   ! ... get magnetic moments from previous run before charge is deleted
@@ -372,20 +372,20 @@ END SUBROUTINE reset_gvectors
 !-------------------------------------------------------------
 SUBROUTINE reset_exx( )
 !-------------------------------------------------------------
-  USE fft_types,  ONLY : fft_type_deallocate 
-  USE exx_base,   ONLY : exx_grid_init, exx_mp_init, exx_div_check, & 
-                         coulomb_fac, coulomb_done 
-  USE exx,        ONLY : dfftt, exx_fft_create, deallocate_exx 
-  USE exx_band,   ONLY : igk_exx 
-  ! 
+  USE fft_types,  ONLY : fft_type_deallocate
+  USE exx_base,   ONLY : exx_grid_init, exx_mp_init, exx_div_check, &
+                         coulomb_fac, coulomb_done
+  USE exx,        ONLY : dfftt, exx_fft_create, deallocate_exx
+  USE exx_band,   ONLY : igk_exx
+  !
   IMPLICIT NONE
   !
   ! ... re-set EXX-related stuff...
   !
   IF (ALLOCATED(coulomb_fac) ) DEALLOCATE( coulomb_fac, coulomb_done )
   CALL deallocate_exx( )
-  IF (ALLOCATED(igk_exx)) DEALLOCATE(igk_exx) 
-  dfftt%nr1=0; dfftt%nr2=0; dfftt%nr3=0 
+  IF (ALLOCATED(igk_exx)) DEALLOCATE(igk_exx)
+  dfftt%nr1=0; dfftt%nr2=0; dfftt%nr3=0
   CALL fft_type_deallocate( dfftt ) ! FIXME: is this needed?
   !
   ! ... re-compute needed EXX-related stuff
@@ -394,16 +394,16 @@ SUBROUTINE reset_exx( )
   CALL exx_mp_init()
   CALL exx_fft_create()
   CALL exx_div_check()
-  ! 
+  !
 END SUBROUTINE reset_exx
 !
 !
 !----------------------------------------------------------------
 SUBROUTINE reset_magn()
   !----------------------------------------------------------------
-  !! LSDA optimization: a final configuration with zero 
-  !! absolute magnetization has been found and we check 
-  !! if it is really the minimum energy structure by 
+  !! LSDA optimization: a final configuration with zero
+  !! absolute magnetization has been found and we check
+  !! if it is really the minimum energy structure by
   !! performing a new scf iteration without any "electronic" history.
   !
   USE io_global,    ONLY : stdout
@@ -423,16 +423,16 @@ SUBROUTINE reset_magn()
            & /5X,'                   absolute magnetization has been found' )
 9020 FORMAT( /5X,'the program is checking if it is really ', &
            &     'the minimum energy structure',             &
-           & /5X,'by performing a new scf iteration ',       & 
-           &     'without any "electronic" history' )               
+           & /5X,'by performing a new scf iteration ',       &
+           &     'without any "electronic" history' )
   !
 END SUBROUTINE reset_magn
 !
 !
 !-------------------------------------------------------------------
-SUBROUTINE reset_starting_magnetization() 
+SUBROUTINE reset_starting_magnetization()
   !-------------------------------------------------------------------
-  !! On input, the scf charge density is needed.  
+  !! On input, the scf charge density is needed.
   !! On output, new values for starting_magnetization, angle1, angle2
   !! estimated from atomic magnetic moments - to be used in last step.
   !
