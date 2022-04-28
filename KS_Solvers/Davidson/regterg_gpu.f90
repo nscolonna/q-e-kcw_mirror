@@ -751,8 +751,8 @@ SUBROUTINE regterg_gpu( h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
 END SUBROUTINE regterg_gpu
 
 SUBROUTINE reorder_evals_revecs(nbase, nvec, nvecx, conv, e_d, ew_d, v_d)
-  USE util_param,   ONLY : DP
-  USE device_fbuff_m,  ONLY : buffer => dev_buf
+  USE util_param,      ONLY : DP
+  USE devxlib_buffers, ONLY : buffer => gpu_buffer
   implicit none
   INTEGER, INTENT(IN) :: nbase, nvec, nvecx
   LOGICAL, INTENT(IN) :: conv(nvec)
@@ -840,15 +840,15 @@ SUBROUTINE pregterg_gpu(h_psi_gpu, s_psi_gpu, uspp, g_psi_gpu, &
   ! ... S is an uspp matrix, evc is a complex vector
   ! ... (real wavefunctions with only half plane waves stored)
   !
-  USE util_param,        ONLY : DP, stdout
-  USE mp_bands_util,     ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id
-  USE mp_bands_util,     ONLY : gstart
-  USE mp,                ONLY : mp_bcast, mp_root_sum, mp_sum
+  USE util_param,      ONLY : DP, stdout
+  USE mp_bands_util,   ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id
+  USE mp_bands_util,   ONLY : gstart
+  USE mp,              ONLY : mp_bcast, mp_root_sum, mp_sum
 #if defined(__OPENMP_GPU)
   USE omp_lib
-  USE mp,             ONLY : mp_sum_mapped, mp_bcast_mapped
+  USE mp,              ONLY : mp_sum_mapped, mp_bcast_mapped
 #endif
-  USE device_fbuff_m,  ONLY : buffer => dev_buf
+  USE devxlib_buffers, ONLY : buffer => gpu_buffer
   !
   IMPLICIT NONE
   !

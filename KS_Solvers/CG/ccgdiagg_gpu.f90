@@ -78,7 +78,8 @@ SUBROUTINE ccgdiagg_gpu( hs_1psi_gpu, s_1psi_gpu, precondition_d, &
 #if defined(__VERBOSE)
   USE util_param,     ONLY : stdout
 #endif
-  USE device_memcpy_m,  ONLY : dev_memset, dev_memcpy
+  USE devxlib_memcpy, ONLY : dev_memcpy_h2d => devxlib_memcpy_h2d
+  USE devxlib_memset, ONLY : dev_memset => devxlib_memory_set
   !
   IMPLICIT NONE
   !
@@ -645,7 +646,7 @@ SUBROUTINE ccgdiagg_gpu( hs_1psi_gpu, s_1psi_gpu, precondition_d, &
 #if defined(__OPENMP_GPU)
   !$omp target update to(e)
 #else
-  CALL dev_memcpy(e_d, e)
+  CALL dev_memcpy_h2d(e_d, e)
 #endif
   !
   !$omp target exit data map(delete:lagrange)

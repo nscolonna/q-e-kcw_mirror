@@ -15,28 +15,29 @@ SUBROUTINE vhpsi_gpu( ldap, np, mps, psip_d, hpsi_d )
   !! This routine computes the Hubbard potential applied to the electronic
   !! structure of the current k-point. The result is added to hpsi.
   !
-  USE kinds,         ONLY : DP
-  USE becmod,        ONLY : bec_type, calbec, allocate_bec_type, &
-                            deallocate_bec_type
-  USE ldaU,          ONLY : Hubbard_lmax, Hubbard_l, is_Hubbard,   &
-                            nwfcU, wfcU, offsetU, lda_plus_u_kind, &
-                            is_hubbard_back, Hubbard_l_back, offsetU_back, &
-                            backall, offsetU_back1
-  USE lsda_mod,      ONLY : current_spin
-  USE scf,           ONLY : v
-  USE ions_base,     ONLY : nat, ntyp => nsp, ityp
-  USE control_flags, ONLY : gamma_only
-  USE mp,            ONLY : mp_sum
+  USE kinds,            ONLY : DP
+  USE becmod,           ONLY : bec_type, calbec, allocate_bec_type, &
+                               deallocate_bec_type
+  USE ldaU,             ONLY : Hubbard_lmax, Hubbard_l, is_Hubbard,   &
+                               nwfcU, wfcU, offsetU, lda_plus_u_kind, &
+                               is_hubbard_back, Hubbard_l_back, offsetU_back, &
+                               backall, offsetU_back1
+  USE lsda_mod,         ONLY : current_spin
+  USE scf,              ONLY : v
+  USE ions_base,        ONLY : nat, ntyp => nsp, ityp
+  USE control_flags,    ONLY : gamma_only
+  USE mp,               ONLY : mp_sum
   !
   USE becmod_gpum,      ONLY : bec_type_d
   USE becmod_subs_gpum, ONLY : allocate_bec_type_gpu, deallocate_bec_type_gpu, &
                                calbec_gpu
-  USE device_memcpy_m,    ONLY: dev_memcpy, dev_memset
+  USE devxlib_memcpy,   ONLY : dev_memcpy_h2d => devxlib_memcpy_h2d
+  USE devxlib_memset,   ONLY : dev_memset => devxlib_memory_set
   !
 #if defined(__CUDA)
   USE cudafor
   USE cublas
-#endif  
+#endif
   !
   IMPLICIT NONE
   !
@@ -66,11 +67,11 @@ SUBROUTINE vhpsi_gpu( ldap, np, mps, psip_d, hpsi_d )
   ! Offset of atomic wavefunctions initialized in setup and stored in offsetU
   !
   ! Allocate the array proj
-  CALL allocate_bec_type_gpu( nwfcU, mps, proj_d ) 
+  CALL allocate_bec_type_gpu( nwfcU, mps, proj_d )
   !
   dimwf1 = SIZE(wfcU(:,1))
   ALLOCATE( wfcU_d(dimwf1,nwfcU) )
-  CALL dev_memcpy(wfcU_d, wfcU)
+  CALL dev_memcpy_h2d(wfcU_d, wfcU)
   !
   ! proj = <wfcU|psip>
   CALL calbec_gpu( np, wfcU_d, psip_d, proj_d )
@@ -94,7 +95,7 @@ CONTAINS
 SUBROUTINE vhpsi_U_gpu()
   !
   ! This routine applies the Hubbard potential with U_I
-  ! to the KS wave functions. 
+  ! to the KS wave functions.
   !
   USE ldaU,      ONLY : ldim_back, ldmx_b, Hubbard_l1_back
   !
@@ -107,7 +108,7 @@ SUBROUTINE vhpsi_U_gpu()
   !
 #if defined(__CUDA)
   attributes(DEVICE) :: vns_d, vnsb_d, rtemp_d, ctemp_d, vaux_d, vauxb_d
-#endif   
+#endif
   !
   ldimax = 2*Hubbard_lmax+1
   ldimaxt = MAX(ldimax, ldmx_b)
@@ -143,7 +144,7 @@ SUBROUTINE vhpsi_U_gpu()
      ! where v%ns = U ( delta/2 - rho%ns ) is computed in v_of_rho
      !
      IF ( is_hubbard(nt) ) THEN
-        !  
+        !
         ldim = 2*Hubbard_l(nt) + 1
         !
         DO na = 1, nat
@@ -174,7 +175,7 @@ SUBROUTINE vhpsi_U_gpu()
         !
      ENDIF
      !
-     ! If the background is used then compute extra 
+     ! If the background is used then compute extra
      ! contribution to the Hubbard potential
      !
      IF ( is_hubbard_back(nt) ) THEN
@@ -234,7 +235,7 @@ SUBROUTINE vhpsi_U_gpu()
                          vauxb_d(ldim0+1,ldim0+1,na),ldmx_b,                   &
                          proj_d%k_d(offsetU_back1(na)+1,1), nwfcU,             &
                          (0.0_dp,0.0_dp), ctemp_d, ldimaxt )
-                    ! 
+                    !
                     CALL cublasZgemm( 'N', 'N', np, mps, ldim, (1.0_dp,0.0_dp), &
                          wfcU_d(1,offsetU_back1(na)+1), ldap, ctemp_d,          &
                          ldimaxt, (1.0_dp,0.0_dp), hpsi_d, ldap )

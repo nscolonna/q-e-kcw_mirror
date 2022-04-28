@@ -467,52 +467,49 @@ SUBROUTINE many_cft3s_gpu( f, dfft, isgn, batchsize )
           !
        ENDIF
        !
-       !$omp single
-       !$omp task depend (out: aux(j*dfft%nnr+1:(j+1)*dfft%nnr))
+       !!$omp single
+       !!$omp task depend (out: aux(j*dfft%nnr+1:(j+1)*dfft%nnr))
        DO i = 0, currsize - 1
          CALL cft_1z_gpu( f((j+i)*dfft%nnr + 1:), sticks(me_p), n3, nx3, isgn, aux(j*dfft%nnr + i*ncpx*nx3 +1:) )
        ENDDO
-       !$omp end task
-       print *, 'FFT 1 pos'
+       !!$omp end task
 
-       !$omp task depend (in: aux(j*dfft%nnr+1:(j+1)*dfft%nnr))
+       !!$omp task depend (in: aux(j*dfft%nnr+1:(j+1)*dfft%nnr))
        CALL fft_scatter_many_columns_to_planes_store( dfft, aux(j*dfft%nnr + 1:), nx3, dfft%nnr, f(j*dfft%nnr + 1:), &
          sticks, dfft%nr3p, isgn, currsize )
-       !$omp end task
-       !$omp end single
+       !!$omp end task
+       !!$omp end single
 
      ENDDO
 
      DO j = 0, batchsize-1, dfft%subbatchsize
        currsize = min(dfft%subbatchsize, batchsize - j)
 
-       !$omp single
-       !$omp task depend (out: f(j*dfft%nnr+1:(j+1)*dfft%nnr))
+       !!$omp single
+       !!$omp task depend (out: f(j*dfft%nnr+1:(j+1)*dfft%nnr))
        CALL fft_scatter_many_columns_to_planes_send( dfft, aux(j*dfft%nnr + 1:), nx3, dfft%nnr, f(j*dfft%nnr + 1:), &
          aux2(j*dfft%nnr + 1:), sticks, dfft%nr3p, isgn, currsize, j/dfft%subbatchsize + 1 )
-       !$omp end task
+       !!$omp end task
 
        IF (currsize == dfft%subbatchsize) THEN
-         !$omp task depend (in: f(j*dfft%nnr+1:(j+1)*dfft%nnr))
+         !!$omp task depend (in: f(j*dfft%nnr+1:(j+1)*dfft%nnr))
          CALL cft_2xy_gpu( f(j*dfft%nnr + 1:), currsize * nppx, n1, n2, nx1, nx2, isgn, planes )
-         !$omp end task
+         !!$omp end task
        ELSE
-         !$omp task depend (in: f(j*dfft%nnr+1:(j+1)*dfft%nnr))
+         !!$omp task depend (in: f(j*dfft%nnr+1:(j+1)*dfft%nnr))
          DO i = 0, currsize - 1
            CALL cft_2xy_gpu( f((j+i)*dfft%nnr + 1:), dfft%nr3p( me_p ), n1, n2, nx1, nx2, isgn, planes )
          ENDDO
-         !$omp end task
+         !!$omp end task
        ENDIF
-       !$omp end single
+       !!$omp end single
 
      ENDDO
      !
   ELSE
      !
-     print *, 'batch', batchsize, dfft%subbatchsize
      DO j = 0, batchsize-1, dfft%subbatchsize
        currsize = min(dfft%subbatchsize, batchsize - j)
-       print *, 'currsize', currsize
        !
        IF ( isgn /= -2 ) THEN
           !
@@ -540,18 +537,18 @@ SUBROUTINE many_cft3s_gpu( f, dfft, isgn, batchsize )
      DO j = 0, batchsize-1, dfft%subbatchsize
        currsize = min(dfft%subbatchsize, batchsize - j)
 
-       !$omp single
-       !$omp task depend (out: aux(j*dfft%nnr+1:(j+1)*dfft%nnr))
+       !!$omp single
+       !!$omp task depend (out: aux(j*dfft%nnr+1:(j+1)*dfft%nnr))
        CALL fft_scatter_many_planes_to_columns_send( dfft, aux(j*dfft%nnr + 1:), nx3, dfft%nnr, f(j*dfft%nnr + 1:), &
          aux2(j*dfft%nnr + 1:), sticks, dfft%nr3p, isgn, currsize, j/dfft%subbatchsize + 1 )
-       !$omp end task
+       !!$omp end task
 
-       !$omp task depend (in: aux(j*dfft%nnr+1:(j+1)*dfft%nnr))
+       !!$omp task depend (in: aux(j*dfft%nnr+1:(j+1)*dfft%nnr))
        DO i = 0, currsize - 1
          CALL cft_1z_gpu( aux(j*dfft%nnr + i*ncpx*nx3 + 1:), sticks( me_p ), n3, nx3, isgn, f((j+i)*dfft%nnr + 1:) )
        ENDDO
-       !$omp end task
-       !$omp end single
+       !!$omp end task
+       !!$omp end single
 
      ENDDO
   ENDIF
@@ -929,7 +926,6 @@ SUBROUTINE many_cft3s_gpu( f_d, dfft, isgn, batchsize )
 
        CALL fft_scatter_many_planes_to_columns_send( dfft, aux_d(j*dfft%nnr + 1:), aux_h(j*dfft%nnr + 1:), nx3, dfft%nnr, f_d(j*dfft%nnr + 1:), &
          f_h(j*dfft%nnr + 1:), aux2_d(j*dfft%nnr + 1:), aux2_h(j*dfft%nnr + 1:), sticks, dfft%nr3p, isgn, currsize, j/dfft%subbatchsize + 1 )
-
 
        i = cudaEventRecord(dfft%bevents(j/dfft%subbatchsize + 1), dfft%bstreams(j/dfft%subbatchsize + 1))
        i = cudaStreamWaitEvent(dfft%a2a_comp, dfft%bevents(j/dfft%subbatchsize + 1), 0)

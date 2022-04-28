@@ -36,7 +36,7 @@ SUBROUTINE c_bands( iter )
   USE wavefunctions_gpum,   ONLY : using_evc
   USE wvfct_gpum,           ONLY : using_et
   USE uspp_init,            ONLY : init_us_2
-  USE device_fbuff_m,       ONLY : dev_buf
+  USE devxlib_buffers,      ONLY : dev_buf => gpu_buffer
   !
   IMPLICIT NONE
   !
@@ -65,7 +65,7 @@ SUBROUTINE c_bands( iter )
   IF ( restart ) CALL restart_in_cbands( ik_, ethr, avg_iter, et )
   !
   ! ... If restarting, calculated wavefunctions have to be read from file
-  ! ... (not needed for a single k-point: this is done in wfcinit, 
+  ! ... (not needed for a single k-point: this is done in wfcinit,
   ! ...  directly from file, in order to avoid wasting memory)
   !
   DO ik = 1, ik_
@@ -83,13 +83,13 @@ SUBROUTINE c_bands( iter )
   ELSEIF ( isolve == 3 ) THEN
      WRITE( stdout, '(5X,"ParO style diagonalization")')
   ELSEIF ( isolve == 4 ) THEN
-     IF (rmm_use_davidson(iter)) THEN 
+     IF (rmm_use_davidson(iter)) THEN
        WRITE( stdout, '(5X,"Davidson diagonalization with overlap")' )
-     ELSE IF (rmm_use_paro(iter)) THEN 
+     ELSE IF (rmm_use_paro(iter)) THEN
       WRITE( stdout, '(5X,"ParO style diagonalization")')
-     ELSE 
+     ELSE
        WRITE( stdout, '(5X,"RMM-DIIS diagonalization")')
-     END IF 
+     END IF
   ELSE
      CALL errore ( 'c_bands', 'invalid type of diagonalization', isolve)
   ENDIF
@@ -229,7 +229,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
   !
   ! please do not capitalize (FORD rules)
   include 'ks_solver_interfaces.fh'
-  !  
+  !
   INTEGER, INTENT(IN) :: iter
   !! iteration index
   INTEGER, INTENT(IN) :: ik
@@ -252,11 +252,11 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
   ! .TRUE. if the wfc have already be rotated
   !
   INTEGER, PARAMETER :: sbsize = 5, rrstep = 7
-  ! block dimensions used in PPCG 
+  ! block dimensions used in PPCG
   !
   COMPLEX (DP), POINTER :: hevc_d(:,:), sevc_d(:,:)
   ! hamiltonian x wavefunctions, only for RMM-DIIS
-  ! overlap x wavefunctions, only for RMM-DIIS 
+  ! overlap x wavefunctions, only for RMM-DIIS
 #if defined(__CUDA)
   attributes(DEVICE) :: hevc_d, sevc_d
 #endif
@@ -428,7 +428,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                !
                avg_iter = avg_iter + ppcg_iter
                !
-             END IF 
+             END IF
           ELSE
              !
              IF (.not. use_gpu ) THEN
@@ -436,7 +436,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                CALL paro_gamma_new( h_psi, s_psi, hs_psi, g_1psi, okvan, &
                           npwx, npw, nbnd, evc, et(1,ik), btype(1,ik), ethr, notconv, nhpsi )
                !
-               avg_iter = avg_iter + nhpsi/float(nbnd) 
+               avg_iter = avg_iter + nhpsi/float(nbnd)
                ! write (6,*) ntry, avg_iter, nhpsi
                !
              ELSE
@@ -444,10 +444,10 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                CALL paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, okvan, &
                           npwx, npw, nbnd, evc_d, et_d(1,ik), btype(1,ik), ethr, notconv, nhpsi )
                !
-               avg_iter = avg_iter + nhpsi/float(nbnd) 
+               avg_iter = avg_iter + nhpsi/float(nbnd)
                ! write (6,*) ntry, avg_iter, nhpsi
                !
-             ENDIF  
+             ENDIF
           ENDIF
           !
           !
@@ -502,7 +502,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                 CALL paro_gamma_new( h_psi, s_psi, hs_psi, g_1psi, okvan, &
                            npwx, npw, nbnd, evc, et(1,ik), btype(1,ik), ethr, notconv, nhpsi )
                 !
-                avg_iter = avg_iter + nhpsi/float(nbnd) 
+                avg_iter = avg_iter + nhpsi/float(nbnd)
                 ! write (6,*) ntry, avg_iter, nhpsi
                 !
               ELSE
@@ -510,10 +510,10 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                 CALL paro_gamma_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, okvan, &
                            npwx, npw, nbnd, evc_d, et_d(1,ik), btype(1,ik), ethr, notconv, nhpsi )
                 !
-                avg_iter = avg_iter + nhpsi/float(nbnd) 
+                avg_iter = avg_iter + nhpsi/float(nbnd)
                 ! write (6,*) ntry, avg_iter, nhpsi
                 !
-              ENDIF  
+              ENDIF
                !
           ELSE IF ( .NOT. lrot ) THEN
              !
@@ -571,7 +571,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
        !
        avg_iter = avg_iter + 0.5D0
        !
-       IF ( .not. use_gpu) THEN 
+       IF ( .not. use_gpu) THEN
           DEALLOCATE( hevc )
           IF ( okvan ) THEN
              DEALLOCATE( sevc )
@@ -640,7 +640,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              IF ( use_para_diag ) THEN
                 CALL pregterg_gpu( h_psi_gpu, s_psi_gpu, okvan, g_psi_gpu, &
                             npw, npwx, nbnd, nbndx, evc_d, ethr, &
-                            et_d(1, ik), btype(1,ik), notconv, lrot, dav_iter, nhpsi ) !    BEWARE gstart has been removed from call 
+                            et_d(1, ik), btype(1,ik), notconv, lrot, dav_iter, nhpsi ) !    BEWARE gstart has been removed from call
                 !
              ELSE
                 !
@@ -796,21 +796,21 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                avg_iter = avg_iter + ppcg_iter
                !
              END IF
-          ELSE 
+          ELSE
              !
              IF ( .not. use_gpu ) THEN
                CALL using_evc(1); CALL using_et(1); CALL using_h_diag(0)
                CALL paro_k_new( h_psi, s_psi, hs_psi, g_1psi, okvan, &
                         npwx, npw, nbnd, npol, evc, et(1,ik), btype(1,ik), ethr, notconv, nhpsi )
                !
-               avg_iter = avg_iter + nhpsi/float(nbnd) 
+               avg_iter = avg_iter + nhpsi/float(nbnd)
                ! write (6,*) ntry, avg_iter, nhpsi
              ELSE
                CALL using_evc_d(1); CALL using_et_d(1); CALL using_h_diag_d(0)
                CALL paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, okvan, &
                         npwx, npw, nbnd, npol, evc_d, et_d(1,ik), btype(1,ik), ethr, notconv, nhpsi )
                !
-               avg_iter = avg_iter + nhpsi/float(nbnd) 
+               avg_iter = avg_iter + nhpsi/float(nbnd)
                ! write (6,*) ntry, avg_iter, nhpsi
                !
              END IF
@@ -827,7 +827,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
        !
        ! ... RMM-DIIS diagonalization
        !
-       IF ( .not. use_gpu) THEN 
+       IF ( .not. use_gpu) THEN
          ALLOCATE( hevc( npwx*npol, nbnd ) )
          IF ( okvan ) THEN
             ALLOCATE( sevc( npwx*npol, nbnd ) )
@@ -841,7 +841,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
          ELSE
             sevc_d => evc_d !evc_d allocated in wfcinit_gpu
          END IF
-       END IF  
+       END IF
        !
        ntry = 0
        !
@@ -866,14 +866,14 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                 CALL paro_k_new( h_psi, s_psi, hs_psi, g_1psi, okvan, &
                          npwx, npw, nbnd, npol, evc, et(1,ik), btype(1,ik), ethr, notconv, nhpsi )
                 !
-                avg_iter = avg_iter + nhpsi/float(nbnd) 
+                avg_iter = avg_iter + nhpsi/float(nbnd)
                 ! write (6,*) ntry, avg_iter, nhpsi
               ELSE
                 CALL using_evc_d(1); CALL using_et_d(1); CALL using_h_diag_d(0)
                 CALL paro_k_new_gpu( h_psi_gpu, s_psi_gpu, hs_psi_gpu, g_1psi_gpu, okvan, &
                          npwx, npw, nbnd, npol, evc_d, et_d(1,ik), btype(1,ik), ethr, notconv, nhpsi )
                 !
-                avg_iter = avg_iter + nhpsi/float(nbnd) 
+                avg_iter = avg_iter + nhpsi/float(nbnd)
                 ! write (6,*) ntry, avg_iter, nhpsi
                 !
               END IF
@@ -883,7 +883,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              IF ( .not. use_gpu ) THEN
                 CALL using_evc(1);  CALL using_et(1); !precontidtion has intent(in)
                 CALL rotate_xpsi( npwx, npw, nbnd, nbnd, evc, npol, okvan, &
-                                  evc, hevc, sevc, et(:,ik), & 
+                                  evc, hevc, sevc, et(:,ik), &
                                   USE_PARA_DIAG = use_para_diag, GAMMA_ONLY = gamma_only )
              ELSE
                 CALL using_evc_d(1);  CALL using_et_d(1); !precontidtion has intent(in)
@@ -927,7 +927,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
           CALL gram_schmidt_k( npwx, npw, nbnd, npol, evc, hevc, sevc, et(1,ik), &
                              okvan, .TRUE., .TRUE., gs_nblock )
        ELSE
-          CALL using_evc_d(1); CALL using_et(1); 
+          CALL using_evc_d(1); CALL using_et(1);
           CALL gram_schmidt_k_gpu( npwx, npw, nbnd, npol, evc_d, hevc_d, sevc_d, et(1,ik), &
                              okvan, .TRUE., .TRUE., gs_nblock )
 
@@ -935,7 +935,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
        !
        avg_iter = avg_iter + 0.5D0
        !
-       IF ( .not. use_gpu) THEN 
+       IF ( .not. use_gpu) THEN
          DEALLOCATE( hevc )
          IF ( okvan ) THEN
             DEALLOCATE( sevc )
@@ -949,7 +949,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
          ELSE
             NULLIFY( sevc_d )
          END IF
-       END IF 
+       END IF
        !
        !
     ELSE
@@ -1010,7 +1010,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                                et(1,ik), btype(1,ik), notconv, lrot, dav_iter, nhpsi )
              END IF
           ELSE
-             CALL using_evc_d(1) ; CALL using_et_d(1) 
+             CALL using_evc_d(1) ; CALL using_et_d(1)
              IF ( use_para_diag ) then
                 !
                 CALL pcegterg_gpu( h_psi_gpu, s_psi_gpu, okvan, g_psi_gpu, &
@@ -1058,7 +1058,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
     !
     LOGICAL :: test_exit_cond
     !
-    
+
     IF ( lscf .AND. lgcscf ) THEN
        !
        ! ... tight condition for GC-SCF
@@ -1223,7 +1223,7 @@ SUBROUTINE c_bands_nscf( )
      !
      IF (.not. use_gpu ) CALL g2_kin( ik )
      IF (      use_gpu ) CALL g2_kin_gpu( ik )
-     ! 
+     !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
      IF ( nkb > 0 ) CALL init_us_2( ngk(ik), igk_k(1,ik), xk(1,ik), vkb , .true.)
@@ -1310,15 +1310,15 @@ END SUBROUTINE c_bands_nscf
 FUNCTION rmm_use_davidson(iter_) RESULT (res)
   USE control_flags, ONLY: rmm_with_davidson
   IMPLICIT NONE
-  INTEGER,INTENT(IN) :: iter_ 
-  LOGICAL :: res 
-  res = (rmm_with_davidson) .AND. ( iter_ < 3 .OR. MOD(iter_,5) == 0) 
+  INTEGER,INTENT(IN) :: iter_
+  LOGICAL :: res
+  res = (rmm_with_davidson) .AND. ( iter_ < 3 .OR. MOD(iter_,5) == 0)
 END FUNCTION rmm_use_davidson
 
 FUNCTION rmm_use_paro(iter_) RESULT (res)
   USE control_flags, ONLY: rmm_with_davidson
   IMPLICIT NONE
-  INTEGER, INTENT(IN) :: iter_ 
-  LOGICAL  :: res 
-  res = (.NOT. rmm_with_davidson) .AND.  (MOD(iter_,5) == 1) 
+  INTEGER, INTENT(IN) :: iter_
+  LOGICAL  :: res
+  res = (.NOT. rmm_with_davidson) .AND.  (MOD(iter_,5) == 1)
 END FUNCTION rmm_use_paro

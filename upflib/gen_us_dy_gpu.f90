@@ -16,17 +16,17 @@ SUBROUTINE gen_us_dy_gpu_ ( npw, npwx, igk_d, xk, nat, tau, ityp, ntyp, &
   !
   ! AF: more extensive use of GPU-resident vars possible
   !
-  USE upf_kinds,   ONLY: dp
-  USE upf_const,   ONLY: tpi
-  USE uspp,        ONLY: nkb, indv_d, nhtol_d, nhtolm_d
-  USE uspp_data,   ONLY: nqx, tab, tab_d, dq
-  USE uspp_param,  ONLY: upf, lmaxkb, nbetam, nh, nhm
-  USE device_fbuff_m,   ONLY: dev_buf
+  USE upf_kinds,       ONLY : dp
+  USE upf_const,       ONLY : tpi
+  USE uspp,            ONLY : nkb, indv_d, nhtol_d, nhtolm_d
+  USE uspp_data,       ONLY : nqx, tab, tab_d, dq
+  USE uspp_param,      ONLY : upf, lmaxkb, nbetam, nh, nhm
+  USE devxlib_buffers, ONLY : gpu_buffer
   !
   IMPLICIT NONE
   !
   INTEGER, INTENT(IN) :: npw
-  !! number ok plane waves 
+  !! number ok plane waves
   INTEGER, INTENT(IN) :: npwx
   !! max number ok plane waves across k-points
   INTEGER, INTENT(IN) :: igk_d(npw)
@@ -95,9 +95,9 @@ SUBROUTINE gen_us_dy_gpu_ ( npw, npwx, igk_d, xk, nat, tau, ityp, ntyp, &
   !
   lmx2 = (lmaxkb+1)**2
   !
-  CALL dev_buf%lock_buffer( dylm_u_d, (/ npw,lmx2 /), ierr(1) )
-  CALL dev_buf%lock_buffer( vkb0_d, (/ npw,nbetam,ntyp /), ierr(2) )
-  CALL dev_buf%lock_buffer( gk_d, (/ 3,npw /), ierr(3) )
+  CALL gpu_buffer%lock_buffer( dylm_u_d, (/ npw,lmx2 /), ierr(1) )
+  CALL gpu_buffer%lock_buffer( vkb0_d, (/ npw,nbetam,ntyp /), ierr(2) )
+  CALL gpu_buffer%lock_buffer( gk_d, (/ 3,npw /), ierr(3) )
   IF (ANY(ierr /= 0)) CALL upf_error( 'gen_us_dy_gpu', 'cannot allocate buffers', ABS(ierr) )
   ALLOCATE( q_d(npw) )
   !
@@ -114,10 +114,10 @@ SUBROUTINE gen_us_dy_gpu_ ( npw, npwx, igk_d, xk, nat, tau, ityp, ntyp, &
      q_d(ig) = gk_d(1,ig)**2 +  gk_d(2,ig)**2 + gk_d(3,ig)**2
   ENDDO
   !
-  CALL dev_buf%lock_buffer( dylm_d, (/npw,lmx2,3/), ierr(4) )
+  CALL gpu_buffer%lock_buffer( dylm_d, (/npw,lmx2,3/), ierr(4) )
   DO ipol = 1, 3
      CALL dylmr2_gpu( lmx2, npw, gk_d, q_d, dylm_d(:,:,ipol), ipol )
-  ENDDO   
+  ENDDO
   !
   u_ipol1 = u(1) ; u_ipol2 = u(2) ; u_ipol3 = u(3)
   !
@@ -129,7 +129,7 @@ SUBROUTINE gen_us_dy_gpu_ ( npw, npwx, igk_d, xk, nat, tau, ityp, ntyp, &
                         u_ipol3*dylm_d(ig,lm,3)
     ENDDO
   ENDDO
-  CALL dev_buf%release_buffer( dylm_d, ierr(4) )
+  CALL gpu_buffer%release_buffer( dylm_d, ierr(4) )
   !
   !
   !$cuf kernel do (1) <<<*,*>>>
@@ -233,17 +233,17 @@ SUBROUTINE gen_us_dy_gpu_ ( npw, npwx, igk_d, xk, nat, tau, ityp, ntyp, &
       pref = (0._DP, -1._DP)**l
       !
       dvkb_d(ig,ikb) = CMPLX(vkb0_d(ig,nb,nt)) * sk_d(ig,na) * &
-                       CMPLX(dylm_u_d(ig,lm))  * pref / CMPLX(tpiba) 
+                       CMPLX(dylm_u_d(ig,lm))  * pref / CMPLX(tpiba)
     ENDDO
-  ENDDO  
+  ENDDO
   !
   DEALLOCATE( sk_d )
   !
   IF (ikb_t /= nkb) CALL upf_error( 'gen_us_dy', 'unexpected error', 1 )
   !
-  CALL dev_buf%release_buffer( dylm_u_d, ierr(1) )
-  CALL dev_buf%release_buffer( vkb0_d, ierr(2) )
-  CALL dev_buf%release_buffer( gk_d, ierr(3) )
+  CALL gpu_buffer%release_buffer( dylm_u_d, ierr(1) )
+  CALL gpu_buffer%release_buffer( vkb0_d, ierr(2) )
+  CALL gpu_buffer%release_buffer( gk_d, ierr(3) )
   !
   DEALLOCATE( ih_d, na_d, nas_d )
 #endif

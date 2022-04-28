@@ -8,11 +8,11 @@
 !----------------------------------------------------------------------------
 SUBROUTINE h_psi_gpu( lda, n, m, psi_d, hpsi_d )
   !----------------------------------------------------------------------------
-  !! This routine computes the product of the Hamiltonian matrix with m 
+  !! This routine computes the product of the Hamiltonian matrix with m
   !! wavefunctions contained in psi.
   !
-  !! \(\textit{Wrapper routine}\): performs bgrp parallelization on 
-  !! non-distributed bands. If suitable and required, calls old H\psi 
+  !! \(\textit{Wrapper routine}\): performs bgrp parallelization on
+  !! non-distributed bands. If suitable and required, calls old H\psi
   !! routine h_psi_ .
   !
   USE kinds,              ONLY: DP
@@ -86,35 +86,37 @@ END SUBROUTINE h_psi_gpu
 SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
   !----------------------------------------------------------------------------
   !----------------------------------------------------------------------------
-  !! This routine computes the product of the Hamiltonian matrix with m 
+  !! This routine computes the product of the Hamiltonian matrix with m
   !! wavefunctions contained in psi.
   !
 #if defined(__CUDA)
   USE cudafor
 #endif
-  USE kinds,                   ONLY: DP
-  USE bp,                      ONLY: lelfield, l3dstring, gdir, efield, efield_cry
-  USE becmod,                  ONLY: bec_type, becp, calbec
-  USE becmod_gpum,             ONLY: becp_d
-  USE lsda_mod,                ONLY: current_spin
-  USE scf_gpum,                ONLY: vrs_d, using_vrs_d
-  USE uspp,                    ONLY: nkb, vkb
-  USE ldaU,                    ONLY: lda_plus_u, lda_plus_u_kind, U_projection
-  USE gvect,                   ONLY: gstart
-  USE control_flags,           ONLY: gamma_only
-  USE noncollin_module,        ONLY: npol, noncolin
-  USE realus,                  ONLY: real_space, invfft_orbital_gamma, fwfft_orbital_gamma, &
-                                     calbec_rs_gamma, add_vuspsir_gamma, invfft_orbital_k,  &
-                                     fwfft_orbital_k, calbec_rs_k, add_vuspsir_k,           & 
-                                     v_loc_psir_inplace
-  USE fft_base,                ONLY: dffts
-  USE exx,                     ONLY: use_ace, vexx, vexxace_gamma, vexxace_k
-  USE xc_lib,                  ONLY: exx_is_active, xclib_dft_is
+  USE kinds,                   ONLY : DP
+  USE bp,                      ONLY : lelfield, l3dstring, gdir, efield, efield_cry
+  USE becmod,                  ONLY : bec_type, becp, calbec
+  USE becmod_gpum,             ONLY : becp_d
+  USE lsda_mod,                ONLY : current_spin
+  USE scf_gpum,                ONLY : vrs_d, using_vrs_d
+  USE uspp,                    ONLY : nkb, vkb
+  USE ldaU,                    ONLY : lda_plus_u, lda_plus_u_kind, U_projection
+  USE gvect,                   ONLY : gstart
+  USE control_flags,           ONLY : gamma_only
+  USE noncollin_module,        ONLY : npol, noncolin
+  USE realus,                  ONLY : real_space, invfft_orbital_gamma, fwfft_orbital_gamma, &
+                                      calbec_rs_gamma, add_vuspsir_gamma, invfft_orbital_k,  &
+                                      fwfft_orbital_k, calbec_rs_k, add_vuspsir_k,           &
+                                      v_loc_psir_inplace
+  USE fft_base,                ONLY : dffts
+  USE exx,                     ONLY : use_ace, vexx, vexxace_gamma, vexxace_k
+  USE xc_lib,                  ONLY : exx_is_active, xclib_dft_is
   USE fft_helper_subroutines
-  USE device_memcpy_m,         ONLY: dev_memcpy, dev_memset
+  USE devxlib_memcpy,          ONLY : dev_memcpy_h2d => devxlib_memcpy_h2d, &
+                                      dev_memcpy_d2h => devxlib_memcpy_d2h
+  USE devxlib_memset,          ONLY : dev_memset => devxlib_memory_set
   !
-  USE wvfct_gpum,              ONLY: g2kin_d, using_g2kin_d
-  USE becmod_subs_gpum,        ONLY: calbec_gpu, using_becp_auto, using_becp_d_auto
+  USE wvfct_gpum,              ONLY : g2kin_d, using_g2kin_d
+  USE becmod_subs_gpum,        ONLY : calbec_gpu, using_becp_auto, using_becp_d_auto
   IMPLICIT NONE
   !
   INTEGER, INTENT(IN)     :: lda, n, m
@@ -146,12 +148,10 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
                     (lda_plus_u .AND. U_projection.NE."pseudo" ) .OR. &
                     exx_is_active() .OR. lelfield
 
-
   IF (need_host_copy) THEN
       ALLOCATE(psi_host(lda*npol,m) , hpsi_host(lda*npol,m) )
-      CALL dev_memcpy(psi_host, psi_d)    ! psi_host = psi_d
+      CALL dev_memcpy_d2h(psi_host, psi_d)    ! psi_host = psi_d
   ENDIF
-
 
   !$cuf kernel do(2)
   DO ibnd = 1, m
@@ -170,15 +170,14 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
      END DO
   END DO
 
-
-  IF (need_host_copy) CALL dev_memcpy(hpsi_host, hpsi_d)    ! hpsi_host = hpsi_d
+  IF (need_host_copy) CALL dev_memcpy_d2h(hpsi_host, hpsi_d)    ! hpsi_host = hpsi_d
 
   CALL start_clock_gpu( 'h_psi:pot' ); !write (*,*) 'start h_pot';FLUSH(6)
   !
   ! ... Here the product with the local potential V_loc psi
   !
   IF ( gamma_only ) THEN
-     ! 
+     !
      IF ( real_space .AND. nkb > 0  ) THEN
         !
         ! ... real-space algorithm
@@ -189,34 +188,34 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
 
         CALL using_becp_auto(1)
         DO ibnd = 1, m, 2
-           ! ... transform psi to real space -> psic 
+           ! ... transform psi to real space -> psic
            CALL invfft_orbital_gamma(psi_host, ibnd, m )
            ! ... compute becp%r = < beta|psi> from psic in real space
-     CALL start_clock_gpu( 'h_psi:calbec' ) 
+     CALL start_clock_gpu( 'h_psi:calbec' )
            CALL calbec_rs_gamma( ibnd, m, becp%r )
      CALL stop_clock_gpu( 'h_psi:calbec' )
            ! ... psic -> vrs * psic (psic overwritten will become hpsi)
-           CALL v_loc_psir_inplace( ibnd, m ) 
+           CALL v_loc_psir_inplace( ibnd, m )
            ! ... psic (hpsi) -> psic + vusp
            CALL  add_vuspsir_gamma( ibnd, m )
            ! ... transform psic back in reciprocal space and add it to hpsi
            CALL fwfft_orbital_gamma( hpsi_host, ibnd, m, add_to_orbital=.TRUE. )
         ENDDO
-        CALL dev_memcpy(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
+        CALL dev_memcpy_h2d(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
         !
      ELSE
         ! ... usual reciprocal-space algorithm
         CALL vloc_psi_gamma_gpu ( lda, n, m, psi_d, vrs_d(1,current_spin), hpsi_d )
         !
-     ENDIF 
+     ENDIF
      !
-  ELSE IF ( noncolin ) THEN 
+  ELSE IF ( noncolin ) THEN
      !
      CALL vloc_psi_nc_gpu ( lda, n, m, psi_d, vrs_d, hpsi_d )
      !
-  ELSE  
-     ! 
-     IF ( real_space .and. nkb > 0  ) then 
+  ELSE
+     !
+     IF ( real_space .and. nkb > 0  ) then
         !
         ! ... real-space algorithm
         ! ... fixme: real_space without beta functions does not make sense
@@ -225,7 +224,7 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
              CALL errore( 'h_psi', 'task_groups not implemented with real_space', 1 )
         !
         DO ibnd = 1, m
-           ! ... transform psi to real space -> psic 
+           ! ... transform psi to real space -> psic
            CALL invfft_orbital_k(psi_host, ibnd, m )
            ! ... compute becp%r = < beta|psi> from psic in real space
      CALL start_clock_gpu( 'h_psi:calbec' )
@@ -239,7 +238,7 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
            CALL fwfft_orbital_k( hpsi_host, ibnd, m, add_to_orbital=.TRUE. )
            !
         ENDDO
-        IF (need_host_copy) CALL dev_memcpy(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
+        IF (need_host_copy) CALL dev_memcpy_h2d(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
         !
      ELSE
         !
@@ -247,7 +246,7 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
         !
      ENDIF
      !
-  ENDIF  
+  ENDIF
   !
   ! ... Here the product with the non local potential V_NL psi
   ! ... (not in the real-space case: it is done together with V_loc)
@@ -267,29 +266,29 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
      CALL add_vuspsi_gpu( lda, n, m, hpsi_d )
      !
   END IF
-  !  
+  !
   CALL stop_clock_gpu( 'h_psi:pot' )
   !
   IF (xclib_dft_is('meta')) THEN
-     CALL dev_memcpy(hpsi_host, hpsi_d) ! hpsi_host = hpsi_d
+     CALL dev_memcpy_d2h(hpsi_host, hpsi_d) ! hpsi_host = hpsi_d
      call h_psi_meta (lda, n, m, psi_host, hpsi_host)
-     CALL dev_memcpy(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
+     CALL dev_memcpy_h2d(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
   end if
   !
   ! ... Here we add the Hubbard potential times psi
   !
   IF ( lda_plus_u .AND. U_projection.NE."pseudo" ) THEN
      !
-     CALL dev_memcpy(hpsi_host, hpsi_d )    ! hpsi_host = hpsi_d
+     CALL dev_memcpy_d2h(hpsi_host, hpsi_d )    ! hpsi_host = hpsi_d
      IF ( noncolin ) THEN
         CALL vhpsi_nc( lda, n, m, psi_host, hpsi_host )
-        CALL dev_memcpy(hpsi_d, hpsi_host)  ! hpsi_d = hpsi_host
+        CALL dev_memcpy_h2d(hpsi_d, hpsi_host)  ! hpsi_d = hpsi_host
      ELSE
         IF ( lda_plus_u_kind.EQ.0 .OR. lda_plus_u_kind.EQ.1 ) THEN
           CALL vhpsi_gpu( lda, n, m, psi_d, hpsi_d )  ! DFT+U
         ELSEIF ( lda_plus_u_kind.EQ.2 ) THEN          ! DFT+U+V
           CALL vhpsi( lda, n, m, psi_host, hpsi_host )
-          CALL dev_memcpy(hpsi_d, hpsi_host)
+          CALL dev_memcpy_h2d(hpsi_d, hpsi_host)
         ENDIF
      ENDIF
      !
@@ -298,25 +297,25 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
   ! ... Here the exact-exchange term Vxx psi
   !
   IF ( exx_is_active() ) THEN
-     CALL dev_memcpy(hpsi_host, hpsi_d ) ! hpsi_host = hpsi_d
+     CALL dev_memcpy_d2h(hpsi_host, hpsi_d ) ! hpsi_host = hpsi_d
      IF ( use_ace) THEN
         IF (gamma_only) THEN
            CALL vexxace_gamma(lda,m,psi_host,ee,hpsi_host)
         ELSE
-           CALL vexxace_k(lda,m,psi_host,ee,hpsi_host) 
+           CALL vexxace_k(lda,m,psi_host,ee,hpsi_host)
         END IF
      ELSE
         CALL using_becp_auto(0)
         CALL vexx( lda, n, m, psi_host, hpsi_host, becp )
      END IF
-     CALL dev_memcpy(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
+     CALL dev_memcpy_h2d(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
   END IF
   !
   ! ... electric enthalpy if required
   !
   IF ( lelfield ) THEN
      !
-     CALL dev_memcpy(hpsi_host, hpsi_d ) ! hpsi_host = hpsi_d
+     CALL dev_memcpy_d2h(hpsi_host, hpsi_d ) ! hpsi_host = hpsi_d
      IF ( .NOT.l3dstring ) THEN
         CALL h_epsi_her_apply( lda, n, m, psi_host, hpsi_host,gdir, efield )
      ELSE
@@ -324,7 +323,7 @@ SUBROUTINE h_psi__gpu( lda, n, m, psi_d, hpsi_d )
            CALL h_epsi_her_apply( lda, n, m, psi_host, hpsi_host,ipol,efield_cry(ipol) )
         END DO
      END IF
-     CALL dev_memcpy(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
+     CALL dev_memcpy_h2d(hpsi_d, hpsi_host) ! hpsi_d = hpsi_host
      !
   END IF
   !

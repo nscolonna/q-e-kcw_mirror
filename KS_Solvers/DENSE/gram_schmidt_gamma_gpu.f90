@@ -16,10 +16,9 @@ SUBROUTINE gram_schmidt_gamma_gpu( npwx, npw, nbnd, psi_d, hpsi_d, spsi_d, e, &
   ! ... Gram-Schmidt orthogonalization, for Gamma-only calculations.
   ! ... blocking algorithm is used.
   !
-  USE util_param,     ONLY : DP, eps16
+  USE util_param,    ONLY : DP, eps16
   USE mp,            ONLY : mp_sum, mp_max, mp_bcast
   USE mp_bands_util, ONLY : gstart, inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id
-  USE device_memcpy_m,        ONLY : dev_memcpy, dev_memset
   !
   IMPLICIT NONE
   !
@@ -57,12 +56,12 @@ SUBROUTINE gram_schmidt_gamma_gpu( npwx, npw, nbnd, psi_d, hpsi_d, spsi_d, e, &
 #if defined (__CUDA)
   attributes(device) :: psi_d, hpsi_d, spsi_d
   attributes(device) :: phi_d, hphi_d, sphi_d
-#endif 
+#endif
   !
   COMPLEX(DP), ALLOCATABLE :: sr_d(:), sr2_d(:,:)
 #if defined (__CUDA)
   attributes(device) :: sr_d, sr2_d
-#endif 
+#endif
   !
   !
   CALL start_clock( 'gsorth' )
@@ -103,7 +102,7 @@ SUBROUTINE gram_schmidt_gamma_gpu( npwx, npw, nbnd, psi_d, hpsi_d, spsi_d, e, &
   !
   ! ... Set owners of blocks
   !
-  ALLOCATE( owner_bgrp_id(nblock)) 
+  ALLOCATE( owner_bgrp_id(nblock))
   owner_bgrp_id = 0
   !
   DO iblock = 1, nblock
@@ -131,7 +130,7 @@ SUBROUTINE gram_schmidt_gamma_gpu( npwx, npw, nbnd, psi_d, hpsi_d, spsi_d, e, &
   !
   ! NOTE: set Im[ phi(G=0) ] - needed for numerical stability
   !
-  IF ( gstart == 2 ) THEN 
+  IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
      DO ii =1,nbnd
         phi_d(1,ii) = CMPLX( DBLE( phi_d(1,ii) ), 0._DP, kind=DP )
@@ -158,7 +157,7 @@ SUBROUTINE gram_schmidt_gamma_gpu( npwx, npw, nbnd, psi_d, hpsi_d, spsi_d, e, &
      CALL DCOPY_gpu( npwx2 * nbnd, spsi_d(1,1), 1, sphi_d(1,1), 1 )
      !
      ! NOTE: set Im[ S*phi(G=0) ] - needed for numerical stability
-     IF ( gstart == 2 ) THEN 
+     IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
         DO ii =1,nbnd
            sphi_d(1,ii) = CMPLX( DBLE( sphi_d(1,ii) ), 0._DP, kind=DP )
@@ -167,7 +166,7 @@ SUBROUTINE gram_schmidt_gamma_gpu( npwx, npw, nbnd, psi_d, hpsi_d, spsi_d, e, &
      !
   END IF
   !
-  ! ... Buffer allocation 
+  ! ... Buffer allocation
   !
   !
   ALLOCATE( sr_d(nbsize))
@@ -210,8 +209,8 @@ SUBROUTINE gram_schmidt_gamma_gpu( npwx, npw, nbnd, psi_d, hpsi_d, spsi_d, e, &
   !
   ! ... Buffer Realese
   !
-  DEALLOCATE (sr_d) 
-  IF (nbnd .GT. nbsize) DEALLOCATE(sr2_d) 
+  DEALLOCATE (sr_d)
+  IF (nbnd .GT. nbsize) DEALLOCATE(sr2_d)
   !
   !
   ! ... Copy psi <- phi
@@ -259,7 +258,7 @@ CONTAINS
     INTEGER               :: ibnd
     REAL(DP)              :: norm
     REAL(DP)              :: psi_ibnd
-    REAL(DP), EXTERNAL    :: gpu_DDOT 
+    REAL(DP), EXTERNAL    :: gpu_DDOT
     !
     DO ibnd = ibnd_start, ibnd_end
        !
@@ -313,7 +312,7 @@ CONTAINS
                          sr_d(1), 1, 1._DP, hphi_d(1,ibnd), 1 )
              !
              ! NOTE: set Im[ H*phi(G=0) ] - needed for numerical stability
-             IF ( gstart == 2 ) THEN                
+             IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
                 DO ii=1,1
                    hphi_d(1,ibnd) = CMPLX( DBLE( hphi_d(1,ibnd) ), 0._DP, kind=DP )
@@ -347,7 +346,7 @@ CONTAINS
           !
           IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
-             DO ii=1,1          
+             DO ii=1,1
                 norm = norm - DBLE( phi_d(1,ibnd) ) * DBLE ( sphi_d(1,ibnd) )
              END DO
           END IF
@@ -377,7 +376,7 @@ CONTAINS
        ! NOTE: set Im[ phi(G=0) ] - needed for numerical stability
        IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
-             DO ii=1,1          
+             DO ii=1,1
                 phi_d(1,ibnd) = CMPLX( DBLE( phi_d(1,ibnd) ), 0._DP, kind=DP )
              END DO
        END IF
@@ -389,7 +388,7 @@ CONTAINS
           ! NOTE: set Im[ H*phi(G=0) ] - needed for numerical stability
           IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
-              DO ii=1,1          
+              DO ii=1,1
                  hphi_d(1,ibnd) = CMPLX( DBLE( hphi_d(1,ibnd) ), 0._DP, kind=DP )
               END DO
           END IF
@@ -403,7 +402,7 @@ CONTAINS
           ! NOTE: set Im[ S*phi(G=0) ] - needed for numerical stability
           IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
-              DO ii=1,1          
+              DO ii=1,1
                 sphi_d(1,ibnd) = CMPLX( DBLE( sphi_d(1,ibnd) ), 0._DP, kind=DP )
               END DO
           END IF
@@ -463,7 +462,7 @@ CONTAINS
     ! NOTE: set Im[ phi(G=0) ] - needed for numerical stability
     IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
-              DO ii=jbnd_start, jbnd_end          
+              DO ii=jbnd_start, jbnd_end
               phi_d(1, ii) = &
                         CMPLX( DBLE( phi_d(1, ii) ), 0._DP, kind=DP )
               END DO
@@ -475,9 +474,9 @@ CONTAINS
                    sr2_d(1,1), nbsize, 1._DP, hphi_d(1,jbnd_start), npwx2 )
        !
        ! NOTE: set Im[ H*phi(G=0) ] - needed for numerical stability
-       IF ( gstart == 2 ) THEN 
+       IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
-              DO ii= jbnd_start, jbnd_end         
+              DO ii= jbnd_start, jbnd_end
                  hphi_d(1, ii) = &
                           CMPLX( DBLE( hphi_d(1, ii) ), 0._DP, kind=DP )
               END DO
@@ -491,7 +490,7 @@ CONTAINS
                    sr2_d(1,1), nbsize, 1._DP, sphi_d(1,jbnd_start), npwx2 )
        !
        ! NOTE: set Im[ S*phi(G=0) ] - needed for numerical stability
-       IF ( gstart == 2 ) THEN 
+       IF ( gstart == 2 ) THEN
 !$cuf kernel do(1)
               DO ii=jbnd_start, jbnd_end
                   sphi_d(1, ii ) = &

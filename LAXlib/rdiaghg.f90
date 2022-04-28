@@ -199,7 +199,7 @@ SUBROUTINE laxlib_rdiaghg_gpu( n, m, h, s, ldh, e, v, me_bgrp, root_bgrp, intra_
   !USE dmr
 #define __USE_GLOBAL_BUFFER
 #if defined(__USE_GLOBAL_BUFFER)
-  USE device_fbuff_m, ONLY : dev=>dev_buf
+  USE devxlib_buffers, ONLY : dev=>gpu_buffer
 #else
   USE omp_lib
 #endif

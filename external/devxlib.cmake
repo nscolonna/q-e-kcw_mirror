@@ -16,7 +16,7 @@ if(DEVXLIB_ROOT)
 
     find_path(
         DEVXLIB_MOD_PATH
-        NAMES device_fbuff_m.mod
+        NAMES devxlib.mod
         HINTS ${DEVXLIB_ROOT}
         PATH_SUFFIXES "include" "mod" "src")
 
@@ -24,8 +24,8 @@ if(DEVXLIB_ROOT)
         message(FATAL_ERROR "Failed in locating device_fbuff_m.mod file at ${DEVXLIB_ROOT}/(include.mod,src)")
     endif()
 
-    target_link_libraries(qe_devxlib INTERFACE ${DEVXLIB_LIB})
-    target_include_directories(qe_devxlib INTERFACE ${DEVXLIB_MOD_PATH})
+    target_link_libraries(qe_devxlib PUBLIC INTERFACE ${DEVXLIB_LIB})
+    target_include_directories(qe_devxlib PUBLIC INTERFACE ${DEVXLIB_MOD_PATH})
 else()
     qe_git_submodule_update(external/devxlib)
 

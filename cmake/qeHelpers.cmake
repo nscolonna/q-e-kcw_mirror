@@ -84,6 +84,16 @@ function(qe_enable_cuda_fortran SRCS)
     endif()
 endfunction(qe_enable_cuda_fortran)
 
+function(qe_enable_omp_offload_fortran SRCS)
+    if(QE_ENABLE_OPENMP_OFFLOAD)
+        foreach(src IN LISTS SRCS)
+            set_source_files_properties(${src} 
+                PROPERTIES
+                    COMPILE_OPTIONS "${QE_OMP_OFFLOAD_COMPILE_OPTIONS}")
+        endforeach()
+    endif()
+endfunction(qe_enable_omp_offload_fortran)
+
 function(_qe_add_cuda_link_flags TGT)
     if(CMAKE_Fortran_COMPILER_ID MATCHES "PGI" OR CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC")
         get_target_property(target_type ${TGT} TYPE)
@@ -94,6 +104,17 @@ function(_qe_add_cuda_link_flags TGT)
         endif()
     endif()
 endfunction(_qe_add_cuda_link_flags)
+
+function(_qe_add_omp_offload_link_flags TGT)
+    if(CMAKE_Fortran_COMPILER_ID MATCHES "IntelLLVM")
+        get_target_property(target_type ${TGT} TYPE)
+        if(target_type STREQUAL "EXECUTABLE")
+            target_link_options(${TGT}
+                PRIVATE
+                    ${QE_OMP_OFFLOAD_LINK_OPTIONS})
+        endif()
+    endif()
+endfunction(_qe_add_omp_offload_link_flags)
 
 function(qe_git_submodule_update PATH)
     # validate submodule_commit_hash_records against git database
@@ -195,6 +216,8 @@ function(_qe_add_target TGT)
     target_compile_options(${TGT} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${f_cpp_flag}>)
     if(QE_ENABLE_CUDA)
         _qe_add_cuda_link_flags(${TGT})
+    elseif(QE_ENABLE_OPENMP_OFFLOAD)
+        _qe_add_omp_offload_link_flags(${TGT})
     endif()
 endfunction(_qe_add_target)
 
