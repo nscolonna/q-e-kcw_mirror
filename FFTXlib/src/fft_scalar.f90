@@ -33,13 +33,13 @@
      USE fft_scalar_sx6
 #elif defined(__FFTW)
      USE fft_scalar_fftw
-#elif defined(__HIP)
 #else
 #error No fft_scalar backend selected!
 #endif
-     USE fft_scalar_hipfft
 #if defined(__CUDA)
      USE fft_scalar_cuFFT
+#elif defined(__HIP)
+     USE fft_scalar_hipfft
 #endif
      IMPLICIT NONE
      SAVE
