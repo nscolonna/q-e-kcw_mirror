@@ -154,6 +154,9 @@ all : libqemod.a
 dlamch.o : dlamch.f
 	$(F77) $(FFLAGS_NOOPT) -c $<
 
+space_group.o : space_group.f90
+	$(F90) $(FFLAGS_NOOPT) -c $<
+
 libqemod.a: 	$(MODULES) $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?       
 	$(RANLIB) $@    
