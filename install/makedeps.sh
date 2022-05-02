@@ -115,7 +115,10 @@ for dir in $dirs; do
     libdeps="mpi omp_lib hdf5 mkl_dfti mkl_dfti.f90 fftw3.f03 fftw3.f \
              xc_version.h xc_f03_lib_m elpa elpa1 \
              mbd w90_io fox_dom fox_wxml m_common_io \
-             device_fbuff_m device_memcpy_m device_auxfunc_m"
+             device_fbuff_m device_memcpy_m device_auxfunc_m\
+	     onemkl_blas_omp_offload_ilp64 onemkl_lapack_omp_offload_ilp64 \
+	     onemkl_blas_omp_offload_lp64  onemkl_lapack_omp_offload_lp64 \
+	     mkl_dfti_omp_offload devxlib_buffers"
 
     # list of all cuda-related modules
     cudadeps="cublas cudafor curand cufft flops_tracker cusolverdn \
