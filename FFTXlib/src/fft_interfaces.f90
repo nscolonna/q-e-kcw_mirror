@@ -12,23 +12,49 @@ MODULE fft_interfaces
   IMPLICIT NONE
   PRIVATE
 
-
   PUBLIC :: fwfft, invfft, fft_interpolate
+#if defined(__OPENMP_GPU)
+  PUBLIC :: invfft_y_gpu, fwfft_y_gpu
 
-  
+  INTERFACE
+     SUBROUTINE invfft_y_gpu( fft_kind, f, dfft, howmany )
+       USE fft_types,       ONLY : fft_type_descriptor
+       USE fft_param,       ONLY : DP
+       IMPLICIT NONE
+       TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+       INTEGER, INTENT(IN) :: fft_kind
+       COMPLEX(DP) :: f(:)
+       INTEGER, OPTIONAL, INTENT(IN) :: howmany
+     END SUBROUTINE invfft_y_gpu
+
+     SUBROUTINE fwfft_y_gpu( fft_kind, f, dfft, howmany )
+       USE fft_types,       ONLY : fft_type_descriptor
+       USE fft_param,       ONLY : DP
+       IMPLICIT NONE
+       TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+       INTEGER, INTENT(IN) :: fft_kind
+       COMPLEX(DP) :: f(:)
+       INTEGER, OPTIONAL, INTENT(IN) :: howmany
+     END SUBROUTINE fwfft_y_gpu
+  END INTERFACE
+#endif
+
   INTERFACE invfft
      !! invfft is the interface to both the standard fft **invfft_x**,
-     !! and to the "box-grid" version **invfft_b**, used only in CP 
+     !! and to the "box-grid" version **invfft_b**, used only in CP
      !! (the latter has an additional argument)
-     
+
      SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
        IMPLICIT NONE
-       CHARACTER(LEN=*),  INTENT(IN) :: fft_kind
+       INTEGER, INTENT(IN) :: fft_kind
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
+#if defined(__OPENMP_GPU)
+       !$omp declare variant (invfft_y_gpu) match( construct={dispatch} )
+#endif
      END SUBROUTINE invfft_y
      !
      SUBROUTINE invfft_b( f, dfft, ia )
@@ -45,7 +71,7 @@ MODULE fft_interfaces
        USE fft_param,  ONLY: DP
        USE cudafor
        IMPLICIT NONE
-       CHARACTER(LEN=*),  INTENT(IN) :: grid_type
+       INTEGER, INTENT(IN) :: fft_kind
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        INTEGER(kind = cuda_stream_kind), OPTIONAL, INTENT(IN) :: stream
@@ -59,10 +85,13 @@ MODULE fft_interfaces
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
        IMPLICIT NONE
-       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
+       INTEGER, INTENT(IN) :: fft_kind
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
+#if defined(__OPENMP_GPU)
+       !$omp declare variant(fwfft_y_gpu) match(construct={dispatch} )
+#endif
      END SUBROUTINE fwfft_y
 #if defined(__CUDA)
      SUBROUTINE fwfft_y_gpu( grid_type, f_d, dfft, howmany, stream )
@@ -81,8 +110,8 @@ MODULE fft_interfaces
 
   INTERFACE fft_interpolate
      !! fft_interpolate  is the interface to utility that fourier interpolate
-     !! real/complex arrays between two grids 
-     
+     !! real/complex arrays between two grids
+
      SUBROUTINE fft_interpolate_real( dfft_in, v_in, dfft_out, v_out )
        USE fft_param,  ONLY :DP
        USE fft_types,  ONLY: fft_type_descriptor

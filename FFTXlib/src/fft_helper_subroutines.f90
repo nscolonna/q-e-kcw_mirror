@@ -16,12 +16,14 @@ MODULE fft_helper_subroutines
 &                    tg_reduce_rho_5
   END INTERFACE
 
+#if !defined(__OPENMP_GPU)
   INTERFACE c2psi_gamma
     MODULE PROCEDURE c2psi_gamma_cpu
-#ifdef __CUDA
+#if defined(__CUDA)
     MODULE PROCEDURE c2psi_gamma_gpu
 #endif
   END INTERFACE
+#endif
   PRIVATE
   PUBLIC :: fftx_threed2oned, fftx_threed2oned_gpu, fftx_oned2threed
   PUBLIC :: tg_reduce_rho
@@ -30,7 +32,7 @@ MODULE fft_helper_subroutines
   ! Used only in CP
   PUBLIC :: fftx_add_threed2oned_gamma, fftx_psi2c_gamma, c2psi_gamma, &
        fftx_add_field, c2psi_gamma_tg
-#if defined (__CUDA)
+#if defined (__CUDA) || defined(__OPENMP_GPU)
   PUBLIC :: fftx_psi2c_gamma_gpu
 #endif
   PUBLIC :: fft_dist_info
@@ -89,8 +91,6 @@ CONTAINS
 
   END SUBROUTINE
 
-
-
   SUBROUTINE tg_reduce_rho_2( rhos, tmp_rhos, ispin, desc )
      USE fft_param
      USE fft_types,      ONLY : fft_type_descriptor
@@ -117,7 +117,7 @@ CONTAINS
         ioff_tg = desc%nr1x * desc%nr2x    * (ir3-1) + desc%nr1x * desc%my_i0r2p
         rhos(ioff+1:ioff+nxyp,ispin) = rhos(ioff+1:ioff+nxyp,ispin) + tmp_rhos(ioff_tg+1:ioff_tg+nxyp)
      END DO
- 
+
   END SUBROUTINE
 
   SUBROUTINE tg_reduce_rho_3( rhos, tmp_rhos, desc )
@@ -150,7 +150,6 @@ CONTAINS
      END DO
   END SUBROUTINE
 
-
   SUBROUTINE tg_reduce_rho_4( rhos, tmp_rhos, desc )
      USE fft_param
      USE fft_types,      ONLY : fft_type_descriptor
@@ -181,7 +180,6 @@ CONTAINS
      END DO
   END SUBROUTINE
 
-
   SUBROUTINE tg_reduce_rho_5( rhos, tmp_rhos, desc )
      USE fft_param
      USE fft_types,      ONLY : fft_type_descriptor
@@ -211,8 +209,6 @@ CONTAINS
         rhos(ioff+1:ioff+nxyp,:) = rhos(ioff+1:ioff+nxyp,:) + tmp_rhos(ioff_tg+1:ioff_tg+nxyp,:)
      END DO
   END SUBROUTINE
-
-
 
   SUBROUTINE tg_get_nnr( desc, right_nnr )
      USE fft_param
@@ -298,8 +294,52 @@ CONTAINS
      END IF
   END SUBROUTINE
 
+#ifdef __OPENMP_GPU
+  SUBROUTINE c2psi_gamma_gpu( desc, psi, c, ca )
+     !
+     !  Copy wave-functions from 1D array (c_bgrp) to 3D array (psi) in Fourier space,
+     !  GPU implementation.
+     !
+     USE fft_param
+     USE fft_types,      ONLY : fft_type_descriptor
+     TYPE(fft_type_descriptor), INTENT(in) :: desc
+     complex(DP), INTENT(OUT) :: psi(:)
+     complex(DP), INTENT(IN) :: c(:)
+     complex(DP), OPTIONAL, INTENT(IN) :: ca(:)
+     complex(DP), parameter :: ci=(0.0d0,1.0d0)
+     integer :: ig
+     !
+     associate(nlm_d=>desc%nlm, nl_d=>desc%nl)
+     !
+     psi = 0.0d0
+     !
+     !  nlm and nl array: hold conversion indices form 3D to
+     !     1-D vectors. Columns along the z-direction are stored
+     !     contigiously
+     !  c array: stores the Fourier expansion coefficients
+     !     Loop for all local g-vectors (ngw)
+     IF( PRESENT(ca) ) THEN
+        !$omp target teams distribute parallel do
+        do ig = 1, desc%ngw
+           psi( nlm_d( ig ) ) = CONJG( c( ig ) ) + ci * conjg( ca( ig ))
+           psi( nl_d( ig ) ) = c( ig ) + ci * ca( ig )
+        end do
+     ELSE
+        !$omp target teams distribute parallel do
+        do ig = 1, desc%ngw
+           psi( nlm_d( ig ) ) = CONJG( c( ig ) )
+           psi( nl_d( ig ) ) = c( ig )
+        end do
+     END IF
+     endassociate
+  END SUBROUTINE
+#endif
 
+#ifdef __OPENMP_GPU
+  SUBROUTINE c2psi_gamma( desc, psi, c, ca )
+#else
   SUBROUTINE c2psi_gamma_cpu( desc, psi, c, ca )
+#endif
      !
      !  Copy wave-functions from 1D array (c_bgrp) to 3D array (psi) in Fourier space
      !
@@ -311,6 +351,10 @@ CONTAINS
      complex(DP), OPTIONAL, INTENT(IN) :: ca(:)
      complex(DP), parameter :: ci=(0.0d0,1.0d0)
      integer :: ig
+     !
+#ifdef __OPENMP_GPU
+     !$omp declare variant (c2psi_gamma_gpu) match( construct={dispatch} )
+#endif
      !
      psi = 0.0d0
      !
@@ -376,7 +420,7 @@ CONTAINS
 
   SUBROUTINE c2psi_k( desc, psi, c, igk, ngk)
      !
-     !  Copy wave-functions from 1D array (c/evc) ordered according (k+G) index igk 
+     !  Copy wave-functions from 1D array (c/evc) ordered according (k+G) index igk
      !  to 3D array (psi) in Fourier space
      !
      USE fft_param
@@ -388,7 +432,7 @@ CONTAINS
      ! local variables
      integer :: ig
      !
-     !  nl array: hold conversion indices from 3D to 1-D vectors. 
+     !  nl array: hold conversion indices from 3D to 1-D vectors.
      !     Columns along the z-direction are stored contigiously
      !  c array: stores the Fourier expansion coefficients of the wave function
      !     Loop for all local g-vectors (npw
@@ -492,7 +536,7 @@ CONTAINS
         END DO
      END IF
   END SUBROUTINE
-  
+
   SUBROUTINE fftx_threed2oned_gpu( desc, vin_d, vout1_d, vout2_d )
      !! GPU version of \(\texttt{fftx_threed2oned}\).
      USE fft_param
@@ -501,29 +545,48 @@ CONTAINS
      complex(DP), INTENT(OUT) :: vout1_d(:)
      complex(DP), OPTIONAL, INTENT(OUT) :: vout2_d(:)
      complex(DP), INTENT(IN) :: vin_d(:)
+#if !defined(__OPENMP_GPU)
      INTEGER, POINTER :: nl_d(:), nlm_d(:)
+#endif
      COMPLEX(DP) :: fp, fm
      INTEGER :: ig
-#if defined(__CUDA) && defined(_OPENACC)
+#if defined(__CUDA) && defined(_OPENACC) || defined(__OPENMP_GPU)
+#if !defined(__OPENMP_GPU)
      attributes(DEVICE) :: nl_d, nlm_d
-     !$acc data present( vout1_d, vout2_d, vin_d )
+#endif
+     !$acc data deviceptr( vout1_d(:), vout2_d(:), vin_d(:) )
+     !$omp target data use_device_ptr( vout1_d(:), vout2_d(:), vin_d(:) )
+#if !defined(__OPENMP_GPU)
      nl_d  => desc%nl_d
      nlm_d => desc%nlm_d
+#endif
      IF( PRESENT( vout2_d ) ) THEN
         !$acc parallel loop
+        !$omp target teams loop
         DO ig=1,desc%ngm
+#if !defined(__OPENMP_GPU)
            fp=vin_d(nl_d(ig))+vin_d(nlm_d(ig))
            fm=vin_d(nl_d(ig))-vin_d(nlm_d(ig))
+#else
+           fp=vin_d(desc%nl(ig))+vin_d(desc%nlm(ig))
+           fm=vin_d(desc%nl(ig))-vin_d(desc%nlm(ig))
+#endif
            vout1_d(ig) = CMPLX(0.5d0,0.d0,kind=DP)*CMPLX( DBLE(fp),AIMAG(fm),kind=DP)
            vout2_d(ig) = CMPLX(0.5d0,0.d0,kind=DP)*CMPLX(AIMAG(fp),-DBLE(fm),kind=DP)
         END DO
      ELSE
         !$acc parallel loop
+        !$omp target teams loop
         DO ig=1,desc%ngm
+#if !defined(__OPENMP_GPU)
            vout1_d(ig) = vin_d(nl_d(ig))
+#else
+           vout1_d(ig) = vin_d(desc%nl(ig))
+#endif
         END DO
      END IF
      !$acc end data
+     !$omp end target data
 #endif
   END SUBROUTINE
 
@@ -557,11 +620,10 @@ CONTAINS
      complex(DP), INTENT(OUT) :: vout1(:)
      complex(DP), OPTIONAL, INTENT(OUT) :: vout2(:)
      complex(DP), INTENT(IN) :: vin(:)
-     INTEGER,     POINTER     :: nl(:), nlm(:)
-#if defined (__CUDA)
-     attributes(DEVICE) :: vout1, vout2, vin, nl, nlm
-#endif
      INTEGER :: ig
+#if defined (__CUDA)
+     INTEGER,     POINTER     :: nl(:), nlm(:)
+     attributes(DEVICE) :: vout1, vout2, vin, nl, nlm
      nl  => desc%nl_d
      nlm => desc%nlm_d
      IF( PRESENT( vout2 ) ) THEN
@@ -576,12 +638,27 @@ CONTAINS
            vout1(ig) = vin(nl(ig))
         END DO
      END IF
+#elif defined (__OPENMP_GPU)
+     IF( PRESENT( vout2 ) ) THEN
+!$omp target teams distribute parallel do
+        DO ig=1,desc%ngw
+           vout1(ig) = CMPLX( DBLE(vin(desc%nl(ig))+vin(desc%nlm(ig))),AIMAG(vin(desc%nl(ig))-vin(desc%nlm(ig))),kind=DP)
+           vout2(ig) = CMPLX(AIMAG(vin(desc%nl(ig))+vin(desc%nlm(ig))),-DBLE(vin(desc%nl(ig))-vin(desc%nlm(ig))),kind=DP)
+        END DO
+!$omp end target teams distribute parallel do
+     ELSE
+!$omp target teams distribute parallel do
+        DO ig=1,desc%ngw
+           vout1(ig) = vin(desc%nl(ig))
+        END DO
+!$omp end target teams distribute parallel do
+     END IF
+#endif
   END SUBROUTINE
-
 
   SUBROUTINE c2psi_gamma_tg(desc, psis, c_bgrp, i, nbsp_bgrp )
      !
-     !  Copy all wave-functions of an orbital group 
+     !  Copy all wave-functions of an orbital group
      !  from 1D array (c_bgrp) to 3D array (psi) in Fourier space
      !
      USE fft_param
@@ -634,7 +711,6 @@ CONTAINS
 !$omp  end parallel
      RETURN
   END SUBROUTINE
-
 
   SUBROUTINE fft_dist_info( desc, unit )
      USE fft_param

@@ -44,11 +44,15 @@ CONTAINS
    INTEGER, OPTIONAL, INTENT(OUT) :: mill(:,:)
    INTEGER :: ng, n1, n2, n3
    !
+   !$omp target exit data map(delete:dfft%nl)
    IF( ALLOCATED( dfft%nl ) ) DEALLOCATE( dfft%nl )
    ALLOCATE( dfft%nl( dfft%ngm ) )
+   !$omp target enter data map(alloc:dfft%nl)
    if (dfft%lgamma) THEN
+      !$omp target exit data map(delete:dfft%nlm)
       IF( ALLOCATED( dfft%nlm ) ) DEALLOCATE( dfft%nlm )
       ALLOCATE( dfft%nlm( dfft%ngm ) )
+      !$omp target enter data map(alloc:dfft%nlm)
    END IF
    !
    DO ng = 1, dfft%ngm
