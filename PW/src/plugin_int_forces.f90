@@ -42,7 +42,7 @@ SUBROUTINE external_wg_corr_force( rhor, force )
   USE ions_base,         ONLY : nat, ntyp => nsp, ityp, tau, zv
   USE gvect,             ONLY : ngm, g
   USE fft_base,          ONLY : dfftp
-  USE fft_interfaces,    ONLY : fwfft
+  USE fft_interfaces,    ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE martyna_tuckerman, ONLY : wg_corr_force
   USE vlocal,            ONLY : strf
   !
@@ -57,7 +57,7 @@ SUBROUTINE external_wg_corr_force( rhor, force )
   !
   allocate(auxr(dfftp%nnr))
   auxr = cmplx(rhor,0.0_dp)
-  call fwfft ("Rho", auxr, dfftp)
+  call fwfft (FFT_RHO_KIND, auxr, dfftp)
   !
   allocate(auxg(ngm))
   auxg = cmplx(0.0_dp,0.0_dp)

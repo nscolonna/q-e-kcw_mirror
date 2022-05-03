@@ -26,7 +26,7 @@ SUBROUTINE setlocal
   USE scf,               ONLY : rho, v_of_0, vltot
   USE vlocal,            ONLY : strf, vloc
   USE fft_base,          ONLY : dfftp
-  USE fft_interfaces,    ONLY : invfft
+  USE fft_interfaces,    ONLY : invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE gvect,             ONLY : ngm
   USE control_flags,     ONLY : gamma_only
   USE mp_bands,          ONLY : intra_bgrp_comm
@@ -98,7 +98,7 @@ SUBROUTINE setlocal
   !
   ! ... aux = potential in G-space . FFT to real space
   !
-  CALL invfft( 'Rho', aux, dfftp )
+  CALL invfft( FFT_RHO_KIND, aux, dfftp )
   !
   vltot(:) =  DBLE( aux(:) )
   !

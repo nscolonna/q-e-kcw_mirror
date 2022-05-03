@@ -65,7 +65,7 @@ SUBROUTINE addusstress_g( sigmanlc )
   USE uspp,           ONLY : becsum, okvan
   USE uspp_param,     ONLY : upf, lmaxq, nh, nhm
   USE control_flags,  ONLY : gamma_only
-  USE fft_interfaces, ONLY : fwfft
+  USE fft_interfaces, ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE mp_pools,       ONLY : inter_pool_comm
   USE mp,             ONLY : mp_sum
   !
@@ -101,7 +101,7 @@ SUBROUTINE addusstress_g( sigmanlc )
      ELSE
         aux(:) = vltot(:) + v%of_r(:,is)
      ENDIF
-     CALL fwfft( 'Rho', aux, dfftp )
+     CALL fwfft( FFT_RHO_KIND, aux, dfftp )
      DO ig = 1, ngm
         vg(ig, is) = aux( dfftp%nl (ig) )
      ENDDO

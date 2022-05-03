@@ -288,7 +288,7 @@ SUBROUTINE AbsOvG( NBands, IKK, Mat )
   !! for the moduli of the wavefunctions).
   !
   USE noncollin_module,  ONLY : npol
-  USE fft_interfaces,    ONLY : fwfft
+  USE fft_interfaces,    ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE wvfct,             ONLY : npwx
   !
   IMPLICIT NONE
@@ -319,7 +319,7 @@ SUBROUTINE AbsOvG( NBands, IKK, Mat )
   Gorbt = (Zero,Zero) 
   DO jbnd = 1, NBands 
     buffer(:) = abs(dble(locbuff(:,jbnd, IKK))) + (Zero,One)*Zero  
-    CALL fwfft( 'Wave' , buffer, dfftt )
+    CALL fwfft( FFT_WAVE_KIND , buffer, dfftt )
     DO ig = 1, npwx
       Gorbt(ig,jbnd) = buffer(dfftt%nl(ig))
     ENDDO
@@ -453,7 +453,7 @@ SUBROUTINE scdm_thresholds( den, grad_den, ThrDen, ThrGrd )
   !
   USE cell_base,         ONLY : omega
   USE fft_base,          ONLY : dfftp
-  USE fft_interfaces,    ONLY : fft_interpolate
+  USE fft_interfaces,    ONLY : fft_interpolate, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE scf,               ONLY : rho
   USE lsda_mod,          ONLY : nspin
   USE mp,                ONLY : mp_sum, mp_max
@@ -694,7 +694,7 @@ SUBROUTINE wave_to_R( psiG, psiR, NGrid, NBands )
   !
   USE cell_base,         ONLY : omega 
   USE kinds,             ONLY : DP
-  USE fft_interfaces,    ONLY : fwfft, invfft
+  USE fft_interfaces,    ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE wvfct,             ONLY : npwx
   USE exx,               ONLY : npwt
   !
@@ -726,7 +726,7 @@ SUBROUTINE wave_to_R( psiG, psiR, NGrid, NBands )
        buffer(dfftt%nl (ig)) = psiG(ig,jbnd)
        buffer(dfftt%nlm(ig)) = conjg( psiG(ig,jbnd) )
     ENDDO
-    CALL invfft( 'Wave' , buffer, dfftt )
+    CALL invfft( FFT_WAVE_KIND , buffer, dfftt )
     psiR(1:NGrid,jbnd) = dble(buffer(1:NGrid))
   ENDDO
   deallocate ( buffer )
@@ -745,7 +745,7 @@ SUBROUTINE wave_to_G( psiR, psiG, NGrid, NBands )
   !
   USE noncollin_module,     ONLY : npol
   USE kinds,                ONLY : DP
-  USE fft_interfaces,       ONLY : fwfft, invfft
+  USE fft_interfaces,       ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE wvfct,                ONLY : npwx
   !
   IMPLICIT NONE
@@ -773,7 +773,7 @@ SUBROUTINE wave_to_G( psiR, psiG, NGrid, NBands )
   psiG = (Zero,Zero) 
   DO jbnd = 1, NBands 
     buffer(:) = dble(psiR(:,jbnd)) + (Zero,One)*Zero
-    CALL fwfft( 'Wave' , buffer, dfftt )
+    CALL fwfft( FFT_WAVE_KIND , buffer, dfftt )
     DO ig = 1, npwx
       psiG(ig,jbnd) = buffer(dfftt%nl(ig))
     ENDDO

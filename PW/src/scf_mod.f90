@@ -19,7 +19,7 @@ MODULE scf
   USE buffers,         ONLY : open_buffer, close_buffer, get_buffer, save_buffer
   USE xc_lib,          ONLY : xclib_dft_is
   USE fft_base,        ONLY : dfftp
-  USE fft_interfaces,  ONLY : invfft
+  USE fft_interfaces,  ONLY : invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE gvect,           ONLY : ngm
   USE gvecs,           ONLY : ngms
   USE ions_base,       ONLY : ntyp => nsp
@@ -325,7 +325,7 @@ CONTAINS
       psic(:) = ( 0.D0, 0.D0 )
       psic(dfftp%nl(:)) = rho_s%of_g(:,is)
       IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho_s%of_g(:,is) )
-      CALL invfft( 'Rho', psic, dfftp )
+      CALL invfft( FFT_RHO_KIND, psic, dfftp )
       rho_s%of_r(:,is) = psic(:)
    ENDDO
    !
@@ -336,7 +336,7 @@ CONTAINS
          psic(:) = ( 0.D0, 0.D0 )
          psic(dfftp%nl(:)) = rho_s%kin_g(:,is)
          IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho_s%kin_g(:,is) )
-         CALL invfft( 'Rho', psic, dfftp )
+         CALL invfft( FFT_RHO_KIND, psic, dfftp )
          rho_s%kin_r(:,is) = psic(:)
       ENDDO
    ENDIF
@@ -488,7 +488,7 @@ CONTAINS
          psic(:) = ( 0.D0, 0.D0 )
          psic(dfftp%nl(:)) = rhoin%of_g(:,is)
          IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rhoin%of_g(:,is) )
-         CALL invfft( 'Rho', psic, dfftp )
+         CALL invfft( FFT_RHO_KIND, psic, dfftp )
          rhoin%of_r(:,is) = psic(:)
       ENDDO
       !
@@ -500,7 +500,7 @@ CONTAINS
             psic(:) = ( 0.D0, 0.D0 )
             psic(dfftp%nl(:)) = rhoin%kin_g(:,is)
             IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rhoin%kin_g(:,is) )
-            CALL invfft( 'Rho', psic, dfftp )
+            CALL invfft( FFT_RHO_KIND, psic, dfftp )
             rhoin%kin_r(:,is) = psic(:)
          ENDDO
       ENDIF

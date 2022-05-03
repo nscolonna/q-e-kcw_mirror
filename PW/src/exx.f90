@@ -351,7 +351,7 @@ MODULE exx
                                      get_screening_parameter, get_gau_parameter, &
                                      exx_is_active
     USE scatter_mod,          ONLY : gather_grid, scatter_grid
-    USE fft_interfaces,       ONLY : invfft
+    USE fft_interfaces,       ONLY : invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE uspp,                 ONLY : nkb, vkb, okvan
     USE us_exx,               ONLY : rotate_becxx
     USE paw_variables,        ONLY : okpaw
@@ -645,7 +645,7 @@ MODULE exx
                 ENDDO
              ENDIF
              !
-             CALL invfft( 'Wave', psic_exx, dfftt )
+             CALL invfft( FFT_WAVE_KIND, psic_exx, dfftt )
              !
              IF (DoLoc) THEN
                locbuff(1:nrxxs,ibnd-ibnd_loop_start+evc_offset+1,ik) = DBLE(  psic_exx(1:nrxxs) )
@@ -675,13 +675,13 @@ MODULE exx
                    temppsic_nc(dfftt%nl(igk_exx(ig,ik)),1) = evc_exx(ig,ibnd-iexx_start+1)
                 ENDDO
 !$omp end parallel do
-                CALL invfft( 'Wave', temppsic_nc(:,1), dfftt )
+                CALL invfft( FFT_WAVE_KIND, temppsic_nc(:,1), dfftt )
 !$omp parallel do default(shared) private(ig) firstprivate(npw,ik,ibnd_exx,npwx)
                 DO ig = 1, npw
                    temppsic_nc(dfftt%nl(igk_exx(ig,ik)),2) = evc_exx(ig+npwx,ibnd-iexx_start+1)
                 ENDDO
 !$omp end parallel do
-                CALL invfft( 'Wave', temppsic_nc(:,2), dfftt )
+                CALL invfft( FFT_WAVE_KIND, temppsic_nc(:,2), dfftt )
              ELSE
 !$omp parallel do default(shared) private(ir) firstprivate(nrxxs)
                 DO ir = 1, nrxxs
@@ -692,7 +692,7 @@ MODULE exx
                    temppsic(dfftt%nl(igk_exx(ig,ik))) = evc_exx(ig,ibnd-iexx_start+1)
                 ENDDO
 !$omp end parallel do
-                CALL invfft( 'Wave', temppsic, dfftt )
+                CALL invfft( FFT_WAVE_KIND, temppsic, dfftt )
              ENDIF
              !
              DO ikq = 1, nkqs
@@ -968,7 +968,7 @@ MODULE exx
     USE gvect,          ONLY : ngm, g
     USE wvfct,          ONLY : npwx, current_k, nbnd
     USE klist,          ONLY : xk, nks, nkstot, igk_k
-    USE fft_interfaces, ONLY : fwfft, invfft
+    USE fft_interfaces, ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE becmod,         ONLY : bec_type
     USE mp_exx,         ONLY : inter_egrp_comm, my_egrp_id, &
                                intra_egrp_comm, me_egrp, &
@@ -1101,7 +1101,7 @@ MODULE exx
 !$omp end parallel do
                 ENDIF
                 !
-                CALL invfft( 'Wave', psi_rhoc_work, dfftt )
+                CALL invfft( FFT_WAVE_KIND, psi_rhoc_work, dfftt )
 !$omp parallel do default(shared), private(ir)
                 DO ir = 1, nrxxs
                    temppsic_DBLE(ir)  = DBLE( psi_rhoc_work(ir) )
@@ -1182,7 +1182,7 @@ MODULE exx
                        _CY(becxx(ikq)%r(:,jbnd+1)),_CX(becpsi%r(:,ibnd)))
                 ENDIF
                 !
-                CALL fwfft( 'Rho', psi_rhoc_work, dfftt )
+                CALL fwfft( FFT_RHO_KIND, psi_rhoc_work, dfftt )
                 !   >>>> add augmentation in G SPACE here
                 IF (okvan .AND. .NOT. tqr) THEN
                    ! ... contribution from one band added to real (in real space) part of rhoc
@@ -1218,7 +1218,7 @@ MODULE exx
                 ENDIF
                 !
                 !brings back v in real space
-                CALL invfft( 'Rho', vc, dfftt )
+                CALL invfft( FFT_RHO_KIND, vc, dfftt )
                 !
                 !   >>>>  compute <psi|H_fock REAL SPACE here
                 IF (okvan .AND. tqr) THEN
@@ -1273,7 +1273,7 @@ MODULE exx
        !
        ! ... brings back result in G-space
        !
-       CALL fwfft( 'Wave' , result(:,ii), dfftt )
+       CALL fwfft( FFT_WAVE_KIND , result(:,ii), dfftt )
        !
        ! ... communicate result
        DO ig = 1, n
@@ -1321,7 +1321,7 @@ MODULE exx
     USE gvect,          ONLY : ngm, g
     USE wvfct,          ONLY : npwx, current_k, nbnd
     USE klist,          ONLY : xk, nks, nkstot, igk_k
-    USE fft_interfaces, ONLY : fwfft, invfft
+    USE fft_interfaces, ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE becmod,         ONLY : bec_type
     USE mp_exx,         ONLY : inter_egrp_comm, my_egrp_id, &
                                intra_egrp_comm, me_egrp, &
@@ -1501,7 +1501,7 @@ MODULE exx
                    !
                 ENDIF
                 !
-                CALL invfft ('Wave', psi_rhoc_work_d, dfftt)
+                CALL invfft (FFT_WAVE_KIND, psi_rhoc_work_d, dfftt)
 !$cuf kernel do
                 DO ir = 1, nrxxs
                    temppsic_dble_d(ir)  = dble ( psi_rhoc_work_d(ir) )
@@ -1583,7 +1583,7 @@ MODULE exx
                    psi_rhoc_work_d = psi_rhoc_work
                 ENDIF
                 !
-                CALL fwfft ('Rho', psi_rhoc_work_d, dfftt)
+                CALL fwfft (FFT_RHO_KIND, psi_rhoc_work_d, dfftt)
                 !   >>>> add augmentation in G SPACE here
                 IF(okvan .and. .not. tqr) THEN
                    psi_rhoc_work = psi_rhoc_work_d
@@ -1621,7 +1621,7 @@ MODULE exx
                 ENDIF
                 !
                 !brings back v in real space
-                CALL invfft ('Rho', vc_d, dfftt)
+                CALL invfft (FFT_RHO_KIND, vc_d, dfftt)
                 !
                 !   >>>>  compute <psi|H_fock REAL SPACE here
                 IF(okvan .and. tqr) THEN
@@ -1677,7 +1677,7 @@ MODULE exx
        !
        ! brings back result in G-space
        !
-       CALL fwfft( 'Wave' , result_d(:,ii), dfftt )
+       CALL fwfft( FFT_WAVE_KIND , result_d(:,ii), dfftt )
        !communicate result
        !$cuf kernel do
        DO ig = 1, n
@@ -1733,7 +1733,7 @@ MODULE exx
     USE gvect,          ONLY : ngm, g
     USE wvfct,          ONLY : npwx, current_k, nbnd
     USE klist,          ONLY : xk, nks, nkstot
-    USE fft_interfaces, ONLY : fwfft, invfft
+    USE fft_interfaces, ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE becmod,         ONLY : bec_type
     USE mp_exx,         ONLY : inter_egrp_comm, my_egrp_id, negrp, &
                                intra_egrp_comm, me_egrp, &
@@ -1859,8 +1859,8 @@ MODULE exx
           ENDDO
 !$omp end parallel do
           !
-          CALL invfft( 'Wave', temppsic_nc(:,1,ii), dfftt )
-          CALL invfft( 'Wave', temppsic_nc(:,2,ii), dfftt )
+          CALL invfft( FFT_WAVE_KIND, temppsic_nc(:,1,ii), dfftt )
+          CALL invfft( FFT_WAVE_KIND, temppsic_nc(:,2,ii), dfftt )
           !
        ELSE
           !
@@ -1870,7 +1870,7 @@ MODULE exx
           ENDDO
 !$omp end parallel do
           !
-          CALL invfft( 'Wave', temppsic(:,ii), dfftt )
+          CALL invfft( FFT_WAVE_KIND, temppsic(:,ii), dfftt )
           !
        ENDIF
        !
@@ -1991,10 +1991,10 @@ MODULE exx
                 !
                 !   ... brings it to G-space
 #if defined(__USE_MANY_FFT)
-                CALL fwfft( 'Rho', prhoc, dfftt, howmany=jcount )
+                CALL fwfft( FFT_RHO_KIND, prhoc, dfftt, howmany=jcount )
 #else
                 DO jbnd=jstart, jend
-                   CALL fwfft( 'Rho', rhoc(:,jbnd-jstart+1), dfftt )
+                   CALL fwfft( FFT_RHO_KIND, rhoc(:,jbnd-jstart+1), dfftt )
                 ENDDO
 #endif
                 !
@@ -2035,10 +2035,10 @@ MODULE exx
                 !brings back v in real space
 #if defined(__USE_MANY_FFT)
                 !fft many
-                CALL invfft( 'Rho', pvc, dfftt, howmany=jcount )
+                CALL invfft( FFT_RHO_KIND, pvc, dfftt, howmany=jcount )
 #else
                 DO jbnd = jstart, jend
-                   CALL invfft( 'Rho', vc(:,jbnd-jstart+1), dfftt )
+                   CALL invfft( FFT_RHO_KIND, vc(:,jbnd-jstart+1), dfftt )
                 ENDDO
 #endif
                 !
@@ -2114,8 +2114,8 @@ MODULE exx
        !
        IF (noncolin) THEN
           !brings back result in G-space
-          CALL fwfft( 'Wave', result_nc(:,1,ii), dfftt )
-          CALL fwfft( 'Wave', result_nc(:,2,ii), dfftt )
+          CALL fwfft( FFT_WAVE_KIND, result_nc(:,1,ii), dfftt )
+          CALL fwfft( FFT_WAVE_KIND, result_nc(:,2,ii), dfftt )
           !
           DO ig = 1, n
              big_result(ig,ibnd) = big_result(ig,ibnd) - exxalfa* &
@@ -2125,7 +2125,7 @@ MODULE exx
           ENDDO
        ELSE
           !
-          CALL fwfft( 'Wave', result(:,ii), dfftt )
+          CALL fwfft( FFT_WAVE_KIND, result(:,ii), dfftt )
           !
           DO ig = 1, n
              big_result(ig,ibnd) = big_result(ig,ibnd) - exxalfa* &
@@ -2200,7 +2200,7 @@ MODULE exx
     USE gvect,          ONLY : ngm, g
     USE wvfct,          ONLY : npwx, current_k, nbnd
     USE klist,          ONLY : xk, nks, nkstot
-    USE fft_interfaces, ONLY : fwfft, invfft
+    USE fft_interfaces, ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE becmod,         ONLY : bec_type
     USE mp_exx,         ONLY : inter_egrp_comm, my_egrp_id, negrp, &
                                intra_egrp_comm, me_egrp, &
@@ -2348,14 +2348,14 @@ MODULE exx
              temppsic_nc_d(dfftt__nl(igk_exx_d(ig,current_k)),1,ii) = psi_d(ig,ii)
              temppsic_nc_d(dfftt__nl(igk_exx_d(ig,current_k)),2,ii) = psi_d(npwx+ig,ii)
           ENDDO
-          CALL invfft ('Wave', temppsic_nc_d(:,1,ii), dfftt)
-          CALL invfft ('Wave', temppsic_nc_d(:,2,ii), dfftt)
+          CALL invfft (FFT_WAVE_KIND, temppsic_nc_d(:,1,ii), dfftt)
+          CALL invfft (FFT_WAVE_KIND, temppsic_nc_d(:,2,ii), dfftt)
        ELSE
           !$cuf kernel do (1)
           DO ig = 1, n
              temppsic_d( dfftt__nl(igk_exx_d(ig,current_k)), ii ) = psi_d(ig,ii)
           ENDDO
-          CALL invfft ('Wave', temppsic_d(:,ii), dfftt)
+          CALL invfft (FFT_WAVE_KIND, temppsic_d(:,ii), dfftt)
        END IF
     END DO
 
@@ -2473,7 +2473,7 @@ end associate
                 DO jbnd=jstart, jend, many_fft
                   jcurr = min(many_fft, jend-jbnd+1)
                   prhoc_d(1:nrxxs*jcurr) => rhoc_d(:,jbnd-jstart+1:jbnd-jstart+jcurr)
-                  CALL fwfft ('Rho', prhoc_d, dfftt, howmany=jcurr)
+                  CALL fwfft (FFT_RHO_KIND, prhoc_d, dfftt, howmany=jcurr)
                 ENDDO
                 !
                 !   >>>> add augmentation in G space HERE
@@ -2512,7 +2512,7 @@ end associate
                 DO jbnd=jstart, jend, many_fft
                   jcurr = min(many_fft, jend-jbnd+1)
                   pvc_d(1:nrxxs*jcurr) => vc_d(:,jbnd-jstart+1:jbnd-jstart+jcurr)
-                  CALL invfft ('Rho', pvc_d, dfftt, howmany=jcurr)
+                  CALL invfft (FFT_RHO_KIND, pvc_d, dfftt, howmany=jcurr)
                 ENDDO
                 !
                 ! Add ultrasoft contribution (REAL SPACE)
@@ -2592,8 +2592,8 @@ end associate
        !big_result_d=big_result !already initialized along with the big_result=1.0D0
        IF (noncolin) THEN
           !brings back result in G-space
-          CALL fwfft ('Wave', result_nc_d(:,1,ii), dfftt)
-          CALL fwfft ('Wave', result_nc_d(:,2,ii), dfftt)
+          CALL fwfft (FFT_WAVE_KIND, result_nc_d(:,1,ii), dfftt)
+          CALL fwfft (FFT_WAVE_KIND, result_nc_d(:,2,ii), dfftt)
           !$cuf kernel do (1)
           DO ig = 1, n
              big_result_d(ig,ibnd) = big_result_d(ig,ibnd) - exxalfa*result_nc_d(dfftt__nl(igk_exx_d(ig,current_k)),1,ii)
@@ -2601,7 +2601,7 @@ end associate
           ENDDO
        ELSE
           !
-          CALL fwfft ('Wave', result_d(:,ii), dfftt)
+          CALL fwfft (FFT_WAVE_KIND, result_d(:,ii), dfftt)
           !$cuf kernel do (1)
           DO ig = 1, n
              big_result_d(ig,ibnd) = big_result_d(ig,ibnd) - exxalfa*result_d(dfftt__nl(igk_exx_d(ig,current_k)),ii)
@@ -2814,7 +2814,7 @@ end associate
                                         all_start, all_end, iexx_start, &
                                         init_index_over_band, jblock
     USE mp,                      ONLY : mp_sum, mp_circular_shift_left
-    USE fft_interfaces,          ONLY : fwfft, invfft
+    USE fft_interfaces,          ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE gvect,                   ONLY : ecutrho
     USE klist,                   ONLY : wk
     USE uspp,                    ONLY : okvan,nkb,vkb
@@ -2956,7 +2956,7 @@ end associate
 !$omp end parallel do
                    ENDIF
                    !
-                   CALL invfft( 'Wave', temppsic, dfftt )
+                   CALL invfft( FFT_WAVE_KIND, temppsic, dfftt )
 !$omp parallel do default(shared), private(ir)
                    DO ir = 1, nrxxs
                       temppsic_DBLE(ir) = DBLE( temppsic(ir) )
@@ -3035,7 +3035,7 @@ end associate
                    ENDIF
                    !
                    ! bring rhoc to G-space
-                   CALL fwfft( 'Rho', rhoc, dfftt )
+                   CALL fwfft( FFT_RHO_KIND, rhoc, dfftt )
                    !
                    IF (okvan .AND. .NOT.tqr) THEN
                       IF (ibnd >= istart) &
@@ -3127,7 +3127,7 @@ end associate
                                         init_index_over_band, jblock
     USE mp_bands,                ONLY : intra_bgrp_comm
     USE mp,                      ONLY : mp_sum, mp_circular_shift_left
-    USE fft_interfaces,          ONLY : fwfft, invfft
+    USE fft_interfaces,          ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE gvect,                   ONLY : ecutrho
     USE klist,                   ONLY : wk
     USE uspp,                    ONLY : okvan,nkb,vkb
@@ -3240,8 +3240,8 @@ end associate
              ENDDO
 !$omp end parallel do
              !
-             CALL invfft( 'Wave', temppsic_nc(:,1,ii), dfftt )
-             CALL invfft( 'Wave', temppsic_nc(:,2,ii), dfftt )
+             CALL invfft( FFT_WAVE_KIND, temppsic_nc(:,1,ii), dfftt )
+             CALL invfft( FFT_WAVE_KIND, temppsic_nc(:,2,ii), dfftt )
              !
           ELSE
 !$omp parallel do default(shared), private(ig)
@@ -3250,7 +3250,7 @@ end associate
              ENDDO
 !$omp end parallel do
              !
-             CALL invfft( 'Wave', temppsic(:,ii), dfftt )
+             CALL invfft( FFT_WAVE_KIND, temppsic(:,ii), dfftt )
              !
           ENDIF
        ENDDO
@@ -3351,10 +3351,10 @@ end associate
                    !
                    ! bring rhoc to G-space
 #if defined(__USE_MANY_FFT)
-                   CALL fwfft ('Rho', prhoc, dfftt, howmany=ibnd_inner_count)
+                   CALL fwfft (FFT_RHO_KIND, prhoc, dfftt, howmany=ibnd_inner_count)
 #else
                    DO ibnd = ibnd_inner_start, ibnd_inner_end
-                      CALL fwfft('Rho', rhoc(:,ibnd-ibnd_inner_start+1), dfftt)
+                      CALL fwfft(FFT_RHO_KIND, rhoc(:,ibnd-ibnd_inner_start+1), dfftt)
                    ENDDO
 #endif
                    ! augment the "charge" in G space
@@ -3445,7 +3445,7 @@ end associate
                                      all_start, all_end, iexx_start
     USE mp,                   ONLY : mp_sum, mp_circular_shift_left
     USE fft_base,             ONLY : dffts
-    USE fft_interfaces,       ONLY : fwfft, invfft
+    USE fft_interfaces,       ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE uspp,                 ONLY : okvan
     !
     USE exx_base,             ONLY : nq1, nq2, nq3, nqs, eps, exxdiv,       &
@@ -3656,7 +3656,7 @@ end associate
 !$omp end parallel do
                 ENDIF      
                 !      
-                CALL invfft( 'Wave', temppsic, dfftt )      
+                CALL invfft( FFT_WAVE_KIND, temppsic, dfftt )      
                 !      
                 IF (gamma_only) THEN      
                    !      
@@ -3692,7 +3692,7 @@ end associate
                       ENDDO      
 !$omp end parallel do
                       ! bring it to G-space      
-                      CALL fwfft( 'Rho', rhoc, dfftt )      
+                      CALL fwfft( FFT_RHO_KIND, rhoc, dfftt )      
                       !      
                       vc = 0._dp      
 !$omp parallel do default(shared), private(ig), reduction(+:vc)
@@ -3727,7 +3727,7 @@ end associate
 !$omp end parallel do
                       !
                       ! bring it to G-space
-                      CALL fwfft( 'Rho', rhoc, dfftt )
+                      CALL fwfft( FFT_RHO_KIND, rhoc, dfftt )
                       !
                       vc = 0._dp
 !$omp parallel do default(shared), private(ig), reduction(+:vc)
@@ -4398,7 +4398,7 @@ end associate
     USE cell_base,         ONLY : omega, alat
     USE wvfct,             ONLY : current_k
     USE klist,             ONLY : xk, nks, nkstot
-    USE fft_interfaces,    ONLY : fwfft, invfft
+    USE fft_interfaces,    ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE mp,                ONLY : mp_stop, mp_barrier, mp_sum
     USE mp_bands,          ONLY : intra_bgrp_comm, me_bgrp, nproc_bgrp
     USE exx_base,          ONLY : nqs, xkq_collect, index_xkq, index_xk, &
@@ -4465,7 +4465,7 @@ end associate
              rhoc(ir) = locbuff(ir,ibnd,ikq) * locbuff(ir,ibnd,ikq) / omega  
            ENDDO
            !
-           CALL fwfft( 'Rho', rhoc, dfftt )
+           CALL fwfft( FFT_RHO_KIND, rhoc, dfftt )
            !
            vc = (0.0d0, 0.0d0)  
            DO ig = 1, dfftt%ngm  
@@ -4473,7 +4473,7 @@ end associate
                vc(dfftt%nlm(ig)) = fac(ig) * rhoc(dfftt%nlm(ig))  
            ENDDO  
            !
-           CALL invfft( 'Rho', vc, dfftt )
+           CALL invfft( FFT_RHO_KIND, vc, dfftt )
            !
            DO ir = 1, NQR   
              RESULT(ir,ibnd) = RESULT(ir,ibnd) + locbuff(ir,ibnd,ikq) * vc(ir)   
@@ -4495,7 +4495,7 @@ end associate
              !
              npairs = npairs + 1  
              !
-             CALL fwfft( 'Rho', rhoc, dfftt )
+             CALL fwfft( FFT_RHO_KIND, rhoc, dfftt )
              !
              vc = (0.0d0, 0.0d0)
              !
@@ -4504,7 +4504,7 @@ end associate
                  vc(dfftt%nlm(ig)) = fac(ig) * rhoc(dfftt%nlm(ig))  
              ENDDO
              !
-             CALL invfft( 'Rho', vc, dfftt )
+             CALL invfft( FFT_RHO_KIND, vc, dfftt )
              !
              DO ir = 1, NQR   
                RESULT(ir,kbnd) = RESULT(ir,kbnd) + x_occupation(ibnd,ikq) * locbuff(ir,ibnd,ikq) * vc(ir)   
@@ -4524,7 +4524,7 @@ end associate
        !
        DO jbnd = 1, nbnd  
          !
-         CALL fwfft( 'Wave', RESULT(:,jbnd), dfftt )
+         CALL fwfft( FFT_WAVE_KIND, RESULT(:,jbnd), dfftt )
          !
          DO ig = 1, npw  
             hpsi(ig,jbnd) = hpsi(ig,jbnd) - exxalfa*RESULT(dfftt%nl(ig),jbnd)   
@@ -4543,7 +4543,7 @@ end associate
     !
     DO jbnd = 1, nbnd
       rhoc(:) = DBLE(locbuff(:,jbnd,ikq)) + (0.0d0,1.0d0)*0.0d0
-      CALL fwfft( 'Wave' , rhoc, dfftt )
+      CALL fwfft( FFT_WAVE_KIND , rhoc, dfftt )
       DO ig = 1, npw
         RESULT(ig,jbnd) = rhoc(dfftt%nl(ig))
       ENDDO
@@ -4771,7 +4771,7 @@ end associate
     USE gvect,           ONLY : ngm, g
     USE wvfct,           ONLY : current_k, npwx
     USE klist,           ONLY : xk, nks, nkstot
-    USE fft_interfaces,  ONLY : fwfft, invfft
+    USE fft_interfaces,  ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE exx_base,        ONLY : index_xkq, nqs, index_xk, xkq_collect, &
                                 g2_convolution
     USE exx_band,        ONLY : igk_exx 
@@ -4839,7 +4839,7 @@ end associate
                   rhoc(ir)=CONJG(exxbuff(ir,ibnd,ikq))*exxbuff(ir,jbnd,current_jk) / omega
                ENDDO
 !$omp end parallel do
-               CALL fwfft( 'Rho', rhoc, dfftt )
+               CALL fwfft( FFT_RHO_KIND, rhoc, dfftt )
                vc = (0._DP, 0._DP)
 !$omp parallel do default(shared), private(ig)
                DO ig = 1, dfftt%ngm  
@@ -4847,7 +4847,7 @@ end associate
                         fac(ig) * rhoc(dfftt%nl(ig)) * x_occupation(ibnd,ik) / nqs
                ENDDO
 !$omp end parallel do
-               CALL invfft( 'Rho', vc, dfftt )
+               CALL invfft( FFT_RHO_KIND, vc, dfftt )
 !$omp parallel do default(shared), private(ir)
                DO ir = 1, nrxxs
                   RESULT(ir) = RESULT(ir) + vc(ir)*exxbuff(ir,ibnd,ikq)
@@ -4859,7 +4859,7 @@ end associate
          ENDDO
        ENDDO 
        !
-       CALL fwfft( 'Wave', RESULT, dfftt )
+       CALL fwfft( FFT_WAVE_KIND, RESULT, dfftt )
 !$omp parallel do default(shared), private(ig)
        DO ig = 1, npw
           hpsi(ig,jbnd) = hpsi(ig,jbnd) - exxalfa*RESULT(dfftt%nl(igk_exx(ig,current_k)))
@@ -4876,7 +4876,7 @@ end associate
     !
     DO jbnd = 1, NBands
       rhoc(:) = exxbuff(:,jbnd,current_jk)
-      CALL fwfft( 'Wave' , rhoc, dfftt )
+      CALL fwfft( FFT_WAVE_KIND , rhoc, dfftt )
       DO ig = 1, npw
         RESULT2(ig,jbnd) = rhoc(dfftt%nl(igk_exx(ig,current_k)))
       ENDDO

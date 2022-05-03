@@ -11,7 +11,7 @@ MODULE fft_rho
   !! FFT and inverse FFT of rho on the dense grid.
   !
   USE kinds,     ONLY : DP
-  USE fft_interfaces, ONLY: fwfft, invfft
+  USE fft_interfaces, ONLY: fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE control_flags,  ONLY: gamma_only
   !
   IMPLICIT NONE
@@ -55,7 +55,7 @@ CONTAINS
              psi(ir)=CMPLX(rhor(ir,iss),0.0_dp,kind=dp)
           END DO
        END IF
-       CALL fwfft('Rho', psi, desc )
+       CALL fwfft(FFT_RHO_KIND, psi, desc )
        CALL fftx_threed2oned( desc, psi, rhog(:,iss) )
     ELSE
        IF ( gamma_only ) THEN
@@ -72,7 +72,7 @@ CONTAINS
                    psi(ir)=CMPLX(rhor(ir,isup),rhor(ir,isdw),kind=dp)
                 END DO
              END IF
-             CALL fwfft('Rho', psi, desc )
+             CALL fwfft(FFT_RHO_KIND, psi, desc )
              CALL fftx_threed2oned( desc, psi, rhog(:,isup), rhog(:,isdw) )
           END DO
        ELSE
@@ -86,7 +86,7 @@ CONTAINS
                    psi(ir)=CMPLX(rhor(ir,iss),0.0_dp,kind=dp)
                 END DO
              END IF
-             CALL fwfft('Rho', psi, desc )
+             CALL fwfft(FFT_RHO_KIND, psi, desc )
              CALL fftx_threed2oned( desc, psi, rhog(:,iss) )
           END DO
        END IF
@@ -138,7 +138,7 @@ CONTAINS
           END DO
        END IF
        !$acc host_data use_device( psi_d )
-       CALL fwfft('Rho', psi_d, desc )
+       CALL fwfft(FFT_RHO_KIND, psi_d, desc )
        !$acc end host_data
        CALL fftx_threed2oned_gpu( desc, psi_d, rhog_d(:,iss) )
     ELSE
@@ -159,7 +159,7 @@ CONTAINS
                 END DO
              END IF
              !$acc host_data use_device( psi_d )
-             CALL fwfft('Rho', psi_d, desc )
+             CALL fwfft(FFT_RHO_KIND, psi_d, desc )
              !$acc end host_data
              CALL fftx_threed2oned_gpu( desc, psi_d, rhog_d(:,isup), rhog_d(:,isdw) )
           END DO
@@ -177,7 +177,7 @@ CONTAINS
                 END DO
              END IF
              !$acc host_data use_device( psi_d )
-             CALL fwfft('Rho', psi_d, desc )
+             CALL fwfft(FFT_RHO_KIND, psi_d, desc )
              !$acc end host_data
              CALL fftx_threed2oned_gpu( desc, psi_d, rhog_d(:,iss) )
           END DO
@@ -204,7 +204,7 @@ CONTAINS
 
     ALLOCATE( psi( desc%nnr ) )
     CALL fftx_oned2threed( desc, psi, rhog )
-    CALL invfft('Rho',psi, desc )
+    CALL invfft(FFT_RHO_KIND,psi, desc )
 !$omp parallel do
     DO ir=1,desc%nnr
        rhor(ir)=DBLE(psi(ir))
@@ -234,7 +234,7 @@ CONTAINS
        IF( nspin == 1 ) THEN
           iss=1
           CALL fftx_oned2threed( desc, psi, rhog(:,iss) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(FFT_RHO_KIND,psi, desc )
 !$omp parallel do
           DO ir=1,desc%nnr
              rhor(ir,iss)=DBLE(psi(ir))
@@ -246,7 +246,7 @@ CONTAINS
              isup=1+(iss-1)*nspin/2 ! 1 for LSDA, 1 and 3 for noncolinear
              isdw=2+(iss-1)*nspin/2 ! 2 for LSDA, 2 and 4 for noncolinear
              CALL fftx_oned2threed( desc, psi, rhog(:,isup), rhog(:,isdw) )
-             CALL invfft('Rho',psi, desc )
+             CALL invfft(FFT_RHO_KIND,psi, desc )
 !$omp parallel do
              DO ir=1,desc%nnr
                 rhor(ir,isup)= DBLE(psi(ir))
@@ -260,7 +260,7 @@ CONTAINS
        !
        DO iss=1, nspin
           CALL fftx_oned2threed( desc, psi, rhog(:,iss) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(FFT_RHO_KIND,psi, desc )
 !$omp parallel do
           DO ir=1,desc%nnr
              rhor(ir,iss)=DBLE(psi(ir))
@@ -292,7 +292,7 @@ CONTAINS
        IF( nspin == 1 ) THEN
           iss=1
           CALL fftx_oned2threed( desc, psi, rhog(:,iss) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(FFT_RHO_KIND,psi, desc )
 !$omp parallel do
           DO ir=1,desc%nnr
              rhor(ir)=DBLE(psi(ir))
@@ -302,7 +302,7 @@ CONTAINS
           isup=1
           isdw=2
           CALL fftx_oned2threed( desc, psi, rhog(:,isup), rhog(:,isdw) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(FFT_RHO_KIND,psi, desc )
 !$omp parallel do
           DO ir=1,desc%nnr
              rhor(ir)= DBLE(psi(ir))+AIMAG(psi(ir))
@@ -316,7 +316,7 @@ CONTAINS
        !
        DO iss=1, nspin
           CALL fftx_oned2threed( desc, psi, rhog(:,iss) )
-          CALL invfft('Rho',psi, desc )
+          CALL invfft(FFT_RHO_KIND,psi, desc )
           IF( iss == 1 ) THEN
 !$omp parallel do
              DO ir=1,desc%nnr

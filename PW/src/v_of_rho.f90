@@ -604,7 +604,7 @@ SUBROUTINE v_h( rhog, ehart, charge, v )
   USE constants,         ONLY : fpi, e2
   USE kinds,             ONLY : DP
   USE fft_base,          ONLY : dfftp
-  USE fft_interfaces,    ONLY : invfft
+  USE fft_interfaces,    ONLY : invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE gvect,             ONLY : ngm, gg, gstart
   USE lsda_mod,          ONLY : nspin
   USE cell_base,         ONLY : omega, tpiba2
@@ -721,7 +721,7 @@ SUBROUTINE v_h( rhog, ehart, charge, v )
   !
   ! ... transform hartree potential to real space
   !
-  CALL invfft('Rho', aux, dfftp)
+  CALL invfft(FFT_RHO_KIND, aux, dfftp)
   !
   ! ... add hartree potential to the xc potential
   !
@@ -1435,7 +1435,7 @@ SUBROUTINE v_h_of_rho_r( rhor, ehart, charge, v )
   !
   USE kinds,           ONLY : DP
   USE fft_base,        ONLY : dfftp
-  USE fft_interfaces,  ONLY : fwfft
+  USE fft_interfaces,  ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE lsda_mod,        ONLY : nspin
   !
   IMPLICIT NONE
@@ -1458,7 +1458,7 @@ SUBROUTINE v_h_of_rho_r( rhor, ehart, charge, v )
   ALLOCATE( rhog( dfftp%ngm ) )
   ALLOCATE( aux( dfftp%nnr ) )
   aux = CMPLX(rhor,0.D0,kind=dp)
-  CALL fwfft ('Rho', aux, dfftp)
+  CALL fwfft (FFT_RHO_KIND, aux, dfftp)
   rhog(:) = aux(dfftp%nl(:))
   DEALLOCATE( aux )
   !
@@ -1483,7 +1483,7 @@ SUBROUTINE gradv_h_of_rho_r( rho, gradv )
   !
   USE kinds,           ONLY : DP
   USE fft_base,        ONLY : dfftp
-  USE fft_interfaces,  ONLY : fwfft, invfft
+  USE fft_interfaces,  ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE constants,       ONLY : fpi, e2
   USE control_flags,   ONLY : gamma_only
   USE cell_base,       ONLY : tpiba, omega
@@ -1510,7 +1510,7 @@ SUBROUTINE gradv_h_of_rho_r( rho, gradv )
   ALLOCATE( rhoaux( dfftp%nnr ) )
   rhoaux( : ) = CMPLX( rho( : ), 0.D0, KIND=dp ) 
   !
-  CALL fwfft( 'Rho', rhoaux, dfftp )
+  CALL fwfft( FFT_RHO_KIND, rhoaux, dfftp )
   !
   ! ... Compute total potential in G space
   !
@@ -1555,7 +1555,7 @@ SUBROUTINE gradv_h_of_rho_r( rho, gradv )
     !
     ! ... bring back to R-space, (\grad_ipol a)(r) ...
     !
-    CALL invfft( 'Rho', gaux, dfftp )
+    CALL invfft( FFT_RHO_KIND, gaux, dfftp )
     !
     gradv(ipol,:) = REAL( gaux(:) )
     !

@@ -18,7 +18,7 @@ SUBROUTINE sum_band()
   USE cell_base,            ONLY : at, bg, omega, tpiba
   USE ions_base,            ONLY : nat, ntyp => nsp, ityp
   USE fft_base,             ONLY : dfftp, dffts
-  USE fft_interfaces,       ONLY : fwfft, invfft
+  USE fft_interfaces,       ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE gvect,                ONLY : ngm, g
   USE gvecs,                ONLY : doublegrid
   USE klist,                ONLY : nks, nkstot, wk, xk, ngk, igk_k
@@ -175,7 +175,7 @@ SUBROUTINE sum_band()
   DO is = 1, nspin
      psic(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
      psic(dffts%nnr+1:) = 0.0_dp
-     CALL fwfft ('Rho', psic, dffts)
+     CALL fwfft (FFT_RHO_KIND, psic, dffts)
      rho%of_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
      rho%of_g(dffts%ngm+1:,is) = (0.0_dp,0.0_dp)
   END DO
@@ -225,7 +225,7 @@ SUBROUTINE sum_band()
      psic(:) = ( 0.D0, 0.D0 )
      psic(dfftp%nl(:)) = rho%of_g(:,is)
      IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho%of_g(:,is) )
-     CALL invfft ('Rho', psic, dfftp)
+     CALL invfft (FFT_RHO_KIND, psic, dfftp)
      rho%of_r(:,is) = psic(:)
   END DO
   !
@@ -239,7 +239,7 @@ SUBROUTINE sum_band()
      DO is = 1, nspin
         psic(1:dffts%nnr) = rho%kin_r(1:dffts%nnr,is)
         psic(dffts%nnr+1:) = 0.0_dp
-        CALL fwfft ('Rho', psic, dffts)
+        CALL fwfft (FFT_RHO_KIND, psic, dffts)
         rho%kin_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
      END DO
      !
@@ -249,7 +249,7 @@ SUBROUTINE sum_band()
         psic(:) = ( 0.D0, 0.D0 )
         psic(dfftp%nl(:)) = rho%kin_g(:,is)
         IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho%kin_g(:,is) )
-        CALL invfft ('Rho', psic, dfftp)
+        CALL invfft (FFT_RHO_KIND, psic, dfftp)
         rho%kin_r(:,is) = psic(:)
      END DO
      !
@@ -382,7 +382,7 @@ SUBROUTINE sum_band()
 
                 END DO
                 !
-                CALL invfft ('tgWave', tg_psi, dffts )
+                CALL invfft (FFT_TGWAVE_KIND, tg_psi, dffts )
                 !
                 ! Now the first proc of the group holds the first two bands
                 ! of the 2*ntgrp bands that we are processing at the same time,
@@ -435,7 +435,7 @@ SUBROUTINE sum_band()
                    !
                 END IF
                 !
-                CALL invfft ('Wave', psic, dffts)
+                CALL invfft (FFT_WAVE_KIND, psic, dffts)
                 !
                 w1 = wg(ibnd,ik) / omega
                 !
@@ -479,7 +479,7 @@ SUBROUTINE sum_band()
                                        CONJG( evc(1:npw,ibnd) )
                    END IF
                    !
-                   CALL invfft ('Wave', psic, dffts)
+                   CALL invfft (FFT_WAVE_KIND, psic, dffts)
                    !
                    ! ... increment the kinetic energy density ...
                    !
@@ -661,8 +661,8 @@ SUBROUTINE sum_band()
 
                    END DO
                    !
-                   CALL invfft ('tgWave', tg_psi_nc(:,1), dffts )
-                   CALL invfft ('tgWave', tg_psi_nc(:,2), dffts)
+                   CALL invfft (FFT_TGWAVE_KIND, tg_psi_nc(:,1), dffts )
+                   CALL invfft (FFT_TGWAVE_KIND, tg_psi_nc(:,2), dffts)
                    !
                    ! Now the first proc of the group holds the first band
                    ! of the ntgrp bands that we are processing at the same time,
@@ -700,8 +700,8 @@ SUBROUTINE sum_band()
                       psic_nc(dffts%nl(igk_k(ig,ik)),1)=evc(ig     ,ibnd)
                       psic_nc(dffts%nl(igk_k(ig,ik)),2)=evc(ig+npwx,ibnd)
                    END DO
-                   CALL invfft ('Wave', psic_nc(:,1), dffts)
-                   CALL invfft ('Wave', psic_nc(:,2), dffts)
+                   CALL invfft (FFT_WAVE_KIND, psic_nc(:,1), dffts)
+                   CALL invfft (FFT_WAVE_KIND, psic_nc(:,2), dffts)
                    !
                    ! increment the charge density ...
                    !
@@ -746,7 +746,7 @@ SUBROUTINE sum_band()
                    !$omp end do nowait
                 !$omp end parallel
                    !
-                   CALL invfft ('tgWave', tg_psi, dffts)
+                   CALL invfft (FFT_TGWAVE_KIND, tg_psi, dffts)
                    !
                    ! Now the first proc of the group holds the first band
                    ! of the ntgrp bands that we are processing at the same time,
@@ -783,7 +783,7 @@ SUBROUTINE sum_band()
                    !$omp end do nowait
                 !$omp end parallel
                    !
-                   CALL invfft ('Wave', psic, dffts)
+                   CALL invfft (FFT_WAVE_KIND, psic, dffts)
                    !
                    ! ... increment the charge density ...
                    !
@@ -799,7 +799,7 @@ SUBROUTINE sum_band()
                       psic(dffts%nl(igk_k(1:npw,ik)))=CMPLX(0d0,kplusg(1:npw),kind=DP) * &
                                               evc(1:npw,ibnd)
                       !
-                      CALL invfft ('Wave', psic, dffts)
+                      CALL invfft (FFT_WAVE_KIND, psic, dffts)
                       !
                       ! ... increment the kinetic energy density ...
                       !

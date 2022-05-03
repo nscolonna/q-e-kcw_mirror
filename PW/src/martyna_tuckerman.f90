@@ -201,7 +201,7 @@ CONTAINS
     !
     USE mp_bands,         ONLY : me_bgrp
     USE fft_base,         ONLY : dfftp
-    USE fft_interfaces,   ONLY : fwfft, invfft
+    USE fft_interfaces,   ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
     USE fft_types,        ONLY : fft_index_to_3d
     USE control_flags,    ONLY : gamma_only_ => gamma_only
     USE gvect,            ONLY : ngm, gg, gstart_ => gstart, ecutrho
@@ -268,7 +268,7 @@ CONTAINS
        !
     ENDDO
     !
-    CALL fwfft( 'Rho', aux, dfftp )
+    CALL fwfft( FFT_RHO_KIND, aux, dfftp )
     ! 
     DO ig = 1, ngm
        wg_corr(ig) = omega * REAL(aux(dfftp%nl(ig))) - smooth_coulomb_g( tpiba2*gg(ig))
@@ -284,7 +284,7 @@ CONTAINS
        ALLOCATE( plot(dfftp%nnr) )
        !
        filplot = 'wg_corr_r'
-       CALL invfft( 'Rho', aux, dfftp )
+       CALL invfft( FFT_RHO_KIND, aux, dfftp )
        plot(:) = REAL(aux(:))
        CALL write_wg_on_file( filplot, plot )
        !
@@ -295,7 +295,7 @@ CONTAINS
        ENDDO
        IF (gamma_only) aux(dfftp%nlm(1:ngm)) = CONJG( aux(dfftp%nl(1:ngm)) )
        !
-       CALL invfft( 'Rho', aux, dfftp )
+       CALL invfft( FFT_RHO_KIND, aux, dfftp )
        plot(:) = REAL(aux(:))
        CALL write_wg_on_file( filplot, plot )
        !
@@ -306,7 +306,7 @@ CONTAINS
           aux(:) = 0.5_dp * aux(:) 
           aux(dfftp%nlm(1:ngm)) = aux(dfftp%nlm(1:ngm)) + CONJG( aux(dfftp%nl(1:ngm)) )
        ENDIF
-       CALL invfft( 'Rho', aux, dfftp )
+       CALL invfft( FFT_RHO_KIND, aux, dfftp )
        plot(:) = REAL(aux(:))
        CALL write_wg_on_file( filplot, plot )
        !

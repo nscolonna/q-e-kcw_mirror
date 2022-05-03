@@ -12,6 +12,8 @@ MODULE fft_interfaces
   IMPLICIT NONE
   PRIVATE
 
+  INTEGER, PARAMETER, PUBLIC :: FFT_RHO_KIND=1, FFT_WAVE_KIND=2, FFT_TGWAVE_KIND=3
+
   PUBLIC :: fwfft, invfft, fft_interpolate
 #if defined(__OPENMP_GPU)
   PUBLIC :: invfft_y_gpu, fwfft_y_gpu

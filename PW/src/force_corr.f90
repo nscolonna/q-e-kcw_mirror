@@ -24,7 +24,7 @@ subroutine force_corr (forcescc)
   USE ions_base,            ONLY : nat, ntyp => nsp, ityp, tau
   USE cell_base,            ONLY : tpiba
   USE fft_base,             ONLY : dfftp
-  USE fft_interfaces,       ONLY : fwfft
+  USE fft_interfaces,       ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE gvect,                ONLY : ngm, gstart, g, ngl, gl, igtongl
   USE lsda_mod,             ONLY : nspin
   USE scf,                  ONLY : vnew
@@ -57,7 +57,7 @@ subroutine force_corr (forcescc)
   ndm = MAXVAL ( msh(1:ntyp) )
   allocate ( rhocgnt(ngl) )
 
-  CALL fwfft ('Rho', psic, dfftp)
+  CALL fwfft (FFT_RHO_KIND, psic, dfftp)
 
   if (gamma_only) then
      fact = 2.d0

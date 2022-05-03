@@ -489,7 +489,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
   USE mp,                   ONLY : mp_sum
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE fft_base,             ONLY : dffts
-  USE fft_interfaces,       ONLY : fwfft, invfft
+  USE fft_interfaces,       ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
   USE gcscf_module,         ONLY : lgcscf, gcscf_gk, gcscf_gh
   !
   IMPLICIT NONE
@@ -538,7 +538,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
   !
   ! ... calculate alpha from density
   !
-  CALL invfft ('Rho', psic, dffts)
+  CALL invfft (FFT_RHO_KIND, psic, dffts)
   !
   avg_rsm1 = 0.D0
   !
@@ -582,7 +582,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
      ENDIF
   !$omp end parallel
   !
-  CALL invfft ('Rho', psic, dffts)
+  CALL invfft (FFT_RHO_KIND, psic, dffts)
   !
   !$omp parallel do
   DO ir = 1, dffts%nnr
@@ -590,7 +590,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
   ENDDO
   !$omp end parallel do
   !
-  CALL fwfft ('Rho', psic, dffts)
+  CALL fwfft (FFT_RHO_KIND, psic, dffts)
   !
   IF ( lgcscf ) THEN
      !
@@ -640,7 +640,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
         ENDIF
      !$omp end parallel
      !
-     CALL invfft ('Rho', psic, dffts)
+     CALL invfft (FFT_RHO_KIND, psic, dffts)
      !
      !$omp parallel do
      DO ir = 1, dffts%nnr
@@ -648,7 +648,7 @@ SUBROUTINE approx_screening2( drho, rhobest )
      ENDDO
      !$omp end parallel do
      !
-     CALL fwfft ('Rho', psic, dffts)
+     CALL fwfft (FFT_RHO_KIND, psic, dffts)
      !
      IF ( lgcscf ) THEN
         !
