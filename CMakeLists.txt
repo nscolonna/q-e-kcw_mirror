@@ -66,6 +66,11 @@ include(GNUInstallDirs)
 include(CMakeDependentOption)
 option(QE_ENABLE_CUDA
     "enable CUDA acceleration on NVIDIA GPUs" OFF)
+option(QE_ENABLE_OPENMP_OFFLOAD
+    "enable OpenMP offload on GPUs" OFF)
+if((QE_ENABLE_CUDA) AND (QE_ENABLE_OPENMP_OFFLOAD))
+    message(FATAL_ERROR "CUDA and OpenMP offload cannot be enabled both at the same time")
+endif()
 if(QE_ENABLE_CUDA)
     option(QE_ENABLE_OPENACC "enable OpenACC acceleration" ON)
     # OpenMP enabled by default if CUDA is enable
@@ -153,6 +158,9 @@ qe_add_global_compile_definitions(QE_NO_CONFIG_H)
 
 if(QE_ENABLE_CUDA)
     qe_add_global_compile_definitions(__CUDA)
+endif()
+if(QE_ENABLE_OPENMP_OFFLOAD)
+   qe_add_global_compile_definitions(__OPENMP_GPU)
 endif()
 if(QE_ENABLE_TRACE)
     qe_add_global_compile_definitions(__TRACE)
