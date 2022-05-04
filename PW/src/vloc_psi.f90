@@ -252,6 +252,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
   !
   INTEGER :: ibnd, j, incr
   INTEGER :: i, right_nnr, right_nr3, right_inc
+  INTEGER, ALLOCATABLE :: dffts_nl(:)
   !
   ! chunking parameters
   INTEGER, PARAMETER :: blocksize = 256
@@ -332,50 +333,65 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !
      ENDDO
   ELSE
+     ALLOCATE(dffts_nl(1:dffts%ngm))
+     dffts_nl = dffts%nl
+     v_siz=dffts%nnr
+     !$omp target data map(to:v,igk_k,dffts_nl) map(tofrom:hpsi)
      DO ibnd = 1, m
         !
-!$omp parallel
-        CALL threaded_barrier_memset(psic, 0.D0, dffts%nnr*2)
-        !$omp do
+#if defined(__OPENMP_GPU)
+        !$omp target teams distribute parallel do
+        do i=1,v_siz
+           psic(i)=(0.d0, 0.d0)
+        enddo
+#else
+        psic(:) = (0.d0, 0.d0)
+#endif
+        !$omp target teams distribute parallel do
         DO j = 1, n
-           psic (dffts%nl (igk_k(j,current_k))) = psi(j, ibnd)
-        ENDDO
-        !$omp end do nowait
-!$omp end parallel
+          psic (dffts_nl (igk_k(j, current_k))) = psi(j, ibnd)
+        END DO
+        !
+!!$omp parallel
+!        CALL threaded_barrier_memset(psic, 0.D0, dffts%nnr*2)
+!        !$omp do
+!        DO j = 1, n
+!           psic (dffts_nl (igk_k(j,current_k))) = psi(j, ibnd)
+!        ENDDO
+!        !$omp end do nowait
+!!$omp end parallel
+
         !write (6,*) 'wfc G ', ibnd
         !write (6,99) (psic(i), i=1,400)
         !
-        !$omp target update to(psic)
+!!$omp target update to(psic)
         !$omp dispatch
         CALL invfft (FFT_WAVE_KIND, psic, dffts)
-        !$omp target update from(psic)
         !write (6,*) 'wfc R ' 
         !write (6,99) (psic(i), i=1,400)
         !
-!$omp parallel do
-        DO j = 1, dffts%nnr
+        !$omp target teams distribute parallel do 
+        DO j = 1, v_siz
            psic (j) = psic (j) * v(j)
         ENDDO
-!$omp end parallel do
         !write (6,*) 'v psi R ' 
         !write (6,99) (psic(i), i=1,400)
         !
-        !$omp target update to(psic)
         !$omp dispatch
         CALL fwfft (FFT_WAVE_KIND, psic, dffts)
-        !$omp target update from(psic)
+!!$omp target update from(psic)
         !
         !   addition to the total product
         !
-!$omp parallel do
+        !$omp target teams distribute parallel do 
         DO j = 1, n
-           hpsi (j, ibnd)   = hpsi (j, ibnd)   + psic (dffts%nl(igk_k(j,current_k)))
+           hpsi (j, ibnd)   = hpsi (j, ibnd)   + psic (dffts_nl(igk_k(j,current_k)))
         ENDDO
-!$omp end parallel do
         !write (6,*) 'v psi G ', ibnd
         !write (6,99) (psic(i), i=1,400)
         !
      ENDDO
+     !$omp end target data
   ENDIF
   !
   IF( use_tg ) THEN
