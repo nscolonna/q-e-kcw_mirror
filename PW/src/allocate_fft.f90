@@ -70,6 +70,7 @@ SUBROUTINE allocate_fft
   ENDIF
   ALLOCATE( rhog_core(ngm)  )
   ALLOCATE( psic(dfftp%nnr) )
+  !$omp target enter data map(alloc:psic)
   ALLOCATE( vrs(dfftp%nnr,nspin) )
 #if defined(__CUDA)
   CALL using_vrs(2)

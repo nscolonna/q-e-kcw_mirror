@@ -175,7 +175,11 @@ SUBROUTINE sum_band()
   DO is = 1, nspin
      psic(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
      psic(dffts%nnr+1:) = 0.0_dp
+write(*,*) '@sum_band-fwfft@'
+     !$omp target update to(psic)
+     !$omp dispatch
      CALL fwfft (FFT_RHO_KIND, psic, dffts)
+     !$omp target update from(psic)
      rho%of_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
      rho%of_g(dffts%ngm+1:,is) = (0.0_dp,0.0_dp)
   END DO
@@ -225,7 +229,11 @@ SUBROUTINE sum_band()
      psic(:) = ( 0.D0, 0.D0 )
      psic(dfftp%nl(:)) = rho%of_g(:,is)
      IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho%of_g(:,is) )
+write(*,*) '@sum_band-invfft@'
+     !$omp target update to(psic)
+     !$omp dispatch
      CALL invfft (FFT_RHO_KIND, psic, dfftp)
+     !$omp target update from(psic)
      rho%of_r(:,is) = psic(:)
   END DO
   !
