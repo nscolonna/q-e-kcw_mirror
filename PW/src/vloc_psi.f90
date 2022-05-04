@@ -133,13 +133,19 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
         !
      ELSE
         !
+        !$omp target update to(psic)
+        !$omp dispatch
         CALL invfft (FFT_WAVE_KIND, psic, dffts)
+        !$omp target update from(psic)
         !
         DO j = 1, dffts%nnr
            psic (j) = psic (j) * v(j)
         ENDDO
         !
+        !$omp target update to(psic)
+        !$omp dispatch
         CALL fwfft (FFT_WAVE_KIND, psic, dffts)
+        !$omp target update from(psic)
         !
      ENDIF
      !
@@ -339,7 +345,10 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,*) 'wfc G ', ibnd
         !write (6,99) (psic(i), i=1,400)
         !
+        !$omp target update to(psic)
+        !$omp dispatch
         CALL invfft (FFT_WAVE_KIND, psic, dffts)
+        !$omp target update from(psic)
         !write (6,*) 'wfc R ' 
         !write (6,99) (psic(i), i=1,400)
         !
@@ -351,7 +360,10 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,*) 'v psi R ' 
         !write (6,99) (psic(i), i=1,400)
         !
+        !$omp target update to(psic)
+        !$omp dispatch
         CALL fwfft (FFT_WAVE_KIND, psic, dffts)
+        !$omp target update from(psic)
         !
         !   addition to the total product
         !
