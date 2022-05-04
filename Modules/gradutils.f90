@@ -211,7 +211,10 @@ SUBROUTINE fft_gradient_g2r( dfft, a, g, ga )
      !
      ! ... bring back to R-space, (\grad_ipol a)(r) ...
      !
+     !$omp target data map(tofrom:gaux)
+     !$omp dispatch
      CALL invfft (FFT_RHO_KIND, gaux, dfft)
+     !$omp end target data
      !
      ! ... bring back to R-space, (\grad_ipol a)(r)
      ! ... add the factor 2\pi/a  missing in the definition of q+G
@@ -231,7 +234,10 @@ SUBROUTINE fft_gradient_g2r( dfft, a, g, ga )
      !
      ! ... bring back to R-space, (\grad_ipol a)(r) ...
      !
+     !$omp target data map(tofrom:gaux)
+     !$omp dispatch
      CALL invfft (FFT_RHO_KIND, gaux, dfft)
+     !$omp end target data
      !
      ! ...and add the factor 2\pi/a  missing in the definition of G
      !
@@ -454,7 +460,10 @@ SUBROUTINE fft_graddot( dfft, a, g, da )
      !
      ! ... bring a(ipol,r) to G-space, a(G) ...
      !
+     !$omp target data map(tofrom:aux)
+     !$omp dispatch
      CALL fwfft (FFT_RHO_KIND, aux, dfft)
+     !$omp end target data
      !
      ! ... multiply by iG to get the gradient in G-space
      !
@@ -474,7 +483,10 @@ SUBROUTINE fft_graddot( dfft, a, g, da )
      !
      ! ... bring a(ipol,r) to G-space, a(G) ...
      !
+     !$omp target data map(tofrom:aux)
+     !$omp dispatch
      CALL fwfft (FFT_RHO_KIND, aux, dfft)
+     !$omp end target data
      !
      ! ... multiply by iG to get the gradient in G-space
      ! ... fill both gaux(G) and gaux(-G) = gaux*(G)
@@ -494,7 +506,10 @@ SUBROUTINE fft_graddot( dfft, a, g, da )
         !
         ! ... bring a(ipol,r) to G-space, a(G) ...
         !
+        !$omp target data map(tofrom:aux)
+        !$omp dispatch
         CALL fwfft (FFT_RHO_KIND, aux, dfft)
+        !$omp end target data
         !
         ! ... multiply by iG to get the gradient in G-space
         !
