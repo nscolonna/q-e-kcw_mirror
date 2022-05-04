@@ -249,7 +249,10 @@ SUBROUTINE fft_gradient_g2r( dfft, a, g, ga )
         !
         ! ... bring back to R-space, (\grad_ipol a)(r) ...
         !
+        !$omp target data map(tofrom:gaux)
+        !$omp dispatch
         CALL invfft (FFT_RHO_KIND, gaux, dfft)
+        !$omp end target data
         !
         ! ...and add the factor 2\pi/a  missing in the definition of G
         !
