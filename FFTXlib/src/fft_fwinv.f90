@@ -11,15 +11,15 @@
 SUBROUTINE invfft_y_gpu( fft_kind, f, dfft, howmany )
   !! Compute G-space to R-space for a specific grid type
   !!
-  !! **fft_kind = 1 --> 'Rho'** :
+  !! **fft_kind = 'Rho'** :
   !!   inverse (backward) fourier transform of potentials and charge density f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 2 --> 'Wave'** :
+  !! **fft_kind = 'Wave'** :
   !!   inverse (backward) fourier transform of  wave functions f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 3 --> 'tgWave'** :
+  !! **fft_kind = 'tgWave'** :
   !!   inverse (backward) fourier transform of  wave functions f with task group
   !!   On output, f is overwritten
   !!
@@ -37,10 +37,10 @@ SUBROUTINE invfft_y_gpu( fft_kind, f, dfft, howmany )
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-  INTEGER, INTENT(IN) :: fft_kind
+  CHARACTER(LEN=*), INTENT(IN) :: fft_kind
   COMPLEX(DP) :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
-  INTEGER :: howmany_ = 1
+  INTEGER :: howmany_ = 1, fft_kind_int
   CHARACTER(LEN=12) :: clock_label
 
   IF(PRESENT(howmany) ) THEN
@@ -50,44 +50,47 @@ SUBROUTINE invfft_y_gpu( fft_kind, f, dfft, howmany )
   END IF
   !
   SELECT CASE(fft_kind)
-  CASE(1)
+  CASE('Rho')
+     fft_kind_int = 1
      clock_label = dfft%rho_clock_label
-  CASE(2)
+  CASE('Wave')
+     fft_kind_int = 2
      clock_label = dfft%wave_clock_label
-  CASE(3)
+  CASE('tgWave')
+     fft_kind_int = 3
      clock_label = dfft%wave_clock_label
   CASE DEFAULT
-     CALL fftx_error__( ' invfft ', ' unknown fft kind : ', fft_kind )
+     CALL fftx_error__( ' invfft GPU ', ' unknown fft kind : ', fft_kind )
   ENDSELECT
-  IF (clock_label == ' ') CALL fftx_error__( ' invfft ', ' uninitialized fft kind : ', fft_kind )
+  IF (clock_label == ' ') CALL fftx_error__( ' invfft GPU ', ' uninitialized fft kind : ', fft_kind )
 
   CALL start_clock(clock_label)
 
   IF( dfft%lpara .and. dfft%use_pencil_decomposition ) THEN
 
-     IF( fft_kind /= 3 ) THEN
+     IF( fft_kind_int /= 3 ) THEN
         IF( howmany_ == 1 ) THEN
-           CALL tg_cft3s_gpu( f, dfft, fft_kind )
+           CALL tg_cft3s_gpu( f, dfft, fft_kind_int )
         ELSE
-           CALL many_cft3s_gpu( f, dfft, fft_kind, howmany_ )
+           CALL many_cft3s_gpu( f, dfft, fft_kind_int, howmany_ )
         ENDIF
      ELSE
-        CALL tg_cft3s_gpu( f, dfft, fft_kind )
+        CALL tg_cft3s_gpu( f, dfft, fft_kind_int )
      ENDIF
 
   ELSE IF( dfft%lpara ) THEN
 
-     IF ( fft_kind /= 3 ) THEN
+     IF ( fft_kind_int /= 3 ) THEN
         IF( howmany_ /= 1 ) THEN
-           CALL many_cft3s_2d_gpu(f, dfft, fft_kind, howmany_ )
+           CALL many_cft3s_2d_gpu(f, dfft, fft_kind_int, howmany_ )
         ELSE
-           CALL tg_cft3s_2d_gpu(f, dfft, fft_kind)
+           CALL tg_cft3s_2d_gpu(f, dfft, fft_kind_int)
         END IF
      END IF
 
   ELSE
 
-     IF( fft_kind == 1 ) THEN
+     IF( fft_kind_int == 1 ) THEN
         CALL cfft3d_gpu( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                             dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1)
      ELSE
@@ -108,15 +111,15 @@ END SUBROUTINE invfft_y_gpu
 SUBROUTINE fwfft_y_gpu( fft_kind, f, dfft, howmany )
   !! Compute R-space to G-space for a specific grid type
   !!
-  !! **fft_kind = 1 --> 'Rho'**
+  !! **fft_kind = 'Rho'** :
   !!   forward fourier transform of potentials and charge density f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 2 --> 'Wave'**
+  !! **fft_kind = 'Wave'** :
   !!   forward fourier transform of  wave functions f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 3 --> 'tgWave'**
+  !! **fft_kind = 'tgWave'** :
   !!   forward fourier transform of wave functions f with task group
   !!   On output, f is overwritten
   !!
@@ -131,10 +134,10 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f, dfft, howmany )
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-  INTEGER, INTENT(IN) :: fft_kind
+  CHARACTER(LEN=*), INTENT(IN) :: fft_kind
   COMPLEX(DP) :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
-  INTEGER :: howmany_ = 1
+  INTEGER :: howmany_ = 1, fft_kind_int
   CHARACTER(LEN=12) :: clock_label
 
   IF(PRESENT(howmany) ) THEN
@@ -144,44 +147,47 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f, dfft, howmany )
   END IF
 
   SELECT CASE(fft_kind)
-  CASE(1)
+  CASE('Rho')
+     fft_kind_int = 1
      clock_label = dfft%rho_clock_label
-  CASE(2)
+  CASE('Wave')
+     fft_kind_int = 2
      clock_label = dfft%wave_clock_label
-  CASE(3)
+  CASE('tgWave')
+     fft_kind_int = 3
      clock_label = dfft%wave_clock_label
   CASE DEFAULT
-     CALL fftx_error__( ' fwfft ', ' unknown fft kind: ', fft_kind )
+     CALL fftx_error__( ' fwfft GPU ', ' unknown fft kind : ', fft_kind )
   ENDSELECT
-  IF (clock_label == ' ') CALL fftx_error__( ' fwfft ', ' uninitialized fft kind : ', fft_kind )
+  IF (clock_label == ' ') CALL fftx_error__( ' fwfft GPU ', ' uninitialized fft kind : ', fft_kind )
 
   CALL start_clock(clock_label)
 
   IF( dfft%lpara .and. dfft%use_pencil_decomposition ) THEN
 
-     IF( fft_kind /= 3 ) THEN
+     IF( fft_kind_int /= 3 ) THEN
         IF( howmany_ == 1 ) THEN
-           CALL tg_cft3s_gpu( f, dfft, -1*fft_kind )
+           CALL tg_cft3s_gpu( f, dfft, -1*fft_kind_int )
         ELSE
-           CALL many_cft3s_gpu( f, dfft, -1*fft_kind, howmany_ )
+           CALL many_cft3s_gpu( f, dfft, -1*fft_kind_int, howmany_ )
         ENDIF
      ELSE
-        CALL tg_cft3s_gpu( f, dfft, -1*fft_kind )
+        CALL tg_cft3s_gpu( f, dfft, -1*fft_kind_int )
      ENDIF
 
   ELSE IF( dfft%lpara ) THEN
 
-     IF ( fft_kind /= 3 ) THEN
+     IF ( fft_kind_int /= 3 ) THEN
         IF( howmany_ /= 1 ) THEN
-           CALL many_cft3s_2d_gpu( f, dfft, -1*fft_kind, howmany_ )
+           CALL many_cft3s_2d_gpu( f, dfft, -1*fft_kind_int, howmany_ )
         ELSE
-           CALL tg_cft3s_2d_gpu( f, dfft, -1*fft_kind )
+           CALL tg_cft3s_2d_gpu( f, dfft, -1*fft_kind_int )
         ENDIF
      ENDIF
 
   ELSE
 
-     IF( fft_kind == 1 ) THEN
+     IF( fft_kind_int == 1 ) THEN
         CALL cfft3d_gpu( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1)
      ELSE
@@ -203,15 +209,15 @@ END SUBROUTINE fwfft_y_gpu
 SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   !! Compute G-space to R-space for a specific grid type
   !!
-  !! **fft_kind = 1 --> 'Rho'** :
+  !! **fft_kind = 'Rho'** :
   !!   inverse (backward) fourier transform of potentials and charge density f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 2 --> 'Wave'** :
+  !! **fft_kind = 'Wave'** :
   !!   inverse (backward) fourier transform of  wave functions f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 3 --> 'tgWave'** :
+  !! **fft_kind = 'tgWave'** :
   !!   inverse (backward) fourier transform of  wave functions f with task group
   !!   On output, f is overwritten
   !!
@@ -231,10 +237,10 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft
-  INTEGER, INTENT(IN) :: fft_kind
+  CHARACTER(LEN=*), INTENT(IN) :: fft_kind
   COMPLEX(DP) :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
-  INTEGER :: howmany_ = 1
+  INTEGER :: howmany_ = 1, fft_kind_ind
   CHARACTER(LEN=12) :: clock_label
 
 #if defined(__OPENMP_GPU)
@@ -248,11 +254,14 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   END IF
   !
   SELECT CASE(fft_kind)
-  CASE(1)
+  CASE('Rho')
+     fft_kind_int = 1
      clock_label = dfft%rho_clock_label
-  CASE(2)
+  CASE('Wave')
+     fft_kind_int = 2
      clock_label = dfft%wave_clock_label
-  CASE(3)
+  CASE('tgWave')
+     fft_kind_int = 3
      clock_label = dfft%wave_clock_label
   CASE DEFAULT
      CALL fftx_error__( ' invfft ', ' unknown fft kind : ', fft_kind )
@@ -264,10 +273,10 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   IF( dfft%lpara .and. dfft%use_pencil_decomposition ) THEN
 
      IF( howmany_ == 1 ) THEN
-        CALL tg_cft3s( f, dfft, fft_kind )
+        CALL tg_cft3s( f, dfft, fft_kind_int )
      ELSE
-        IF (fft_kind /= 3) THEN
-           CALL many_cft3s( f, dfft, fft_kind, howmany )
+        IF (fft_kind_int /= 3) THEN
+           CALL many_cft3s( f, dfft, fft_kind_int, howmany )
         ELSE
            CALL fftx_error__( ' invfft ', ' howmany not yet implemented for parallel driver ', 1 )
         END IF
@@ -279,15 +288,15 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
         CALL fftx_error__( ' invfft ', ' howmany not yet implemented for parallel driver ', 1 )
      END IF
 
-     IF( fft_kind /= 3 ) THEN
-        CALL tg_cft3s_2d(f,dfft, fft_kind)
+     IF( fft_kind_int /= 3 ) THEN
+        CALL tg_cft3s_2d(f,dfft, fft_kind_int)
      ELSE
         CALL fftx_error__( ' fwfft ', ' tgWave not implemented  ', 1 )
      END IF
 
   ELSE
 
-     IF( fft_kind == 1 ) THEN
+     IF( fft_kind_int == 1 ) THEN
         CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1)
      ELSE
@@ -309,15 +318,15 @@ END SUBROUTINE invfft_y
 SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   !! Compute R-space to G-space for a specific grid type
   !!
-  !! **fft_kind = 1 --> 'Rho'**
+  !! **fft_kind = 'Rho'**
   !!   forward fourier transform of potentials and charge density f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 2 --> 'Wave'**
+  !! **fft_kind = 'Wave'**
   !!   forward fourier transform of  wave functions f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 3 --> 'tgWave'**
+  !! **fft_kind = 'tgWave'**
   !!   forward fourier transform of wave functions f with task group
   !!   On output, f is overwritten
   !!
@@ -334,7 +343,7 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft
-  INTEGER, INTENT(IN) :: fft_kind
+  CHARACTER(LEN=*), INTENT(IN) :: fft_kind
   COMPLEX(DP) :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER :: howmany_ = 1
@@ -351,14 +360,17 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   END IF
 
   SELECT CASE(fft_kind)
-  CASE(1)
+  CASE('Rho')
+     fft_kind_int = 1
      clock_label = dfft%rho_clock_label
-  CASE(2)
+  CASE('Wave')
+     fft_kind_int = 2
      clock_label = dfft%wave_clock_label
-  CASE(3)
+  CASE('tgWave')
+     fft_kind_int = 3
      clock_label = dfft%wave_clock_label
   CASE DEFAULT
-     CALL fftx_error__( ' fwfft ', ' unknown fft kind: ', fft_kind )
+     CALL fftx_error__( ' fwfft ', ' unknown fft kind : ', fft_kind )
   ENDSELECT
   IF (clock_label == ' ') CALL fftx_error__( ' fwfft ', ' uninitialized fft kind : ', fft_kind )
 
@@ -367,9 +379,9 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   IF( dfft%lpara .and. dfft%use_pencil_decomposition ) THEN
 
      IF( howmany_ == 1 ) THEN
-        CALL tg_cft3s(f, dfft, -1*fft_kind)
+        CALL tg_cft3s(f, dfft, -1*fft_kind_int)
      ELSE
-        CALL many_cft3s( f, dfft, -1*fft_kind, howmany )
+        CALL many_cft3s( f, dfft, -1*fft_kind_int, howmany )
      END IF
 
   ELSE IF( dfft%lpara ) THEN
@@ -378,15 +390,15 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
         CALL fftx_error__( ' fwfft ', ' howmany not yet implemented for parallel driver ', 1 )
      END IF
 
-     IF( fft_kind /= 3 ) THEN
-        CALL tg_cft3s_2d(f, dfft, -1*fft_kind)
+     IF( fft_kind_int /= 3 ) THEN
+        CALL tg_cft3s_2d(f, dfft, -1*fft_kind_int)
      ELSE
         CALL fftx_error__( ' fwfft ', ' tgWave not implemented  ', 1 )
      END IF
 
   ELSE
 
-     IF( fft_kind == 1 ) THEN
+     IF( fft_kind_int == 1 ) THEN
         CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1)
      ELSE
@@ -498,15 +510,15 @@ END SUBROUTINE invfft_b
 SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   !! Compute G-space to R-space for a specific grid type
   !!
-  !! **fft_kind = 1 --> 'Rho'** :
+  !! **fft_kind = 'Rho'** :
   !!   inverse (backward) fourier transform of potentials and charge density f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 2 --> 'Wave'** :
+  !! **fft_kind = 'Wave'** :
   !!   inverse (backward) fourier transform of  wave functions f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 3 --> 'tgWave'** :
+  !! **fft_kind = 'tgWave'** :
   !!   inverse (backward) fourier transform of  wave functions f with task group
   !!   On output, f is overwritten
   !!
@@ -525,12 +537,12 @@ SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-  INTEGER, INTENT(IN) :: fft_kind
+  CHARACTER(LEN=*), INTENT(IN) :: fft_kind
   COMPLEX(DP), DEVICE :: f_d(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER(kind = cuda_stream_kind), OPTIONAL, INTENT(IN) :: stream
   !
-  INTEGER                          :: howmany_ = 1
+  INTEGER                          :: howmany_ = 1, fft_kind_int
   INTEGER(kind = cuda_stream_kind) :: stream_  = 0
 
   CHARACTER(LEN=12) :: clock_label
@@ -548,16 +560,19 @@ SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   END IF
   !
   SELECT CASE(fft_kind)
-  CASE(1)
+  CASE('Rho')
+     fft_kind_int = 1
      clock_label = dfft%rho_clock_label
-  CASE(2)
+  CASE('Wave')
+     fft_kind_int = 2
      clock_label = dfft%wave_clock_label
-  CASE(3)
+  CASE('tgWave')
+     fft_kind_int = 3
      clock_label = dfft%wave_clock_label
   CASE DEFAULT
-     CALL fftx_error__( ' invfft ', ' unknown fft kind : ', fft_kind )
+     CALL fftx_error__( ' invfft GPU ', ' unknown fft kind : ', fft_kind )
   ENDSELECT
-  IF (clock_label == ' ') CALL fftx_error__( ' invfft ', ' uninitialized fft kind : ', fft_kind )
+  IF (clock_label == ' ') CALL fftx_error__( ' invfft GPU ', ' uninitialized fft kind : ', fft_kind )
 
   CALL start_clock_gpu(clock_label)
 
@@ -567,29 +582,29 @@ SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
         CALL fftx_error__( ' invfft ', ' stream support not implemented for parallel driver ', 1 )
      END IF
 
-     IF( fft_kind /= 3 ) THEN
+     IF( fft_kind_int /= 3 ) THEN
         IF( howmany_ == 1 ) THEN
-           CALL tg_cft3s_gpu( f, dfft, fft_kind )
+           CALL tg_cft3s_gpu( f, dfft, fft_kind_int )
         ELSE
-           CALL many_cft3s_gpu( f, dfft, fft_kind, howmany_ )
+           CALL many_cft3s_gpu( f, dfft, fft_kind_int, howmany_ )
         ENDIF
      ELSE
-        CALL tg_cft3s_gpu( f, dfft, fft_kind )
+        CALL tg_cft3s_gpu( f, dfft, fft_kind_int )
      ENDIF
 
   ELSE IF( dfft%lpara ) THEN
 
-     IF ( fft_kind /= 3 ) THEN
+     IF ( fft_kind_int /= 3 ) THEN
         IF( howmany_ /= 1 ) THEN
-           CALL many_cft3s_2d_gpu(f, dfft, fft_kind, howmany_ )
+           CALL many_cft3s_2d_gpu(f, dfft, fft_kind_int, howmany_ )
         ELSE
-           CALL tg_cft3s_2d_gpu(f, dfft, fft_kind)
+           CALL tg_cft3s_2d_gpu(f, dfft, fft_kind_int)
         END IF
      END IF
 
   ELSE
 
-     IF( fft_kind == 1 ) THEN
+     IF( fft_kind_int == 1 ) THEN
         CALL cfft3d_gpu( f_d, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1, stream_)
      ELSE
@@ -611,15 +626,15 @@ END SUBROUTINE invfft_y_gpu
 SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   !! Compute R-space to G-space for a specific grid type
   !!
-  !! **fft_kind = 1 --> 'Rho'**
+  !! **fft_kind = 'Rho'**
   !!   forward fourier transform of potentials and charge density f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 2 --> 'Wave'**
+  !! **fft_kind = 'Wave'**
   !!   forward fourier transform of  wave functions f
   !!   On output, f is overwritten
   !!
-  !! **fft_kind = 3 --> 'tgWave'**
+  !! **fft_kind = 'tgWave'**
   !!   forward fourier transform of wave functions f with task group
   !!   On output, f is overwritten
   !!
@@ -634,12 +649,12 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-  INTEGER, INTENT(IN) :: fft_kind
+  CHARACTER(LEN=*), INTENT(IN) :: fft_kind
   COMPLEX(DP), DEVICE :: f_d(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER(kind = cuda_stream_kind), OPTIONAL, INTENT(IN) :: stream
 
-  INTEGER                          :: howmany_ = 1
+  INTEGER                          :: howmany_ = 1, fft_kind_int
   INTEGER(kind = cuda_stream_kind) :: stream_  = 0
 
   CHARACTER(LEN=12) :: clock_label
@@ -657,16 +672,19 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   END IF
   !
   SELECT CASE(fft_kind)
-  CASE(1)
+  CASE('Rho')
+     fft_kind_int = 1
      clock_label = dfft%rho_clock_label
-  CASE(2)
+  CASE('Wave')
+     fft_kind_int = 2
      clock_label = dfft%wave_clock_label
-  CASE(3)
+  CASE('tgWave')
+     fft_kind_int = 3
      clock_label = dfft%wave_clock_label
   CASE DEFAULT
-     CALL fftx_error__( ' fwfft ', ' unknown fft kind: ', fft_kind )
+     CALL fftx_error__( ' fwfft GPU ', ' unknown fft kind : ', fft_kind )
   ENDSELECT
-  IF (clock_label == ' ') CALL fftx_error__( ' fwfft ', ' uninitialized fft kind : '//fft_kind , 1 )
+  IF (clock_label == ' ') CALL fftx_error__( ' fwfft GPU ', ' uninitialized fft kind : '//fft_kind , 1 )
 
   CALL start_clock_gpu(clock_label)
 
@@ -676,29 +694,29 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
         CALL fftx_error__( ' fwfft ', ' stream support not implemented for parallel driver ', 1 )
      END IF
 
-     IF( fft_kind /= 3 ) THEN
+     IF( fft_kind_int /= 3 ) THEN
         IF( howmany_ == 1 ) THEN
-           CALL tg_cft3s_gpu( f, dfft, -1*fft_kind )
+           CALL tg_cft3s_gpu( f, dfft, -1*fft_kind_int )
         ELSE
-           CALL many_cft3s_gpu( f, dfft, -1*fft_kind, howmany_ )
+           CALL many_cft3s_gpu( f, dfft, -1*fft_kind_int, howmany_ )
         ENDIF
      ELSE
-        CALL tg_cft3s_gpu( f, dfft, -1*fft_kind )
+        CALL tg_cft3s_gpu( f, dfft, -1*fft_kind_int )
      ENDIF
 
   ELSE IF( dfft%lpara ) THEN
 
-     IF ( fft_kind /= 3 ) THEN
+     IF ( fft_kind_int /= 3 ) THEN
         IF( howmany_ /= 1 ) THEN
-           CALL many_cft3s_2d_gpu( f, dfft, -1*fft_kind, howmany_ )
+           CALL many_cft3s_2d_gpu( f, dfft, -1*fft_kind_int, howmany_ )
         ELSE
-           CALL tg_cft3s_2d_gpu( f, dfft, -1*fft_kind )
+           CALL tg_cft3s_2d_gpu( f, dfft, -1*fft_kind_int )
         ENDIF
      ENDIF
 
   ELSE
 
-     IF( fft_kind == 1 ) THEN
+     IF( fft_kind_int == 1 ) THEN
         CALL cfft3d_gpu( f_d, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1, stream_ )
      ELSE
