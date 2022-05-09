@@ -24,7 +24,7 @@ MODULE fft_interfaces
        USE fft_param,       ONLY : DP
        IMPLICIT NONE
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-       INTEGER, INTENT(IN) :: fft_kind
+       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
        COMPLEX(DP) :: f(:)
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
      END SUBROUTINE invfft_y_gpu
@@ -34,7 +34,7 @@ MODULE fft_interfaces
        USE fft_param,       ONLY : DP
        IMPLICIT NONE
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-       INTEGER, INTENT(IN) :: fft_kind
+       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
        COMPLEX(DP) :: f(:)
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
      END SUBROUTINE fwfft_y_gpu
@@ -50,7 +50,7 @@ MODULE fft_interfaces
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
        IMPLICIT NONE
-       INTEGER, INTENT(IN) :: fft_kind
+       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
@@ -73,7 +73,7 @@ MODULE fft_interfaces
        USE fft_param,  ONLY: DP
        USE cudafor
        IMPLICIT NONE
-       INTEGER, INTENT(IN) :: fft_kind
+       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        INTEGER(kind = cuda_stream_kind), OPTIONAL, INTENT(IN) :: stream
@@ -87,7 +87,7 @@ MODULE fft_interfaces
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
        IMPLICIT NONE
-       INTEGER, INTENT(IN) :: fft_kind
+       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
