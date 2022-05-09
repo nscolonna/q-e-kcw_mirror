@@ -18,7 +18,7 @@ MODULE rVV10
   USE mp_bands,          ONLY : intra_bgrp_comm
   USE io_global,         ONLY : ionode, stdout
   USE fft_base,          ONLY : dfftp
-  USE fft_interfaces,    ONLY : fwfft, invfft , FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,    ONLY : fwfft, invfft 
   USE control_flags,     ONLY : gamma_only, iverbosity
 
   IMPLICIT NONE
@@ -205,7 +205,7 @@ CONTAINS
     call start_clock( 'rVV10_ffts')
     
     do theta_i = 1, Nqs
-       CALL invfft(FFT_RHO_KIND, thetas(:,theta_i), dfftp) 
+       CALL invfft('Rho', thetas(:,theta_i), dfftp) 
     end do
 
     call stop_clock( 'rVV10_ffts')
@@ -416,7 +416,7 @@ CONTAINS
       call start_clock( 'rVV10_ffts')
 
       do theta_i = 1, Nqs
-         CALL invfft(FFT_RHO_KIND, u_vdW(:,theta_i), dfftp) 
+         CALL invfft('Rho', u_vdW(:,theta_i), dfftp) 
       end do
 
       call stop_clock( 'rVV10_ffts')
@@ -706,7 +706,7 @@ CONTAINS
 
     do theta_i = 1, Nqs
 
-     CALL fwfft (FFT_RHO_KIND, thetas(:,theta_i), dfftp)
+     CALL fwfft ('Rho', thetas(:,theta_i), dfftp)
     end do
 
     call stop_clock( 'rVV10_ffts')
@@ -1279,10 +1279,10 @@ end subroutine vdW_energy
 
     do icar = 1,3
       h(:) = CMPLX( h_prefactor(:)*gradient_rho(icar,:), 0.0_DP, kind=dp)
-      CALL fwfft (FFT_RHO_KIND, h, dfftp) 
+      CALL fwfft ('Rho', h, dfftp) 
       h(dfftp%nl(:)) = CMPLX(0.0_DP,1.0_DP,kind=dp)*tpiba*g(icar,:)*h(dfftp%nl(:))
       if (gamma_only) h(dfftp%nlm(:)) = CONJG(h(dfftp%nl(:)))
-      CALL invfft (FFT_RHO_KIND, h, dfftp) 
+      CALL invfft ('Rho', h, dfftp) 
       potential(:) = potential(:) - REAL(h(:))
     end do
 

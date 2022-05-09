@@ -1293,7 +1293,7 @@ MODULE realus
       USE uspp,             ONLY : okvan, becsum
       USE uspp_param,       ONLY : upf, nh
       USE noncollin_module, ONLY : nspin_mag
-      USE fft_interfaces,   ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+      USE fft_interfaces,   ONLY : fwfft
       USE fft_base,         ONLY : dfftp
       USE wavefunctions,    ONLY : psic
 #if defined (__DEBUG)
@@ -1351,7 +1351,7 @@ MODULE realus
       !
       DO is = 1, nspin_mag
          psic(:) = rhor(:,is)
-         CALL fwfft (FFT_RHO_KIND, psic, dfftp)
+         CALL fwfft ('Rho', psic, dfftp)
          rho(:,is) = rho(:,is) + psic(dfftp%nl(:))
       END DO
       !
@@ -2200,7 +2200,7 @@ MODULE realus
     USE klist,         ONLY : ngk, igk_k
     USE kinds,         ONLY : DP
     USE fft_base,      ONLY : dffts
-    USE fft_interfaces,ONLY : invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+    USE fft_interfaces,ONLY : invfft
     USE fft_helper_subroutines,   ONLY : fftx_ntgrp, tg_get_recip_inc
     !
     IMPLICIT NONE
@@ -2248,7 +2248,7 @@ MODULE realus
            ioff = ioff + right_inc
         ENDDO
         !
-        CALL invfft (FFT_TGWAVE_KIND, tg_psic, dffts)
+        CALL invfft ('tgWave', tg_psic, dffts)
         !
         !
         IF (present(conserved)) THEN
@@ -2281,7 +2281,7 @@ MODULE realus
         ENDIF
         !$omp end parallel
         !
-       CALL invfft (FFT_WAVE_KIND, psic, dffts)
+       CALL invfft ('Wave', psic, dffts)
         !
         IF (present(conserved)) THEN
          IF (conserved .eqv. .true.) THEN
@@ -2315,7 +2315,7 @@ MODULE realus
     USE klist,         ONLY : ngk, igk_k
     USE kinds,         ONLY : DP
     USE fft_base,      ONLY : dffts
-    USE fft_interfaces,ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+    USE fft_interfaces,ONLY : fwfft
     USE fft_helper_subroutines,   ONLY : fftx_ntgrp, tg_get_recip_inc
     !
     IMPLICIT NONE
@@ -2346,7 +2346,7 @@ MODULE realus
     !New task_groups versions
     IF( dffts%has_task_groups ) THEN
        !
-        CALL fwfft (FFT_TGWAVE_KIND, tg_psic, dffts )
+        CALL fwfft ('tgWave', tg_psic, dffts )
         !
         ioff   = 0
         CALL tg_get_recip_inc( dffts, right_inc )
@@ -2390,7 +2390,7 @@ MODULE realus
 
     ELSE !Non task_groups version
          !larger memory slightly faster
-        CALL fwfft (FFT_WAVE_KIND, psic, dffts)
+        CALL fwfft ('Wave', psic, dffts)
 
         IF (ibnd < last) THEN
            ! two ffts at the same time
@@ -2455,7 +2455,7 @@ MODULE realus
     USE klist,                    ONLY : ngk, igk_k
     USE wvfct,                    ONLY : current_k
     USE fft_base,                 ONLY : dffts
-    USE fft_interfaces,           ONLY : invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+    USE fft_interfaces,           ONLY : invfft
     USE fft_helper_subroutines,   ONLY : fftx_ntgrp, tg_get_recip_inc
 
     IMPLICIT NONE
@@ -2499,7 +2499,7 @@ MODULE realus
 
        ENDDO
        !
-       CALL invfft (FFT_TGWAVE_KIND, tg_psic, dffts)
+       CALL invfft ('tgWave', tg_psic, dffts)
        IF (present(conserved)) THEN
           IF (conserved .eqv. .true.) THEN
              IF (.not. allocated(tg_psic_temp)) &
@@ -2519,7 +2519,7 @@ MODULE realus
        !$omp end do
        !$omp end parallel
        !
-       CALL invfft (FFT_WAVE_KIND, psic, dffts)
+       CALL invfft ('Wave', psic, dffts)
        IF (present(conserved)) THEN
           IF (conserved .eqv. .true.) THEN
              IF (.not. allocated(psic_temp) ) ALLOCATE (psic_temp(size(psic)))
@@ -2549,7 +2549,7 @@ MODULE realus
     USE wvfct,                    ONLY : current_k
     USE kinds,                    ONLY : DP
     USE fft_base,                 ONLY : dffts
-    USE fft_interfaces,           ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+    USE fft_interfaces,           ONLY : fwfft
     USE fft_helper_subroutines,   ONLY : fftx_ntgrp, tg_get_recip_inc
     !
     IMPLICIT NONE
@@ -2581,7 +2581,7 @@ MODULE realus
 
     IF( dffts%has_task_groups ) THEN
        !
-       CALL fwfft (FFT_TGWAVE_KIND, tg_psic, dffts)
+       CALL fwfft ('tgWave', tg_psic, dffts)
        !
        ioff   = 0
        CALL tg_get_recip_inc( dffts, right_inc )
@@ -2609,7 +2609,7 @@ MODULE realus
        !
     ELSE !non task groups version
        !
-       CALL fwfft (FFT_WAVE_KIND, psic, dffts)
+       CALL fwfft ('Wave', psic, dffts)
        !
        IF( add_to_orbital_ ) THEN
           !$omp parallel do default(shared) private(ig)

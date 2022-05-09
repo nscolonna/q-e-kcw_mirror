@@ -22,7 +22,7 @@ SUBROUTINE h_psi_meta( ldap, np, mp, psip, hpsi )
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions,        ONLY : psic
   USE fft_base,             ONLY : dffts
-  USE fft_interfaces,       ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,       ONLY : fwfft, invfft
   !
   IMPLICIT NONE
   !
@@ -68,11 +68,11 @@ SUBROUTINE h_psi_meta( ldap, np, mp, psip, hpsi )
               psic(dffts%nlm(1:np)) = -ci * kplusg(1:np) * CONJG(psip(1:np,im))
            ENDIF
            !
-           CALL invfft( FFT_WAVE_KIND, psic, dffts )
+           CALL invfft( 'Wave', psic, dffts )
            !
            psic(1:nrxxs) = kedtau(1:nrxxs,current_spin) * psic(1:nrxxs) 
            !
-           CALL fwfft( FFT_WAVE_KIND, psic, dffts )
+           CALL fwfft( 'Wave', psic, dffts )
            !
            IF ( im < mp ) THEN
               hpsi(1:np,im) = hpsi(1:np,im)   - ci * kplusg(1:np) * 0.5d0 * &
@@ -100,11 +100,11 @@ SUBROUTINE h_psi_meta( ldap, np, mp, psip, hpsi )
            psic(dffts%nl(igk_k(1:np,current_k))) = CMPLX(0d0, kplusg(1:np), KIND=DP) &
                                                    * psip(1:np,im)
            !
-           CALL invfft( FFT_WAVE_KIND, psic, dffts )
+           CALL invfft( 'Wave', psic, dffts )
            !
            psic(1:nrxxs) = kedtau(1:nrxxs,current_spin) * psic(1:nrxxs) 
            !
-           CALL fwfft( FFT_WAVE_KIND, psic, dffts )
+           CALL fwfft( 'Wave', psic, dffts )
            !
            hpsi(1:np,im) = hpsi(1:np,im) - CMPLX(0d0, kplusg(1:np), KIND=DP) &
                                          * psic(dffts%nl(igk_k(1:np,current_k)))

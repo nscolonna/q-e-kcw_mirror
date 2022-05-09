@@ -16,7 +16,7 @@ subroutine stres_cc (sigmaxcc)
   USE ions_base,            ONLY : ntyp => nsp
   USE cell_base,            ONLY : alat, omega, tpiba, tpiba2
   USE fft_base,             ONLY : dfftp
-  USE fft_interfaces,       ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,       ONLY : fwfft
   USE gvect,                ONLY : ngm, gstart, g, gg, ngl, gl,igtongl
   USE ener,                 ONLY : etxc, vtxc
   USE lsda_mod,             ONLY : nspin
@@ -58,7 +58,7 @@ subroutine stres_cc (sigmaxcc)
      enddo
   endif
   deallocate (vxc)
-  CALL fwfft (FFT_RHO_KIND, psic, dfftp)
+  CALL fwfft ('Rho', psic, dfftp)
   !
   ! psic contains now Vxc(G)
   !

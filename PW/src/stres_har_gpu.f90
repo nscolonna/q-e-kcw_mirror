@@ -16,7 +16,7 @@ SUBROUTINE stres_har_gpu( sigmahar )
   USE cell_base,          ONLY: omega, tpiba2
   USE ener,               ONLY: ehart
   USE fft_base,           ONLY: dfftp
-  USE fft_interfaces,     ONLY: fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,     ONLY: fwfft
   USE gvect,              ONLY: ngm, gstart
   USE scf,                ONLY: rho
   USE control_flags,      ONLY: gamma_only
@@ -55,7 +55,7 @@ SUBROUTINE stres_har_gpu( sigmahar )
   !
   CALL using_psic_d(1)
   !
-  CALL fwfft( FFT_RHO_KIND, psic_d, dfftp )
+  CALL fwfft( 'Rho', psic_d, dfftp )
   ! psic contains now the charge density in G space
   ! the  G=0 component is not computed
   !

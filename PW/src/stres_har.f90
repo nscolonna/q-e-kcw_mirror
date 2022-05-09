@@ -16,7 +16,7 @@ SUBROUTINE stres_har( sigmahar )
   USE cell_base,       ONLY: omega, tpiba2
   USE ener,            ONLY: ehart
   USE fft_base,        ONLY: dfftp
-  USE fft_interfaces,  ONLY: fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,  ONLY: fwfft
   USE gvect,           ONLY: ngm, gstart, g, gg
   USE scf,             ONLY: rho
   USE control_flags,   ONLY: gamma_only
@@ -39,7 +39,7 @@ SUBROUTINE stres_har( sigmahar )
   sigmahar(:,:) = 0.0_DP
   psic(:) = CMPLX( rho%of_r(:,1), KIND=DP )
   !
-  CALL fwfft(FFT_RHO_KIND, psic, dfftp)
+  CALL fwfft('Rho', psic, dfftp)
   ! psic contains now the charge density in G space
   ! the  G=0 component is not computed
   IF (do_cutoff_2D) THEN  

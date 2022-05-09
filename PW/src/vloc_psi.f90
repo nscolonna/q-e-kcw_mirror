@@ -15,7 +15,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
   USE kinds,                   ONLY : DP
   USE mp_bands,                ONLY : me_bgrp
   USE fft_base,                ONLY : dffts
-  USE fft_interfaces,          ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,          ONLY : fwfft, invfft
   USE wavefunctions,           ONLY : psic
   USE fft_helper_subroutines,  ONLY : fftx_ntgrp, tg_get_nnr, &
                                       tg_get_group_nr3, tg_get_recip_inc
@@ -121,7 +121,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      !
      IF( use_tg ) THEN
         !
-        CALL invfft (FFT_TGWAVE_KIND, tg_psic, dffts )
+        CALL invfft ('tgWave', tg_psic, dffts )
         !
         CALL tg_get_group_nr3( dffts, right_nr3 )
         !
@@ -129,13 +129,13 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
            tg_psic (j) = tg_psic (j) * tg_v(j)
         ENDDO
         !
-        CALL fwfft (FFT_TGWAVE_KIND, tg_psic, dffts )
+        CALL fwfft ('tgWave', tg_psic, dffts )
         !
      ELSE
         !
         !$omp target update to(psic)
         !$omp dispatch
-        CALL invfft (FFT_WAVE_KIND, psic, dffts)
+        CALL invfft ('Wave', psic, dffts)
         !$omp target update from(psic)
         !
         DO j = 1, dffts%nnr
@@ -144,7 +144,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
         !
         !$omp target update to(psic)
         !$omp dispatch
-        CALL fwfft (FFT_WAVE_KIND, psic, dffts)
+        CALL fwfft ('Wave', psic, dffts)
         !$omp target update from(psic)
         !
      ENDIF
@@ -228,7 +228,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
   USE klist,                  ONLY : igk_k
   USE mp_bands,               ONLY : me_bgrp
   USE fft_base,               ONLY : dffts
-  USE fft_interfaces,         ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,         ONLY : fwfft, invfft
   USE fft_helper_subroutines, ONLY : fftx_ntgrp, tg_get_nnr, &
                                      tg_get_group_nr3, tg_get_recip_inc
   USE wavefunctions,          ONLY : psic
@@ -301,7 +301,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !$omp end do nowait
 !$omp end parallel
         !
-        CALL  invfft (FFT_TGWAVE_KIND, tg_psic, dffts )
+        CALL  invfft ('tgWave', tg_psic, dffts )
         !write (6,*) 'wfc R ' 
         !write (6,99) (tg_psic(i), i=1,400)
         !
@@ -315,7 +315,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,*) 'v psi R ' 
         !write (6,99) (tg_psic(i), i=1,400)
         !
-        CALL fwfft (FFT_TGWAVE_KIND,  tg_psic, dffts )
+        CALL fwfft ('tgWave',  tg_psic, dffts )
         !
         !   addition to the total product
         !
@@ -366,7 +366,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !
 !!$omp target update to(psic)
         !$omp dispatch
-        CALL invfft (FFT_WAVE_KIND, psic, dffts)
+        CALL invfft ('Wave', psic, dffts)
         !write (6,*) 'wfc R ' 
         !write (6,99) (psic(i), i=1,400)
         !
@@ -378,7 +378,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,99) (psic(i), i=1,400)
         !
         !$omp dispatch
-        CALL fwfft (FFT_WAVE_KIND, psic, dffts)
+        CALL fwfft ('Wave', psic, dffts)
 !!$omp target update from(psic)
         !
         !   addition to the total product
@@ -418,7 +418,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
   USE klist,                  ONLY : igk_k
   USE mp_bands,               ONLY : me_bgrp
   USE fft_base,               ONLY : dffts, dfftp
-  USE fft_interfaces,         ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,         ONLY : fwfft, invfft
   USE lsda_mod,               ONLY : nspin
   USE noncollin_module,       ONLY : npol, domag
   USE wavefunctions,          ONLY : psic_nc
@@ -502,7 +502,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
 
            ENDDO
            !
-           CALL invfft (FFT_TGWAVE_KIND, tg_psic(:,ipol), dffts )
+           CALL invfft ('tgWave', tg_psic(:,ipol), dffts )
            !
         ENDDO
         !
@@ -512,7 +512,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
            DO j = 1, n
               psic_nc(dffts%nl(igk_k(j,current_k)),ipol) = psi(j+(ipol-1)*lda,ibnd)
            ENDDO
-           CALL invfft (FFT_WAVE_KIND, psic_nc(:,ipol), dffts)
+           CALL invfft ('Wave', psic_nc(:,ipol), dffts)
         ENDDO
      ENDIF
 
@@ -558,7 +558,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         !
         DO ipol = 1, npol
 
-           CALL fwfft (FFT_TGWAVE_KIND, tg_psic(:,ipol), dffts )
+           CALL fwfft ('tgWave', tg_psic(:,ipol), dffts )
            !
            ioff   = 0
            !
@@ -582,7 +582,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
      ELSE
 
         DO ipol=1,npol
-           CALL fwfft (FFT_WAVE_KIND, psic_nc(:,ipol), dffts)
+           CALL fwfft ('Wave', psic_nc(:,ipol), dffts)
         ENDDO
         !
         !   addition to the total product

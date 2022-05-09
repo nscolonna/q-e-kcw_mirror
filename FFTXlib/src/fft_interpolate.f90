@@ -38,7 +38,7 @@ subroutine fft_interpolate_real (dfft_in, v_in, dfft_out, v_out )
 
      aux_in (1:dfft_in%nnr) = v_in(1:dfft_in%nnr)
 
-     CALL fwfft (1, aux_in, dfft_in)
+     CALL fwfft ('Rho', aux_in, dfft_in)
 
      aux_out(1:dfft_out%nnr) = (0.d0, 0.d0)
 
@@ -47,7 +47,7 @@ subroutine fft_interpolate_real (dfft_in, v_in, dfft_out, v_out )
      aux_out (dfft_out%nl (1:ngm) ) = aux_in (dfft_in%nl (1:ngm) )
      IF (dfft_in%lgamma) aux_out (dfft_out%nlm (1:ngm) ) = aux_in (dfft_in%nlm (1:ngm) )
 
-     CALL invfft (1, aux_out, dfft_out)
+     CALL invfft ('Rho', aux_out, dfft_out)
 
      v_out (1:dfft_out%nnr) = aux_out (1:dfft_out%nnr)
 
@@ -92,7 +92,7 @@ subroutine fft_interpolate_complex (dfft_in, v_in, dfft_out, v_out )
 
      aux_in (1:dfft_in%nnr) = v_in(1:dfft_in%nnr)
 
-     CALL fwfft (1, aux_in, dfft_in)
+     CALL fwfft ('Rho', aux_in, dfft_in)
 
      v_out(1:dfft_out%nnr) = (0.d0, 0.d0)
 
@@ -100,7 +100,7 @@ subroutine fft_interpolate_complex (dfft_in, v_in, dfft_out, v_out )
 
      v_out (dfft_out%nl (1:ngm) ) = aux_in (dfft_in%nl (1:ngm) )
 
-     CALL invfft (1, v_out, dfft_out)
+     CALL invfft ('Rho', v_out, dfft_out)
 
      DEALLOCATE (aux_in)
 

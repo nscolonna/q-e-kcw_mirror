@@ -212,7 +212,7 @@ SUBROUTINE AbsOvG_k( NBands, IKQ, JK, loc_diag, loc_off )
   !! accurate for the moduli of the wavefunctions).
   !
   USE noncollin_module,    ONLY : npol
-  USE fft_interfaces,      ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,      ONLY : fwfft
   USE wvfct,               ONLY : npwx
   USE exx_band,            ONLY : igk_exx
   USE klist,               ONLY : nks, ngk
@@ -257,7 +257,7 @@ SUBROUTINE AbsOvG_k( NBands, IKQ, JK, loc_diag, loc_off )
      buffer(:) = ABS(exxbuff(:,jbnd,JK)) 
      ! buffer(:) = exxbuff(:,jbnd,JK)
      !
-     CALL fwfft( FFT_WAVE_KIND , buffer, dfftt )
+     CALL fwfft( 'Wave' , buffer, dfftt )
      !
      DO ig = 1, npw
        GorbtJ(ig,jbnd) = buffer(dfftt%nl(igk_exx(ig,kk))) 
@@ -266,7 +266,7 @@ SUBROUTINE AbsOvG_k( NBands, IKQ, JK, loc_diag, loc_off )
      buffer(:) = ABS(exxbuff(:,jbnd,IKQ)) 
      ! buffer(:) = exxbuff(:,jbnd,IKQ)
      !
-     CALL fwfft( FFT_WAVE_KIND , buffer, dfftt )
+     CALL fwfft( 'Wave' , buffer, dfftt )
      !
      DO ig = 1, npw
        GorbtI(ig,jbnd) = buffer(dfftt%nl(igk_exx(ig,kk)))  

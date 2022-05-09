@@ -25,7 +25,7 @@ SUBROUTINE stres_mgga( sigmaxc )
   USE io_files,               ONLY : iunwfc, nwordwfc
   USE wvfct,                  ONLY : nbnd, npwx, wg 
   USE lsda_mod,               ONLY : lsda, nspin, current_spin, isk
-  USE fft_interfaces,         ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,         ONLY : fwfft, invfft
   USE fft_base,               ONLY : dfftp, dffts
   USE mp,                     ONLY : mp_sum
   USE mp_pools,               ONLY : inter_pool_comm
@@ -189,7 +189,7 @@ SUBROUTINE wfc_gradient ( ibnd, ik, npw, gradpsi )
   USE klist,                  ONLY : xk, igk_k
   USE gvect,                  ONLY : g
   USE fft_base,               ONLY : dffts
-  USE fft_interfaces,         ONLY : invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,         ONLY : invfft
   USE wavefunctions_gpum,   ONLY : using_evc
   !
   IMPLICIT NONE 
@@ -238,7 +238,7 @@ SUBROUTINE wfc_gradient ( ibnd, ik, npw, gradpsi )
         !
         ! Gradient of the wavefunction in real space
         !
-        CALL invfft (FFT_WAVE_KIND, psic, dffts)
+        CALL invfft ('Wave', psic, dffts)
         !
         gradpsi(:,ipol) = psic
         !
@@ -256,7 +256,7 @@ SUBROUTINE wfc_gradient ( ibnd, ik, npw, gradpsi )
          !
          ! Gradient of the wavefunction in real space
          !
-         CALL invfft (FFT_WAVE_KIND, psic, dffts)
+         CALL invfft ('Wave', psic, dffts)
          !
          gradpsi(:,ipol) = psic
          !

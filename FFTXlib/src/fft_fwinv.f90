@@ -240,7 +240,7 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   CHARACTER(LEN=*), INTENT(IN) :: fft_kind
   COMPLEX(DP) :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
-  INTEGER :: howmany_ = 1, fft_kind_ind
+  INTEGER :: howmany_ = 1, fft_kind_int
   CHARACTER(LEN=12) :: clock_label
 
 #if defined(__OPENMP_GPU)
@@ -346,7 +346,7 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   CHARACTER(LEN=*), INTENT(IN) :: fft_kind
   COMPLEX(DP) :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
-  INTEGER :: howmany_ = 1
+  INTEGER :: howmany_ = 1, fft_kind_int
   CHARACTER(LEN=12) :: clock_label
 
 #if defined(__OPENMP_GPU)

@@ -20,7 +20,7 @@ SUBROUTINE newq( vr, deeq, skip_vltot )
   USE ions_base,            ONLY : nat, ntyp => nsp, ityp
   USE cell_base,            ONLY : omega, tpiba
   USE fft_base,             ONLY : dfftp
-  USE fft_interfaces,       ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,       ONLY : fwfft
   USE gvect,                ONLY : g, gg, ngm, gstart, mill, &
                                    eigts1, eigts2, eigts3
   USE lsda_mod,             ONLY : nspin
@@ -98,7 +98,7 @@ SUBROUTINE newq( vr, deeq, skip_vltot )
         ENDDO
         !$omp end parallel do
      ENDIF
-     CALL fwfft( FFT_RHO_KIND, psic, dfftp )
+     CALL fwfft( 'Rho', psic, dfftp )
      !$omp parallel do default(shared) private(ig)
      DO ig = 1, ngm_l
         vaux(ig,is) = psic(dfftp%nl(ngm_s+ig-1))

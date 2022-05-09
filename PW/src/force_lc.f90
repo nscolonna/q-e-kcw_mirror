@@ -17,7 +17,7 @@ SUBROUTINE force_lc( nat, tau, ityp, alat, omega, ngm, ngl, &
   USE mp_bands,        ONLY : intra_bgrp_comm
   USE mp,              ONLY : mp_sum
   USE fft_base,        ONLY : dfftp
-  USE fft_interfaces,  ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,  ONLY : fwfft
   USE esm,             ONLY : esm_force_lc, do_comp_esm, esm_bc
   USE Coul_cut_2D,     ONLY : do_cutoff_2D, cutoff_force_lc
   !
@@ -72,7 +72,7 @@ SUBROUTINE force_lc( nat, tau, ityp, alat, omega, ngm, ngl, &
   !
   aux(:) = CMPLX( rho(:), 0.0_DP, KIND=DP )
   !
-  CALL fwfft( FFT_RHO_KIND, aux, dfftp )
+  CALL fwfft( 'Rho', aux, dfftp )
   !
   ! aux contains now  n(G)
   !

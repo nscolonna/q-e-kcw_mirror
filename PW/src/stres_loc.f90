@@ -16,7 +16,7 @@ subroutine stres_loc (sigmaloc)
   USE ions_base,            ONLY : ntyp => nsp
   USE cell_base,            ONLY : omega, tpiba2
   USE fft_base,             ONLY : dfftp
-  USE fft_interfaces,       ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,       ONLY : fwfft
   USE gvect,                ONLY : ngm, gstart, g, ngl, gl, igtongl
   USE scf,                  ONLY : rho
   USE vlocal,               ONLY : strf, vloc
@@ -42,7 +42,7 @@ subroutine stres_loc (sigmaloc)
   sigmaloc(:,:) = 0.d0
   psic(:) = CMPLX(rho%of_r(:,1), KIND=dp)
 
-  CALL fwfft (FFT_RHO_KIND, psic, dfftp)
+  CALL fwfft ('Rho', psic, dfftp)
   ! psic contains now the charge density in G space
   if (gamma_only) then
      fact = 2.d0

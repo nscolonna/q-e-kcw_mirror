@@ -56,7 +56,7 @@ USE mp_images,         ONLY : intra_image_comm
 USE mp_bands,          ONLY : intra_bgrp_comm
 USE io_global,         ONLY : stdout, ionode
 USE fft_base,          ONLY : dfftp
-USE fft_interfaces,    ONLY : fwfft, invfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+USE fft_interfaces,    ONLY : fwfft, invfft
 USE control_flags,     ONLY : iverbosity, gamma_only
 
 ! ----------------------------------------------------------------------
@@ -478,7 +478,7 @@ CONTAINS
   ! FFTing the u_i(k) to get the u_i(r) of SOLER equation 11.
 
   DO theta_i = 1, Nqs
-     CALL invfft(FFT_RHO_KIND, thetas(:,theta_i), dfftp)
+     CALL invfft('Rho', thetas(:,theta_i), dfftp)
   END DO
 
   CALL vdW_DF_potential (q0, dq0_drho, dq0_dgradrho, grad_rho, thetas, potential)
@@ -674,7 +674,7 @@ CONTAINS
   ! FFTing the u_i(k) to get the u_i(r) of SOLER equation 11.
 
   DO theta_i = 1, Nqs
-     CALL invfft(FFT_RHO_KIND, thetas(:,theta_i), dfftp)
+     CALL invfft('Rho', thetas(:,theta_i), dfftp)
   END DO
 
   CALL vdW_DF_potential (q0, dq0_drho_up  , dq0_dgradrho_up  , grad_rho_up  , thetas, potential_up  )
@@ -847,7 +847,7 @@ CONTAINS
   END DO
 
   DO idx = 1, Nqs
-     CALL fwfft (FFT_RHO_KIND, thetas(:,idx), dfftp)
+     CALL fwfft ('Rho', thetas(:,idx), dfftp)
   END DO
 
   END SUBROUTINE get_q0_on_grid
@@ -1100,7 +1100,7 @@ CONTAINS
   END DO
 
   DO idx = 1, Nqs
-     CALL fwfft (FFT_RHO_KIND, thetas(:,idx), dfftp)
+     CALL fwfft ('Rho', thetas(:,idx), dfftp)
   END Do
 
   END SUBROUTINE get_q0_on_grid_spin
@@ -1502,10 +1502,10 @@ CONTAINS
         IF ( gradient2 > 0.0D0 ) h(i_grid) = h(i_grid) / SQRT( gradient2 )
      END DO
 
-     CALL fwfft (FFT_RHO_KIND, h, dfftp)
+     CALL fwfft ('Rho', h, dfftp)
      h(dfftp%nl(:)) = CMPLX(0.0_DP,1.0_DP, kind=dp) * tpiba * g(icar,:) * h(dfftp%nl(:))
      IF (gamma_only) h(dfftp%nlm(:)) = CONJG(h(dfftp%nl(:)))
-     CALL invfft (FFT_RHO_KIND, h, dfftp)
+     CALL invfft ('Rho', h, dfftp)
      potential(:) = potential(:) - REAL(h(:))
 
   END Do
@@ -2044,7 +2044,7 @@ CONTAINS
   ! Get u in real space.
 
   do theta_i = 1, Nqs
-     CALL invfft(FFT_RHO_KIND, u_vdW(:,theta_i), dfftp)
+     CALL invfft('Rho', u_vdW(:,theta_i), dfftp)
   end do
 
 
@@ -2187,7 +2187,7 @@ CONTAINS
   ! Get u in real space.
 
   DO theta_i = 1, Nqs
-     CALL invfft(FFT_RHO_KIND, u_vdW(:,theta_i), dfftp)
+     CALL invfft('Rho', u_vdW(:,theta_i), dfftp)
   END DO
 
 

@@ -53,7 +53,7 @@ SUBROUTINE addusforce_g( forcenl )
   USE mp_pools,           ONLY : inter_pool_comm
   USE mp,                 ONLY : mp_sum
   USE control_flags,      ONLY : gamma_only
-  USE fft_interfaces,     ONLY : fwfft, FFT_RHO_KIND, FFT_WAVE_KIND, FFT_TGWAVE_KIND
+  USE fft_interfaces,     ONLY : fwfft
   !
   IMPLICIT NONE
   !
@@ -91,7 +91,7 @@ SUBROUTINE addusforce_g( forcenl )
      ELSE
         aux(:) = vltot (:) + v%of_r (:, is)
      ENDIF
-     CALL fwfft( FFT_RHO_KIND, aux, dfftp )
+     CALL fwfft( 'Rho', aux, dfftp )
      ! Note the factors -i and 2pi/a *units of G) here in V(G) !
      vg(:, is) = aux(dfftp%nl(:)) * tpiba * (0.d0, -1.d0)
   ENDDO
