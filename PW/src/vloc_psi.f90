@@ -134,7 +134,9 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      ELSE
         !
         !$omp target update to(psic)
+#if defined(__OPENMP_GPU)
         !$omp dispatch
+#endif
         CALL invfft ('Wave', psic, dffts)
         !$omp target update from(psic)
         !
@@ -143,7 +145,9 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
         ENDDO
         !
         !$omp target update to(psic)
+#if defined(__OPENMP_GPU)
         !$omp dispatch
+#endif
         CALL fwfft ('Wave', psic, dffts)
         !$omp target update from(psic)
         !
@@ -365,7 +369,9 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,99) (psic(i), i=1,400)
         !
 !!$omp target update to(psic)
+#if defined(__OPENMP_GPU)
         !$omp dispatch
+#endif
         CALL invfft ('Wave', psic, dffts)
         !write (6,*) 'wfc R ' 
         !write (6,99) (psic(i), i=1,400)
@@ -377,7 +383,9 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,*) 'v psi R ' 
         !write (6,99) (psic(i), i=1,400)
         !
+#if defined(__OPENMP_GPU)
         !$omp dispatch
+#endif
         CALL fwfft ('Wave', psic, dffts)
 !!$omp target update from(psic)
         !

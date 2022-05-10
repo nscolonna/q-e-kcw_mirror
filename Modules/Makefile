@@ -5,6 +5,13 @@ include ../make.inc
 # location of needed modules
 MODFLAGS=$(BASEMOD_FLAGS)
 
+# set an auxiliary compiler (if the compiler is ifx, space_group needs to be compiled with ifort)
+ifeq (,$(shell which ifort)) 
+  AAUX=$(F90)
+else 
+  AAUX='ifort'
+endif
+
 # list of modules
 
 MODULES = \
@@ -155,7 +162,7 @@ dlamch.o : dlamch.f
 	$(F77) $(FFLAGS_NOOPT) -c $<
 
 space_group.o : space_group.f90
-	ifort  $(FFLAGS_NOOPT) -c $<
+	$(AAUX) $(FFLAGS_NOOPT) -c $<
 
 libqemod.a: 	$(MODULES) $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?       

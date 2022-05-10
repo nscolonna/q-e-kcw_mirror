@@ -212,7 +212,9 @@ SUBROUTINE fft_gradient_g2r( dfft, a, g, ga )
      ! ... bring back to R-space, (\grad_ipol a)(r) ...
      !
      !$omp target data map(tofrom:gaux)
+#if defined(__OPENMP_GPU)
      !$omp dispatch
+#endif
      CALL invfft ('Rho', gaux, dfft)
      !$omp end target data
      !
@@ -235,7 +237,9 @@ SUBROUTINE fft_gradient_g2r( dfft, a, g, ga )
      ! ... bring back to R-space, (\grad_ipol a)(r) ...
      !
      !$omp target data map(tofrom:gaux)
+#if defined(__OPENMP_GPU)
      !$omp dispatch
+#endif
      CALL invfft ('Rho', gaux, dfft)
      !$omp end target data
      !
@@ -256,7 +260,9 @@ SUBROUTINE fft_gradient_g2r( dfft, a, g, ga )
         ! ... bring back to R-space, (\grad_ipol a)(r) ...
         !
         !$omp target data map(tofrom:gaux)
+#if defined(__OPENMP_GPU)
         !$omp dispatch
+#endif
         CALL invfft ('Rho', gaux, dfft)
         !$omp end target data
         !
@@ -461,7 +467,9 @@ SUBROUTINE fft_graddot( dfft, a, g, da )
      ! ... bring a(ipol,r) to G-space, a(G) ...
      !
      !$omp target data map(tofrom:aux)
+#if defined(__OPENMP_GPU)
      !$omp dispatch
+#endif
      CALL fwfft ('Rho', aux, dfft)
      !$omp end target data
      !
@@ -484,7 +492,9 @@ SUBROUTINE fft_graddot( dfft, a, g, da )
      ! ... bring a(ipol,r) to G-space, a(G) ...
      !
      !$omp target data map(tofrom:aux)
+#if defined(__OPENMP_GPU)
      !$omp dispatch
+#endif
      CALL fwfft ('Rho', aux, dfft)
      !$omp end target data
      !
@@ -507,7 +517,9 @@ SUBROUTINE fft_graddot( dfft, a, g, da )
         ! ... bring a(ipol,r) to G-space, a(G) ...
         !
         !$omp target data map(tofrom:aux)
+#if defined(__OPENMP_GPU)
         !$omp dispatch
+#endif
         CALL fwfft ('Rho', aux, dfft)
         !$omp end target data
         !

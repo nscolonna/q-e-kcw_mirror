@@ -176,7 +176,9 @@ SUBROUTINE sum_band()
      psic(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
      psic(dffts%nnr+1:) = 0.0_dp
      !$omp target update to(psic)
+#if defined(__OPENMP_GPU)
      !$omp dispatch
+#endif
      CALL fwfft ('Rho', psic, dffts)
      !$omp target update from(psic)
      rho%of_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
@@ -229,7 +231,9 @@ SUBROUTINE sum_band()
      psic(dfftp%nl(:)) = rho%of_g(:,is)
      IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho%of_g(:,is) )
      !$omp target update to(psic)
+#if defined(__OPENMP_GPU)
      !$omp dispatch
+#endif
      CALL invfft ('Rho', psic, dfftp)
      !$omp target update from(psic)
      rho%of_r(:,is) = psic(:)
