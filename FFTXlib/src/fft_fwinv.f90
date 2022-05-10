@@ -584,21 +584,21 @@ SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
 
      IF( fft_kind_int /= 3 ) THEN
         IF( howmany_ == 1 ) THEN
-           CALL tg_cft3s_gpu( f, dfft, fft_kind_int )
+           CALL tg_cft3s_gpu( f_d, dfft, fft_kind_int )
         ELSE
-           CALL many_cft3s_gpu( f, dfft, fft_kind_int, howmany_ )
+           CALL many_cft3s_gpu( f_d, dfft, fft_kind_int, howmany_ )
         ENDIF
      ELSE
-        CALL tg_cft3s_gpu( f, dfft, fft_kind_int )
+        CALL tg_cft3s_gpu( f_d, dfft, fft_kind_int )
      ENDIF
 
   ELSE IF( dfft%lpara ) THEN
 
      IF ( fft_kind_int /= 3 ) THEN
         IF( howmany_ /= 1 ) THEN
-           CALL many_cft3s_2d_gpu(f, dfft, fft_kind_int, howmany_ )
+           CALL many_cft3s_2d_gpu(f_d, dfft, fft_kind_int, howmany_ )
         ELSE
-           CALL tg_cft3s_2d_gpu(f, dfft, fft_kind_int)
+           CALL tg_cft3s_2d_gpu(f_d, dfft, fft_kind_int)
         END IF
      END IF
 
