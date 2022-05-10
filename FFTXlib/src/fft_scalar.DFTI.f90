@@ -6,7 +6,7 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-#if defined(__DFTI)
+#if defined(__DFTI) 
 !=----------------------------------------------------------------------=!
    MODULE fft_scalar_dfti
 !=----------------------------------------------------------------------=!

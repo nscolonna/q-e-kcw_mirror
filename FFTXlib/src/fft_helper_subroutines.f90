@@ -11,6 +11,8 @@ MODULE fft_helper_subroutines
   IMPLICIT NONE
   SAVE
 
+#include <cpv_device_macros.h>
+
   INTERFACE tg_reduce_rho
     MODULE PROCEDURE tg_reduce_rho_1,tg_reduce_rho_2,tg_reduce_rho_3,tg_reduce_rho_4, &
 &                    tg_reduce_rho_5
@@ -561,8 +563,8 @@ CONTAINS
      nlm_d => desc%nlm_d
 #endif
      IF( PRESENT( vout2_d ) ) THEN
-        !$acc parallel loop
-        !$omp target teams loop
+        DEV_ACC parallel loop
+        DEV_OMP target teams loop
         DO ig=1,desc%ngm
 #if !defined(__OPENMP_GPU)
            fp=vin_d(nl_d(ig))+vin_d(nlm_d(ig))
@@ -575,8 +577,8 @@ CONTAINS
            vout2_d(ig) = CMPLX(0.5d0,0.d0,kind=DP)*CMPLX(AIMAG(fp),-DBLE(fm),kind=DP)
         END DO
      ELSE
-        !$acc parallel loop
-        !$omp target teams loop
+        DEV_ACC parallel loop
+        DEV_OMP target teams loop
         DO ig=1,desc%ngm
 #if !defined(__OPENMP_GPU)
            vout1_d(ig) = vin_d(nl_d(ig))
@@ -585,8 +587,8 @@ CONTAINS
 #endif
         END DO
      END IF
-     !$acc end data
      !$omp end target data
+     !$acc end data
 #endif
   END SUBROUTINE
 
