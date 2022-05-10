@@ -7,6 +7,9 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 #if defined(__DFTI) 
+#if !defined(__OPENMP_GPU)
+#include "mkl_dfti.f90"
+#endif
 !=----------------------------------------------------------------------=!
    MODULE fft_scalar_dfti
 !=----------------------------------------------------------------------=!
@@ -15,7 +18,9 @@
        USE onemkl_dfti_omp_offload
        USE, intrinsic :: ISO_C_BINDING
 #else
-       USE onemkl_dfti
+!civn TOFIX: onemkl_dfti is not always available, I revert back to MKL_DFTI here for retrocompatibility
+       !USE onemkl_dfti
+       USE MKL_DFTI
 #endif
        USE fft_param
 
