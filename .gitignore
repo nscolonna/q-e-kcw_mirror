@@ -19,6 +19,7 @@ build/
 *_tmp.f90
 *.TMP
 *.out
+*.modmic
 
 bin/*
 FoX
