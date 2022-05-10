@@ -12,8 +12,6 @@ MODULE fft_interfaces
   IMPLICIT NONE
   PRIVATE
 
-  INTEGER, PARAMETER, PUBLIC :: FFT_RHO_KIND=1, FFT_WAVE_KIND=2, FFT_TGWAVE_KIND=3
-
   PUBLIC :: fwfft, invfft, fft_interpolate
 #if defined(__OPENMP_GPU)
   PUBLIC :: invfft_y_gpu, fwfft_y_gpu
@@ -50,7 +48,7 @@ MODULE fft_interfaces
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
        IMPLICIT NONE
-       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
+       CHARACTER(LEN=*),  INTENT(IN) :: fft_kind
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
@@ -73,7 +71,7 @@ MODULE fft_interfaces
        USE fft_param,  ONLY: DP
        USE cudafor
        IMPLICIT NONE
-       CHARACTER(LEN=*), INTENT(IN) :: fft_kind
+       CHARACTER(LEN=*),  INTENT(IN) :: grid_type
        TYPE(fft_type_descriptor), INTENT(IN) :: dfft
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        INTEGER(kind = cuda_stream_kind), OPTIONAL, INTENT(IN) :: stream
