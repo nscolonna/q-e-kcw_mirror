@@ -281,7 +281,15 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
      !
      CALL tg_gather( dffts, v, tg_v )
      CALL stop_clock ('vloc_psi:tg_gather')
-
+     !
+  ELSE
+     !     
+     ALLOCATE(dffts_nl(1:dffts%ngm))
+     dffts_nl = dffts%nl
+     v_siz=dffts%nnr
+     !
+     !$omp target enter data map(to:v,igk_k,dffts_nl,psi,hpsi)
+     !
   ENDIF
   !
   IF( use_tg ) THEN
@@ -337,10 +345,6 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !
      ENDDO
   ELSE
-     ALLOCATE(dffts_nl(1:dffts%ngm))
-     dffts_nl = dffts%nl
-     v_siz=dffts%nnr
-     !$omp target data map(to:v,igk_k,dffts_nl) map(tofrom:hpsi)
      DO ibnd = 1, m
         !
 #if defined(__OPENMP_GPU)
@@ -399,13 +403,17 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,99) (psic(i), i=1,400)
         !
      ENDDO
-     !$omp end target data
   ENDIF
   !
   IF( use_tg ) THEN
      !
      DEALLOCATE( tg_psic )
      DEALLOCATE( tg_v )
+     !
+  ELSE
+     !
+     !$omp target exit data map(delete:dffts_nl,v,igk_k,psi) map(from:hpsi)
+     DEALLOCATE(dffts_nl)
      !
   ENDIF
   CALL stop_clock ('vloc_psi')
