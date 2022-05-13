@@ -421,8 +421,10 @@ CONTAINS
     IF ( ALLOCATED( desc%tg_sdsp ) )DEALLOCATE( desc%tg_sdsp )
     IF ( ALLOCATED( desc%tg_rdsp ) )DEALLOCATE( desc%tg_rdsp )
 
+#if defined(__OPENMP_GPU)
     !$omp target exit data map(delete:desc%nl)
     !$omp target exit data map(delete:desc%nlm)
+#endif
     IF ( ALLOCATED( desc%nl ) )  DEALLOCATE( desc%nl )
     IF ( ALLOCATED( desc%nlm ) ) DEALLOCATE( desc%nlm )
 
