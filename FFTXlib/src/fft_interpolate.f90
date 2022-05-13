@@ -16,7 +16,7 @@ subroutine fft_interpolate_real (dfft_in, v_in, dfft_out, v_out )
   USE fft_types,      ONLY : fft_type_descriptor
   USE fft_interfaces, ONLY : fwfft, invfft
   ! I/O variables
-  TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft_in, dfft_out
+  TYPE(fft_type_descriptor), INTENT(IN) :: dfft_in, dfft_out
   REAL(DP),INTENT(IN)  :: v_in (:) !dfft_in%nnr)
   REAL(DP),INTENT(OUT) :: v_out (:) !dfft_out%nnr)
   ! local variables
@@ -71,7 +71,7 @@ subroutine fft_interpolate_complex (dfft_in, v_in, dfft_out, v_out )
   USE fft_types,      ONLY : fft_type_descriptor
   USE fft_interfaces, ONLY : fwfft, invfft
   ! I/O variables
-  TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft_in, dfft_out
+  TYPE(fft_type_descriptor), INTENT(IN) :: dfft_in, dfft_out
   COMPLEX(DP),INTENT(IN)  :: v_in (:) !dfft_in%nnr)
   COMPLEX(DP),INTENT(OUT) :: v_out (:) !dfft_out%nnr)
   ! local variables

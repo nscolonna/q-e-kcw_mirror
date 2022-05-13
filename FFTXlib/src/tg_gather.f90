@@ -213,7 +213,7 @@ END SUBROUTINE tg_cgather_gpu
 ! === GPU CODE ===
 !----------------------------------------------------------------------------------------------------------------
 !-real version
-SUBROUTINE tg_gather_gpu( dffts, v_d, tg_v_d )
+SUBROUTINE tg_gather_omp( dffts, v_d, tg_v_d )
   !
   USE fft_param
   USE fft_types,      ONLY : fft_type_descriptor
@@ -270,10 +270,10 @@ SUBROUTINE tg_gather_gpu( dffts, v_d, tg_v_d )
 #endif
   !write (6,'(20f12.7)') (tg_v(i+dffts%nr1x*(i-1)), i=1,dffts%nr1x)
   RETURN
-END SUBROUTINE tg_gather_gpu
+END SUBROUTINE tg_gather_omp
 
 !-complex version of previous routine
-SUBROUTINE tg_cgather_gpu( dffts, v_d, tg_v_d )
+SUBROUTINE tg_cgather_omp( dffts, v_d, tg_v_d )
   !
   USE fft_param
   USE fft_types,      ONLY : fft_type_descriptor
@@ -328,5 +328,5 @@ SUBROUTINE tg_cgather_gpu( dffts, v_d, tg_v_d )
 #endif
   !write (6,'(20f12.7)') (tg_v(i+dffts%nr1x*(i-1)), i=1,dffts%nr1x)
   RETURN
-END SUBROUTINE tg_cgather_gpu
+END SUBROUTINE tg_cgather_omp
 #endif

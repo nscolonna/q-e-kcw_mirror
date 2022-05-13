@@ -171,8 +171,6 @@ MODULE fft_types
     INTEGER(kind=cuda_stream_kind), allocatable, dimension(:) :: bstreams
     TYPE(cudaEvent), allocatable, dimension(:) :: bevents
     !
-    ! These variables define the dimension of batches and subbatches in
-    ! * the 1D+1D+1D implementation:
     INTEGER              :: nstream_many = 16 ! this should be replace by batchsize
                                               ! since it has the same meaning.
     !
@@ -344,7 +342,7 @@ CONTAINS
     ALLOCATE( desc%ir1w_d( desc%nr1x ) ) ; desc%ir1w_d  = 0
     ALLOCATE( desc%ir1w_tg_d( desc%nr1x ) ) ; desc%ir1w_tg_d  = 0
     ALLOCATE( desc%ismap_d( nx * ny ) ) ; desc%ismap_d = 0
-
+    
     ALLOCATE ( desc%stream_scatter_yz(desc%nproc3) ) ;
     DO iproc = 1, desc%nproc3
         ierr = cudaStreamCreate(desc%stream_scatter_yz(iproc))
@@ -422,10 +420,9 @@ CONTAINS
     IF ( ALLOCATED( desc%tg_rcv ) ) DEALLOCATE( desc%tg_rcv )
     IF ( ALLOCATED( desc%tg_sdsp ) )DEALLOCATE( desc%tg_sdsp )
     IF ( ALLOCATED( desc%tg_rdsp ) )DEALLOCATE( desc%tg_rdsp )
-#if defined(__OPENMP_GPU)
+
     !$omp target exit data map(delete:desc%nl)
     !$omp target exit data map(delete:desc%nlm)
-#endif
     IF ( ALLOCATED( desc%nl ) )  DEALLOCATE( desc%nl )
     IF ( ALLOCATED( desc%nlm ) ) DEALLOCATE( desc%nlm )
 
@@ -460,11 +457,13 @@ CONTAINS
     IF ( ALLOCATED( desc%nlm_d ) ) DEALLOCATE( desc%nlm_d )
     !
     ! SLAB decomposition
-    IF (desc%a2a_comp /= 0) THEN
+    IF (desc%a2a_comp /= 0) THEN 
       ierr = cudaStreamDestroy( desc%a2a_comp )
       CALL fftx_error__("fft_type_deallocate","failed destroying stream a2a_comp", ierr)
       desc%a2a_comp = 0
-    END IF
+    END IF 
+  
+    
 
     IF ( ALLOCATED(desc%bstreams) ) THEN
         nsubbatches = ceiling(real(desc%batchsize)/desc%subbatchsize)
@@ -483,7 +482,7 @@ CONTAINS
     IF ( ALLOCATED( desc%srh ) )    DEALLOCATE( desc%srh )
 #endif
 
-    desc%comm  = MPI_COMM_NULL
+    desc%comm  = MPI_COMM_NULL 
 #if defined(__MPI)
     IF (desc%comm2 /= MPI_COMM_NULL) CALL MPI_COMM_FREE( desc%comm2, ierr )
     IF (desc%comm3 /= MPI_COMM_NULL) CALL MPI_COMM_FREE( desc%comm3, ierr )
@@ -550,6 +549,13 @@ CONTAINS
           CALL MPI_COMM_DUP(desc%comm2, desc%comm2s(i), ierr)
           CALL MPI_COMM_DUP(desc%comm3, desc%comm3s(i), ierr)
        ENDDO
+       !ELSEIF (nmany == 1) THEN
+       !  DO i=1, SIZE(desc%comm2s)
+       !     IF (desc%comm2s(i) /= MPI_COMM_NULL) CALL MPI_COMM_FREE( desc%comm2s(i), ierr )
+       !     IF (desc%comm3s(i) /= MPI_COMM_NULL) CALL MPI_COMM_FREE( desc%comm3s(i), ierr )
+       !  ENDDO
+       !  DEALLOCATE( desc%comm2s )
+       !  DEALLOCATE( desc%comm3s )
        ENDIF
 #endif
 #endif
@@ -962,7 +968,9 @@ CONTAINS
     desc%nr1p_d = desc%nr1p
     desc%nr1w_d = desc%nr1w
     desc%nr1w_tg_d(1) = desc%nr1w_tg
+
 #endif
+    IF (nmany > 1) ALLOCATE(desc%aux(nmany * desc%nnr))
 
     RETURN
 

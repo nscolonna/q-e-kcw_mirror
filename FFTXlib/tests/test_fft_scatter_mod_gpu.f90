@@ -116,7 +116,7 @@ program test_fft_scatter_mod_gpu
   END SUBROUTINE fft_desc_finalize
   !
   SUBROUTINE fill_random(c, c_d, n)
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
 #endif
     USE fft_param, ONLY : DP
@@ -136,14 +136,16 @@ program test_fft_scatter_mod_gpu
   END SUBROUTINE fill_random
   !
   SUBROUTINE test_fft_scatter_xy_gpu_1(mp, test, gamma_only, ny)
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
+    USE fft_scatter_gpu, ONLY : fft_scatter_xy_gpu
+#elif defined(__OPENMP_GPU)
+    USE fft_scatter_omp, ONLY : fft_scatter_xy_omp
 #endif
     USE fft_param,       ONLY : DP
     USE fft_types,       ONLY : fft_type_descriptor
     USE stick_base,      ONLY : sticks_map
     USE fft_scatter,     ONLY : fft_scatter_xy
-    USE fft_scatter_gpu, ONLY : fft_scatter_xy_gpu
     implicit none
     TYPE(mpi_t) :: mp
     TYPE(tester_t) :: test
@@ -191,7 +193,7 @@ program test_fft_scatter_mod_gpu
 #if !defined(__OPENMP_GPU)
     CALL fft_scatter_xy_gpu( dfft, scatter_in_d, scatter_out_d, vsiz, fft_sign, stream )
 #else
-    CALL fft_scatter_xy_gpu( dfft, scatter_in_d, scatter_out_d, vsiz, fft_sign )
+    CALL fft_scatter_xy_omp( dfft, scatter_in_d, scatter_out_d, vsiz, fft_sign )
 #endif
     !$omp target update from(scatter_out_d(1:compare_len))
 #if !defined(__OPENMP_GPU)
@@ -212,7 +214,7 @@ program test_fft_scatter_mod_gpu
 #if !defined(__OPENMP_GPU)
     CALL fft_scatter_xy_gpu( dfft, scatter_out_d, scatter_in_d, vsiz, -1*fft_sign, stream )
 #else
-    CALL fft_scatter_xy_gpu( dfft, scatter_out_d, scatter_in_d, vsiz, -1*fft_sign )
+    CALL fft_scatter_xy_omp( dfft, scatter_out_d, scatter_in_d, vsiz, -1*fft_sign )
 #endif
     !
     compare_len = dfft%nr2x * dfft%nr1w(me2) * dfft%my_nr3p
@@ -244,14 +246,16 @@ program test_fft_scatter_mod_gpu
     ! This test checks wave fft scatter, with parallel = .true. if
     !  called with more than 1 MPI.
     !
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
+    USE fft_scatter_gpu, ONLY : fft_scatter_yz_gpu
+#elif defined(__OPENMP_GPU)
+    USE fft_scatter_omp, ONLY : fft_scatter_yz_omp
 #endif
     USE fft_param,       ONLY : DP
     USE fft_types,       ONLY : fft_type_descriptor
     USE stick_base,      ONLY : sticks_map
     USE fft_scatter,     ONLY : fft_scatter_yz
-    USE fft_scatter_gpu, ONLY : fft_scatter_yz_gpu
     implicit none
     TYPE(mpi_t) :: mp
     TYPE(tester_t) :: test
@@ -293,7 +297,11 @@ program test_fft_scatter_mod_gpu
     CALL fill_random(scatter_in, scatter_in_d, vsiz)
     !
     CALL fft_scatter_yz( dfft, scatter_in, scatter_out, vsiz, fft_sign )
+#if !defined(__OPENMP_GPU)
     CALL fft_scatter_yz_gpu( dfft, scatter_in_d, scatter_out_d, vsiz, fft_sign )
+#else
+    CALL fft_scatter_yz_omp( dfft, scatter_in_d, scatter_out_d, vsiz, fft_sign )
+#endif
     ! Set the number of elements that should be strictly equivalent in the
     ! two implementations.
     compare_len = dfft%my_nr3p*my_nr1p_*dfft%nr2x
@@ -312,7 +320,11 @@ program test_fft_scatter_mod_gpu
     CALL fill_random(scatter_in, scatter_in_d, vsiz)
     !
     CALL fft_scatter_yz( dfft, scatter_out, scatter_in, vsiz, -1*fft_sign )
+#if !defined(__OPENMP_GPU)
     CALL fft_scatter_yz_gpu( dfft, scatter_out_d, scatter_in_d, vsiz, -1*fft_sign )
+#else
+    CALL fft_scatter_yz_omp( dfft, scatter_out_d, scatter_in_d, vsiz, -1*fft_sign )
+#endif
     !
     compare_len = dfft%nsw(mp%me+1)*dfft%nr3x
     !$omp target update from(scatter_out_d(1:compare_len))
@@ -341,14 +353,16 @@ program test_fft_scatter_mod_gpu
     ! This test checks wave fft scatter, with parallel = .true. if
     !  called with more than 1 MPI.
     !
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
+    USE fft_scatter_gpu, ONLY : fft_scatter_yz_gpu, fft_scatter_many_yz_gpu
+#elif defined(__OPENMP_GPU)
+    USE fft_scatter_omp, ONLY : fft_scatter_yz_omp, fft_scatter_many_yz_omp
 #endif
     USE fft_param,       ONLY : DP
     USE fft_types,       ONLY : fft_type_descriptor
     USE stick_base,      ONLY : sticks_map
     USE fft_scatter,     ONLY : fft_scatter_yz
-    USE fft_scatter_gpu, ONLY : fft_scatter_yz_gpu, fft_scatter_many_yz_gpu
     implicit none
     TYPE(mpi_t) :: mp
     TYPE(tester_t) :: test
@@ -402,7 +416,11 @@ program test_fft_scatter_mod_gpu
        end_out = (start_out-1) + dfft%my_nr3p*dfft%nr1w(dfft%mype2 +1)*dfft%nr2x
        !
        CALL fft_scatter_yz( dfft, scatter_in(start_in:end_in), scatter_out(start_out:end_out), dfft%nnr, 2 )
+#if !defined(__OPENMP_GPU)
        CALL fft_scatter_yz_gpu( dfft, scatter_in_d(start_in:end_in), scatter_out_d(start_in:end_out), dfft%nnr, 2 )
+#else
+       CALL fft_scatter_yz_omp( dfft, scatter_in_d(start_in:end_in), scatter_out_d(start_in:end_out), dfft%nnr, 2 )
+#endif
        !$omp target update from(scatter_out_d(start_out:end_out))
 #if !defined(__OPENMP_GPU)
        aux(start_out:end_out) = scatter_out_d(start_out:end_out)
@@ -424,9 +442,13 @@ program test_fft_scatter_mod_gpu
        end_out  = (i+1)*nstick_zx*n3
        scatter_in_d(start_out:end_out) = scatter_in(start_in:start_in+nstick_zx*n3)
     END DO
-    !$omp target update to(scatter_in_d)
+#if !defined(__OPENMP_GPU)
     CALL fft_scatter_many_yz_gpu ( dfft, scatter_in_d, scatter_out_d, vsiz, 2, howmany )
+#else
+    !$omp target update to(scatter_in_d)
+    CALL fft_scatter_many_yz_omp ( dfft, scatter_in_d, scatter_out_d, vsiz, 2, howmany )
     !$omp target update from(scatter_out_d)
+#endif
 
     DO i=0,howmany-1
        start_out = i*dfft%nnr + 1
@@ -455,7 +477,11 @@ program test_fft_scatter_mod_gpu
        start_out = start_in
        end_out = end_in
        CALL fft_scatter_yz( dfft, scatter_out(start_out:end_out), scatter_in(start_in:end_in),  dfft%nnr, -2 )
+#if !defined(__OPENMP_GPU)
        CALL fft_scatter_yz_gpu( dfft, scatter_out_d(start_out:end_out), scatter_in_d(start_in:end_in), dfft%nnr, -2 )
+#else
+       CALL fft_scatter_yz_omp( dfft, scatter_out_d(start_out:end_out), scatter_in_d(start_in:end_in), dfft%nnr, -2 )
+#endif
        !$omp target update from(scatter_out_d(start_out:end_out))
        !
 #if !defined(__OPENMP_GPU)
@@ -476,7 +502,11 @@ program test_fft_scatter_mod_gpu
     scatter_in_d(1:vsiz) = scatter_in_cpy(1:vsiz)
     !$omp target update to(scatter_in_d)
     !
+#if !defined(__OPENMP_GPU)
     CALL fft_scatter_many_yz_gpu ( dfft, scatter_out_d, scatter_in_d, vsiz, -2, howmany )
+#else
+    CALL fft_scatter_many_yz_omp ( dfft, scatter_out_d, scatter_in_d, vsiz, -2, howmany )
+#endif
 
     DO i=0,howmany-1
        ! Extract data from GPU. Data are spaced by nstick_zx*n3x

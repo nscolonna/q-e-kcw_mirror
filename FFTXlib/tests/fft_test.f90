@@ -477,18 +477,18 @@ program test
   !
   IF (use_tg) THEN
     ALLOCATE (tg_psic(dffts%nnr_tg))
-    CALL invfft(3, tg_psic, dffts)
+    CALL invfft('tgWave', tg_psic, dffts)
     DEALLOCATE (tg_psic)
   ELSE
-    CALL invfft(2, psic, dffts)
+    CALL invfft('Wave', psic, dffts)
   END IF
   !
   IF (use_tg) THEN
     ALLOCATE (tg_psic(dffts%nnr_tg))
-    CALL fwfft(3, tg_psic, dffts)
+    CALL fwfft('tgWave', tg_psic, dffts)
     DEALLOCATE (tg_psic)
   ELSE
-    CALL fwfft(2, psic, dffts)
+    CALL fwfft('Wave', psic, dffts)
   END IF
   ! Now for real,
   !
@@ -531,7 +531,7 @@ program test
       call prepare_psi_tg(ib, nbnd, ngms, psi, tg_psic, dffts, gamma_only)
       time(STAMP_PSI) = mpi_wall_time()
       !
-      CALL invfft(3, tg_psic, dffts)
+      CALL invfft('tgWave', tg_psic, dffts)
       time(STAMP_INVFFT) = mpi_wall_time()
       !
       CALL tg_get_group_nr3(dffts, right_nr3)
@@ -542,7 +542,7 @@ program test
       !
       time(STAMP_VLOC) = mpi_wall_time()
       !
-      CALL fwfft(3, tg_psic, dffts)
+      CALL fwfft('tgWave', tg_psic, dffts)
       time(STAMP_FWFFT) = mpi_wall_time()
       !
       CALL accumulate_hpsi_tg(ib, nbnd, ngms, hpsi, tg_psic, dffts, gamma_only)
@@ -568,7 +568,7 @@ program test
       ENDDO
       time(STAMP_PSI) = mpi_wall_time()
       !
-      CALL invfft(2, psic, dffts, howmany=group_size)
+      CALL invfft('Wave', psic, dffts, howmany=group_size)
       time(STAMP_INVFFT) = mpi_wall_time()
       !
       DO j = 1, dffts%nnr
@@ -576,7 +576,7 @@ program test
       ENDDO
       time(STAMP_VLOC) = mpi_wall_time()
       !
-      CALL fwfft(2, psic, dffts, howmany=group_size)
+      CALL fwfft('Wave', psic, dffts, howmany=group_size)
       time(STAMP_FWFFT) = mpi_wall_time()
       !
       DO k=0, group_size - 1
@@ -600,7 +600,7 @@ program test
       call prepare_psi(ib, nbnd, ngms, psi, psic, dffts, gamma_only)
       time(STAMP_PSI) = mpi_wall_time()
       !
-      CALL invfft(2, psic, dffts)
+      CALL invfft('Wave', psic, dffts)
       time(STAMP_INVFFT) = mpi_wall_time()
       !
       DO j = 1, dffts%nnr
@@ -608,7 +608,7 @@ program test
       ENDDO
       time(STAMP_VLOC) = mpi_wall_time()
       !
-      CALL fwfft(2, psic, dffts)
+      CALL fwfft('Wave', psic, dffts)
       time(STAMP_FWFFT) = mpi_wall_time()
       !
       CALL accumulate_hpsi(ib, nbnd, ngms, hpsi, psic, dffts, gamma_only)

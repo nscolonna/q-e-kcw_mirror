@@ -6,28 +6,20 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-#if defined(__DFTI)
-
-#if defined(_OPENMP) && defined(__FFT_SCALAR_THREAD_SAFE)
-! compiler safeguard for thread-safe eligibility
-#if defined(__PGI)
-#error PGI compiler breaks the use of __FFT_SCALAR_THREAD_SAFE in DFTI
-#endif
-#endif
-
-#include "mkl_dfti.f90"
+#if defined(__DFTI) && defined(__OPENMP_GPU)
 !=----------------------------------------------------------------------=!
-   MODULE fft_scalar_dfti
+   MODULE fft_scalar_dfti_omp
 !=----------------------------------------------------------------------=!
 
-       USE MKL_DFTI ! -- this can be found in the MKL include directory
+       USE onemkl_dfti_omp_offload
+       USE, intrinsic :: ISO_C_BINDING
        USE fft_param
 
        IMPLICIT NONE
         SAVE
 
         PRIVATE
-        PUBLIC :: cft_1z, cft_2xy, cfft3d, cfft3ds
+        PUBLIC :: cft_1z_omp, cft_2xy_omp, cfft3d_omp, cfft3ds_omp
 
         TYPE dfti_descriptor_array
            TYPE(DFTI_DESCRIPTOR), POINTER :: desc
@@ -49,7 +41,7 @@
 !=----------------------------------------------------------------------=!
 !
 
-   SUBROUTINE cft_1z(c, nsl, nz, ldz, isign, cout, in_place)
+   SUBROUTINE cft_1z_omp(c, nsl, nz, ldz, isign, cout, in_place)
 
 !     driver routine for nsl 1d complex fft's of length nz
 !     ldz >= nz is the distance between sequences to be transformed
@@ -67,10 +59,18 @@
      COMPLEX (DP) :: c(:), cout(:)
 
      REAL (DP)  :: tscale
-     INTEGER    :: i, ip
+     INTEGER    :: i, err, idir, ip, void
      INTEGER, SAVE :: zdims( 3, ndims ) = -1
      INTEGER, SAVE :: icurrent = 1
      LOGICAL :: found
+
+     INTEGER :: tid
+
+#if defined(__OPENMP)
+     INTEGER  :: offset, ldz_t
+     INTEGER  :: omp_get_max_threads
+     EXTERNAL :: omp_get_max_threads
+#endif
 
      !   Intel MKL native FFT driver
 
@@ -79,10 +79,8 @@
      LOGICAL, SAVE :: is_inplace
      INTEGER :: dfti_status = 0
      INTEGER :: placement
-#if defined(__FFT_SCALAR_THREAD_SAFE)
-!$omp threadprivate(hand, dfti_first, zdims, icurrent, is_inplace)
-#endif
 
+!$omp threadprivate(hand, dfti_first, dfti_status, zdims, icurrent, is_inplace)
      IF (PRESENT(in_place)) THEN
        is_inplace = in_place
      ELSE
@@ -124,20 +122,28 @@
 
      IF (isign < 0) THEN
         IF (is_inplace) THEN
+!$omp target variant dispatch use_device_ptr(c)
           dfti_status = DftiComputeForward(hand(ip)%desc, c )
+!$omp end target variant dispatch
         ELSE
+!$omp target variant dispatch use_device_ptr(c, cout)
           dfti_status = DftiComputeForward(hand(ip)%desc, c, cout )
+!$omp end target variant dispatch
         ENDIF
-        IF(dfti_status /= 0) &
-           CALL fftx_error__(' cft_1z ',' stopped in DftiComputeForward '// DftiErrorMessage(dfti_status), dfti_status )
+        IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU ',&
+              ' stopped in DftiComputeForward '// DftiErrorMessage(dfti_status), dfti_status )
      ELSE IF (isign > 0) THEN
         IF (is_inplace) THEN
+!$omp target variant dispatch use_device_ptr(c)
           dfti_status = DftiComputeBackward(hand(ip)%desc, c)
+!$omp end target variant dispatch
         ELSE
+!$omp target variant dispatch use_device_ptr(c, cout)
           dfti_status = DftiComputeBackward(hand(ip)%desc, c, cout )
+!$omp end target variant dispatch
         ENDIF
-        IF(dfti_status /= 0) &
-           CALL fftx_error__(' cft_1z ',' stopped in DftiComputeBackward '// DftiErrorMessage(dfti_status), dfti_status )
+        IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU ',&
+              ' stopped in DftiComputeBackward '// DftiErrorMessage(dfti_status), dfti_status )
      END IF
 
 #if defined(__FFT_CLOCKS)
@@ -149,6 +155,7 @@
    CONTAINS !=------------------------------------------------=!
 
      SUBROUTINE lookup()
+
      IF( dfti_first ) THEN
         DO ip = 1, ndims
            hand(ip)%desc => NULL()
@@ -177,45 +184,47 @@
        END IF
 
        dfti_status = DftiCreateDescriptor(hand( icurrent )%desc, DFTI_DOUBLE, DFTI_COMPLEX, 1,nz)
-       IF(dfti_status /= 0)  &
-         CALL fftx_error__(' cft_1z ',' stopped in DftiCreateDescriptor ', dfti_status )
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU',&
+              ' stopped in DftiCreateDescriptor '// DftiErrorMessage(dfti_status), dfti_status )
 
        dfti_status = DftiSetValue(hand( icurrent )%desc, DFTI_NUMBER_OF_TRANSFORMS,nsl)
-       IF(dfti_status /= 0) &
-         CALL fftx_error__(' cft_1z ',' stopped in DFTI_NUMBER_OF_TRANSFORMS ', dfti_status )
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU',&
+              ' stopped in DFTI_NUMBER_OF_TRANSFORMS '// DftiErrorMessage(dfti_status), dfti_status )
 
        dfti_status = DftiSetValue(hand( icurrent )%desc,DFTI_INPUT_DISTANCE, ldz )
-       IF(dfti_status /= 0) &
-         CALL fftx_error__(' cft_1z ',' stopped in DFTI_INPUT_DISTANCE ', dfti_status )
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU',&
+                  ' stopped in DFTI_INPUT_DISTANCE '// DftiErrorMessage(dfti_status), dfti_status )
 
        IF (is_inplace) THEN
          dfti_status = DftiSetValue(hand( icurrent )%desc, DFTI_PLACEMENT, DFTI_INPLACE)
        ELSE
          dfti_status = DftiSetValue(hand( icurrent )%desc, DFTI_PLACEMENT, DFTI_NOT_INPLACE)
        ENDIF
-       IF(dfti_status /= 0) &
-         CALL fftx_error__(' cft_1z ',' stopped in DFTI_PLACEMENT ', dfti_status )
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU',&
+              ' stopped in DFTI_PLACEMENT '// DftiErrorMessage(dfti_status), dfti_status )
 
        dfti_status = DftiSetValue(hand( icurrent )%desc,DFTI_OUTPUT_DISTANCE, ldz )
-       IF(dfti_status /= 0) &
-         CALL fftx_error__(' cft_1z ',' stopped in DFTI_OUTPUT_DISTANCE ', dfti_status )
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU',&
+              ' stopped in DFTI_OUTPUT_DISTANCE '// DftiErrorMessage(dfti_status), dfti_status )
 
        tscale = 1.0_DP/nz
        dfti_status = DftiSetValue( hand( icurrent )%desc, DFTI_FORWARD_SCALE, tscale);
-       IF(dfti_status /= 0) &
-         CALL fftx_error__(' cft_1z ',' stopped in DFTI_FORWARD_SCALE ', dfti_status )
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU',&
+              ' stopped in DFTI_FORWARD_SCALE '// DftiErrorMessage(dfti_status), dfti_status )
 
        dfti_status = DftiSetValue( hand( icurrent )%desc, DFTI_BACKWARD_SCALE, DBLE(1) );
-       IF(dfti_status /= 0) &
-         CALL fftx_error__(' cft_1z ',' stopped in DFTI_BACKWARD_SCALE ', dfti_status )
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_1z GPU',&
+              ' stopped in DFTI_BACKWARD_SCALE '// DftiErrorMessage(dfti_status), dfti_status )
 
        !dfti_status = DftiSetValue( hand( icurrent )%desc, DFTI_THREAD_LIMIT, 1 );
        !IF(dfti_status /= 0) &
        !  CALL fftx_error__(' cft_1z ',' stopped in DFTI_THREAD_LIMIT ', dfti_status )
 
+!$omp target variant dispatch
        dfti_status = DftiCommitDescriptor(hand( icurrent )%desc)
-       IF(dfti_status /= 0) &
-         CALL fftx_error__(' cft_1z ',' stopped in DftiCommitDescriptor ', dfti_status )
+!$omp end target variant dispatch
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_1z ',&
+              ' stopped in DftiCommitDescriptor '// DftiErrorMessage(dfti_status), dfti_status )
 
        zdims(1,icurrent) = nz; zdims(2,icurrent) = nsl; zdims(3,icurrent) = ldz;
        ip = icurrent
@@ -223,7 +232,7 @@
 
      END SUBROUTINE init_dfti
 
-   END SUBROUTINE cft_1z
+   END SUBROUTINE cft_1z_omp
 
 !
 !
@@ -237,9 +246,8 @@
 !
 !=----------------------------------------------------------------------=!
 !
-!
 
-   SUBROUTINE cft_2xy(r, nzl, nx, ny, ldx, ldy, isign, pl2ix)
+   SUBROUTINE cft_2xy_omp(r, nzl, nx, ny, ldx, ldy, isign, pl2ix)
 
 !     driver routine for nzl 2d complex fft's of lengths nx and ny
 !     input : r(ldx*ldy)  complex, transform is in-place
@@ -247,7 +255,7 @@
 !     2d array: r2d(ldx, ldy) (x first dimension, y second dimension)
 !     (ldx>nx, ldy>ny used on some architectures to reduce memory conflicts)
 !     pl2ix(nx) (optional) is 1 for columns along y to be transformed
-!     isign > 0 : backward (f(G)=>f(R)), isign < 0 : forward (f(R) => f(G))
+!     isign > 0 : forward (f(G)=>f(R)), isign <0 backward (f(R) => f(G))
 !     Up to "ndims" initializations (for different combinations of input
 !     parameters nx,ny,nzl,ldx) are stored and re-used if available
 
@@ -255,18 +263,27 @@
 
      INTEGER, INTENT(IN) :: isign, ldx, ldy, nx, ny, nzl
      INTEGER, OPTIONAL, INTENT(IN) :: pl2ix(:)
-     COMPLEX (DP) :: r( : )
-     INTEGER :: i, k, j, ip
+     COMPLEX (DP), INTENT(INOUT) :: r( : )
+     INTEGER :: i, k, j, err, idir, ip, kk, void
      REAL(DP) :: tscale
      INTEGER, SAVE :: icurrent = 1
      INTEGER, SAVE :: dims( 4, ndims) = -1
      LOGICAL :: dofft( nfftx ), found
      INTEGER, PARAMETER  :: stdout = 6
 
+#if defined(__OPENMP)
+     INTEGER :: offset
+     INTEGER :: nx_t, ny_t, nzl_t, ldx_t, ldy_t
+     INTEGER  :: itid, mytid, ntids
+     INTEGER  :: omp_get_thread_num, omp_get_num_threads,omp_get_max_threads
+     EXTERNAL :: omp_get_thread_num, omp_get_num_threads, omp_get_max_threads
+#endif
+
      TYPE(DFTI_DESCRIPTOR_ARRAY), SAVE :: hand( ndims )
      LOGICAL, SAVE :: dfti_first = .TRUE.
      INTEGER :: dfti_status = 0
 
+!$omp threadprivate(hand, dfti_first, dfti_status, dims, icurrent)
      dofft( 1 : nx ) = .TRUE.
      IF( PRESENT( pl2ix ) ) THEN
        IF( SIZE( pl2ix ) < nx ) &
@@ -301,19 +318,19 @@
 
      IF( isign < 0 ) THEN
         !
+!$omp target variant dispatch use_device_ptr(r)
         dfti_status = DftiComputeForward(hand(ip)%desc, r(:))
-        IF(dfti_status /= 0)THEN
-           WRITE(*,*) "stopped in DftiComputeForward", dfti_status
-           STOP
-        ENDIF
+!$omp end target variant dispatch
+        IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU ',&
+              ' stopped in DftiComputeForward '// DftiErrorMessage(dfti_status), dfti_status )
         !
      ELSE IF( isign > 0 ) THEN
         !
+!$omp target variant dispatch use_device_ptr(r)
         dfti_status = DftiComputeBackward(hand(ip)%desc, r(:))
-        IF(dfti_status /= 0)THEN
-           WRITE(*,*) "stopped in DftiComputeBackward", dfti_status
-           STOP
-        ENDIF
+!$omp end target variant dispatch
+        IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU ',&
+              ' stopped in DftiComputeBackward '// DftiErrorMessage(dfti_status), dfti_status )
         !
      END IF
 
@@ -326,6 +343,10 @@
    CONTAINS !=------------------------------------------------=!
 
      SUBROUTINE check_dims()
+     IF ( nx < 1 ) &
+         call fftx_error__('cfft2d',' nx is less than 1 ', 1)
+     IF ( ny < 1 ) &
+         call fftx_error__('cfft2d',' ny is less than 1 ', 1)
      END SUBROUTINE check_dims
 
      SUBROUTINE lookup()
@@ -354,42 +375,36 @@
           ENDIF
        END IF
 
-       dfti_status = DftiCreateDescriptor(hand( icurrent )%desc, DFTI_DOUBLE, DFTI_COMPLEX, 2,(/nx,ny/))
-       IF(dfti_status /= 0) THEN
-          WRITE(*,*) "stopped in DftiCreateDescriptor", dfti_status
-          STOP
-       ENDIF
+       dfti_status = DftiCreateDescriptor(hand( icurrent )%desc, DFTI_DOUBLE, DFTI_COMPLEX, 2, [nx,ny])
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU',&
+              ' stopped in DftiCreateDescriptor '// DftiErrorMessage(dfti_status), dfti_status )
+
        dfti_status = DftiSetValue(hand( icurrent )%desc, DFTI_NUMBER_OF_TRANSFORMS,nzl)
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in DFTI_NUMBER_OF_TRANSFORMS", dfti_status
-          STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU',&
+              ' stopped in DFTI_NUMBER_OF_TRANSFORMS '// DftiErrorMessage(dfti_status), dfti_status )
+
        dfti_status = DftiSetValue(hand( icurrent )%desc,DFTI_INPUT_DISTANCE, ldx*ldy )
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in DFTI_INPUT_DISTANCE", dfti_status
-          STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU',&
+              ' stopped in DFTI_INPUT_DISTANCE '// DftiErrorMessage(dfti_status), dfti_status )
+
        dfti_status = DftiSetValue(hand( icurrent )%desc, DFTI_PLACEMENT, DFTI_INPLACE)
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in DFTI_PLACEMENT", dfti_status
-          STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU',&
+              ' stopped in DFTI_PLACEMENT '// DftiErrorMessage(dfti_status), dfti_status )
+
        tscale = 1.0_DP/ (nx * ny )
        dfti_status = DftiSetValue( hand( icurrent )%desc, DFTI_FORWARD_SCALE, tscale);
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in DFTI_FORWARD_SCALE", dfti_status
-          STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU',&
+              ' stopped in DFTI_FORWARD_SCALE '// DftiErrorMessage(dfti_status), dfti_status )
+
        dfti_status = DftiSetValue( hand( icurrent )%desc, DFTI_BACKWARD_SCALE, DBLE(1) );
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in DFTI_BACKWARD_SCALE", dfti_status
-          STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU',&
+              ' stopped in DFTI_BACKWARD_SCALE '// DftiErrorMessage(dfti_status), dfti_status )
+
+!$omp target variant dispatch
        dfti_status = DftiCommitDescriptor(hand( icurrent )%desc)
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in DftiCommitDescriptor", dfti_status
-          STOP
-       ENDIF
+!$omp end target variant dispatch
+       IF(dfti_status /= 0) CALL fftx_error__(' cft_2xy GPU',&
+              ' stopped in DftiCommitDescriptor '// DftiErrorMessage(dfti_status), dfti_status )
 
        dims(1,icurrent) = ny; dims(2,icurrent) = ldx;
        dims(3,icurrent) = nx; dims(4,icurrent) = nzl;
@@ -397,7 +412,7 @@
        icurrent = MOD( icurrent, ndims ) + 1
      END SUBROUTINE init_dfti
 
-   END SUBROUTINE cft_2xy
+   ENDSUBROUTINE cft_2xy_omp
 
 !
 !=----------------------------------------------------------------------=!
@@ -410,7 +425,8 @@
 !
 !=----------------------------------------------------------------------=!
 !
-   SUBROUTINE cfft3d( f, nx, ny, nz, ldx, ldy, ldz, howmany, isign )
+
+   SUBROUTINE cfft3d_omp( f, nx, ny, nz, ldx, ldy, ldz, howmany, isign )
 
   !     driver routine for 3d complex fft of lengths nx, ny, nz
   !     input  :  f(ldx*ldy*ldz)  complex, transform is in-place
@@ -438,6 +454,7 @@
      TYPE(DFTI_DESCRIPTOR_ARRAY), SAVE :: hand(ndims)
      LOGICAL, SAVE :: dfti_first = .TRUE.
      INTEGER :: dfti_status = 0
+!$omp threadprivate(hand, dfti_first, dfti_status, dims, icurrent)
      !
 
      CALL check_dims()
@@ -463,19 +480,19 @@
 
      IF( isign < 0 ) THEN
         !
+        !$omp target variant dispatch use_device_ptr(f)
         dfti_status = DftiComputeForward(hand(ip)%desc, f(1:))
-        IF(dfti_status /= 0)THEN
-           WRITE(*,*) "stopped in cfft3d, DftiComputeForward", dfti_status
-           STOP
-        ENDIF
+        !$omp end target variant dispatch
+        IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU ',&
+              ' stopped in DftiComputeForward '// DftiErrorMessage(dfti_status), dfti_status )
         !
      ELSE IF( isign > 0 ) THEN
         !
+        !$omp target variant dispatch use_device_ptr(f)
         dfti_status = DftiComputeBackward(hand(ip)%desc, f(1:))
-        IF(dfti_status /= 0)THEN
-           WRITE(*,*) "stopped in cfft3d, DftiComputeBackward", dfti_status
-           STOP
-        ENDIF
+        !$omp end target variant dispatch
+        IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU ',&
+              ' stopped in DftiComputeBackward '// DftiErrorMessage(dfti_status), dfti_status )
         !
      END IF
 
@@ -524,51 +541,44 @@
           ENDIF
        END IF
 
-       dfti_status = DftiCreateDescriptor(hand(icurrent)%desc, DFTI_DOUBLE, DFTI_COMPLEX, 3,(/nx,ny,nz/))
-       IF(dfti_status /= 0) THEN
-          WRITE(*,*) "stopped in cfft3d, DftiCreateDescriptor", dfti_status
-          STOP
-       ENDIF
-       dfti_status = DftiSetValue(hand(icurrent)%desc, DFTI_NUMBER_OF_TRANSFORMS,howmany)
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in cfft3d, DFTI_NUMBER_OF_TRANSFORMS", dfti_status
-          STOP
-       ENDIF
+       dfti_status = DftiCreateDescriptor(hand(icurrent)%desc, DFTI_DOUBLE, DFTI_COMPLEX, 3, [nx,ny,nz])
+       IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU',&
+              ' stopped in DftiCreateDescriptor '// DftiErrorMessage(dfti_status), dfti_status )
+
+       dfti_status = DftiSetValue(hand(icurrent)%desc, DFTI_NUMBER_OF_TRANSFORMS, howmany)
+       IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU',&
+              ' stopped in DFTI_NUMBER_OF_TRANSFORMS '// DftiErrorMessage(dfti_status), dfti_status )
+
        dfti_status = DftiSetValue(hand(icurrent)%desc, DFTI_INPUT_DISTANCE, ldx*ldy*ldz)
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in cfft3dm, DFTI_INPUT_DISTANCE", dfti_status
-          STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU',&
+              ' stopped in DFTI_INPUT_DISTANCE '// DftiErrorMessage(dfti_status), dfti_status )
+
        dfti_status = DftiSetValue(hand(icurrent)%desc, DFTI_PLACEMENT, DFTI_INPLACE)
-       IF(dfti_status /= 0)THEN
-         WRITE(*,*) "stopped in cfft3d, DFTI_PLACEMENT", dfti_status
-         STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU',&
+              ' stopped in DFTI_PLACEMENT '// DftiErrorMessage(dfti_status), dfti_status )
+
        tscale = 1.0_DP/ (nx * ny * nz)
        dfti_status = DftiSetValue( hand(icurrent)%desc, DFTI_FORWARD_SCALE, tscale);
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in cfft3d, DFTI_FORWARD_SCALE", dfti_status
-          STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU',&
+              ' stopped in DFTI_FORWARD_SCALE '// DftiErrorMessage(dfti_status), dfti_status )
+
        tscale = 1.0_DP
        dfti_status = DftiSetValue( hand(icurrent)%desc, DFTI_BACKWARD_SCALE, tscale );
-       IF(dfti_status /= 0)THEN
-          WRITE(*,*) "stopped in cfft3d, DFTI_BACKWARD_SCALE", dfti_status
-          STOP
-       ENDIF
+       IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU',&
+              ' stopped in DFTI_BACKWARD_SCALE '// DftiErrorMessage(dfti_status), dfti_status )
 
+       !$omp target variant dispatch
        dfti_status = DftiCommitDescriptor(hand(icurrent)%desc)
-       IF(dfti_status /= 0) THEN
-          WRITE(*,*) "stopped in cfft3d, DftiCreateDescriptor", dfti_status
-          STOP
-       ENDIF
+       !$omp end target variant dispatch
+       IF(dfti_status /= 0) CALL fftx_error__(' cfft3d GPU',&
+              ' stopped in DftiCommitDescriptor '// DftiErrorMessage(dfti_status), dfti_status )
 
        dims(1,icurrent) = nx; dims(2,icurrent) = ny; dims(3,icurrent) = nz; dims(4,icurrent) = howmany
        ip = icurrent
        icurrent = MOD( icurrent, ndims ) + 1
      END SUBROUTINE init_dfti
 
-   END SUBROUTINE cfft3d
+   END SUBROUTINE cfft3d_omp
 
 !
 !=----------------------------------------------------------------------=!
@@ -582,21 +592,20 @@
 !=----------------------------------------------------------------------=!
 !
 
-SUBROUTINE cfft3ds (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, do_fft_z, do_fft_y)
-  !
-  implicit none
+   SUBROUTINE cfft3ds_omp (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign, do_fft_z, do_fft_y)
+     !
+     implicit none
 
-  integer :: nx, ny, nz, ldx, ldy, ldz, isign, howmany
-  !
-  complex(DP) :: f ( ldx * ldy * ldz )
-  integer :: do_fft_y(:), do_fft_z(:)
-  !
-  CALL cfft3d (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign)
+     integer :: nx, ny, nz, ldx, ldy, ldz, isign, howmany
+     !
+     complex(DP) :: f ( ldx * ldy * ldz )
+     integer :: do_fft_y(:), do_fft_z(:)
+     !
+     CALL cfft3d_omp (f, nx, ny, nz, ldx, ldy, ldz, howmany, isign)
 
-END SUBROUTINE cfft3ds
-#else
-   MODULE fft_scalar_dfti
+   END SUBROUTINE cfft3ds_omp
+
+!=----------------------------------------------------------------------=!
+END MODULE fft_scalar_dfti_omp
+!=----------------------------------------------------------------------=!
 #endif
-!=----------------------------------------------------------------------=!
-END MODULE fft_scalar_dfti
-!=----------------------------------------------------------------------=!

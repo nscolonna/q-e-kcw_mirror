@@ -12,12 +12,13 @@ MODULE fft_interfaces
   IMPLICIT NONE
   PRIVATE
 
+
   PUBLIC :: fwfft, invfft, fft_interpolate
 #if defined(__OPENMP_GPU)
-  PUBLIC :: invfft_y_gpu, fwfft_y_gpu
+  PUBLIC :: invfft_y_omp, fwfft_y_omp
 
   INTERFACE
-     SUBROUTINE invfft_y_gpu( fft_kind, f, dfft, howmany )
+     SUBROUTINE invfft_y_omp( fft_kind, f, dfft, howmany )
        USE fft_types,       ONLY : fft_type_descriptor
        USE fft_param,       ONLY : DP
        IMPLICIT NONE
@@ -25,9 +26,9 @@ MODULE fft_interfaces
        CHARACTER(LEN=*), INTENT(IN) :: fft_kind
        COMPLEX(DP) :: f(:)
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
-     END SUBROUTINE invfft_y_gpu
+     END SUBROUTINE invfft_y_omp
 
-     SUBROUTINE fwfft_y_gpu( fft_kind, f, dfft, howmany )
+     SUBROUTINE fwfft_y_omp( fft_kind, f, dfft, howmany )
        USE fft_types,       ONLY : fft_type_descriptor
        USE fft_param,       ONLY : DP
        IMPLICIT NONE
@@ -35,15 +36,15 @@ MODULE fft_interfaces
        CHARACTER(LEN=*), INTENT(IN) :: fft_kind
        COMPLEX(DP) :: f(:)
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
-     END SUBROUTINE fwfft_y_gpu
+     END SUBROUTINE fwfft_y_omp
   END INTERFACE
 #endif
 
   INTERFACE invfft
      !! invfft is the interface to both the standard fft **invfft_x**,
-     !! and to the "box-grid" version **invfft_b**, used only in CP
+     !! and to the "box-grid" version **invfft_b**, used only in CP 
      !! (the latter has an additional argument)
-
+     
      SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
        USE fft_types,  ONLY: fft_type_descriptor
        USE fft_param,  ONLY :DP
@@ -53,7 +54,7 @@ MODULE fft_interfaces
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
 #if defined(__OPENMP_GPU)
-       !$omp declare variant (invfft_y_gpu) match( construct={dispatch} )
+       !$omp declare variant (invfft_y_omp) match( construct={dispatch} )
 #endif
      END SUBROUTINE invfft_y
      !
@@ -90,7 +91,7 @@ MODULE fft_interfaces
        INTEGER, OPTIONAL, INTENT(IN) :: howmany
        COMPLEX(DP) :: f(:)
 #if defined(__OPENMP_GPU)
-       !$omp declare variant(fwfft_y_gpu) match(construct={dispatch} )
+       !$omp declare variant(fwfft_y_omp) match(construct={dispatch} )
 #endif
      END SUBROUTINE fwfft_y
 #if defined(__CUDA)
@@ -110,8 +111,8 @@ MODULE fft_interfaces
 
   INTERFACE fft_interpolate
      !! fft_interpolate  is the interface to utility that fourier interpolate
-     !! real/complex arrays between two grids
-
+     !! real/complex arrays between two grids 
+     
      SUBROUTINE fft_interpolate_real( dfft_in, v_in, dfft_out, v_out )
        USE fft_param,  ONLY :DP
        USE fft_types,  ONLY: fft_type_descriptor

@@ -1353,7 +1353,7 @@ END MODULE fft_scatter_2d_gpu
 !=----------------------------------------------------------------------=!
 #elif __OPENMP_GPU
 !=----------------------------------------------------------------------=!
-   MODULE fft_scatter_2d_gpu
+   MODULE fft_scatter_2d_omp
 !=----------------------------------------------------------------------=!
 
         USE fft_types, ONLY: fft_type_descriptor
@@ -1365,18 +1365,18 @@ END MODULE fft_scatter_2d_gpu
 
         PRIVATE
 
-        PUBLIC :: fft_scatter_gpu, fft_scatter_gpu_batch
-        PUBLIC :: fft_scatter_many_columns_to_planes_send, &
-                  fft_scatter_many_columns_to_planes_store, &
-                  fft_scatter_many_planes_to_columns_send, &
-                  fft_scatter_many_planes_to_columns_store
+        PUBLIC :: fft_scatter_omp, fft_scatter_omp_batch
+        PUBLIC :: fft_scatter_many_columns_to_planes_send_omp, &
+                  fft_scatter_many_columns_to_planes_store_omp, &
+                  fft_scatter_many_planes_to_columns_send_omp, &
+                  fft_scatter_many_planes_to_columns_store_omp
 
 !=----------------------------------------------------------------------=!
       CONTAINS
 !=----------------------------------------------------------------------=!
 
 !----------------------------------------------------------------------------
-SUBROUTINE fft_scatter_gpu ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
+SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
   !
   IMPLICIT NONE
   !
@@ -1651,9 +1651,9 @@ SUBROUTINE fft_scatter_gpu ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
 
   RETURN
 
-END SUBROUTINE fft_scatter_gpu
+END SUBROUTINE fft_scatter_omp
 
-SUBROUTINE fft_scatter_gpu_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn, batchsize, srh )
+SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn, batchsize, srh )
   !
   IMPLICIT NONE
   !
@@ -1958,9 +1958,9 @@ SUBROUTINE fft_scatter_gpu_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
 
   RETURN
 
-END SUBROUTINE fft_scatter_gpu_batch
+END SUBROUTINE fft_scatter_omp_batch
 
-SUBROUTINE fft_scatter_many_columns_to_planes_store ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn, batchsize )
+SUBROUTINE fft_scatter_many_columns_to_planes_store_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn, batchsize )
    !
    IMPLICIT NONE
    !
@@ -2075,9 +2075,9 @@ SUBROUTINE fft_scatter_many_columns_to_planes_store ( dfft, f_in, nr3x, nxx_, f_
 
   RETURN
 
-END SUBROUTINE fft_scatter_many_columns_to_planes_store
+END SUBROUTINE fft_scatter_many_columns_to_planes_store_omp
 
-SUBROUTINE fft_scatter_many_columns_to_planes_send ( dfft, f_in, nr3x, nxx_, f_aux, f_aux2, ncp_, npp_, isgn, batchsize, batch_id )
+SUBROUTINE fft_scatter_many_columns_to_planes_send_omp ( dfft, f_in, nr3x, nxx_, f_aux, f_aux2, ncp_, npp_, isgn, batchsize, batch_id )
    !
    IMPLICIT NONE
    !
@@ -2261,9 +2261,9 @@ SUBROUTINE fft_scatter_many_columns_to_planes_send ( dfft, f_in, nr3x, nxx_, f_a
 
   RETURN
 
-END SUBROUTINE fft_scatter_many_columns_to_planes_send
+END SUBROUTINE fft_scatter_many_columns_to_planes_send_omp
 
-SUBROUTINE fft_scatter_many_planes_to_columns_store ( dfft, nr3x, nxx_, f_aux, f_aux2, ncp_, npp_, isgn, batchsize, batch_id )
+SUBROUTINE fft_scatter_many_planes_to_columns_store_omp ( dfft, nr3x, nxx_, f_aux, f_aux2, ncp_, npp_, isgn, batchsize, batch_id )
    !
    IMPLICIT NONE
    !
@@ -2376,9 +2376,9 @@ SUBROUTINE fft_scatter_many_planes_to_columns_store ( dfft, nr3x, nxx_, f_aux, f
 
   RETURN
 
-END SUBROUTINE fft_scatter_many_planes_to_columns_store
+END SUBROUTINE fft_scatter_many_planes_to_columns_store_omp
 
-SUBROUTINE fft_scatter_many_planes_to_columns_send ( dfft, f_in, nr3x, nxx_, f_aux, f_aux2, ncp_, npp_, isgn, batchsize, batch_id )
+SUBROUTINE fft_scatter_many_planes_to_columns_send_omp ( dfft, f_in, nr3x, nxx_, f_aux, f_aux2, ncp_, npp_, isgn, batchsize, batch_id )
    !
    IMPLICIT NONE
    !
@@ -2560,9 +2560,9 @@ SUBROUTINE fft_scatter_many_planes_to_columns_send ( dfft, f_in, nr3x, nxx_, f_a
 
    RETURN
 
-END SUBROUTINE fft_scatter_many_planes_to_columns_send
+END SUBROUTINE fft_scatter_many_planes_to_columns_send_omp
 !
 !=----------------------------------------------------------------------=!
-END MODULE fft_scatter_2d_gpu
+END MODULE fft_scatter_2d_omp
 !=----------------------------------------------------------------------=!
 #endif

@@ -30,7 +30,7 @@ program test_fft_scalar_gpu
   CONTAINS
   !
   SUBROUTINE fill_random(c, c_d, n)
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
 #endif
     USE fft_param, ONLY : DP
@@ -51,10 +51,12 @@ program test_fft_scalar_gpu
   !
   SUBROUTINE test_cft_1z_gpu(test)
     USE fft_scalar, ONLY : cft_1z, cft_2xy, cfft3d, cfft3ds
-    USE fft_scalar, ONLY : cft_1z_gpu, cft_2xy_gpu, cfft3d_gpu, cfft3ds_gpu
     USE fft_param, ONLY : DP
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
+    USE fft_scalar, ONLY : cft_1z_gpu, cft_2xy_gpu, cfft3d_gpu, cfft3ds_gpu
+#elif defined(__OPENMP_GPU)
+    USE fft_scalar, ONLY : cft_1z_omp, cft_2xy_omp, cfft3d_omp, cfft3ds_omp
 #endif
     implicit none
     !
@@ -87,7 +89,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cft_1z_gpu(c_d, nsl, nz, ldz, 1, cout_d, stream)
 #else
-    CALL cft_1z_gpu(c_d, nsl, nz, ldz, 1, cout_d)
+    CALL cft_1z_omp(c_d, nsl, nz, ldz, 1, cout_d)
 #endif
     !$omp target update from(cout_d)
     !
@@ -108,7 +110,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cft_1z_gpu(c_d, nsl, nz, ldz, -1, cout_d, stream)
 #else
-    CALL cft_1z_gpu(c_d, nsl, nz, ldz, -1, cout_d)
+    CALL cft_1z_omp(c_d, nsl, nz, ldz, -1, cout_d)
 #endif
     !$omp target exit data map(from:cout_d)
     !
@@ -130,7 +132,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cft_1z_gpu(c_d, nsl, nz, ldz, 1, cout_d, stream, in_place=.true.)
 #else
-    CALL cft_1z_gpu(c_d, nsl, nz, ldz, 1, cout_d, in_place=.true.)
+    CALL cft_1z_omp(c_d, nsl, nz, ldz, 1, cout_d, in_place=.true.)
 #endif
     !$omp target update from(c_d)
     !
@@ -151,7 +153,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cft_1z_gpu(c_d, nsl, nz, ldz, -1, cout_d, stream, in_place=.true.)
 #else
-    CALL cft_1z_gpu(c_d, nsl, nz, ldz, -1, cout_d, in_place=.true.)
+    CALL cft_1z_omp(c_d, nsl, nz, ldz, -1, cout_d, in_place=.true.)
 #endif
     !$omp target exit data map(from:c_d)
     !
@@ -168,10 +170,12 @@ program test_fft_scalar_gpu
   !
   SUBROUTINE test_cft_2xy_gpu(test)
     USE fft_scalar, ONLY : cft_2xy
-    USE fft_scalar, ONLY : cft_2xy_gpu
     USE fft_param, ONLY : DP
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
+    USE fft_scalar, ONLY : cft_2xy_gpu
+#elif defined(__OPENMP_GPU)
+    USE fft_scalar, ONLY : cft_2xy_omp
 #endif
     implicit none
     !
@@ -200,7 +204,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cft_2xy_gpu(c_d, tmp_d, nzl, nx, ny, ldx, ldy, 1, stream)
 #else
-    CALL cft_2xy_gpu(c_d, nzl, nx, ny, ldx, ldy, 1)
+    CALL cft_2xy_omp(c_d, nzl, nx, ny, ldx, ldy, 1)
 #endif
     !$omp target update from(c_d)
     CALL cft_2xy(c, nzl, nx, ny, ldx, ldy, 1)
@@ -218,7 +222,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cft_2xy_gpu(c_d, tmp_d, nzl, nx, ny, ldx, ldy, -1, stream)
 #else
-    CALL cft_2xy_gpu(c_d, nzl, nx, ny, ldx, ldy, -1)
+    CALL cft_2xy_omp(c_d, nzl, nx, ny, ldx, ldy, -1)
 #endif
     !$omp target exit data map(from:c_d)
     CALL cft_2xy(c, nzl, nx, ny, ldx, ldy, -1)
@@ -236,10 +240,12 @@ program test_fft_scalar_gpu
   !
   SUBROUTINE test_cfft3d_gpu(test)
     USE fft_scalar, ONLY : cfft3d
-    USE fft_scalar, ONLY : cfft3d_gpu
     USE fft_param, ONLY : DP
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
+    USE fft_scalar, ONLY : cfft3d_gpu
+#elif defined(__OPENMP_GPU)
+    USE fft_scalar, ONLY : cfft3d_omp
 #endif
     implicit none
     !
@@ -281,7 +287,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cfft3d_gpu( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, 1, stream )
 #else
-    CALL cfft3d_gpu( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, 1 )
+    CALL cfft3d_omp( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, 1 )
 #endif
     !$omp target update from(c_d)
     !
@@ -305,7 +311,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cfft3d_gpu( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, -1, stream )
 #else
-    CALL cfft3d_gpu( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, -1 )
+    CALL cfft3d_omp( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, -1 )
 #endif
     !$omp target exit data map(from:c_d)
     !
@@ -327,10 +333,12 @@ program test_fft_scalar_gpu
   !
   SUBROUTINE test_cfft3ds_gpu(test)
     USE fft_scalar, ONLY : cfft3ds
-    USE fft_scalar, ONLY : cfft3ds_gpu
     USE fft_param, ONLY : DP
-#if !defined(__OPENMP_GPU)
+#if defined(__CUDA)
     USE cudafor
+    USE fft_scalar, ONLY : cfft3ds_gpu
+#elif defined(__OPENMP_GPU)
+    USE fft_scalar, ONLY : cfft3ds_omp
 #endif
     implicit none
     !
@@ -363,7 +371,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cfft3ds_gpu( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, 1, do_fft_z, do_fft_y, stream)
 #else
-    CALL cfft3ds_gpu( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, 1, do_fft_z, do_fft_y)
+    CALL cfft3ds_omp( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, 1, do_fft_z, do_fft_y)
 #endif
     !$omp target update from(c_d)
     !
@@ -381,7 +389,7 @@ program test_fft_scalar_gpu
 #if !defined(__OPENMP_GPU)
     CALL cfft3ds_gpu( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, -1, do_fft_z, do_fft_y, stream )
 #else
-    CALL cfft3ds_gpu( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, -1, do_fft_z, do_fft_y )
+    CALL cfft3ds_omp( c_d, nx, ny, nz, ldx, ldy, ldz, howmany, -1, do_fft_z, do_fft_y )
 #endif
     !$omp target exit data map(from:c_d)
     !

@@ -466,7 +466,7 @@ ENDSUBROUTINE many_cft3s
 !  General purpose driver, OpenMP GPU version
 !
 !----------------------------------------------------------------------------
-SUBROUTINE tg_cft3s_gpu( f, dfft, isgn )
+SUBROUTINE tg_cft3s_omp( f, dfft, isgn )
   !----------------------------------------------------------------------------
   !
   !! ... isgn = +-1 : parallel 3d fft for rho and for the potential
@@ -489,17 +489,17 @@ SUBROUTINE tg_cft3s_gpu( f, dfft, isgn )
   !! ...              transpose across nodes           (fft_scatter_yz)
   !! ...              fft along z using pencils        (cft_1z)
   !
-  ! If task_group_fft_is_active the FFT acts on a number of wfcs equal to
-  ! dfft%nproc2, the number of Y-sections in which a plane is divided.
-  ! Data are reshuffled by the fft_scatter_tg routine so that each of the
-  ! dfft%nproc2 subgroups (made by dfft%nproc3 procs) deals with whole planes
+  ! If task_group_fft_is_active the FFT acts on a number of wfcs equal to 
+  ! dfft%nproc2, the number of Y-sections in which a plane is divided. 
+  ! Data are reshuffled by the fft_scatter_tg routine so that each of the 
+  ! dfft%nproc2 subgroups (made by dfft%nproc3 procs) deals with whole planes 
   ! of a single wavefunciton.
   !
   ! This driver is based on code written by Stefano de Gironcoli for PWSCF.
   !
-  USE fft_scalar,      ONLY : cft_1z_gpu
-  USE fft_scatter_gpu, ONLY : fft_scatter_xy_gpu, fft_scatter_yz_gpu, &
-                              fft_scatter_tg_opt_gpu
+  USE fft_scalar,      ONLY : cft_1z_omp
+  USE fft_scatter_omp, ONLY : fft_scatter_xy_omp, fft_scatter_yz_omp, &
+                              fft_scatter_tg_opt_omp
   USE fft_types,       ONLY : fft_type_descriptor
   USE fft_buffers,     ONLY : check_buffers_size, aux
   !
@@ -540,20 +540,20 @@ SUBROUTINE tg_cft3s_gpu( f, dfft, isgn )
   CALL check_buffers_size( dfft )
   !
   IF ( isgn > 0 ) THEN  ! G -> R
-     if (isgn==3) then
-        call fft_scatter_tg_opt_gpu ( dfft, f, aux, nnr_, isgn)
-        CALL cft_1z_gpu( aux, nsticks_z, n3, nx3, isgn, f )
+     if (isgn==+3) then 
+        call fft_scatter_tg_opt_omp ( dfft, f, aux, nnr_, isgn)
+        CALL cft_1z_omp( aux, nsticks_z, n3, nx3, isgn, f )
      else
-        CALL cft_1z_gpu( f, nsticks_z, n3, nx3, isgn, aux, in_place=.true. )
+        CALL cft_1z_omp( f, nsticks_z, n3, nx3, isgn, aux, in_place=.true. )
      endif
      ! Rz, Gy, Gx
-     CALL fft_scatter_yz_gpu ( dfft, f, aux, nnr_, isgn )
+     CALL fft_scatter_yz_omp ( dfft, f, aux, nnr_, isgn )
      ! Gy, Gx, Rz
-     CALL cft_1z_gpu( aux, nsticks_y, n2, nx2, isgn, f )
+     CALL cft_1z_omp( aux, nsticks_y, n2, nx2, isgn, f )
      ! Ry, Gx, Rz
-     CALL fft_scatter_xy_gpu ( dfft, f, aux, nnr_, isgn )
+     CALL fft_scatter_xy_omp ( dfft, f, aux, nnr_, isgn )
      ! Gx, Ry, Rz
-     CALL cft_1z_gpu( aux, nsticks_x, n1, nx1, isgn, f )
+     CALL cft_1z_omp( aux, nsticks_x, n1, nx1, isgn, f )
      ! Rx, Ry, Rz
      ! clean garbage beyond the intended dimension.
      if (nsticks_x*nx1 < nnr_) then
@@ -567,16 +567,16 @@ SUBROUTINE tg_cft3s_gpu( f, dfft, isgn )
   ELSE                  ! R -> G
      !
      ! Rx, Ry, Rz
-     CALL cft_1z_gpu( f, nsticks_x, n1, nx1, isgn, aux )
+     CALL cft_1z_omp( f, nsticks_x, n1, nx1, isgn, aux )
      ! Gx, Ry, Rz
-     CALL fft_scatter_xy_gpu ( dfft, f, aux, nnr_, isgn )
+     CALL fft_scatter_xy_omp ( dfft, f, aux, nnr_, isgn )
      ! Ry, Gx, Rz
-     CALL cft_1z_gpu( f, nsticks_y, n2, nx2, isgn, aux )
+     CALL cft_1z_omp( f, nsticks_y, n2, nx2, isgn, aux )
      ! Gy, Gx, Rz
-     CALL fft_scatter_yz_gpu ( dfft, f, aux, nnr_, isgn )
+     CALL fft_scatter_yz_omp ( dfft, f, aux, nnr_, isgn )
      !! Rz, Gy, Gx
      if (isgn==-3) then
-        CALL cft_1z_gpu( f, nsticks_z, n3, nx3, isgn, aux )
+        CALL cft_1z_omp( f, nsticks_z, n3, nx3, isgn, aux )
         ! clean garbage beyond the intended dimension. should not be needed but apparently it is !
         !if (nsticks_z*nx3 < nnr_) then
         !   !$omp target teams distribute parallel do
@@ -584,9 +584,9 @@ SUBROUTINE tg_cft3s_gpu( f, dfft, isgn )
         !       aux(i) = (0.0_DP,0.0_DP)
         !   end do
         !endif
-        call fft_scatter_tg_opt_gpu ( dfft, aux, f, nnr_, isgn)
+        call fft_scatter_tg_opt_omp ( dfft, aux, f, nnr_, isgn)
      else
-        CALL cft_1z_gpu( f, nsticks_z, n3, nx3, isgn, aux, in_place=.true. )
+        CALL cft_1z_omp( f, nsticks_z, n3, nx3, isgn, aux, in_place=.true. )
         ! clean garbage beyond the intended dimension. should not be needed but apparently it is !
         !if (nsticks_z*nx3 < nnr_) then
         !   !$omp target teams distribute parallel do
@@ -604,12 +604,12 @@ SUBROUTINE tg_cft3s_gpu( f, dfft, isgn )
 99 format ( 20 ('(',2f12.9,')') )
 
   !
-END SUBROUTINE tg_cft3s_gpu
+END SUBROUTINE tg_cft3s_omp
 !
-!  Specific driver for the new 'many' call, OpenMP GPU version
+!  Specific driver for the new 'many' call, GPU version
 !
 !----------------------------------------------------------------------------
-SUBROUTINE many_cft3s_gpu( f, dfft, isgn, howmany )
+SUBROUTINE many_cft3s_omp( f, dfft, isgn, howmany )
   !----------------------------------------------------------------------------
   !
   !! ... isgn = +-1 : parallel 3d fft for rho and for the potential
@@ -632,18 +632,17 @@ SUBROUTINE many_cft3s_gpu( f, dfft, isgn, howmany )
   !! ...              transpose across nodes           (fft_scatter_yz)
   !! ...              fft along z using pencils        (cft_1z)
   !
-  ! If task_group_fft_is_active the FFT acts on a number of wfcs equal to
-  ! dfft%nproc2, the number of Y-sections in which a plane is divided.
-  ! Data are reshuffled by the fft_scatter_tg routine so that each of the
-  ! dfft%nproc2 subgroups (made by dfft%nproc3 procs) deals with whole planes
+  ! If task_group_fft_is_active the FFT acts on a number of wfcs equal to 
+  ! dfft%nproc2, the number of Y-sections in which a plane is divided. 
+  ! Data are reshuffled by the fft_scatter_tg routine so that each of the 
+  ! dfft%nproc2 subgroups (made by dfft%nproc3 procs) deals with whole planes 
   ! of a single wavefunciton.
   !
   ! This driver is based on code written by Stefano de Gironcoli for PWSCF.
   !
-  USE fft_scalar,      ONLY : cft_1z_gpu
-  USE fft_scatter_gpu, ONLY : fft_scatter_xy_gpu,      fft_scatter_yz_gpu,      &
-                              fft_scatter_tg_gpu,      fft_scatter_tg_opt_gpu,  &
-                              fft_scatter_many_xy_gpu, fft_scatter_many_yz_gpu
+  USE fft_scalar,      ONLY : cft_1z_omp
+  USE fft_scatter_omp, ONLY : fft_scatter_xy_omp,      fft_scatter_yz_omp,      &
+                              fft_scatter_many_xy_omp, fft_scatter_many_yz_omp
   USE fft_types,       ONLY : fft_type_descriptor
   USE fft_buffers,     ONLY : check_buffers_size, aux
   USE omp_lib
@@ -698,25 +697,25 @@ SUBROUTINE many_cft3s_gpu( f, dfft, isgn, howmany )
      !!$omp end target teams distribute parallel do
      !
      DO i = 0, howmany-1
-        !CALL cft_1z_gpu( aux(i*nnr_+1:), nsticks_z, n3, nx3, isgn, f(nx3*nsticks_zx*i+1:) )
-        CALL cft_1z_gpu( f(i*nnr_+1:), nsticks_z, n3, nx3, isgn, aux(nx3*nsticks_zx*i+1:) )
+        !CALL cft_1z_omp( aux(i*nnr_+1:), nsticks_z, n3, nx3, isgn, f(nx3*nsticks_zx*i+1:) )
+        CALL cft_1z_omp( f(i*nnr_+1:), nsticks_z, n3, nx3, isgn, aux(nx3*nsticks_zx*i+1:) )
      ENDDO
      !
-     !CALL fft_scatter_many_yz_gpu( dfft, f, aux, howmany*nnr_, isgn, howmany )
-     CALL fft_scatter_many_yz_gpu( dfft, aux, f, howmany*nnr_, isgn, howmany )
+     !CALL fft_scatter_many_yz_omp( dfft, f, aux, howmany*nnr_, isgn, howmany )
+     CALL fft_scatter_many_yz_omp( dfft, aux, f, howmany*nnr_, isgn, howmany )
      !
      DO i = 0, howmany-1
-        !CALL cft_1z_gpu( aux(i*nnr_+1:), nsticks_y, n2, nx2, isgn, f(nx2*nsticks_yx*i+1:) )
-        CALL cft_1z_gpu( f(i*nnr_+1:), nsticks_y, n2, nx2, isgn, aux(i*nnr_+1:), in_place=.true. )
+        !CALL cft_1z_omp( aux(i*nnr_+1:), nsticks_y, n2, nx2, isgn, f(nx2*nsticks_yx*i+1:) )
+        CALL cft_1z_omp( f(i*nnr_+1:), nsticks_y, n2, nx2, isgn, aux(i*nnr_+1:), in_place=.true. )
      ENDDO
      !
-     !CALL fft_scatter_many_xy_gpu ( dfft, f, aux, howmany*nnr_, isgn, howmany )
+     !CALL fft_scatter_many_xy_omp ( dfft, f, aux, howmany*nnr_, isgn, howmany )
      DO i = 0, howmany-1
-        CALL fft_scatter_xy_gpu ( dfft, f(i*nnr_+1:), aux(i*nnr_+1:), nnr_, isgn )
+        CALL fft_scatter_xy_omp ( dfft, f(i*nnr_+1:), aux(i*nnr_+1:), nnr_, isgn )
      END DO
      !
      DO i = 0, howmany-1
-        CALL cft_1z_gpu( aux(i*nnr_+1:), nsticks_x, n1, nx1, isgn, f(i*nnr_+1:) )
+        CALL cft_1z_omp( aux(i*nnr_+1:), nsticks_x, n1, nx1, isgn, f(i*nnr_+1:) )
      ENDDO
      !
      if (nsticks_x*nx1 < nnr_) then
@@ -731,25 +730,25 @@ SUBROUTINE many_cft3s_gpu( f, dfft, isgn, howmany )
   ELSE                  ! R -> G
      !
      DO i = 0, howmany-1
-        CALL cft_1z_gpu( f(i*nnr_+1:), nsticks_x, n1, nx1, isgn, aux(i*nnr_+1:) )
+        CALL cft_1z_omp( f(i*nnr_+1:), nsticks_x, n1, nx1, isgn, aux(i*nnr_+1:) )
      ENDDO
      !
-     !CALL fft_scatter_many_xy_gpu ( dfft, f, aux, howmany*nnr_, isgn, howmany )
+     !CALL fft_scatter_many_xy_omp ( dfft, f, aux, howmany*nnr_, isgn, howmany )
      DO i = 0, howmany-1
-        CALL fft_scatter_xy_gpu ( dfft, f(i*nnr_+1:), aux(i*nnr_+1:), nnr_, isgn )
+        CALL fft_scatter_xy_omp ( dfft, f(i*nnr_+1:), aux(i*nnr_+1:), nnr_, isgn )
      END DO
      !
      DO i = 0, howmany-1
-        !CALL cft_1z_gpu( f(nx2*nsticks_yx*i+1:), nsticks_y, n2, nx2, isgn, aux(i*nnr_+1:))
-        CALL cft_1z_gpu( f(i*nnr_+1:), nsticks_y, n2, nx2, isgn, aux(i*nnr_+1:), in_place=.true. )
+        !CALL cft_1z_omp( f(nx2*nsticks_yx*i+1:), nsticks_y, n2, nx2, isgn, aux(i*nnr_+1:))
+        CALL cft_1z_omp( f(i*nnr_+1:), nsticks_y, n2, nx2, isgn, aux(i*nnr_+1:), in_place=.true. )
      ENDDO
      !
-     !CALL fft_scatter_many_yz_gpu( dfft, f, aux, howmany*nnr_, isgn, howmany )
-     CALL fft_scatter_many_yz_gpu( dfft, aux, f, howmany*nnr_, isgn, howmany )
+     !CALL fft_scatter_many_yz_omp( dfft, f, aux, howmany*nnr_, isgn, howmany )
+     CALL fft_scatter_many_yz_omp( dfft, aux, f, howmany*nnr_, isgn, howmany )
      !
      DO i = 0, howmany-1
-        !CALL cft_1z_gpu( f(nx3*nsticks_zx*i+1:), nsticks_z, n3, nx3, isgn, aux(i*nnr_+1:) )
-        CALL cft_1z_gpu( aux(nx3*nsticks_zx*i+1:), nsticks_z, n3, nx3, isgn, f(i*nnr_+1:) )
+        !CALL cft_1z_omp( f(nx3*nsticks_zx*i+1:), nsticks_z, n3, nx3, isgn, aux(i*nnr_+1:) )
+        CALL cft_1z_omp( aux(nx3*nsticks_zx*i+1:), nsticks_z, n3, nx3, isgn, f(i*nnr_+1:) )
      ENDDO
      !
      !$omp target teams distribute parallel do collapse(2)
@@ -767,7 +766,7 @@ SUBROUTINE many_cft3s_gpu( f, dfft, isgn, howmany )
   RETURN
 99 format ( 20 ('(',2f12.9,')') )
   !
-ENDSUBROUTINE many_cft3s_gpu
+ENDSUBROUTINE many_cft3s_omp
 
 #endif
 
@@ -799,10 +798,10 @@ SUBROUTINE tg_cft3s_gpu( f_d, dfft, isgn )
   !! ...              transpose across nodes           (fft_scatter_yz)
   !! ...              fft along z using pencils        (cft_1z)
   !
-  ! If task_group_fft_is_active the FFT acts on a number of wfcs equal to
-  ! dfft%nproc2, the number of Y-sections in which a plane is divided.
-  ! Data are reshuffled by the fft_scatter_tg routine so that each of the
-  ! dfft%nproc2 subgroups (made by dfft%nproc3 procs) deals with whole planes
+  ! If task_group_fft_is_active the FFT acts on a number of wfcs equal to 
+  ! dfft%nproc2, the number of Y-sections in which a plane is divided. 
+  ! Data are reshuffled by the fft_scatter_tg routine so that each of the 
+  ! dfft%nproc2 subgroups (made by dfft%nproc3 procs) deals with whole planes 
   ! of a single wavefunciton.
   !
   ! This driver is based on code written by Stefano de Gironcoli for PWSCF.
@@ -855,7 +854,7 @@ SUBROUTINE tg_cft3s_gpu( f_d, dfft, isgn )
   !
   IF ( isgn > 0 ) THEN  ! G -> R
      !CALL nvtxStartRangeAsync("tg_cft3s_gpu G->R", 1)
-     if (isgn==+3) then
+     if (isgn==+3) then 
         call fft_scatter_tg_opt_gpu ( dfft, f_d, aux_d, nnr_, isgn, stream)
         CALL cft_1z_gpu( aux_d, nsticks_z, n3, nx3, isgn, f_d, stream )
      else
@@ -943,10 +942,10 @@ SUBROUTINE many_cft3s_gpu( f_d, dfft, isgn, howmany )
   !! ...              transpose across nodes           (fft_scatter_yz)
   !! ...              fft along z using pencils        (cft_1z)
   !
-  ! If task_group_fft_is_active the FFT acts on a number of wfcs equal to
-  ! dfft%nproc2, the number of Y-sections in which a plane is divided.
-  ! Data are reshuffled by the fft_scatter_tg routine so that each of the
-  ! dfft%nproc2 subgroups (made by dfft%nproc3 procs) deals with whole planes
+  ! If task_group_fft_is_active the FFT acts on a number of wfcs equal to 
+  ! dfft%nproc2, the number of Y-sections in which a plane is divided. 
+  ! Data are reshuffled by the fft_scatter_tg routine so that each of the 
+  ! dfft%nproc2 subgroups (made by dfft%nproc3 procs) deals with whole planes 
   ! of a single wavefunciton.
   !
   ! This driver is based on code written by Stefano de Gironcoli for PWSCF.

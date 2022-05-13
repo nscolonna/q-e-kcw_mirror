@@ -454,9 +454,9 @@ program test_fwinv_gpu
       !$omp target enter data map(alloc:data_in_d)
       CALL fill_random(data_in, data_in_d, dfft%nnr_tg)
       !
-      CALL fwfft( 3 , data_in, dfft, 1 )
+      CALL fwfft( 'tgWave' , data_in, dfft, 1 )
       !$omp dispatch
-      CALL fwfft( 3 , data_in_d, dfft, 1 )
+      CALL fwfft( 'tgWave' , data_in_d, dfft, 1 )
     ELSE
       ! Allocate variables and fill realspace data with random numbers
       ALLOCATE(data_in(dfft%nnr))
@@ -467,9 +467,9 @@ program test_fwinv_gpu
       !$omp target enter data map(alloc:data_in_d)
       CALL fill_random(data_in, data_in_d, dfft%nnr)
       !
-      CALL fwfft( 2 , data_in, dfft, 1 )
+      CALL fwfft( 'Wave' , data_in, dfft, 1 )
       !$omp dispatch
-      CALL fwfft( 2 , data_in_d, dfft, 1 )
+      CALL fwfft( 'Wave' , data_in_d, dfft, 1 )
     ENDIF
     ! data from GPU is moved to an auxiliary array to compare the results of the GPU
     ! and the CPU implementation on the host
@@ -508,9 +508,9 @@ program test_fwinv_gpu
     !$omp target enter data map(alloc:data_in_d)
     CALL fill_random(data_in, data_in_d, dfft%nnr)
     !
-    CALL fwfft( 1 , data_in, dfft, 1 )
+    CALL fwfft( 'Rho' , data_in, dfft, 1 )
     !$omp dispatch
-    CALL fwfft( 1 , data_in_d, dfft, 1 )
+    CALL fwfft( 'Rho' , data_in_d, dfft, 1 )
 #if !defined(__OPENMP_GPU)
     aux = data_in_d
 #endif
@@ -584,9 +584,9 @@ program test_fwinv_gpu
       !
       CALL fill_random(data_in, data_in_d, dfft%nnr_tg)
       !
-      CALL invfft( 3 , data_in, dfft, 1 )
+      CALL invfft( 'tgWave' , data_in, dfft, 1 )
       !$omp dispatch
-      CALL invfft( 3 , data_in_d, dfft, 1 )
+      CALL invfft( 'tgWave' , data_in_d, dfft, 1 )
     ELSE
       !
       ALLOCATE(data_in(dfft%nnr))
@@ -618,9 +618,9 @@ program test_fwinv_gpu
       !$omp target update to(data_in_d)
 #endif
       !
-      CALL invfft( 2 , data_in, dfft, 1 )
+      CALL invfft( 'Wave' , data_in, dfft, 1 )
       !$omp dispatch
-      CALL invfft( 2 , data_in_d, dfft, 1 )
+      CALL invfft( 'Wave' , data_in_d, dfft, 1 )
     ENDIF
 #if !defined(__OPENMP_GPU)
     aux = data_in_d
@@ -669,9 +669,9 @@ program test_fwinv_gpu
     !$omp target update to(data_in_d)
 #endif
     !
-    CALL invfft( 1 , data_in, dfft, 1 )
+    CALL invfft( 'Rho' , data_in, dfft, 1 )
     !$omp dispatch
-    CALL invfft( 1 , data_in_d, dfft, 1 )
+    CALL invfft( 'Rho' , data_in_d, dfft, 1 )
 #if !defined(__OPENMP_GPU)
     aux = data_in_d
 #endif
@@ -735,12 +735,12 @@ program test_fwinv_gpu
       CALL fill_random(data_in, data_in_d, dfft%nnr*howmany)
       !
       !$omp dispatch
-      CALL fwfft( 2 , data_in_d, dfft, howmany=howmany)
+      CALL fwfft( 'Wave' , data_in_d, dfft, howmany=howmany)
       !
       !$omp target exit data map(from:data_in_d)
       DO i=0,howmany-1
         start = i*dfft%nnr
-        CALL fwfft( 2 , data_in(1+start:), dfft, 1 )
+        CALL fwfft( 'Wave' , data_in(1+start:), dfft, 1 )
 #if !defined(__OPENMP_GPU)
         aux(1:dfft%nnr) = data_in_d(start+1:start+dfft%nnr)
 #endif
@@ -777,7 +777,7 @@ program test_fwinv_gpu
     CALL fill_random(data_in, data_in_d, dfft%nnr*howmany)
     !
     !$omp dispatch
-    CALL fwfft( 1 , data_in_d, dfft,  howmany)
+    CALL fwfft( 'Rho' , data_in_d, dfft,  howmany)
     !
     !$omp target exit data map(from:data_in_d)
     !
@@ -786,7 +786,7 @@ program test_fwinv_gpu
       start = i*dfft%nnr
       !
       ! This will FFT the content of data_in starting from start+1 and for nnr elements
-      CALL fwfft( 1 , data_in(1+start:), dfft, 1 )
+      CALL fwfft( 'Rho' , data_in(1+start:), dfft, 1 )
 #if !defined(__OPENMP_GPU)
       aux(1:dfft%nnr) = data_in_d(start+1:start+dfft%nnr)
 #endif
@@ -882,11 +882,11 @@ program test_fwinv_gpu
 #endif
       !
       !$omp dispatch
-      CALL invfft( 2 , data_in_d, dfft, howmany=howmany ) !, stream=strm )
+      CALL invfft( 'Wave' , data_in_d, dfft, howmany=howmany ) !, stream=strm )
       !$omp target exit data map(from:data_in_d)
       DO i=0,howmany-1
         start = i*dfft%nnr
-        CALL invfft( 2 , data_in(1+start:), dfft, 1 )
+        CALL invfft( 'Wave' , data_in(1+start:), dfft, 1 )
 #if !defined(__OPENMP_GPU)
         aux(start+1:start+dfft%nnr) = data_in_d(start+1:start+dfft%nnr)
         ! Check
@@ -944,12 +944,12 @@ program test_fwinv_gpu
 
     !
     !$omp dispatch
-    CALL invfft( 1 , data_in_d, dfft, howmany )
+    CALL invfft( 'Rho' , data_in_d, dfft, howmany )
     !$omp target exit data map(from:data_in_d)
     !
     DO i=0,howmany-1
       start = i*dfft%nnr
-      CALL invfft( 1 , data_in(1+start:), dfft, 1 )
+      CALL invfft( 'Rho' , data_in(1+start:), dfft, 1 )
 #if !defined(__OPENMP_GPU)
       aux(1:dfft%nnr) = data_in_d(start+1:start+dfft%nnr)
       ! Check
