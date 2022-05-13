@@ -13,6 +13,8 @@
 !----------------------------------------------------------------------
 
 #if defined(__CUDA)
+MODULE fft_scatter_omp
+END MODULE fft_scatter_omp
 
 #define __NON_BLOCKING_SCATTER
 
@@ -1048,6 +1050,8 @@ END MODULE fft_scatter_gpu
 ! defined (__CUDA)
 
 #elif defined(__OPENMP_GPU)
+MODULE fft_scatter_gpu
+END MODULE fft_scatter_gpu
 
 #define __NON_BLOCKING_SCATTER
 
