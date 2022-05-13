@@ -15,8 +15,8 @@ all: common $(EXECS)
 common: sort.o tester.o utils.o recips.o
 
 %.x: %.o
-	#$(LD) $(LDFLAGS) $(CUDA_LIBS) $< utils.o tester.o sort.o recips.o -o $@ ../src/libqefft.a $(FFT_LIBS) $(BLAS_LIBS) $(MPI_LIBS) $(LD_LIBS)
-	$(LD) $(LDFLAGS) $< utils.o tester.o sort.o recips.o -o $@ ../src/libqefft.a $(FFT_LIBS) $(BLAS_LIBS) $(MPI_LIBS) $(LD_LIBS)
+	$(LD) $(LDFLAGS) -Mcudalib=cufft $< utils.o tester.o sort.o recips.o -o $@ ../src/libqefft.a $(FFT_LIBS) $(BLAS_LIBS) $(MPI_LIBS) $(LD_LIBS)
+	#$(LD) $(LDFLAGS) $< utils.o tester.o sort.o recips.o -o $@ ../src/libqefft.a $(FFT_LIBS) $(BLAS_LIBS) $(MPI_LIBS) $(LD_LIBS)
 
 test : fft_test.o ../src/libqefft.a
 	$(LD) $(LDFLAGS) -o fft_test.x fft_test.o ../src/libqefft.a $(FFT_LIBS) $(BLAS_LIBS) $(MPI_LIBS) $(LD_LIBS)
