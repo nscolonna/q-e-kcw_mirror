@@ -43,7 +43,7 @@ SUBROUTINE clean_pw( lflag )
   USE m_gth,                ONLY : deallocate_gth
   USE ldaU,                 ONLY : deallocate_hubbard
   USE extfield,             ONLY : forcefield, forcegate
-  USE fft_base,             ONLY : dfftp, dffts  
+  USE fft_base,             ONLY : dfftp, dffts
   USE fft_base,             ONLY : pstickdealloc
   USE fft_types,            ONLY : fft_type_deallocate
   USE noncollin_module,     ONLY : deallocate_noncol
@@ -60,7 +60,7 @@ SUBROUTINE clean_pw( lflag )
   USE pseudo_types,         ONLY : deallocate_pseudo_upf
   USE bp,                   ONLY : deallocate_bp_efield
   USE exx,                  ONLY : deallocate_exx
-  USE Coul_cut_2D,          ONLY : cutoff_2D, lr_Vloc 
+  USE Coul_cut_2D,          ONLY : cutoff_2D, lr_Vloc
   !
   USE control_flags,        ONLY : ts_vdw, mbd_vdw
   USE tsvdw_module,         ONLY : tsvdw_finalize
@@ -137,6 +137,7 @@ SUBROUTINE clean_pw( lflag )
   IF ( ALLOCATED( vltot  ) )     DEALLOCATE( vltot  )
   IF ( ALLOCATED( rho_core  ) )  DEALLOCATE( rho_core  )
   IF ( ALLOCATED( rhog_core ) )  DEALLOCATE( rhog_core )
+  !$omp target exit data map(delete:psic)
   IF ( ALLOCATED( psic    ) )    DEALLOCATE( psic    )
   IF ( ALLOCATED( psic_nc ) )    DEALLOCATE( psic_nc )
   IF ( ALLOCATED( vrs     ) )    DEALLOCATE( vrs     )
@@ -152,9 +153,9 @@ SUBROUTINE clean_pw( lflag )
   ! ... arrays allocated in allocate_nlpot.f90 ( and never deallocated )
   !
   CALL deallocate_uspp_data()
-  CALL deallocate_uspp() 
+  CALL deallocate_uspp()
   !
-  CALL deallocate_gth( lflag ) 
+  CALL deallocate_gth( lflag )
   CALL deallocate_noncol()
   CALL deallocate_igk()
   !
@@ -173,7 +174,7 @@ SUBROUTINE clean_pw( lflag )
   !
   CALL deallocate_wavefunctions_gpu()
   !
-  ! ... fft structures allocated in data_structure.f90  
+  ! ... fft structures allocated in data_structure.f90
   !
   ! UGLY HACK WARNING: unlike previous versions, fft_type_deallocate
   ! removes all information about FFT grids, including FFT dimensions.
@@ -209,7 +210,7 @@ SUBROUTINE clean_pw( lflag )
   ! for Wannier_ac
   IF (use_wannier) CALL wannier_clean()
   !
-  CALL deallocate_exx() 
+  CALL deallocate_exx()
   !
   IF (ts_vdw .or. mbd_vdw) CALL tsvdw_finalize()
   IF (mbd_vdw) CALL clean_mbd()
