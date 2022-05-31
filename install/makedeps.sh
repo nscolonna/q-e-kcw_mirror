@@ -118,7 +118,8 @@ for dir in $dirs; do
              device_fbuff_m device_memcpy_m device_auxfunc_m\
 	     onemkl_blas_omp_offload_ilp64 onemkl_lapack_omp_offload_ilp64 \
 	     onemkl_blas_omp_offload_lp64  onemkl_lapack_omp_offload_lp64 \
-	     mkl_dfti_omp_offload devxlib_buffers"
+	     mkl_dfti_omp_offload devxlib_buffers \
+             hipfort hipfort_check hipfort_hipfft "
 
     # list of all cuda-related modules
     cudadeps="cublas cudafor curand cufft flops_tracker cusolverdn \
