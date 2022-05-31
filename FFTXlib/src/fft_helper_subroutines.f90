@@ -331,7 +331,7 @@ CONTAINS
            psi( nl_d( ig ) ) = c( ig )
         end do
      END IF
-     endassociate
+     end associate
   END SUBROUTINE
 #endif
 
@@ -352,7 +352,7 @@ CONTAINS
      complex(DP), parameter :: ci=(0.0d0,1.0d0)
      integer :: ig
      !
-#ifdef __OPENMP_GPU
+#ifdef __DFTI
      !$omp declare variant (c2psi_gamma_gpu) match( construct={dispatch} )
 #endif
      !
@@ -555,7 +555,11 @@ CONTAINS
      attributes(DEVICE) :: nl_d, nlm_d
 #endif
      !$acc data deviceptr( vout1_d(:), vout2_d(:), vin_d(:) )
+#if defined(__DFTI)
      !$omp target data use_device_ptr( vout1_d(:), vout2_d(:), vin_d(:) )
+#elif defined(__HIP)
+     !$omp target data use_device_ptr( vout1_d, vout2_d, vin_d )
+#endif
 #if !defined(__OPENMP_GPU)
      nl_d  => desc%nl_d
      nlm_d => desc%nlm_d

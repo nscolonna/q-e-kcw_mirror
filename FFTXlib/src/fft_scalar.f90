@@ -38,6 +38,8 @@
 #endif
 #if defined(__CUDA)
      USE fft_scalar_cuFFT
+#elif defined(__HIP)
+     USE fft_scalar_hipfft
 #endif
      IMPLICIT NONE
      SAVE
