@@ -38,8 +38,12 @@
 #endif
 #if defined(__CUDA)
      USE fft_scalar_cuFFT
-#elif defined(__OPENMP_GPU)
+#elif defined(__OPENMP_GPU) && defined(__ONEMKL)
      USE fft_scalar_dfti_omp
+#elif defined(__OPENMP_GPU) && defined(__HIP)
+     USE fft_scalar_hipfft
+#elif defined(__OPENMP_GPU) 
+#error No fft_scalar backend selected for __OPENMP_GPU!
 #endif
      IMPLICIT NONE
      SAVE
