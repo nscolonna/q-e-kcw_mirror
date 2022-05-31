@@ -12,6 +12,7 @@ fft_fwinv.o  \
 fft_scalar.o  \
 fft_scalar.DFTI.o  \
 fft_scalar.DFTIOMP.o  \
+fft_scalar.hipFFT.o  \
 fft_scalar.ESSL.o  \
 fft_scalar.FFTW.o  \
 fft_scatter.o  \
@@ -45,7 +46,8 @@ libqefft.a: 	$(FFTX)
 	$(AR) $(ARFLAGS) $@ $?       
 	$(RANLIB) $@    
 
-fft_scalar.o : fft_scalar.f90  fft_scalar.FFTW3.f90  fft_scalar.FFTW.f90  fft_scalar.SX6.f90 fft_scalar.DFTI.f90  fft_scalar.ESSL.f90
+fft_scalar.o : fft_scalar.f90  fft_scalar.FFTW3.f90  fft_scalar.FFTW.f90  fft_scalar.SX6.f90 \
+               fft_scalar.DFTI.f90  fft_scalar.ESSL.f90 fft_scalar.DFTIOMP.f90 fft_scalar.hipFFT.f90
 
 
 fft_stick.o : fft_stick.c fftw_sp.h fftw_dp.h

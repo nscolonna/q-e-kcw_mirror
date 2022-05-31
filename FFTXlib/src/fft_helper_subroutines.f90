@@ -340,7 +340,7 @@ CONTAINS
            psi( nl_d( ig ) ) = c( ig )
         end do
      END IF
-     endassociate
+     end associate
   END SUBROUTINE
 #endif
 
@@ -587,7 +587,7 @@ CONTAINS
      complex(DP), INTENT(IN) :: vin_d(:)
      COMPLEX(DP) :: fp, fm
      INTEGER :: ig
-     !$omp target data use_device_ptr( vout1_d(:), vout2_d(:), vin_d(:) )
+     !$omp target data use_device_ptr( vout1_d, vout2_d, vin_d )
      IF( PRESENT( vout2_d ) ) THEN
         !$omp target teams loop
         DO ig=1,desc%ngm

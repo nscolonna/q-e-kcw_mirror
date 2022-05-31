@@ -319,10 +319,15 @@ CONTAINS
     ALLOCATE( desc%tg_rdsp( desc%nproc2) ) ; desc%tg_rdsp = 0
 
 #if defined (__OPENMP_GPU)
-    !$omp target enter data map(alloc:desc%nsp, desc%nsw)
+    !$omp target enter data map(alloc:desc%nsp)
+    !$omp target enter data map(alloc:desc%nsw)
     !$omp target enter data map(alloc:desc%ismap)
-    !$omp target enter data map(alloc:desc%ir1p, desc%ir1w, desc%ir1w_tg)
-    !$omp target enter data map(alloc:desc%indp, desc%indw, desc%indw_tg)
+    !$omp target enter data map(alloc:desc%ir1p)
+    !$omp target enter data map(alloc:desc%ir1w)
+    !$omp target enter data map(alloc:desc%ir1w_tg)
+    !$omp target enter data map(alloc:desc%indp)
+    !$omp target enter data map(alloc:desc%indw)
+    !$omp target enter data map(alloc:desc%indw_tg)
 
     nsubbatches = ceiling(real(desc%batchsize)/desc%subbatchsize)
     ALLOCATE( desc%srh(2*nproc, nsubbatches))
@@ -378,10 +383,15 @@ CONTAINS
     INTEGER :: i, ierr, nsubbatches
      !write (6,*) ' inside fft_type_deallocate' ; FLUSH(6)
 #if defined(__OPENMP_GPU)
-    !$omp target exit data map(delete:desc%nsp, desc%nsw)
+    !$omp target exit data map(delete:desc%nsp)
+    !$omp target exit data map(delete:desc%nsw)
     !$omp target exit data map(delete:desc%ismap)
-    !$omp target exit data map(delete:desc%ir1p, desc%ir1w, desc%ir1w_tg)
-    !$omp target exit data map(delete:desc%indp, desc%indw, desc%indw_tg)
+    !$omp target exit data map(delete:desc%ir1p)
+    !$omp target exit data map(delete:desc%ir1w)
+    !$omp target exit data map(delete:desc%ir1w_tg)
+    !$omp target exit data map(delete:desc%indp)
+    !$omp target exit data map(delete:desc%indw)
+    !$omp target exit data map(delete:desc%indw_tg)
     !$omp target exit data map(delete:desc%aux)
     !$omp target exit data map(delete:desc%srh)
 #endif

@@ -1319,11 +1319,11 @@ SUBROUTINE fft_scatter_xy_omp ( desc, f_in, f_aux, nxx_, isgn )
 
   ENDIF
   !
+  !$omp end target data
   if ( abs (isgn) == 3 ) then     ! It's a wavefunction FFT with task group
      deallocate(nr1p_, indx)
   endif
   CALL stop_clock ('fft_scatt_xy')
-  !$omp end target data
 
 #endif
 

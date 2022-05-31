@@ -27,7 +27,11 @@ SUBROUTINE invfft_y_omp( fft_kind, f, dfft, howmany )
   !!   No check is performed on the correspondence between dfft and fft_kind. 
   !!   from all other cases
 
+#if defined(__ONEMKL)
   USE fft_scalar_dfti_omp, ONLY : cfft3d_omp, cfft3ds_omp
+#elif defined(__HIP)
+  USE fft_scalar_hipfft,   ONLY : cfft3d_omp, cfft3ds_omp
+#endif
   USE fft_parallel,    ONLY : tg_cft3s_omp, many_cft3s_omp
   USE fft_parallel_2d, ONLY : tg_cft3s_2d_omp   => tg_cft3s_omp,  &
                               many_cft3s_2d_omp => many_cft3s_omp
@@ -130,7 +134,11 @@ SUBROUTINE fwfft_y_omp( fft_kind, f, dfft, howmany )
   !!   On output, f is overwritten
   !! 
 
+#if defined(__ONEMKL)
   USE fft_scalar_dfti_omp, ONLY : cfft3d_omp, cfft3ds_omp
+#elif defined(__HIP)
+  USE fft_scalar_hipfft,   ONLY : cfft3d_omp, cfft3ds_omp
+#endif
   USE fft_parallel,    ONLY : tg_cft3s_omp, many_cft3s_omp
   USE fft_parallel_2d, ONLY : tg_cft3s_2d_omp   => tg_cft3s_omp,  &
                               many_cft3s_2d_omp => many_cft3s_omp
