@@ -6,8 +6,12 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-#if defined(__USE_DISPATCH) && !defined(__OPENMP_GPU)
+#if   !defined(__OPENMP_GPU) &&  defined(__USE_DISPATCH) 
 #error __USE_DISPATCH can be only used with OpenMP offload (__OPENMP_GPU)
+#elif  defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
+#define TARGET_ATTRIBUTE , target
+#else
+#define TARGET_ATTRIBUTE 
 #endif 
 
 #if defined(__OPENMP_GPU)
@@ -265,7 +269,7 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
 
   TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft
   CHARACTER(LEN=*), INTENT(IN) :: fft_kind
-  COMPLEX(DP) :: f(:)
+  COMPLEX(DP) TARGET_ATTRIBUTE :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
@@ -380,7 +384,7 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
 
   TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft
   CHARACTER(LEN=*), INTENT(IN) :: fft_kind
-  COMPLEX(DP) :: f(:)
+  COMPLEX(DP) TARGET_ATTRIBUTE :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
