@@ -6,6 +6,10 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
+#if defined(__USE_DISPATCH) && !defined(__OPENMP_GPU)
+#error __USE_DISPATCH can be only used with OpenMP offload (__OPENMP_GPU)
+#endif 
+
 #if defined(__OPENMP_GPU)
 !!=---------------------------------------------------------------------------=!
 SUBROUTINE invfft_y_omp( fft_kind, f, dfft, howmany )
@@ -251,6 +255,11 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   USE fft_parallel_2d,  ONLY: tg_cft3s_2d => tg_cft3s
   USE fft_types,     ONLY: fft_type_descriptor
   USE fft_param,     ONLY: DP
+#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
+  USE fft_interfaces,  ONLY: invfft_y_omp
+  USE omp_lib,         ONLY: omp_target_is_present, omp_get_default_device
+  USE iso_c_binding,   ONLY: c_loc
+#endif
 
   IMPLICIT NONE
 
@@ -260,6 +269,13 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
+
+#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
+  IF (OMP_TARGET_IS_PRESENT(c_loc(f), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+      CALL invfft_y_omp(fft_kind, f, dfft, howmany)
+      RETURN
+  ENDIF
+#endif
 
   IF(PRESENT(howmany) ) THEN
      howmany_ = howmany
@@ -354,6 +370,11 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   USE fft_parallel_2d,  ONLY: tg_cft3s_2d => tg_cft3s
   USE fft_types,     ONLY: fft_type_descriptor
   USE fft_param,     ONLY: DP
+#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
+  USE fft_interfaces,  ONLY: fwfft_y_omp
+  USE omp_lib,         ONLY: omp_target_is_present, omp_get_default_device
+  USE iso_c_binding,   ONLY: c_loc
+#endif
 
   IMPLICIT NONE
 
@@ -363,6 +384,13 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
+
+#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
+  IF (OMP_TARGET_IS_PRESENT(c_loc(f), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+      CALL fwfft_y_omp(fft_kind, f, dfft, howmany)
+      RETURN
+  ENDIF
+#endif
 
   IF(PRESENT(howmany) ) THEN
      howmany_ = howmany

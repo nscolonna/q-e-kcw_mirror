@@ -357,7 +357,7 @@ CONTAINS
      complex(DP), parameter :: ci=(0.0d0,1.0d0)
      integer :: ig
      !
-#if defined (__OPENMP_GPU)
+#if defined (__USE_DISPATCH)
      !$omp declare variant (c2psi_gamma_omp) match( construct={dispatch} )
 #endif
      !
