@@ -31,7 +31,7 @@ SUBROUTINE sum_band()
   USE uspp,                 ONLY : nkb, vkb, becsum, ebecsum, nhtol, nhtoj, indv, okvan, &
                                    becsum_d, ebecsum_d
   USE uspp_param,           ONLY : nh, nhm
-  USE wavefunctions,        ONLY : evc, psic, psic_nc
+  USE wavefunctions,        ONLY : evc, psic, psic_omp, psic_nc
   USE noncollin_module,     ONLY : noncolin, npol, nspin_mag, domag
   USE wvfct,                ONLY : nbnd, npwx, wg, et, btype
   USE mp_pools,             ONLY : inter_pool_comm
@@ -173,15 +173,15 @@ SUBROUTINE sum_band()
   ! ... bring the unsymmetrized rho(r) to G-space (use psic as work array)
   !
   DO is = 1, nspin
-     psic(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
-     psic(dffts%nnr+1:) = 0.0_dp
-     !$omp target update to(psic)
+     psic_omp(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
+     psic_omp(dffts%nnr+1:) = 0.0_dp
+     !$omp target update to(psic_omp)
 #if defined(__USE_DISPATCH)
      !$omp dispatch
 #endif
-     CALL fwfft ('Rho', psic, dffts)
-     !$omp target update from(psic)
-     rho%of_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
+     CALL fwfft ('Rho', psic_omp, dffts)
+     !$omp target update from(psic_omp)
+     rho%of_g(1:dffts%ngm,is) = psic_omp(dffts%nl(1:dffts%ngm))
      rho%of_g(dffts%ngm+1:,is) = (0.0_dp,0.0_dp)
   END DO
 
@@ -227,16 +227,16 @@ SUBROUTINE sum_band()
   ! ... synchronize rho%of_r to the calculated rho%of_g (use psic as work array)
   !
   DO is = 1, nspin_mag
-     psic(:) = ( 0.D0, 0.D0 )
-     psic(dfftp%nl(:)) = rho%of_g(:,is)
-     IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho%of_g(:,is) )
-     !$omp target update to(psic)
+     psic_omp(:) = ( 0.D0, 0.D0 )
+     psic_omp(dfftp%nl(:)) = rho%of_g(:,is)
+     IF ( gamma_only ) psic_omp(dfftp%nlm(:)) = CONJG( rho%of_g(:,is) )
+     !$omp target update to(psic_omp)
 #if defined(__USE_DISPATCH)
      !$omp dispatch
 #endif
-     CALL invfft ('Rho', psic, dfftp)
-     !$omp target update from(psic)
-     rho%of_r(:,is) = psic(:)
+     CALL invfft ('Rho', psic_omp, dfftp)
+     !$omp target update from(psic_omp)
+     rho%of_r(:,is) = psic_omp(:)
   END DO
   !
   ! ... rho_kin(r): sum over bands, k-points, bring to G-space, symmetrize,

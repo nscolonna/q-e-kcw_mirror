@@ -37,6 +37,8 @@
      !
      COMPLEX(DP) , ALLOCATABLE, TARGET :: psic(:)
      !! additional memory for FFT
+     COMPLEX(DP) , ALLOCATABLE, TARGET :: psic_omp(:)
+     !! additional memory for FFT (mapped when OMP offload is active)
      COMPLEX(DP) , ALLOCATABLE, TARGET :: psic_nc(:,:)
      !! additional memory for FFT for the noncolinear case
      !

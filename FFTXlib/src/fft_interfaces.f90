@@ -14,7 +14,7 @@ MODULE fft_interfaces
 
 
   PUBLIC :: fwfft, invfft, fft_interpolate
-#if defined(__OPENMP_GPU)
+#if defined(__OPENMP_GPU) 
   PUBLIC :: invfft_y_omp, fwfft_y_omp
 
   INTERFACE

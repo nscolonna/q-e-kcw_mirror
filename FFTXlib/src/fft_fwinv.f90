@@ -274,19 +274,19 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
 
-#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
-  IF (OMP_TARGET_IS_PRESENT(c_loc(f), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
-      CALL invfft_y_omp(fft_kind, f, dfft, howmany)
-      RETURN
-  ENDIF
-#endif
-
   IF(PRESENT(howmany) ) THEN
      howmany_ = howmany
   ELSE
      howmany_ = 1
   END IF
   !
+#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
+  IF (OMP_TARGET_IS_PRESENT(c_loc(f), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+      CALL invfft_y_omp(fft_kind, f, dfft, howmany_)
+      RETURN
+  ENDIF
+#endif
+  
   IF( fft_kind == 'Rho' ) THEN
      clock_label = dfft%rho_clock_label
   ELSE IF( fft_kind == 'Wave' .OR. fft_kind == 'tgWave' ) THEN
@@ -389,18 +389,18 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
 
-#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
-  IF (OMP_TARGET_IS_PRESENT(c_loc(f), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
-      CALL fwfft_y_omp(fft_kind, f, dfft, howmany)
-      RETURN
-  ENDIF
-#endif
-
   IF(PRESENT(howmany) ) THEN
      howmany_ = howmany
   ELSE
      howmany_ = 1
   END IF
+
+#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
+  IF (OMP_TARGET_IS_PRESENT(c_loc(f), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
+      CALL fwfft_y_omp(fft_kind, f, dfft, howmany_)
+      RETURN
+  ENDIF
+#endif
 
   IF( fft_kind == 'Rho' ) THEN
      clock_label = dfft%rho_clock_label

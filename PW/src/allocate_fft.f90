@@ -24,7 +24,7 @@ SUBROUTINE allocate_fft
                                kedtau, create_scf_type
   USE control_flags,    ONLY : gamma_only
   USE noncollin_module, ONLY : pointlist, factlist, report, noncolin, npol
-  USE wavefunctions,    ONLY : psic, psic_nc
+  USE wavefunctions,    ONLY : psic, psic_omp, psic_nc
   USE xc_lib,           ONLY : xclib_dft_is
   !
   USE scf_gpum,  ONLY : using_vrs
@@ -70,7 +70,8 @@ SUBROUTINE allocate_fft
   ENDIF
   ALLOCATE( rhog_core(ngm)  )
   ALLOCATE( psic(dfftp%nnr) )
-  !$omp target enter data map(alloc:psic)
+  ALLOCATE( psic_omp(dfftp%nnr) )
+  !$omp target enter data map(alloc:psic_omp)
   ALLOCATE( vrs(dfftp%nnr,nspin) )
 #if defined(__CUDA)
   CALL using_vrs(2)

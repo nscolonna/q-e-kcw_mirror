@@ -36,7 +36,7 @@ SUBROUTINE clean_pw( lflag )
                                    vrs, kedtau, destroy_scf_type, vnew
   USE symm_base,            ONLY : irt
   USE symme,                ONLY : sym_rho_deallocate
-  USE wavefunctions,        ONLY : evc, psic, psic_nc
+  USE wavefunctions,        ONLY : evc, psic, psic_omp, psic_nc
   USE uspp,                 ONLY : deallocate_uspp
   USE uspp_data,            ONLY : deallocate_uspp_data
   USE uspp_param,           ONLY : upf
@@ -137,7 +137,8 @@ SUBROUTINE clean_pw( lflag )
   IF ( ALLOCATED( vltot  ) )     DEALLOCATE( vltot  )
   IF ( ALLOCATED( rho_core  ) )  DEALLOCATE( rho_core  )
   IF ( ALLOCATED( rhog_core ) )  DEALLOCATE( rhog_core )
-  !$omp target exit data map(delete:psic)
+  !$omp target exit data map(delete:psic_omp)
+  IF ( ALLOCATED( psic_omp) )    DEALLOCATE( psic_omp)
   IF ( ALLOCATED( psic    ) )    DEALLOCATE( psic    )
   IF ( ALLOCATED( psic_nc ) )    DEALLOCATE( psic_nc )
   IF ( ALLOCATED( vrs     ) )    DEALLOCATE( vrs     )
