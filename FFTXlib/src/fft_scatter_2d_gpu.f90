@@ -19,7 +19,6 @@
         USE fft_types, ONLY: fft_type_descriptor
         USE fft_param
 
-
         USE cudafor
 
         IMPLICIT NONE
@@ -59,7 +58,6 @@ SUBROUTINE fft_scatter_gpu ( dfft, f_in_d, f_in, nr3x, nxx_, f_aux_d, f_aux, ncp
   !
   INTEGER :: iter, dest, sorc
   INTEGER :: istatus(MPI_STATUS_SIZE)
-
 
   p_ismap_d => dfft%ismap_d
   !
@@ -124,7 +122,6 @@ SUBROUTINE fft_scatter_gpu ( dfft, f_in_d, f_in, nr3x, nxx_, f_aux_d, f_aux, ncp
      ! step two: communication
      !
      gcomm = dfft%comm
-
 
      CALL start_clock ('a2a_fw')
 #ifdef __GPU_MPI
@@ -626,7 +623,6 @@ SUBROUTINE fft_scatter_gpu_batch ( dfft, f_in_d, f_in, nr3x, nxx_, f_aux_d, f_au
      ! CALL mpi_barrier (gcomm, ierr)  ! why barrier? for buggy openmpi over ib
      CALL start_clock ('a2a_bw')
 
-
      istat = cudaDeviceSynchronize()
      DO iter = 2, nprocp
         IF(IAND(nprocp, nprocp-1) == 0) THEN
@@ -809,7 +805,6 @@ SUBROUTINE fft_scatter_many_columns_to_planes_store ( dfft, f_in_d, f_in, nr3x, 
   RETURN
 
 END SUBROUTINE fft_scatter_many_columns_to_planes_store
-
 
 SUBROUTINE fft_scatter_many_columns_to_planes_send ( dfft, f_in_d, f_in, nr3x, nxx_, f_aux_d, f_aux, f_aux2_d, f_aux2, ncp_, npp_, isgn, batchsize, batch_id )
    !
@@ -1148,7 +1143,6 @@ SUBROUTINE fft_scatter_many_planes_to_columns_store ( dfft, f_in_d, f_in, nr3x, 
    ENDDO
 #endif
 
-
 #ifdef __GPU_MPI
    istat = cudaEventRecord( dfft%bevents(batch_id), dfft%a2a_comp )
 #else
@@ -1162,7 +1156,6 @@ SUBROUTINE fft_scatter_many_planes_to_columns_store ( dfft, f_in_d, f_in, nr3x, 
   RETURN
 
 END SUBROUTINE fft_scatter_many_planes_to_columns_store
-
 
 SUBROUTINE fft_scatter_many_planes_to_columns_send ( dfft, f_in_d, f_in, nr3x, nxx_, f_aux_d, f_aux, f_aux2_d, f_aux2, ncp_, npp_, isgn, batchsize, batch_id )
    !
@@ -1417,11 +1410,10 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
      ! step one: store contiguously the slices
      !
      offset = 0
-!$omp taskgroup
      DO gproc = 1, nprocp
         kdest = ( gproc - 1 ) * sendsiz
         kfrom = offset
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
         DO k = 1, ncp_ (me)
            DO i = 1, npp_ ( gproc )
              f_aux( kdest + i + (k-1)*nppx ) = f_in( kfrom + i + (k-1)*nr3x )
@@ -1430,7 +1422,6 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
 !$omp end target teams distribute parallel do
         offset = offset + npp_ ( gproc )
      ENDDO
-!$omp end taskgroup
 
 #ifndef __GPU_MPI
 !$omp target update from (f_aux)
@@ -1479,15 +1470,11 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
 !$omp end target data
 #else
      CALL mpi_alltoall (f_aux(1), sendsiz, MPI_DOUBLE_COMPLEX, f_in(1), sendsiz, MPI_DOUBLE_COMPLEX, gcomm, ierr)
+     !$omp target update to (f_in(1:sendsiz*nprocp))
 #endif
      CALL stop_clock ('a2a_fw')
 
      IF( abs(ierr) /= 0 ) CALL fftx_error__ ('fft_scatter', 'info<>0', abs(ierr) )
-
-#ifndef __GPU_MPI
-!$omp target update to (f_in(1:sendsiz*nprocp))
-#endif
-
      !
 10   CONTINUE
 
@@ -1500,11 +1487,10 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
      npp = dfft%nr3p( me )
      nnp = dfft%nnp
      IF( isgn == 1 ) THEN
-!$omp taskgroup
         DO ip = 1, nprocp
            ioff = dfft%iss( ip )
            nswip = dfft%nsp( ip )
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
            DO omp_j = 1, npp
               DO omp_i = 1, nswip
                  it = ( ip - 1 ) * sendsiz + (omp_i-1)*nppx
@@ -1514,13 +1500,11 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
            ENDDO
 !$omp end target teams distribute parallel do
         ENDDO
-!$omp end taskgroup
      ELSE
-!$omp taskgroup
         DO ip = 1, nprocp
            ioff = dfft%iss( ip )
            nswip =  dfft%nsw( ip )
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
            DO omp_j = 1, npp
               DO omp_i = 1, nswip
                  it = (omp_i-1) * nppx + ( ip - 1 ) * sendsiz
@@ -1530,7 +1514,6 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
            ENDDO
 !$omp end target teams distribute parallel do
         ENDDO
-!$omp end taskgroup
      END IF
   ELSE
      !
@@ -1539,11 +1522,10 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
      npp = dfft%nr3p( me )
      nnp = dfft%nnp
      IF( isgn == -1 ) THEN
-!$omp taskgroup
         DO ip = 1, nprocp
            ioff = dfft%iss( ip )
            nswip = dfft%nsp( ip )
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
            DO omp_j = 1, npp
               DO omp_i = 1, nswip
                  mc = dfft%ismap( omp_i + ioff )
@@ -1553,13 +1535,11 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
            ENDDO
 !$omp end target teams distribute parallel do
         ENDDO
-!$omp end taskgroup
      ELSE
-!$omp taskgroup
         DO gproc = 1, nprocp
            ioff = dfft%iss( gproc )
            nswip = dfft%nsw( gproc )
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
            DO omp_j = 1, npp
               DO omp_i = 1, nswip
                  mc = dfft%ismap( omp_i + ioff )
@@ -1569,7 +1549,6 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
            ENDDO
 !$omp end target teams distribute parallel do
         ENDDO
-!$omp end taskgroup
      END IF
      !
      IF( nprocp == 1 ) GO TO 20
@@ -1617,6 +1596,7 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
 !$omp end target data
 #else
      CALL mpi_alltoall (f_in(1), sendsiz, MPI_DOUBLE_COMPLEX, f_aux(1), sendsiz, MPI_DOUBLE_COMPLEX, gcomm, ierr)
+     !$omp target update to(f_aux)
 #endif
      CALL stop_clock ('a2a_bw')
      IF( abs(ierr) /= 0 ) CALL fftx_error__ ('fft_scatter', 'info<>0', abs(ierr) )
@@ -1624,11 +1604,10 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
      !  step one: store contiguously the columns
      !
      offset = 0
-!$omp taskgroup
      DO gproc = 1, nprocp
         kdest = ( gproc - 1 ) * sendsiz
         kfrom = offset
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
         DO k = 1, ncp_ (me)
            DO i = 1, npp_ ( gproc )
              f_in( kfrom + i + (k-1)*nr3x ) = f_aux( kdest + i + (k-1)*nppx )
@@ -1637,11 +1616,6 @@ SUBROUTINE fft_scatter_omp ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, isgn )
 !$omp end target teams distribute parallel do
         offset = offset + npp_ ( gproc )
      ENDDO
-!$omp end taskgroup
-
-#ifndef __GPU_MPI
-!$omp target update from (f_in)
-#endif
 
 20   CONTINUE
 
@@ -1697,11 +1671,10 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
      ! step one: store contiguously the slices
      !
      offset = 0
-!$omp taskgroup
      DO gproc = 1, nprocp
         kdest = ( gproc - 1 ) * sendsiz
         kfrom = offset
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
         DO k = 1, batchsize * ncpx
            DO i = 1, npp_ ( gproc )
              f_aux( kdest + i + (k-1)*nppx ) = f_in( kfrom + i + (k-1)*nr3x )
@@ -1710,7 +1683,6 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
 !$omp end target teams distribute parallel do
         offset = offset + npp_ ( gproc )
      ENDDO
-!$omp end taskgroup
 #ifndef __GPU_MPI
 !$omp target update from (f_aux)
 #endif
@@ -1790,11 +1762,10 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
      npp = dfft%nr3p( me )
      nnp = dfft%nnp
      IF( isgn == 1 ) THEN
-!$omp taskgroup
         DO ip = 1, dfft%nproc
            ioff = dfft%iss( ip )
            nswip = dfft%nsp( ip )
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
            DO omp_j = 1, npp
               DO omp_i = 1, nswip
                  it = ( ip - 1 ) * sendsiz + (omp_i-1)*nppx
@@ -1804,13 +1775,11 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
            ENDDO
 !$omp end target teams distribute parallel do
         ENDDO
-!$omp end taskgroup
      ELSE
-!$omp taskgroup
         DO gproc = 1,  dfft%nproc
            ioff = dfft%iss( gproc )
            nswip =  dfft%nsw( gproc )
-!$omp target teams distribute parallel do collapse(3) nowait
+!$omp target teams distribute parallel do collapse(3)
            DO i = 0, batchsize-1
               DO omp_j = 1, npp
                  DO omp_i = 1, nswip
@@ -1822,7 +1791,6 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
            ENDDO
 !$omp end target teams distribute parallel do
         ENDDO
-!$omp end taskgroup
      END IF
   ELSE
      !
@@ -1831,11 +1799,10 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
      npp = dfft%nr3p( me )
      nnp = dfft%nnp
      IF( isgn == -1 ) THEN
-!$omp taskgroup
         DO ip = 1, dfft%nproc
            ioff = dfft%iss( ip )
            nswip = dfft%nsp( ip )
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
            DO omp_j = 1, npp
               DO omp_i = 1, nswip
                  mc = dfft%ismap( omp_i + ioff )
@@ -1845,13 +1812,11 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
            ENDDO
 !$omp end target teams distribute parallel do
         ENDDO
-!$omp end taskgroup
      ELSE
-!$omp taskgroup
         DO ip = 1, dfft%nproc
            ioff = dfft%iss( ip )
            nswip = dfft%nsw( ip )
-!$omp target teams distribute parallel do collapse(3) nowait
+!$omp target teams distribute parallel do collapse(3)
            DO i = 0, batchsize-1
               DO omp_j = 1, npp
                  DO omp_i = 1, nswip
@@ -1863,7 +1828,6 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
            ENDDO
 !$omp end target teams distribute parallel do
         ENDDO
-!$omp end taskgroup
      END IF
      !
      IF( nprocp == 1 ) GO TO 20
@@ -1918,6 +1882,7 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
 !$omp end target data
 #else
      f_aux( (me-1)*sendsiz + 1:me*sendsiz) = f_in((me-1)*sendsiz + 1:me*sendsiz)
+     !$omp target update to(f_aux)
 #endif
 
      call MPI_WAITALL(2*nprocp-2, srh, MPI_STATUSES_IGNORE, ierr)
@@ -1931,11 +1896,10 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
      !
      offset = 0
 
-!$omp taskgroup
      DO gproc = 1, nprocp
         kdest = ( gproc - 1 ) * sendsiz
         kfrom = offset
-!$omp target teams distribute parallel do collapse(2) nowait
+!$omp target teams distribute parallel do collapse(2)
         DO k = 1, batchsize * ncpx
            DO i = 1, npp_ ( gproc )
              f_in( kfrom + i + (k-1)*nr3x ) = f_aux( kdest + i + (k-1)*nppx )
@@ -1944,11 +1908,6 @@ SUBROUTINE fft_scatter_omp_batch ( dfft, f_in, nr3x, nxx_, f_aux, ncp_, npp_, is
 !$omp end target teams distribute parallel do
         offset = offset + npp_ ( gproc )
      ENDDO
-!$omp end taskgroup
-
-#ifndef __GPU_MPI
-!$omp target update to (f_in)
-#endif
 
 20   CONTINUE
 
