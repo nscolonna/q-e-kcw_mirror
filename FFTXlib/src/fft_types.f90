@@ -350,7 +350,7 @@ CONTAINS
     ALLOCATE( desc%ir1w_d( desc%nr1x ) ) ; desc%ir1w_d  = 0
     ALLOCATE( desc%ir1w_tg_d( desc%nr1x ) ) ; desc%ir1w_tg_d  = 0
     ALLOCATE( desc%ismap_d( nx * ny ) ) ; desc%ismap_d = 0
-    
+
     ALLOCATE ( desc%stream_scatter_yz(desc%nproc3) ) ;
     DO iproc = 1, desc%nproc3
         ierr = cudaStreamCreate(desc%stream_scatter_yz(iproc))
@@ -498,13 +498,11 @@ CONTAINS
     IF ( ALLOCATED( desc%nlm_d ) ) DEALLOCATE( desc%nlm_d )
     !
     ! SLAB decomposition
-    IF (desc%a2a_comp /= 0) THEN 
+    IF (desc%a2a_comp /= 0) THEN
       ierr = cudaStreamDestroy( desc%a2a_comp )
       CALL fftx_error__("fft_type_deallocate","failed destroying stream a2a_comp", ierr)
       desc%a2a_comp = 0
-    END IF 
-  
-    
+    END IF
 
     IF ( ALLOCATED(desc%bstreams) ) THEN
         nsubbatches = ceiling(real(desc%batchsize)/desc%subbatchsize)
@@ -523,7 +521,7 @@ CONTAINS
     IF ( ALLOCATED( desc%srh ) )    DEALLOCATE( desc%srh )
 #endif
 
-    desc%comm  = MPI_COMM_NULL 
+    desc%comm  = MPI_COMM_NULL
 #if defined(__MPI)
     IF (desc%comm2 /= MPI_COMM_NULL) CALL MPI_COMM_FREE( desc%comm2, ierr )
     IF (desc%comm3 /= MPI_COMM_NULL) CALL MPI_COMM_FREE( desc%comm3, ierr )
@@ -1011,7 +1009,6 @@ CONTAINS
     desc%nr1w_tg_d(1) = desc%nr1w_tg
 
 #endif
-    IF (nmany > 1) ALLOCATE(desc%aux(nmany * desc%nnr))
 
     RETURN
 
