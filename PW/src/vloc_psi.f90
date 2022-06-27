@@ -14,7 +14,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
   USE parallel_include
   USE kinds,                   ONLY : DP
   USE mp_bands,                ONLY : me_bgrp
-  USE fft_base,                ONLY : dffts
+  USE fft_base,                ONLY : dffts, dfftp
   USE fft_interfaces,          ONLY : fwfft, invfft
   USE wavefunctions,           ONLY : psic, psic_omp
   USE fft_helper_subroutines,  ONLY : fftx_ntgrp, tg_get_nnr, &
@@ -40,12 +40,13 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
   INTEGER :: ibnd, j, incr
   INTEGER :: right_nnr, right_nr3, right_inc
   COMPLEX(DP) :: fp, fm
+  INTEGER, ALLOCATABLE :: dffts_nl(:), dffts_nlm(:)
   !
   !Variables for task groups
   LOGICAL :: use_tg
   REAL(DP), ALLOCATABLE :: tg_v(:)
   COMPLEX(DP), ALLOCATABLE :: tg_psic(:)
-  INTEGER :: v_siz, idx, ioff
+  INTEGER :: v_siz, v_siz_p, idx, ioff
   !
   CALL start_clock ('vloc_psi')
   incr = 2
@@ -64,6 +65,19 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      CALL stop_clock ('vloc_psi:tg_gather')
      !
      incr = 2 * fftx_ntgrp(dffts)
+     !
+  ELSE
+     !
+     ALLOCATE(dffts_nl(1:dffts%ngm))
+     ALLOCATE(dffts_nlm(1:dffts%ngm))
+     !
+     dffts_nl = dffts%nl
+     dffts_nlm = dffts%nlm
+     v_siz = dffts%nnr
+     v_siz_p = dfftp%nnr
+#if defined (__OPENMP_GPU) 
+     !$omp target enter data map(to: dffts_nl, dffts_nlm, v, psi, hpsi)
+#endif
      !
   ENDIF
   !
@@ -99,17 +113,22 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
         !
      ELSE
         !
-        psic_omp(:) = (0.d0, 0.d0)
+        !$omp target teams distribute parallel do
+        DO j = 1, v_siz_p
+          psic_omp(j) = (0.d0, 0.d0)
+        END DO
         IF (ibnd < m) THEN
            ! two ffts at the same time
+           !$omp target teams distribute parallel do
            DO j = 1, n
-              psic_omp(dffts%nl (j))=      psi(j,ibnd) + (0.0d0,1.d0)*psi(j,ibnd+1)
-              psic_omp(dffts%nlm(j))=conjg(psi(j,ibnd) - (0.0d0,1.d0)*psi(j,ibnd+1))
+              psic_omp(dffts_nl (j))=      psi(j,ibnd) + (0.0d0,1.d0)*psi(j,ibnd+1)
+              psic_omp(dffts_nlm(j))=conjg(psi(j,ibnd) - (0.0d0,1.d0)*psi(j,ibnd+1))
            ENDDO
         ELSE
+           !$omp target teams distribute parallel do
            DO j = 1, n
-              psic_omp (dffts%nl (j)) =       psi(j, ibnd)
-              psic_omp (dffts%nlm(j)) = conjg(psi(j, ibnd))
+              psic_omp (dffts_nl (j)) =       psi(j, ibnd)
+              psic_omp (dffts_nlm(j)) = conjg(psi(j, ibnd))
            ENDDO
         ENDIF
         !
@@ -133,23 +152,20 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
         !
      ELSE
         !
-        !$omp target update to(psic_omp)
 #if defined(__USE_DISPATCH)
         !$omp dispatch
 #endif
         CALL invfft ('Wave', psic_omp, dffts)
-        !$omp target update from(psic_omp)
         !
-        DO j = 1, dffts%nnr
+!$omp target teams distribute parallel do
+        DO j = 1, v_siz
            psic_omp (j) = psic_omp (j) * v(j)
         ENDDO
         !
-        !$omp target update to(psic_omp)
 #if defined(__USE_DISPATCH)
         !$omp dispatch
 #endif
         CALL fwfft ('Wave', psic_omp, dffts)
-        !$omp target update from(psic_omp)
         !
      ENDIF
      !
@@ -188,17 +204,19 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      ELSE
         IF (ibnd < m) THEN
            ! two ffts at the same time
+           !$omp target teams distribute parallel do
            DO j = 1, n
-              fp = (psic_omp (dffts%nl(j)) + psic_omp (dffts%nlm(j)))*0.5d0
-              fm = (psic_omp (dffts%nl(j)) - psic_omp (dffts%nlm(j)))*0.5d0
+              fp = (psic_omp (dffts_nl(j)) + psic_omp (dffts_nlm(j)))*0.5d0
+              fm = (psic_omp (dffts_nl(j)) - psic_omp (dffts_nlm(j)))*0.5d0
               hpsi (j, ibnd)   = hpsi (j, ibnd)   + &
                                  cmplx( dble(fp), aimag(fm),kind=DP)
               hpsi (j, ibnd+1) = hpsi (j, ibnd+1) + &
                                  cmplx(aimag(fp),- dble(fm),kind=DP)
            ENDDO
         ELSE
+           !$omp target teams distribute parallel do
            DO j = 1, n
-              hpsi (j, ibnd)   = hpsi (j, ibnd)   + psic_omp (dffts%nl(j))
+              hpsi (j, ibnd)   = hpsi (j, ibnd)   + psic_omp (dffts_nl(j))
            ENDDO
         ENDIF
      ENDIF
@@ -209,6 +227,14 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      !
      DEALLOCATE( tg_psic )
      DEALLOCATE( tg_v )
+     !
+   ELSE
+     !
+#if defined(__OPENMP_GPU)
+     !$omp target exit data map(delete:dffts_nl,dffts_nlm,v,psi) map(from:hpsi)
+#endif
+     DEALLOCATE( dffts_nl )
+     DEALLOCATE( dffts_nlm )
      !
   ENDIF
   CALL stop_clock ('vloc_psi')
