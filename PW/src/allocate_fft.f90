@@ -24,7 +24,7 @@ SUBROUTINE allocate_fft
                                kedtau, create_scf_type
   USE control_flags,    ONLY : gamma_only
   USE noncollin_module, ONLY : pointlist, factlist, report, noncolin, npol
-  USE wavefunctions,    ONLY : psic, psic_omp, psic_nc
+  USE wavefunctions,    ONLY : psic, psic_omp, psic_nc, psic_nc_omp
   USE xc_lib,           ONLY : xclib_dft_is
   !
   USE scf_gpum,  ONLY : using_vrs
@@ -78,7 +78,13 @@ SUBROUTINE allocate_fft
   CALL using_psic(2); CALL using_psic_d(0)
 #endif
   !
-  IF (noncolin) ALLOCATE( psic_nc(dfftp%nnr,npol) )
+  IF (noncolin) THEN
+          ALLOCATE( psic_nc(dfftp%nnr,npol) )
+          ALLOCATE( psic_nc_omp(dfftp%nnr,npol) )
+#if defined (__OPENMP_GPU)
+       !$omp target enter data map(alloc:psic_nc_omp)
+#endif
+  ENDIF
 #if defined(__CUDA)
   IF (noncolin) THEN
      CALL using_psic_nc(2)

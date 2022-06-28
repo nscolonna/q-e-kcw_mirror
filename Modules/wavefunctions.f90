@@ -41,6 +41,8 @@
      !! additional memory for FFT (mapped when OMP offload is active)
      COMPLEX(DP) , ALLOCATABLE, TARGET :: psic_nc(:,:)
      !! additional memory for FFT for the noncolinear case
+     COMPLEX(DP) , ALLOCATABLE, TARGET :: psic_nc_omp(:,:)
+     !! additional memory for FFT (mapped when OMP offload is active)
      !
      !
      ! electronic wave functions, CPV code
@@ -66,7 +68,7 @@
        IF( ALLOCATED( cm_bgrp ) ) DEALLOCATE( cm_bgrp )
        IF( ALLOCATED( phi ) ) DEALLOCATE( phi )
        IF( ALLOCATED( psic_nc ) ) DEALLOCATE( psic_nc )
-       !$omp target exit data map(delete:psic)
+       IF( ALLOCATED( psic_nc_omp ) ) DEALLOCATE( psic_nc_omp )
        IF( ALLOCATED( psic ) ) DEALLOCATE( psic )
        IF( ALLOCATED( evc ) ) DEALLOCATE( evc )
 #if defined (__CUDA)

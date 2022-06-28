@@ -75,9 +75,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      dffts_nlm = dffts%nlm
      v_siz = dffts%nnr
      v_siz_p = dfftp%nnr
-#if defined (__OPENMP_GPU) 
      !$omp target enter data map(to: dffts_nl, dffts_nlm, v, psi, hpsi)
-#endif
      !
   ENDIF
   !
@@ -230,9 +228,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      !
    ELSE
      !
-#if defined(__OPENMP_GPU)
      !$omp target exit data map(delete:dffts_nl,dffts_nlm,v,psi) map(from:hpsi)
-#endif
      DEALLOCATE( dffts_nl )
      DEALLOCATE( dffts_nlm )
      !
@@ -398,7 +394,6 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,*) 'wfc G ', ibnd
         !write (6,99) (psic(i), i=1,400)
         !
-!!$omp target update to(psic)
 #if defined(__USE_DISPATCH)
         !$omp dispatch
 #endif
@@ -463,7 +458,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
   USE fft_interfaces,         ONLY : fwfft, invfft
   USE lsda_mod,               ONLY : nspin
   USE noncollin_module,       ONLY : npol, domag
-  USE wavefunctions,          ONLY : psic_nc
+  USE wavefunctions,          ONLY : psic_nc, psic_nc_omp
   USE fft_helper_subroutines, ONLY : fftx_ntgrp, tg_get_nnr, &
                                      tg_get_group_nr3, tg_get_recip_inc
   !
@@ -486,12 +481,13 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
   !
   INTEGER :: ibnd, j,ipol, incr, is
   COMPLEX(DP) :: sup, sdwn
+  INTEGER, ALLOCATABLE :: dffts_nl(:)
   !
   ! Variables for task groups
   LOGICAL :: use_tg
   REAL(DP), ALLOCATABLE :: tg_v(:,:)
   COMPLEX(DP), ALLOCATABLE :: tg_psic(:,:)
-  INTEGER :: v_siz, idx, ioff
+  INTEGER :: v_siz, v_siz_p, idx, ioff
   INTEGER :: right_nnr, right_nr3, right_inc
   !
   CALL start_clock ('vloc_psi')
@@ -516,6 +512,17 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
      CALL stop_clock ('vloc_psi:tg_gather')
 
      incr = fftx_ntgrp(dffts)
+     !
+  ELSE
+     !
+     ALLOCATE(dffts_nl(1:dffts%ngm))
+     !
+     dffts_nl = dffts%nl
+     v_siz = dffts%nnr
+     v_siz_p = dfftp%nnr
+     !
+     !$omp target enter data map(to:v,igk_k,dffts_nl,psi,hpsi)
+     !
   ENDIF
   !
   ! the local potential V_Loc psi. First the psi in real space
@@ -549,12 +556,25 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         ENDDO
         !
      ELSE
-        psic_nc = (0.d0,0.d0)
+#if defined(__OPENMP_GPU)
+        !$omp target teams distribute parallel do collapse(2)
+        DO ipol=1, npol
+          DO j = 1, v_siz_p
+              psic_nc_omp(j,ipol) = (0.d0,0.d0)
+          END DO
+        END DO
+#else
+        psic_nc_omp = (0.d0,0.d0)
+#endif
         DO ipol=1,npol
+        !$omp target teams distribute parallel do
            DO j = 1, n
-              psic_nc(dffts%nl(igk_k(j,current_k)),ipol) = psi(j+(ipol-1)*lda,ibnd)
+              psic_nc_omp(dffts_nl(igk_k(j,current_k)),ipol) = psi(j+(ipol-1)*lda,ibnd)
            ENDDO
-           CALL invfft ('Wave', psic_nc(:,ipol), dffts)
+#if defined(__OMP_DISPATCH)
+           !$omp dispatch
+#endif
+           CALL invfft ('Wave', psic_nc_omp(:,ipol), dffts)
         ENDDO
      ENDIF
 
@@ -579,18 +599,28 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         ENDIF
      ELSE
         IF (domag) THEN
-           DO j=1, dffts%nnr
-              sup = psic_nc(j,1) * (v(j,1)+v(j,4)) + &
-                    psic_nc(j,2) * (v(j,2)-(0.d0,1.d0)*v(j,3))
-              sdwn = psic_nc(j,2) * (v(j,1)-v(j,4)) + &
-                     psic_nc(j,1) * (v(j,2)+(0.d0,1.d0)*v(j,3))
-              psic_nc(j,1)=sup
-              psic_nc(j,2)=sdwn
+           !$omp target teams distribute parallel do
+           DO j=1, v_siz
+              sup = psic_nc_omp(j,1) * (v(j,1)+v(j,4)) + &
+                    psic_nc_omp(j,2) * (v(j,2)-(0.d0,1.d0)*v(j,3))
+              sdwn = psic_nc_omp(j,2) * (v(j,1)-v(j,4)) + &
+                     psic_nc_omp(j,1) * (v(j,2)+(0.d0,1.d0)*v(j,3))
+              psic_nc_omp(j,1)=sup
+              psic_nc_omp(j,2)=sdwn
            ENDDO
         ELSE
-           DO j=1, dffts%nnr
-              psic_nc(j,:) = psic_nc(j,:) * v(j,1)
+#if defined(__OPENMP_GPU)
+           !$omp target teams distribute parallel do collapse(2)
+           DO ipol=1, npol
+              DO j=1, v_siz
+                 psic_nc_omp(j,ipol) = psic_nc_omp(j,ipol) * v(j,1)
+              END DO
            ENDDO
+#else
+           DO j=1, v_siz
+                 psic_nc_omp(j,:) = psic_nc_omp(j,:) * v(j,1)
+           END DO
+#endif
         ENDIF
      ENDIF
      !
@@ -622,17 +652,21 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         ENDDO
         !
      ELSE
-
+        !
         DO ipol=1,npol
-           CALL fwfft ('Wave', psic_nc(:,ipol), dffts)
+#if defined(__OPENMP_GPU)
+        !$omp dispatch
+#endif
+           CALL fwfft ('Wave', psic_nc_omp(:,ipol), dffts)
         ENDDO
         !
         !   addition to the total product
         !
+        !$omp target teams distribute parallel do collapse(2)
         DO ipol=1,npol
            DO j = 1, n
               hpsi(j,ipol,ibnd) = hpsi(j,ipol,ibnd) + &
-                                  psic_nc(dffts%nl(igk_k(j,current_k)),ipol)
+                                  psic_nc_omp(dffts_nl(igk_k(j,current_k)),ipol)
            ENDDO
         ENDDO
 
@@ -644,6 +678,11 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
      !
      DEALLOCATE( tg_v )
      DEALLOCATE( tg_psic )
+     !
+  ELSE
+     !
+     !$omp target exit data map(delete:dffts_nl,igk_k,v,psi) map(from:hpsi)
+     DEALLOCATE( dffts_nl )
      !
   ENDIF
   CALL stop_clock ('vloc_psi')
