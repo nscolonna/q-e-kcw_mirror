@@ -486,9 +486,13 @@ SUBROUTINE v_xc( rho, rho_core, rhog_core, etxc, vtxc, v )
   IF ( nspin == 1 .OR. ( nspin == 4 .AND. .NOT. domag ) ) THEN
      ! ... spin-unpolarized case
      !
+#if defined(__OPENMP_GPU)
      !$omp target data map(to:rho%of_r) map(from:ex,ec,vx,vc)
+#endif
      CALL xc( dfftp%nnr, 1, 1, rho%of_r, ex, ec, vx, vc, gpu_args_=.TRUE. )
+#if defined(__OPENMP_GPU)
      !$omp end target data
+#endif
      !
      !$acc parallel loop reduction(+:etxc) reduction(+:vtxc) reduction(-:rhoneg1) &
      !$acc&              present(rho)
@@ -504,9 +508,13 @@ SUBROUTINE v_xc( rho, rho_core, rhog_core, etxc, vtxc, v )
   ELSEIF ( nspin == 2 ) THEN
      ! ... spin-polarized case
      !
+#if defined(__OPENMP_GPU)
      !$omp target data map(to:rho%of_r) map(from:ex,ec,vx,vc)
+#endif
      CALL xc( dfftp%nnr, 2, 2, rho%of_r, ex, ec, vx, vc, gpu_args_=.TRUE. )
+#if defined(__OPENMP_GPU)
      !$omp end target data
+#endif
      !
      !$acc parallel loop reduction(+:etxc) reduction(+:vtxc) reduction(-:rhoneg1) &
      !$acc&              reduction(-:rhoneg2) present(rho)
@@ -527,9 +535,13 @@ SUBROUTINE v_xc( rho, rho_core, rhog_core, etxc, vtxc, v )
    ELSEIF ( nspin == 4 ) THEN
       ! ... noncollinear case
       !
+#if defined(__OPENMP_GPU)
       !$omp target data map(to:rho%of_r) map(from:ex,ec,vx,vc)
+#endif
       CALL xc( dfftp%nnr, 4, 2, rho%of_r, ex, ec, vx, vc, gpu_args_=.TRUE. )
+#if defined(__OPENMP_GPU)
       !$omp end target data
+#endif
       !
       !$acc parallel loop reduction(+:etxc) reduction(+:vtxc) reduction(-:rhoneg1) &
       !$acc&              reduction(+:rhoneg2) present(rho)
