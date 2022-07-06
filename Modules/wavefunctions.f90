@@ -67,8 +67,18 @@
        IF( ALLOCATED( c0_bgrp ) ) DEALLOCATE( c0_bgrp )
        IF( ALLOCATED( cm_bgrp ) ) DEALLOCATE( cm_bgrp )
        IF( ALLOCATED( phi ) ) DEALLOCATE( phi )
-       IF( ALLOCATED( psic_nc ) ) DEALLOCATE( psic_nc )
-       IF( ALLOCATED( psic_nc_omp ) ) DEALLOCATE( psic_nc_omp )
+       IF( ALLOCATED( psic_nc ) ) THEN
+#if defined(__OPENMP_GPU)
+       !$omp target exit data map(delete:psic_nc)
+#endif
+               DEALLOCATE( psic_nc )
+       ENDIF
+       IF( ALLOCATED( psic_nc_omp ) ) THEN
+#if defined(__OPENMP_GPU)
+       !$omp target exit data map(delete:psic_nc_omp)
+#endif
+               DEALLOCATE( psic_nc_omp )
+       ENDIF
        IF( ALLOCATED( psic ) ) DEALLOCATE( psic )
        IF( ALLOCATED( evc ) ) DEALLOCATE( evc )
 #if defined (__CUDA)
