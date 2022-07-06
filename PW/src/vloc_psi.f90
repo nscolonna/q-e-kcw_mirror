@@ -380,22 +380,22 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         do i=1,v_siz
            psic_omp(i)=(0.d0, 0.d0)
         enddo
-#else
-        psic_omp(:) = (0.d0, 0.d0)
-#endif
         !$omp target teams distribute parallel do
         DO j = 1, n
           psic_omp (dffts_nl (igk_k(j, current_k))) = psi(j, ibnd)
         END DO
         !
-!!$omp parallel
-!        CALL threaded_barrier_memset(psic, 0.D0, dffts%nnr*2)
-!        !$omp do
-!        DO j = 1, n
-!           psic (dffts_nl (igk_k(j,current_k))) = psi(j, ibnd)
-!        ENDDO
-!        !$omp end do nowait
-!!$omp end parallel
+#else
+!$omp parallel
+        CALL threaded_barrier_memset(psic_omp, 0.D0, dffts%nnr*2)
+        !$omp do
+        DO j = 1, n
+           psic_omp (dffts_nl (igk_k(j,current_k))) = psi(j, ibnd)
+        ENDDO
+        !$omp end do nowait
+!$omp end parallel
+
+#endif
 
         !write (6,*) 'wfc G ', ibnd
         !write (6,99) (psic(i), i=1,400)
