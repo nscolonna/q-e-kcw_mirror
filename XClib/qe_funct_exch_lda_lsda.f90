@@ -21,7 +21,11 @@ SUBROUTINE slater( rs, ex, vx )
   USE kind_l,  ONLY: DP
   !
   IMPLICIT NONE
-  !!
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rs
   !! Wigner-Seitz radius
   REAL(DP), INTENT(OUT) :: ex
@@ -51,6 +55,10 @@ SUBROUTINE slater1( rs, ex, vx )
   USE kind_l,      ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rs
   !! Wigner-Seitz radius
@@ -82,6 +90,10 @@ SUBROUTINE slater_rxc( rs, ex, vx )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rs
   !! Wigner-Seitz radius
   REAL(DP), INTENT(OUT) :: ex
@@ -95,7 +107,7 @@ SUBROUTINE slater_rxc( rs, ex, vx )
                            opf=1.5d0 !, C014=0.014D0
   REAL(DP) :: trd, ftrd, tftm, a0, alp, z, fz, fzp, vxp, xp, &
               beta, sb, alb, c014
-  !
+
   trd  = one/3.d0
   ftrd = 4.d0*trd
   tftm = 2**ftrd-2.d0
@@ -136,23 +148,27 @@ SUBROUTINE slaterKZK( rs, ex, vx, vol )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rs
   !! Wigner-Seitz radius
   REAL(DP), INTENT(OUT) :: ex
   !! Exchange energy (per unit volume)
   REAL(DP), INTENT(OUT) :: vx
   !! Exchange potential
-  REAL(DP) :: vol
+  REAL(DP), INTENT(IN) :: vol
   !! Finite size volume element
   !
   ! ... local variables
   !
   REAL(DP) :: dL, ga, pi, a0
-  REAL(DP), PARAMETER :: a1 = -2.2037d0, &
-                         a2 = 0.4710d0, a3 = -0.015d0, ry2h = 0.5d0
+  REAL(DP), PARAMETER :: a1 = -2.2037d0, a2 = 0.4710d0, &
+                         a3 = -0.015d0, ry2h = 0.5d0
   REAL(DP), PARAMETER :: f = -0.687247939924714d0, alpha = 2.0d0/3.0d0
   !                      f = -9/8*(3/2pi)^(2/3)
-  !
+
   pi = 4.d0 * ATAN(1.d0)
   a0 = f * alpha * 2.d0
   !
@@ -160,11 +176,11 @@ SUBROUTINE slaterKZK( rs, ex, vx, vol )
   ga = 0.5d0 * dL *(3.d0 /pi)**(1.d0/3.d0)
   !
   IF ( rs < ga ) THEN
-     ex = a0 / rs + a1 * rs / dL**2.d0 + a2 * rs**2.d0 / dL**3.d0
+     ex = a0 / rs + a1 * rs / dL**2.d0 + a2 * rs**2.d0 / dL**3
      vx = (4.d0 * a0 / rs + 2.d0 * a1 * rs / dL**2.d0 + &
-              a2 * rs**2.d0 / dL**3.d0 ) / 3.d0
+          a2 * rs**2.d0 / dL**3 ) / 3.d0
   ELSE
-     ex = a0 / ga + a1 * ga / dL**2.d0 + a2 * ga**2.d0 / dL**3.d0 ! solids
+     ex = a0 / ga + a1 * ga / dL**2.d0 + a2 * ga**2.d0 / dL**3 ! solids
      vx = ex
      ! ex = a3 * dL**5.d0 / rs**6.d0                           ! molecules
      ! vx = 3.d0 * ex
@@ -190,6 +206,10 @@ SUBROUTINE slater_spin( rho, zeta, ex, vx_up, vx_dw )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rho
   !! total charge density
   REAL(DP), INTENT(IN) :: zeta
@@ -205,7 +225,6 @@ SUBROUTINE slater_spin( rho, zeta, ex, vx_up, vx_dw )
   !                      f = -9/8*(3/pi)^(1/3)
   REAL(DP), PARAMETER :: third = 1.d0/3.d0, p43 = 4.d0/3.d0
   REAL(DP) :: exup, exdw, rho13
-  !
   !
   rho13 = ( (1.d0 + zeta)*rho )**third
   exup = f * alpha * rho13
@@ -232,6 +251,10 @@ SUBROUTINE slater_rxc_spin( rho, z, ex, vx_up, vx_dw )
   USE kind_l,       ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rho
   !! total charge density
@@ -298,6 +321,10 @@ SUBROUTINE slater1_spin( rho, zeta, ex, vx_up, vx_dw )
   USE kind_l, ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rho
   !! total charge density

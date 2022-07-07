@@ -23,6 +23,10 @@ SUBROUTINE becke88( rho, grho, sx, v1x, v2x )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
   !
@@ -66,6 +70,10 @@ SUBROUTINE ggax( rho, grho, sx, v1x, v2x )
   USE kind_l, ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
@@ -123,6 +131,10 @@ SUBROUTINE pbex( rho, grho, iflag, sx, v1x, v2x )
   USE kind_l,      ONLY : DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   INTEGER, INTENT(IN) :: iflag
   REAL(DP), INTENT(IN) :: rho, grho
@@ -346,6 +358,10 @@ SUBROUTINE hcth( rho, grho, sx, v1x, v2x )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
   !
@@ -464,6 +480,10 @@ END SUBROUTINE hcth
       !
       IMPLICIT NONE
       !
+#if defined(__OPENMP_GPU)
+      !$omp declare target
+#endif
+      !
       REAL(DP), INTENT(IN)  :: r, c(6)
       REAL(DP), INTENT(OUT) :: g, dg
       !
@@ -501,6 +521,10 @@ SUBROUTINE optx( rho, grho, sx, v1x, v2x )
   USE kind_l,   ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
@@ -542,6 +566,10 @@ SUBROUTINE wcx( rho, grho, sx, v1x, v2x )
   USE kind_l,   ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
@@ -614,6 +642,10 @@ SUBROUTINE pbexsr( rho, grho, sxsr, v1xsr, v2xsr, omega )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: omega
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sxsr, v1xsr, v2xsr
@@ -673,7 +705,11 @@ END SUBROUTINE pbexsr
       use kind_l, ONLY : DP
       !
       IMPLICIT NONE
-
+      !
+#if defined(__OPENMP_GPU)
+      !$omp declare target
+#endif
+      !
       INTEGER :: IXC
       REAL(DP):: RHO, GRHO, V1X, V2X, OMEGA
       REAL(DP), PARAMETER :: SMALL=1.D-20, SMAL2=1.D-08
@@ -748,7 +784,11 @@ END SUBROUTINE pbexsr
       use kind_l, ONLY : DP
 !      USE constants, ONLY : pi
       Implicit None
-      
+
+#if defined(__OPENMP_GPU)
+      !$omp declare target
+#endif
+
       REAL(DP), PARAMETER :: pi=3.14159265358979323846d0
 
       Real(dp) :: rho,s,omega,Fx_wgga,dfxdn,dfxds
@@ -882,7 +922,7 @@ END SUBROUTINE pbexsr
       dcfbards=-Two*s/dampfac/dampfac/27.0D0 - dzetads/Two
 
       egbars=-f25*cfbars*lam-(f45/Three)*B*lam**Two
-      egbars=egbars-f65*Abar*lam**Three
+      egbars=egbars-f65*Abar*lam**INT(Three)
       egbars=egbars-f45*pisqrt*lam**f72
       egbars=egbars-Three*f45*(zeta**f12-eta**f12)*lam**f72
 
@@ -910,7 +950,7 @@ END SUBROUTINE pbexsr
       dbetads=dbetads*dzetads
 
       chi=ny/phi
-      dchidn=dnydn*lam/phi**Three
+      dchidn=dnydn*lam/phi**INT(Three)
       dchids=-f12*chi*dzetads/phi/phi
 
       chiP1=One-chi
@@ -918,32 +958,32 @@ END SUBROUTINE pbexsr
       dchiP1dn=chiP1p*dchidn
       dchiP1ds=chiP1p*dchids
 
-      chiP2=One-f32*chi+f12*chi**Three
+      chiP2=One-f32*chi+f12*chi**INT(Three)
       chiP2p=-f32*(One-chi**Two)
       dchiP2dn=chiP2p*dchidn
       dchiP2ds=chiP2p*dchids
 
-      chiP3=One-Five*f38*chi+f54*chi**Three-f38*chi**Five
-      chiP3p=-Five*f38+Three*f54*chi**Two-Five*f38*chi**Four
+      chiP3=One-Five*f38*chi+f54*chi**INT(Three)-f38*chi**INT(Five)
+      chiP3p=-Five*f38+Three*f54*chi**Two-Five*f38*chi**INT(Four)
       dchiP3dn=chiP3p*dchidn
       dchiP3ds=chiP3p*dchids
 
       Fx_wgga=Abar
       Fx_wgga=Fx_wgga-coef1*chiP1/lam
       Fx_wgga=Fx_wgga-coef2*cfbars*chiP2/lam**Two
-      Fx_wgga=Fx_wgga-coef3*egbars*chiP3/lam**Three
+      Fx_wgga=Fx_wgga-coef3*egbars*chiP3/lam**INT(Three)
       Fx_wgga=Fx_wgga+alpha+beta
 
       dfxdn=-coef1*dchiP1dn/lam
       dfxdn=dfxdn-coef2*cfbars*dchiP2dn/lam**Two
-      dfxdn=dfxdn-coef3*egbars*dchiP3dn/lam**Three
+      dfxdn=dfxdn-coef3*egbars*dchiP3dn/lam**INT(Three)
       dfxdn=dfxdn+dalphadn+dbetadn
 
       dfxds=-coef1*(dchiP1ds/lam-chiP1*dzetads/lam**Two)
       dfxds=dfxds-coef2*(dcfbards*chiP2+cfbars*dchiP2ds)/lam**Two
-      dfxds=dfxds+coef2*cfbars*chiP2*(Two*dzetads/lam**Three)
-      dfxds=dfxds-coef3*(degbards*chiP3+egbars*dchiP3ds)/lam**Three
-      dfxds=dfxds+coef3*egbars*chiP3*(Three*dzetads/lam**Four)
+      dfxds=dfxds+coef2*cfbars*chiP2*(Two*dzetads/lam**INT(Three))
+      dfxds=dfxds-coef3*(degbards*chiP3+egbars*dchiP3ds)/lam**INT(Three)
+      dfxds=dfxds+coef3*egbars*chiP3*(Three*dzetads/lam**INT(Four))
       dfxds=dfxds+dalphads+dbetads
 
 !     ==--------------------------------------------------------------==
@@ -962,6 +1002,10 @@ SUBROUTINE rPW86( rho, grho, sx, v1x, v2x )
   USE kind_l,      ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
@@ -1012,6 +1056,10 @@ SUBROUTINE c09x( rho, grho, sx, v1x, v2x )
   USE kind_l,      ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
@@ -1080,6 +1128,10 @@ SUBROUTINE sogga( rho, grho, sx, v1x, v2x )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
   ! input: charge and abs gradient
@@ -1140,6 +1192,10 @@ SUBROUTINE pbexgau( rho, grho, sxsr, v1xsr, v2xsr, alpha_gau )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: alpha_gau
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sxsr, v1xsr, v2xsr
@@ -1187,6 +1243,10 @@ SUBROUTINE pbe_gauscheme( rho, s, alpha_gau, Fx, dFxdr, dFxds )
        USE kind_l, ONLY: DP
        !
        IMPLICIT NONE
+       !
+#if defined(__OPENMP_GPU)
+       !$omp declare target
+#endif
        !
        REAL(dp) :: rho,s,alpha_gau,Fx,dFxdr,dFxds
        ! input: charge and squared gradient and alpha_gau
@@ -1277,6 +1337,9 @@ FUNCTION TayExp(X)
   !-------------------------------------------
   USE kind_l,   ONLY: DP
   IMPLICIT NONE
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   REAL(DP), INTENT(IN) :: X
   REAL(DP) :: TAYEXP
   INTEGER :: NTERM,I
@@ -1308,6 +1371,10 @@ SUBROUTINE PW86( rho, grho, sx, v1x, v2x )
   USE kind_l,  ONLY: DP
   !
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
@@ -1355,6 +1422,10 @@ SUBROUTINE becke86b( rho, grho, sx, v1x, v2x )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
   !
@@ -1400,6 +1471,10 @@ SUBROUTINE b86b( rho, grho, iflag, sx, v1x, v2x )
   !
   USE kind_l,     ONLY : DP
   IMPLICIT NONE
+  !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
   !
   INTEGER, INTENT(IN) :: iflag
   REAL(DP), INTENT(IN) :: rho, grho
@@ -1468,6 +1543,10 @@ SUBROUTINE cx13( rho, grho, sx, v1x, v2x )
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rho, grho
   REAL(DP), INTENT(OUT) :: sx, v1x, v2x
   !
@@ -1524,6 +1603,10 @@ SUBROUTINE becke88_spin( rho_up, rho_dw, grho_up, grho_dw, sx_up, sx_dw, v1x_up,
   !
   IMPLICIT NONE
   !
+#if defined(__OPENMP_GPU)
+  !$omp declare target
+#endif
+  !
   REAL(DP), INTENT(IN) :: rho_up, rho_dw
   !! charge
   REAL(DP), INTENT(IN) :: grho_up, grho_dw
@@ -1544,7 +1627,7 @@ SUBROUTINE becke88_spin( rho_up, rho_dw, grho_up, grho_dw, sx_up, sx_dw, v1x_up,
   !
   !DO is = 1, 2
      rho13 = rho_up**third
-     rho43 = rho13**4
+     rho43 = rho13*rho13*rho13*rho13
      xs  = SQRT(grho_up) / rho43
      xs2 = xs * xs
      sa2b8 = SQRT(1.0d0 + xs2)
@@ -1557,7 +1640,7 @@ SUBROUTINE becke88_spin( rho_up, rho_dw, grho_up, grho_dw, sx_up, sx_dw, v1x_up,
      v2x_up = beta * (ee-dd) / (rho43*dd2)
 
      rho13 = rho_dw**third
-     rho43 = rho13**4
+     rho43 = rho13*rho13*rho13*rho13
      xs  = SQRT(grho_dw) / rho43
      xs2 = xs * xs
      sa2b8 = SQRT(1.0d0 + xs2)
@@ -1584,6 +1667,10 @@ SUBROUTINE wpbe_analy_erfc_approx_grad( rho, s, omega, Fx_wpbe, d1rfx, d1sfx )
       USE kind_l,    ONLY: DP
       !
       IMPLICIT NONE
+      !
+#if defined(__OPENMP_GPU)
+      !$omp declare target
+#endif
       !
       REAL(DP) rho,s,omega,Fx_wpbe,d1sfx,d1rfx
       !
@@ -2181,6 +2268,9 @@ FUNCTION EXPINT(n, x)
 !
       USE kind_l,   ONLY: DP
       IMPLICIT NONE
+#if defined(__OPENMP_GPU)
+      !$omp declare target
+#endif
       INTEGER, INTENT(IN) :: n
       REAL(DP), INTENT(IN) :: x
       REAL(DP) :: expint
@@ -2192,9 +2282,10 @@ FUNCTION EXPINT(n, x)
       INTEGER :: i, nm1, k
       REAL(DP) :: a,b,c,d,del,fact,h,iarsum
 
-      IF (.NOT. ((n >= 0).AND.(x >= 0.0).AND.((x > 0.0).OR.(n > 1)))) THEN
-         !CALL xclib_error('expint','bad arguments', 1)
-         STOP
+      IF (.NOT. ((n >= 0).AND.(x >= 0.d0).AND.((x > 0.d0).OR.(n > 1)))) THEN
+        !CALL xclib_error('expint','bad arguments', 1)
+        !STOP
+        RETURN
       END IF
 
       IF (n == 0) THEN
@@ -2218,7 +2309,7 @@ FUNCTION EXPINT(n, x)
             h = h*del
             IF (ABS(del-1.0d0) <= EPS) EXIT
          END DO
-         IF (i > maxit) STOP !CALL xclib_error('expint','continued fraction failed',1)
+         IF (i > maxit) RETURN !STOP !CALL xclib_error('expint','continued fraction failed',1)
          expint = h*EXP(-x)
       ELSE
          IF (nm1 /= 0) THEN
@@ -2244,9 +2335,9 @@ FUNCTION EXPINT(n, x)
             expint = expint + del
             IF (ABS(del) < ABS(expint)*eps) EXIT
          END DO
-         IF (i > maxit) STOP !CALL xclib_error('expint','series failed',1)
+         IF (i > maxit) RETURN !STOP !CALL xclib_error('expint','series failed',1)
       END IF
+      RETURN
 END FUNCTION EXPINT
 !
 END MODULE
-
