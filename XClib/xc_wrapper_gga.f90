@@ -579,6 +579,10 @@ SUBROUTINE xc_gcx_( length, ns, rho, grho, ex, ec, v1x, v2x, v1c, v2c, v2c_ud )
   !
   !$acc end data
   !
+#if defined(__OPENMP_GPU)
+  IF (igcx==43 .OR. igcc==14) CALL xclib_error( 'xc_gcx_', 'No BEEF with OPENMP_GPU (for the moment)', 1 )
+#endif
+  !
   RETURN
   !
 END SUBROUTINE xc_gcx_
