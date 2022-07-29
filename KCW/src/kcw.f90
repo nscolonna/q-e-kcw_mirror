@@ -26,6 +26,7 @@ PROGRAM kcw
   USE control_kcw,               ONLY : calculation
   USE mp_global,             ONLY : mp_startup
   USE check_stop,            ONLY : check_stop_init
+  USE coulomb,           ONLY : setup_coulomb
   !
   IMPLICIT NONE
   !
@@ -41,6 +42,7 @@ PROGRAM kcw
   ! 2) Read the input file and the PW outputs
   CALL kcw_readin( ) 
   !
+  IF (calculation == 'cc') call setup_coulomb()
   IF (calculation == 'wann2kcw') CALL wann2kcw ( )
   IF (calculation == 'screen')   CALL kcw_screen ( )
   IF (calculation == 'ham' )     CALL kcw_ham ()

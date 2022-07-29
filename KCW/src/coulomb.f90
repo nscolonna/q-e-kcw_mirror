@@ -44,6 +44,7 @@ MODULE coulomb
     USE io_global,            ONLY : stdout
     USE control_kcw,          ONLY : mp1, mp2, mp3, l_vcut, eps_inf, calculation
     USE martyna_tuckerman,    ONLY : do_comp_mt
+    USE cell_base,            ONLY : omega
     !
     IMPLICIT NONE 
     !
@@ -104,6 +105,7 @@ MODULE coulomb
       WRITE (stdout,'(/,5X, "INFO: Coulomb q+G=0 treatment:")') 
       WRITE (stdout,'(  5X, "INFO: Divergence         ", 3x, 1A8)'     )  exxdiv_treatment
       WRITE( stdout,'(  5X, "INFO: q-grid dimension   ", 3x, 3I4)'     )  nq1, nq2, nq3
+      WRITE( stdout,'(  5X, "INFO: cell volume        ", 3x, 1F20.12)'     )  omega
       WRITE (stdout,'(  5X, "INFO: Gamma Extrapolation", 3x, 1L5 )'    )  x_gamma_extrapolation
       !
       IF ( x_gamma_extrapolation ) THEN
@@ -119,7 +121,7 @@ MODULE coulomb
       ENDIF
       !
       WRITE (stdout,'(  5X, "INFO: Bare Coulomb G0     ", 3x, 1ES15.5 )')  exxdiv
-      IF ( calculation == "screen" .AND. l_vcut ) THEN
+      IF ( (calculation == "screen" .AND. l_vcut) .OR. calculation == 'cc' ) THEN
          !
          WRITE (stdout,'(  5X, "INFO: Epsilon infinity   ", 3x, 1F12.6 )' )  eps_inf
          WRITE (stdout,'(  5X, "INFO: Dielectric tesor   ", 3x, 3F12.6 )' )  (eps_mat(:,1))
@@ -128,7 +130,7 @@ MODULE coulomb
          !
       ENDIF
       !
-      IF (calculation == "screen") THEN
+      IF (calculation == "screen" .OR. calculation == 'cc' ) THEN
          WRITE (stdout,'(  5X, "INFO: Screened Coulomb G0 ", 3x, 1ES15.5 )')  exxdiv_eps
          WRITE (stdout,'(  5X, "      Isotropic estimate  ", 3x, 1ES15.5 )')  exxdiv/eps_inf
       ENDIF
