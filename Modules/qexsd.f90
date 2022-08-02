@@ -131,7 +131,7 @@ CONTAINS
       CALL xml_NewElement (XF=qexsd_xf, NAME = "qes:espresso")
       CALL xml_addAttribute(XF=qexsd_xf, NAME = "xsi:schemaLocation", &
                             VALUE = "http://www.quantum-espresso.org/ns/qes/qes-1.0 "//&
-                                    "http://www.quantum-espresso.org/ns/qes/qes_210716.xsd" )
+                                    "http://www.quantum-espresso.org/ns/qes/qes_220603.xsd" )
       CALL xml_addAttribute(XF=qexsd_xf, NAME="Units", VALUE="Hartree atomic units")
       CALL xml_addComment(XF = qexsd_xf, &
               COMMENT = "All quantities are in Hartree atomic units unless otherwise specified" ) 
@@ -555,8 +555,9 @@ CONTAINS
     ! 
 
 SUBROUTINE qexsd_init_clocks (timing_, total_clock, partial_clocks)
+      !
       USE mytime,  ONLY: nclock, clock_label, cputime, walltime, called
-      USE qes_libs_module, ONLY: qes_init, qes_reset 
+      !
       TYPE(timing_type),INTENT(INOUT)          :: timing_ 
       CHARACTER(LEN=*),INTENT(IN)             :: total_clock 
       CHARACTER(LEN=*),OPTIONAL,INTENT(IN)    :: partial_clocks(:) 

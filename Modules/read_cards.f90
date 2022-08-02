@@ -92,6 +92,11 @@ CONTAINS
       !
       tavel = .false.
       !
+      ! ... solvent's density initialization
+      !
+      solv_dens1 = 0.0_DP
+      solv_dens2 = 0.0_DP
+      !
       CALL init_autopilot()
       !
       RETURN
@@ -210,6 +215,10 @@ CONTAINS
       ELSEIF ( trim(card) == 'WANNIER_AC' .and. ( prog == 'WA' )) THEN
          !
          CALL card_wannier_ac( input_line )
+         !
+      ELSEIF ( trim(card) == 'SOLVENTS' .AND. trism ) THEN
+         !
+         CALL card_solvents( input_line )
          !
       ELSEIF ( trim(card) == 'TOTAL_CHARGE' ) THEN
          !
@@ -1952,6 +1961,108 @@ CONTAINS
    !    BEGIN manual
    !----------------------------------------------------------------------
    !
+   ! SOLVENTS
+   !
+   !   set the solvents been read and their molecular files
+   !
+   ! Syntax:
+   !
+   !   SOLVENTS (units_option)
+   !      label(1)    density(1)    molfile(1)
+   !       ...        ...           ...
+   !      label(n)    density(n)    molfile(n)
+   !
+   ! Example:
+   !
+   ! SOLVENTS (mol/L)
+   !   H2O  55.3   H2O.spc.MOL
+   !   Na+   0.1   Na.aq.MOL
+   !   Cl-   0.1   Cl.aq.MOL
+   !
+   ! Where:
+   !
+   !   units_option == 1/cell  densities are given in particle's numbers in a cell
+   !   units_option == mol/L   densities are given in mol/L
+   !   units_option == g/cm^3  densities are given in g/cm^3
+   !
+   !   label(i)   ( character(len=10) )  label of the solvent
+   !   density(i) ( real )               solvent's density
+   !   molfile(i) ( character(len=80) )  file name of the pseudopotential
+   !
+   !----------------------------------------------------------------------
+   !    END manual
+   !------------------------------------------------------------------------
+   !
+   SUBROUTINE card_solvents( input_line )
+      !
+      IMPLICIT NONE
+      !
+      CHARACTER(len=256) :: input_line
+      LOGICAL, EXTERNAL  :: matches
+      INTEGER            :: iv, ip, ierr
+      CHARACTER(len=10)  :: lb_mol
+      CHARACTER(len=256) :: molfile
+      !
+      !
+      IF ( tsolvents ) THEN
+         CALL errore( ' card_solvents ', 'two occurrences', 2 )
+      ENDIF
+      IF ( nsolv > nsolx ) THEN
+         CALL errore( ' card_solvents ', 'nsolv out of range', nsolv )
+      ENDIF
+      !
+      IF ( matches( "1/CELL", input_line ) ) THEN
+         solvents_unit = '1/cell'
+      ELSEIF ( matches( "MOL/L", input_line ) ) THEN
+         solvents_unit = 'mol/L'
+      ELSEIF ( matches( "G/CM^3", input_line ) ) THEN
+         solvents_unit = 'g/cm^3'
+      ELSE
+         IF ( trim( adjustl( input_line ) ) /= 'SOLVENTS' ) THEN
+            CALL errore( 'read_cards ', &
+                        & 'unknown option for SOLVENTS: '&
+                        & // input_line, 1 )
+         ENDIF
+         CALL infomsg( 'read_cards ', &
+            & 'DEPRECATED: no units specified in SOLVENTS card' )
+         solvents_unit = '1/cell'
+         CALL infomsg( 'read_cards ', &
+            & 'SOLVENTS: units set to '//trim(solvents_unit) )
+      ENDIF
+      !
+      DO iv = 1, nsolv
+         !
+         CALL read_line( input_line )
+         IF (.NOT. laue_both_hands) THEN
+           READ( input_line, *, iostat=ierr ) lb_mol, solv_dens1(iv), molfile
+         ELSE
+           READ( input_line, *, iostat=ierr ) lb_mol, solv_dens2(iv), solv_dens1(iv), molfile
+         END IF
+         CALL errore( ' card_solvents ', &
+            & 'cannot read solvents from: '//trim(input_line), abs(ierr))
+         solv_mfile(iv) = trim( molfile )
+         lb_mol         = adjustl( lb_mol )
+         solv_label(iv) = trim( lb_mol )
+         !
+         DO ip = 1, iv - 1
+            IF ( solv_label(ip) == solv_label(iv) ) THEN
+               CALL errore( ' card_solvents ', &
+                           & " two occurrences of the same solvent's label ", iv )
+            ENDIF
+         ENDDO
+         !
+      ENDDO
+      tsolvents = .true.
+      !
+      RETURN
+      !
+   END SUBROUTINE card_solvents
+   !
+   !
+   !------------------------------------------------------------------------
+   !    BEGIN manual
+   !----------------------------------------------------------------------
+   !
    ! TOTAL_CHARGE
    !
    !   set the total charge
@@ -2120,28 +2231,6 @@ CONTAINS
       counter_e2(:) = 0
       ALLOCATE(counter_e3(ntyp))
       counter_e3(:) = 0
-      ALLOCATE(counter_v(natx,natx*(2*sc_size+1)**3))
-      counter_v(:,:) = 0
-      !
-      ! Needed for Hubbard V: initialize the atomic types for 
-      ! the virtual atoms in the same way as it is done in
-      ! PW/src/intersite_V.f90
-      ! sp_pos(na) is the atomic type of the atom na
-      ALLOCATE(ityp(natx*(2*sc_size+1)**3))
-      ityp(1:nat) = sp_pos(1:nat)
-      i = nat
-      DO nx = -sc_size, sc_size
-         DO ny = -sc_size, sc_size
-            DO nz = -sc_size, sc_size
-               IF ( nx.NE.0 .OR. ny.NE.0 .OR. nz.NE.0 ) THEN
-                  DO na = 1, nat
-                     i = i + 1
-                     ityp(i) = sp_pos(na)
-                  ENDDO
-               ENDIF
-            ENDDO
-         ENDDO
-      ENDDO
       !
       ! Read Hubbard parameters, principal and orbital quantum numbers
       !
@@ -2396,6 +2485,33 @@ CONTAINS
             ! Sanity check
             IF (nat>natx) CALL errore('card_hubbard', 'Too many atoms. &
                 Increase the value of natx in Modules/parameters.f90 and recompile the code.',1)
+            !
+            ! Initialize the atomic types for 
+            ! the virtual atoms in the same way as it is done in
+            ! PW/src/intersite_V.f90
+            ! sp_pos(na) is the atomic type of the atom na
+            IF (.NOT.ALLOCATED(ityp)) THEN
+               ALLOCATE(ityp(natx*(2*sc_size+1)**3))
+               ityp(1:nat) = sp_pos(1:nat)
+               i = nat
+               DO nx = -sc_size, sc_size
+                  DO ny = -sc_size, sc_size
+                     DO nz = -sc_size, sc_size
+                        IF ( nx.NE.0 .OR. ny.NE.0 .OR. nz.NE.0 ) THEN
+                           DO na = 1, nat
+                              i = i + 1
+                              ityp(i) = sp_pos(na)
+                           ENDDO
+                        ENDIF
+                     ENDDO
+                  ENDDO
+               ENDDO
+            ENDIF
+            !
+            IF (.NOT.ALLOCATED(counter_v)) THEN
+               ALLOCATE(counter_v(natx,natx*(2*sc_size+1)**3))
+               counter_v(:,:) = 0
+            ENDIF
             !
             ! First of all, we read the indices na and nb that correspond to the location 
             ! of atoms Fe and O in the ATOMIC_POSITIONS card (columns 4 and 5)
@@ -2902,8 +3018,8 @@ CONTAINS
       DEALLOCATE(counter_b)
       DEALLOCATE(counter_e2)
       DEALLOCATE(counter_e3)
-      DEALLOCATE(counter_v)
-      DEALLOCATE(ityp)
+      IF (ALLOCATED(counter_v)) DEALLOCATE(counter_v)
+      IF (ALLOCATED(ityp)) DEALLOCATE(ityp)
       tahub = .true.
       !
       RETURN

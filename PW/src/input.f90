@@ -222,6 +222,8 @@ SUBROUTINE iosys()
 
   USE gcscf_module,          ONLY : gcscf_iosys
 
+  USE rism_module,           ONLY : rism_iosys
+
   USE vlocal,        ONLY : starting_charge_ => starting_charge
   !
   ! ... CONTROL namelist
@@ -233,7 +235,7 @@ SUBROUTINE iosys()
                                gdir, nppstr, wf_collect,lelfield,lorbm,efield, &
                                nberrycyc, efield_cart, lecrpa,                 &
                                lfcp, vdw_table_name, memory, max_seconds,      &
-                               tqmmm, efield_phase, gate, max_xml_steps
+                               tqmmm, efield_phase, gate, max_xml_steps, trism
 
   !
   ! ... SYSTEM namelist
@@ -268,7 +270,7 @@ SUBROUTINE iosys()
                                esm_bc, esm_efield, esm_w, esm_nfit, esm_a,    &
                                lgcscf,                                        &
                                zgate, relaxz, block, block_1, block_2,        &
-                               block_height
+                               block_height, lgcscf
   !
   ! ... ELECTRONS namelist
   !
@@ -351,7 +353,7 @@ SUBROUTINE iosys()
   CHARACTER(LEN=256):: dft_
   !
   INTEGER  :: ia, nt, tempunit, i, j, ibrav_mp
-  LOGICAL  :: exst, parallelfs, domag, stop_on_error
+  LOGICAL  :: exst, parallelfs, domag, stop_on_error, is_tau_read
   REAL(DP) :: at_dum(3,3), theta, phi, ecutwfc_pp, ecutrho_pp, V
   CHARACTER(len=256) :: tempfile
   INTEGER, EXTERNAL :: at2ibrav
@@ -1196,8 +1198,14 @@ SUBROUTINE iosys()
   !
   IF ( mixing_beta < 0.0_DP ) THEN
      !
-     IF ( lgcscf ) THEN
+     IF ( lgcscf .AND. trism ) THEN
+        ! GC-SCF with ESM-RISM
+        mixing_beta = 0.1_DP
+     ELSE IF ( lgcscf ) THEN
         ! GC-SCF with ESM-BC2 or ESM-BC3
+        mixing_beta = 0.2_DP
+     ELSE IF ( trism ) THEN
+        ! 3D-RISM or ESM-RISM
         mixing_beta = 0.2_DP
      ELSE
         ! default
@@ -1501,7 +1509,8 @@ SUBROUTINE iosys()
         pseudo_dir_cur = restart_dir()
      END IF
      !
-     CALL read_conf_from_file( stop_on_error, nat_, ntyp, tau, alat, at )
+     CALL read_conf_from_file( stop_on_error, nat_, ntyp, tau, alat, at, &
+                               is_tau_read )
      !
      ! Update reciprocal lattice and volume (may be updated if coming from a vc run)
      !
@@ -1680,11 +1689,15 @@ SUBROUTINE iosys()
      CALL init_constraint( nat, tau, ityp, alat )
   END IF
   !
-  ! ... set variables for FCP
+  ! ... set variables for RISM
+  !
+  CALL rism_iosys(trism)
+  !
+  ! ... set variables for FCP (this must be after RISM, to check condition)
   !
   CALL fcp_iosys(lfcp)
   !
-  ! ... set variables for GC-SCF (this must be after FCP, to check condition)
+  ! ... set variables for GC-SCF (this must be after RISM and FCP, to check condition)
   !
   CALL gcscf_iosys(lgcscf)
   !
