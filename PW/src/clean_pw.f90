@@ -36,7 +36,7 @@ SUBROUTINE clean_pw( lflag )
                                    vrs, kedtau, destroy_scf_type, vnew
   USE symm_base,            ONLY : irt
   USE symme,                ONLY : sym_rho_deallocate
-  USE wavefunctions,        ONLY : evc, psic, psic_omp, psic_nc, psic_nc_omp
+  USE wavefunctions,        ONLY : evc, psic, psic_nc
   USE uspp,                 ONLY : deallocate_uspp
   USE uspp_data,            ONLY : deallocate_uspp_data
   USE uspp_param,           ONLY : upf
@@ -137,19 +137,17 @@ SUBROUTINE clean_pw( lflag )
   IF ( ALLOCATED( vltot  ) )     DEALLOCATE( vltot  )
   IF ( ALLOCATED( rho_core  ) )  DEALLOCATE( rho_core  )
   IF ( ALLOCATED( rhog_core ) )  DEALLOCATE( rhog_core )
-  IF ( ALLOCATED( psic_omp) )    THEN
+  IF ( ALLOCATED( psic    ) ) THEN
 #if defined(__OPENMP_GPU)
-     !$omp target exit data map(delete:psic_omp)
+     !$omp target exit data map(delete:psic)
 #endif
-     DEALLOCATE( psic_omp)
+     DEALLOCATE( psic    )
   ENDIF
-  IF ( ALLOCATED( psic    ) )    DEALLOCATE( psic    )
-  IF ( ALLOCATED( psic_nc ) )    DEALLOCATE( psic_nc )
-  IF ( ALLOCATED( psic_nc_omp) ) THEN
+  IF ( ALLOCATED( psic_nc) ) THEN
 #if defined(__OPENMP_GPU)
-    !$omp target exit data map(delete:psic_nc_omp)
+    !$omp target exit data map(delete:psic_nc)
 #endif
-    DEALLOCATE( psic_nc_omp)
+    DEALLOCATE( psic_nc)
   ENDIF
   IF ( ALLOCATED( vrs     ) )    DEALLOCATE( vrs     )
   CALL deallocate_scf_gpu()

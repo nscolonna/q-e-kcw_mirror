@@ -9,7 +9,7 @@
 !----------------------------------------------------------------------------
 SUBROUTINE sum_band()
   !----------------------------------------------------------------------------
-  !! Calculates the symmetrized charge density and related quantities.  
+  !! Calculates the symmetrized charge density and related quantities.
   !! Also computes the occupations and the sum of occupied eigenvalues.
   !
   USE kinds,                ONLY : DP
@@ -19,6 +19,9 @@ SUBROUTINE sum_band()
   USE ions_base,            ONLY : nat, ntyp => nsp, ityp
   USE fft_base,             ONLY : dfftp, dffts
   USE fft_interfaces,       ONLY : fwfft, invfft
+#if defined(__OPENMP_GPU)
+  USE fft_interfaces,       ONLY : fwfft_y_omp, invfft_y_omp
+#endif
   USE gvect,                ONLY : ngm, g
   USE gvecs,                ONLY : doublegrid
   USE klist,                ONLY : nks, nkstot, wk, xk, ngk, igk_k
@@ -31,7 +34,7 @@ SUBROUTINE sum_band()
   USE uspp,                 ONLY : nkb, vkb, becsum, ebecsum, nhtol, nhtoj, indv, okvan, &
                                    becsum_d, ebecsum_d
   USE uspp_param,           ONLY : nh, nhm
-  USE wavefunctions,        ONLY : evc, psic, psic_omp, psic_nc
+  USE wavefunctions,        ONLY : evc, psic, psic_nc
   USE noncollin_module,     ONLY : noncolin, npol, nspin_mag, domag
   USE wvfct,                ONLY : nbnd, npwx, wg, et, btype
   USE mp_pools,             ONLY : inter_pool_comm
@@ -122,7 +125,7 @@ SUBROUTINE sum_band()
           CALL new_ns(rho%ns)
        ENDIF
        !
-    ELSEIF (lda_plus_u_kind.EQ.2) THEN 
+    ELSEIF (lda_plus_u_kind.EQ.2) THEN
        !
        CALL new_nsg()
        !
@@ -140,7 +143,7 @@ SUBROUTINE sum_band()
   IF ( okvan ) CALL using_becp_auto(2)
   IF (xclib_dft_is('meta') .OR. lxdm) ALLOCATE (kplusg(npwx))
   !
-  ! ... specialized routines are called to sum at Gamma or for each k point 
+  ! ... specialized routines are called to sum at Gamma or for each k point
   ! ... the contribution of the wavefunctions to the charge
   ! ... The band energy contribution eband is computed together with the charge
   !
@@ -173,15 +176,16 @@ SUBROUTINE sum_band()
   ! ... bring the unsymmetrized rho(r) to G-space (use psic as work array)
   !
   DO is = 1, nspin
-     psic_omp(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
-     psic_omp(dffts%nnr+1:) = 0.0_dp
-     !$omp target update to(psic_omp)
-#if defined(__USE_DISPATCH)
-     !$omp dispatch
+     psic(1:dffts%nnr) = rho%of_r(1:dffts%nnr,is)
+     psic(dffts%nnr+1:) = 0.0_dp
+     !$omp target update to(psic)
+#if defined(__OPENMP_GPU)
+     CALL fwfft_y_omp ('Rho', psic, dffts)
+#else
+     CALL fwfft ('Rho', psic, dffts)
 #endif
-     CALL fwfft ('Rho', psic_omp, dffts)
-     !$omp target update from(psic_omp)
-     rho%of_g(1:dffts%ngm,is) = psic_omp(dffts%nl(1:dffts%ngm))
+     !$omp target update from(psic)
+     rho%of_g(1:dffts%ngm,is) = psic(dffts%nl(1:dffts%ngm))
      rho%of_g(dffts%ngm+1:,is) = (0.0_dp,0.0_dp)
   END DO
 
@@ -219,7 +223,7 @@ SUBROUTINE sum_band()
      !
   ENDIF
   !
-  ! ... symmetrize rho(G) 
+  ! ... symmetrize rho(G)
   !
   CALL start_clock( 'sum_band:sym_rho' )
   CALL sym_rho ( nspin_mag, rho%of_g )
@@ -227,16 +231,17 @@ SUBROUTINE sum_band()
   ! ... synchronize rho%of_r to the calculated rho%of_g (use psic as work array)
   !
   DO is = 1, nspin_mag
-     psic_omp(:) = ( 0.D0, 0.D0 )
-     psic_omp(dfftp%nl(:)) = rho%of_g(:,is)
-     IF ( gamma_only ) psic_omp(dfftp%nlm(:)) = CONJG( rho%of_g(:,is) )
-     !$omp target update to(psic_omp)
-#if defined(__USE_DISPATCH)
-     !$omp dispatch
+     psic(:) = ( 0.D0, 0.D0 )
+     psic(dfftp%nl(:)) = rho%of_g(:,is)
+     IF ( gamma_only ) psic(dfftp%nlm(:)) = CONJG( rho%of_g(:,is) )
+     !$omp target update to(psic)
+#if defined(__OPENMP_GPU)
+     CALL invfft_y_omp ('Rho', psic, dfftp)
+#else
+     CALL invfft ('Rho', psic, dfftp)
 #endif
-     CALL invfft ('Rho', psic_omp, dfftp)
-     !$omp target update from(psic_omp)
-     rho%of_r(:,is) = psic_omp(:)
+     !$omp target update from(psic)
+     rho%of_r(:,is) = psic(:)
   END DO
   !
   ! ... rho_kin(r): sum over bands, k-points, bring to G-space, symmetrize,
@@ -318,7 +323,7 @@ SUBROUTINE sum_band()
 
        IF( use_tg ) THEN
           !
-          v_siz = dffts%nnr_tg 
+          v_siz = dffts%nnr_tg
           !
           ALLOCATE( tg_psi( v_siz ) )
           ALLOCATE( tg_rho( v_siz ) )
@@ -514,7 +519,7 @@ SUBROUTINE sum_band()
           !
           ! ... If we have a US pseudopotential we compute here the becsum term
           !
-          IF ( okvan ) CALL sum_bec ( ik, current_spin, ibnd_start,ibnd_end,this_bgrp_nbnd ) 
+          IF ( okvan ) CALL sum_bec ( ik, current_spin, ibnd_start,ibnd_end,this_bgrp_nbnd )
           !
        END DO k_loop
        !
@@ -617,7 +622,7 @@ SUBROUTINE sum_band()
           ! ... for DMFT the eigenvectors are updated using v_dmft from add_dmft_occ.f90
           !
           IF ( dmft .AND. .NOT. dmft_updated) THEN
-             ! 
+             !
              DO j = 1, npw
                 CALL ZGEMM('C', 'N', nbnd, 1, nbnd, (1.d0,0.d0), v_dmft(:,:,ik), nbnd, evc(j,:), nbnd, (0.d0,0.d0), evc(j,:), nbnd)
              ENDDO
@@ -680,7 +685,7 @@ SUBROUTINE sum_band()
                    !
                    ! Compute the proper factor for each band
                    !
-                   idx = fftx_tgpe(dffts) + 1 
+                   idx = fftx_tgpe(dffts) + 1
                    !
                    ! Remember
                    ! proc 0 has bands ibnd
@@ -831,7 +836,7 @@ SUBROUTINE sum_band()
           !
           ! ... If we have a US pseudopotential we compute here the becsum term
           !
-          IF ( okvan ) CALL sum_bec ( ik, current_spin, ibnd_start,ibnd_end,this_bgrp_nbnd ) 
+          IF ( okvan ) CALL sum_bec ( ik, current_spin, ibnd_start,ibnd_end,this_bgrp_nbnd )
           !
        END DO k_loop
        !
@@ -901,7 +906,6 @@ SUBROUTINE sum_band()
 
      END SUBROUTINE get_rho_gamma
 
-
      SUBROUTINE get_rho_domag(rho_loc, nrxxs_loc, w1_loc, psic_loc)
 
         IMPLICIT NONE
@@ -919,7 +923,7 @@ SUBROUTINE sum_band()
            rho_loc(ir,2) = rho_loc(ir,2) + w1_loc*2.D0* &
                           (DBLE(psic_loc(ir,1))* DBLE(psic_loc(ir,2)) + &
                           AIMAG(psic_loc(ir,1))*AIMAG(psic_loc(ir,2)))
- 
+
            rho_loc(ir,3) = rho_loc(ir,3) + w1_loc*2.D0* &
                           (DBLE(psic_loc(ir,1))*AIMAG(psic_loc(ir,2)) - &
                            DBLE(psic_loc(ir,2))*AIMAG(psic_loc(ir,1)))
@@ -936,14 +940,14 @@ SUBROUTINE sum_band()
 END SUBROUTINE sum_band
 
 !----------------------------------------------------------------------------
-SUBROUTINE sum_bec ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd ) 
+SUBROUTINE sum_bec ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd )
   !----------------------------------------------------------------------------
   !! This routine computes the sum over bands:
   !
   !! \[ \sum_i \langle\psi_i|\beta_l\rangle w_i \langle\beta_m|\psi_i\rangle \]
   !
-  !! for point "ik" and, for LSDA, spin "current_spin".  
-  !! Calls calbec to compute \(\text{"becp"}=\langle \beta_m|\psi_i \rangle\).  
+  !! for point "ik" and, for LSDA, spin "current_spin".
+  !! Calls calbec to compute \(\text{"becp"}=\langle \beta_m|\psi_i \rangle\).
   !! Output is accumulated (unsymmetrized) into "becsum", module "uspp".
   !
   !! Routine used in sum_band (if okvan) and in compute_becsum, called by hinit1 (if okpaw).
@@ -1002,7 +1006,7 @@ SUBROUTINE sum_bec ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd )
      if (gamma_only) then
         do kbnd = 1, this_bgrp_nbnd, 2 !  ibnd_start, ibnd_end, 2
            ibnd = ibnd_start + kbnd - 1
-           call invfft_orbital_gamma(evc,ibnd,ibnd_end) 
+           call invfft_orbital_gamma(evc,ibnd,ibnd_end)
            call calbec_rs_gamma(kbnd,this_bgrp_nbnd,becp%r)
         enddo
      else
@@ -1010,7 +1014,7 @@ SUBROUTINE sum_bec ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd )
         becp%k = (0.d0,0.d0)
         do kbnd = 1, this_bgrp_nbnd ! ibnd_start, ibnd_end
            ibnd = ibnd_start + kbnd - 1
-           call invfft_orbital_k(evc,ibnd,ibnd_end) 
+           call invfft_orbital_k(evc,ibnd,ibnd_end)
            call calbec_rs_k(kbnd,this_bgrp_nbnd)
         enddo
      endif
@@ -1037,10 +1041,10 @@ SUBROUTINE sum_bec ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd )
                      auxk2( ibnd_start:ibnd_end, nh(np)*npol ) )
         END IF
         IF ( noncolin ) THEN
-           ALLOCATE ( aux_nc( nh(np)*npol,nh(np)*npol ) ) 
+           ALLOCATE ( aux_nc( nh(np)*npol,nh(np)*npol ) )
         ELSE
-           ALLOCATE ( aux_gk( nh(np),nh(np) ) ) 
-           if (tqr) ALLOCATE ( aux_egk( nh(np),nh(np) ) ) 
+           ALLOCATE ( aux_gk( nh(np),nh(np) ) )
+           if (tqr) ALLOCATE ( aux_egk( nh(np),nh(np) ) )
         END IF
         !
         !   In becp=<vkb_i|psi_j> terms corresponding to atom na of type nt
@@ -1080,7 +1084,7 @@ SUBROUTINE sum_bec ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd )
                     ikb = ofsbeta(na) + ih
                     DO ibnd_loc = 1, nbnd_loc
                        ibnd = (ibnd_start - 1) + ibnd_loc + becp%ibnd_begin - 1
-                       auxg(ibnd_loc,ih)= wg(ibnd,ik)*becp%r(ikb,ibnd_loc) 
+                       auxg(ibnd_loc,ih)= wg(ibnd,ik)*becp%r(ikb,ibnd_loc)
                     END DO
                  END DO
                  !$omp end parallel do
@@ -1109,7 +1113,7 @@ SUBROUTINE sum_bec ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd )
                     ikb = ofsbeta(na) + ih
                     DO kbnd = 1, this_bgrp_nbnd ! ibnd_start, ibnd_end
                        ibnd = ibnd_start + kbnd - 1
-                       auxk1(ibnd,ih) = becp%k(ikb,kbnd) 
+                       auxk1(ibnd,ih) = becp%k(ikb,kbnd)
                        auxk2(ibnd,ih) = wg(ibnd,ik)*becp%k(ikb,kbnd)
                     END DO
                  END DO
@@ -1176,8 +1180,8 @@ SUBROUTINE sum_bec ( ik, current_spin, ibnd_start, ibnd_end, this_bgrp_nbnd )
         IF ( noncolin ) THEN
            DEALLOCATE ( aux_nc )
         ELSE
-           DEALLOCATE ( aux_gk  ) 
-           if (tqr) DEALLOCATE ( aux_egk  ) 
+           DEALLOCATE ( aux_gk  )
+           if (tqr) DEALLOCATE ( aux_egk  )
         END IF
         IF ( gamma_only ) THEN
            DEALLOCATE( auxg )
@@ -1197,7 +1201,7 @@ END SUBROUTINE sum_bec
 SUBROUTINE add_becsum_nc ( na, np, becsum_nc, becsum )
   !----------------------------------------------------------------------------
   !! This routine multiplies \(\text{becsum_nc}\) by the identity and the
-  !! Pauli matrices, saves it in \(\text{becsum}\) for the calculation of 
+  !! Pauli matrices, saves it in \(\text{becsum}\) for the calculation of
   !! augmentation charge and magnetization.
   !
   USE kinds,                ONLY : DP
@@ -1238,14 +1242,14 @@ SUBROUTINE add_becsum_nc ( na, np, becsum_nc, becsum )
         END IF
      END DO
   END DO
-  
+
 END SUBROUTINE add_becsum_nc
 !
 !----------------------------------------------------------------------------
 SUBROUTINE add_becsum_so( na, np, becsum_nc, becsum )
   !----------------------------------------------------------------------------
   !! This routine multiplies \(\text{becsum_nc}\) by the identity and the Pauli
-  !! matrices, rotates it as appropriate for the spin-orbit case, saves it in 
+  !! matrices, rotates it as appropriate for the spin-orbit case, saves it in
   !! \(\text{becsum}\) for the calculation of augmentation charge and magnetization.
   !
   USE kinds,                ONLY : DP

@@ -418,6 +418,9 @@ program test_fwinv_gpu
     USE fft_types,       ONLY : fft_type_descriptor
     USE stick_base,      ONLY : sticks_map
     USE fft_interfaces,  ONLY : fwfft
+#if defined(__OPENMP_GPU)
+    USE fft_interfaces,  ONLY : fwfft_y_omp
+#endif
     implicit none
     TYPE(mpi_t) :: mp
     TYPE(tester_t) :: test
@@ -455,10 +458,11 @@ program test_fwinv_gpu
       CALL fill_random(data_in, data_in_d, dfft%nnr_tg)
       !
       CALL fwfft( 'tgWave' , data_in, dfft, 1 )
-#if defined(__USE_DISPATCH)
-      !$omp dispatch
-#endif
+#if defined(__OPENMP_GPU)
+      CALL fwfft_y_omp( 'tgWave' , data_in_d, dfft, 1 )
+#else
       CALL fwfft( 'tgWave' , data_in_d, dfft, 1 )
+#endif
     ELSE
       ! Allocate variables and fill realspace data with random numbers
       ALLOCATE(data_in(dfft%nnr))
@@ -470,10 +474,11 @@ program test_fwinv_gpu
       CALL fill_random(data_in, data_in_d, dfft%nnr)
       !
       CALL fwfft( 'Wave' , data_in, dfft, 1 )
-#if defined(__USE_DISPATCH)
-      !$omp dispatch
-#endif
+#if defined(__OPENMP_GPU)
+      CALL fwfft_y_omp( 'Wave' , data_in_d, dfft, 1 )
+#else
       CALL fwfft( 'Wave' , data_in_d, dfft, 1 )
+#endif
     ENDIF
     ! data from GPU is moved to an auxiliary array to compare the results of the GPU
     ! and the CPU implementation on the host
@@ -513,10 +518,11 @@ program test_fwinv_gpu
     CALL fill_random(data_in, data_in_d, dfft%nnr)
     !
     CALL fwfft( 'Rho' , data_in, dfft, 1 )
-#if defined(__USE_DISPATCH)
-    !$omp dispatch
-#endif
+#if defined(__OPENMP_GPU)
+    CALL fwfft_y_omp( 'Rho' , data_in_d, dfft, 1 )
+#else
     CALL fwfft( 'Rho' , data_in_d, dfft, 1 )
+#endif
 #if !defined(__OPENMP_GPU)
     aux = data_in_d
 #endif
@@ -549,6 +555,9 @@ program test_fwinv_gpu
     USE fft_types,       ONLY : fft_type_descriptor
     USE stick_base,      ONLY : sticks_map
     USE fft_interfaces,  ONLY : invfft
+#if defined(__OPENMP_GPU)
+    USE fft_interfaces,  ONLY : invfft_y_omp
+#endif
     implicit none
     TYPE(mpi_t) :: mp
     TYPE(tester_t) :: test
@@ -591,10 +600,11 @@ program test_fwinv_gpu
       CALL fill_random(data_in, data_in_d, dfft%nnr_tg)
       !
       CALL invfft( 'tgWave' , data_in, dfft, 1 )
-#if defined(__USE_DISPATCH)
-      !$omp dispatch
-#endif
+#if defined __OPENMP_GPU
+      CALL invfft_y_omp( 'tgWave' , data_in_d, dfft, 1 )
+#else
       CALL invfft( 'tgWave' , data_in_d, dfft, 1 )
+#endif
     ELSE
       !
       ALLOCATE(data_in(dfft%nnr))
@@ -627,10 +637,11 @@ program test_fwinv_gpu
 #endif
       !
       CALL invfft( 'Wave' , data_in, dfft, 1 )
-#if defined(__USE_DISPATCH)
-      !$omp dispatch
-#endif
+#if defined __OPENMP_GPU
+      CALL invfft_y_omp( 'Wave' , data_in_d, dfft, 1 )
+#else
       CALL invfft( 'Wave' , data_in_d, dfft, 1 )
+#endif
     ENDIF
 #if !defined(__OPENMP_GPU)
     aux = data_in_d
@@ -680,10 +691,11 @@ program test_fwinv_gpu
 #endif
     !
     CALL invfft( 'Rho' , data_in, dfft, 1 )
-#if defined(__USE_DISPATCH)
-    !$omp dispatch
-#endif
+#if defined(__OPENMP_GPU)
+    CALL invfft_y_omp( 'Rho' , data_in_d, dfft, 1 )
+#else
     CALL invfft( 'Rho' , data_in_d, dfft, 1 )
+#endif
 #if !defined(__OPENMP_GPU)
     aux = data_in_d
 #endif
@@ -710,6 +722,9 @@ program test_fwinv_gpu
     USE fft_types,       ONLY : fft_type_descriptor
     USE stick_base,      ONLY : sticks_map
     USE fft_interfaces,  ONLY : fwfft
+#if defined(__OPENMP_GPU)
+    USE fft_interfaces,  ONLY : fwfft_y_omp
+#endif
     implicit none
     TYPE(mpi_t) :: mp
     TYPE(tester_t) :: test
@@ -746,10 +761,11 @@ program test_fwinv_gpu
       !$omp target enter data map(alloc:data_in_d)
       CALL fill_random(data_in, data_in_d, dfft%nnr*howmany)
       !
-#if defined(__USE_DISPATCH)
-      !$omp dispatch
-#endif
+#if defined(__OPENMP_GPU)
+      CALL fwfft_y_omp( 'Wave' , data_in_d, dfft, howmany=howmany)
+#else
       CALL fwfft( 'Wave' , data_in_d, dfft, howmany=howmany)
+#endif
       !
       !$omp target exit data map(from:data_in_d)
       DO i=0,howmany-1
@@ -790,10 +806,11 @@ program test_fwinv_gpu
     !
     CALL fill_random(data_in, data_in_d, dfft%nnr*howmany)
     !
-#if defined(__USE_DISPATCH)
-    !$omp dispatch
-#endif
+#if defined(__OPENMP_GPU)
+    CALL fwfft_y_omp( 'Rho' , data_in_d, dfft,  howmany)
+#else
     CALL fwfft( 'Rho' , data_in_d, dfft,  howmany)
+#endif
     !
     !$omp target exit data map(from:data_in_d)
     !
@@ -834,6 +851,9 @@ program test_fwinv_gpu
     USE fft_types,       ONLY : fft_type_descriptor
     USE stick_base,      ONLY : sticks_map
     USE fft_interfaces,  ONLY : invfft
+#if defined(__OPENMP_GPU)
+    USE fft_interfaces,  ONLY : invfft_y_omp
+#endif
     implicit none
     TYPE(mpi_t) :: mp
     TYPE(tester_t) :: test
@@ -897,10 +917,11 @@ program test_fwinv_gpu
       aux = (0.d0, 0.d0)
 #endif
       !
-#if defined(__USE_DISPATCH)
-      !$omp dispatch
-#endif
+#if defined(__OPENMP_GPU)
+      CALL invfft_y_omp( 'Wave' , data_in_d, dfft, howmany=howmany ) !, stream=strm )
+#else
       CALL invfft( 'Wave' , data_in_d, dfft, howmany=howmany ) !, stream=strm )
+#endif
       !$omp target exit data map(from:data_in_d)
       DO i=0,howmany-1
         start = i*dfft%nnr
@@ -959,12 +980,12 @@ program test_fwinv_gpu
 #if !defined(__OPENMP_GPU)
     aux = (0.d0, 0.d0)
 #endif
-
     !
-#if defined(__USE_DISPATCH)
-    !$omp dispatch
-#endif
+#if defined(__OPENMP_GPU)
+    CALL invfft_y_omp( 'Rho' , data_in_d, dfft, howmany )
+#else
     CALL invfft( 'Rho' , data_in_d, dfft, howmany )
+#endif
     !$omp target exit data map(from:data_in_d)
     !
     DO i=0,howmany-1

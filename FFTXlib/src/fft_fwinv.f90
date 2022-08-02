@@ -2,27 +2,24 @@
 ! Copyright (C) Quantum ESPRESSO group
 !
 ! This file is distributed under the terms of the
+
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-#if   !defined(__OPENMP_GPU) &&  defined(__USE_DISPATCH) 
+#if   !defined(__OPENMP_GPU) &&  defined(__USE_DISPATCH)
 #error __USE_DISPATCH can be only used with OpenMP offload (__OPENMP_GPU)
-#elif  defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
-#define TARGET_ATTRIBUTE , target
-#else
-#define TARGET_ATTRIBUTE 
-#endif 
+#endif
 
 #if defined(__OPENMP_GPU)
 !!=---------------------------------------------------------------------------=!
 SUBROUTINE invfft_y_omp( fft_kind, f, dfft, howmany )
   !! Compute G-space to R-space for a specific grid type
-  !! 
-  !! **fft_kind = 'Rho'** : 
+  !!
+  !! **fft_kind = 'Rho'** :
   !!   inverse (backward) fourier transform of potentials and charge density f
   !!   On output, f is overwritten
-  !! 
+  !!
   !! **fft_kind = 'Wave'** :
   !!   inverse (backward) fourier transform of  wave functions f
   !!   On output, f is overwritten
@@ -32,7 +29,7 @@ SUBROUTINE invfft_y_omp( fft_kind, f, dfft, howmany )
   !!   On output, f is overwritten
   !!
   !! **dfft = FFT grid descriptor**, IMPORTANT NOTICE: grid is specified only by dfft.
-  !!   No check is performed on the correspondence between dfft and fft_kind. 
+  !!   No check is performed on the correspondence between dfft and fft_kind.
   !!   from all other cases
 
 #if defined(__ONEMKL)
@@ -111,7 +108,7 @@ SUBROUTINE invfft_y_omp( fft_kind, f, dfft, howmany )
      IF( fft_kind == 'Rho' ) THEN
         CALL cfft3d_omp( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                             dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1)
-     ELSE 
+     ELSE
         CALL cfft3ds_omp( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                              dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , 1, &
                              dfft%isind, dfft%iplw )
@@ -128,11 +125,11 @@ END SUBROUTINE invfft_y_omp
 !!=---------------------------------------------------------------------------=!
 SUBROUTINE fwfft_y_omp( fft_kind, f, dfft, howmany )
   !! Compute R-space to G-space for a specific grid type
-  !! 
+  !!
   !! **fft_kind = 'Rho'**
   !!   forward fourier transform of potentials and charge density f
   !!   On output, f is overwritten
-  !! 
+  !!
   !! **fft_kind = 'Wave'**
   !!   forward fourier transform of  wave functions f
   !!   On output, f is overwritten
@@ -140,7 +137,7 @@ SUBROUTINE fwfft_y_omp( fft_kind, f, dfft, howmany )
   !! **fft_kind = 'tgWave'**
   !!   forward fourier transform of wave functions f with task group
   !!   On output, f is overwritten
-  !! 
+  !!
 
 #if defined(__ONEMKL)
   USE fft_scalar_dfti_omp, ONLY : cfft3d_omp, cfft3ds_omp
@@ -236,11 +233,11 @@ END SUBROUTINE fwfft_y_omp
 !=---------------------------------------------------------------------------=!
 SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   !! Compute G-space to R-space for a specific grid type
-  !! 
-  !! **fft_kind = 'Rho'** : 
+  !!
+  !! **fft_kind = 'Rho'** :
   !!   inverse (backward) fourier transform of potentials and charge density f
   !!   On output, f is overwritten
-  !! 
+  !!
   !! **fft_kind = 'Wave'** :
   !!   inverse (backward) fourier transform of  wave functions f
   !!   On output, f is overwritten
@@ -250,26 +247,21 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
   !!   On output, f is overwritten
   !!
   !! **dfft = FFT grid descriptor**, IMPORTANT NOTICE: grid is specified only by dfft.
-  !!   No check is performed on the correspondence between dfft and fft_kind. 
+  !!   No check is performed on the correspondence between dfft and fft_kind.
   !!   from all other cases
-  
+
   USE fft_scalar,    ONLY: cfft3d, cfft3ds
   USE fft_smallbox,  ONLY: cft_b, cft_b_omp
   USE fft_parallel,  ONLY: tg_cft3s, many_cft3s
   USE fft_parallel_2d,  ONLY: tg_cft3s_2d => tg_cft3s
   USE fft_types,     ONLY: fft_type_descriptor
   USE fft_param,     ONLY: DP
-#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
-  USE fft_interfaces,  ONLY: invfft_y_omp
-  USE omp_lib,         ONLY: omp_target_is_present, omp_get_default_device
-  USE iso_c_binding,   ONLY: c_loc
-#endif
 
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft
   CHARACTER(LEN=*), INTENT(IN) :: fft_kind
-  COMPLEX(DP) TARGET_ATTRIBUTE :: f(:)
+  COMPLEX(DP) :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
@@ -280,13 +272,6 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
      howmany_ = 1
   END IF
   !
-#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
-  IF (OMP_TARGET_IS_PRESENT(c_loc(f), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
-      CALL invfft_y_omp(fft_kind, f, dfft, howmany_)
-      RETURN
-  ENDIF
-#endif
-  
   IF( fft_kind == 'Rho' ) THEN
      clock_label = dfft%rho_clock_label
   ELSE IF( fft_kind == 'Wave' .OR. fft_kind == 'tgWave' ) THEN
@@ -337,7 +322,7 @@ SUBROUTINE invfft_y( fft_kind, f, dfft, howmany )
      IF( fft_kind == 'Rho' ) THEN
         CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1)
-     ELSE 
+     ELSE
         CALL cfft3ds( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , 1, &
                         dfft%isind, dfft%iplw )
@@ -355,11 +340,11 @@ END SUBROUTINE invfft_y
 !
 SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   !! Compute R-space to G-space for a specific grid type
-  !! 
+  !!
   !! **fft_kind = 'Rho'**
   !!   forward fourier transform of potentials and charge density f
   !!   On output, f is overwritten
-  !! 
+  !!
   !! **fft_kind = 'Wave'**
   !!   forward fourier transform of  wave functions f
   !!   On output, f is overwritten
@@ -367,24 +352,19 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   !! **fft_kind = 'tgWave'**
   !!   forward fourier transform of wave functions f with task group
   !!   On output, f is overwritten
-  !! 
-  
+  !!
+
   USE fft_scalar,    ONLY: cfft3d, cfft3ds
   USE fft_parallel,  ONLY: tg_cft3s, many_cft3s
   USE fft_parallel_2d,  ONLY: tg_cft3s_2d => tg_cft3s
   USE fft_types,     ONLY: fft_type_descriptor
   USE fft_param,     ONLY: DP
-#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
-  USE fft_interfaces,  ONLY: fwfft_y_omp
-  USE omp_lib,         ONLY: omp_target_is_present, omp_get_default_device
-  USE iso_c_binding,   ONLY: c_loc
-#endif
 
   IMPLICIT NONE
 
   TYPE(fft_type_descriptor), INTENT(INOUT) :: dfft
   CHARACTER(LEN=*), INTENT(IN) :: fft_kind
-  COMPLEX(DP) TARGET_ATTRIBUTE :: f(:)
+  COMPLEX(DP) :: f(:)
   INTEGER, OPTIONAL, INTENT(IN) :: howmany
   INTEGER :: howmany_ = 1
   CHARACTER(LEN=12) :: clock_label
@@ -394,14 +374,7 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   ELSE
      howmany_ = 1
   END IF
-
-#if defined(__OPENMP_GPU) && !defined(__USE_DISPATCH)
-  IF (OMP_TARGET_IS_PRESENT(c_loc(f), OMP_GET_DEFAULT_DEVICE()) == 1) THEN
-      CALL fwfft_y_omp(fft_kind, f, dfft, howmany_)
-      RETURN
-  ENDIF
-#endif
-
+  !
   IF( fft_kind == 'Rho' ) THEN
      clock_label = dfft%rho_clock_label
   ELSE IF( fft_kind == 'Wave' .OR. fft_kind == 'tgWave' ) THEN
@@ -414,7 +387,7 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   CALL start_clock(clock_label)
 
   IF( dfft%lpara .and. dfft%use_pencil_decomposition ) THEN
-     
+
      IF( howmany_ == 1 ) THEN
      IF( fft_kind == 'Rho' ) THEN
         CALL tg_cft3s(f,dfft,-1)
@@ -452,7 +425,7 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
      IF( fft_kind == 'Rho' ) THEN
         CALL cfft3d( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1)
-     ELSE 
+     ELSE
         CALL cfft3ds( f, dfft%nr1, dfft%nr2, dfft%nr3, &
                          dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1, &
                          dfft%isind, dfft%iplw )
@@ -461,7 +434,7 @@ SUBROUTINE fwfft_y( fft_kind, f, dfft, howmany )
   END IF
 
   CALL stop_clock( clock_label )
-  
+
   RETURN
   !
 END SUBROUTINE fwfft_y
@@ -476,24 +449,24 @@ SUBROUTINE invfft_b( f, dfft, ia )
   !! The array f (overwritten on output) is NOT distributed:
   !! a copy is present on each processor.
   !! The fft along z  is done on the entire grid.
-  !! The fft along y  is done ONLY on planes that have components on the dense 
+  !! The fft along y  is done ONLY on planes that have components on the dense
   !! dense grid for each processor. In addition the fft along x is done ONLY on
-  !! the y-sections that have components on the dense grid for each processor. 
+  !! the y-sections that have components on the dense grid for each processor.
   !! Note that the final array will no longer be the same on all processors.
-  !! 
+  !!
   !! **fft_kind** = 'Box' (only allowed value!)
-  !! 
+  !!
   !! **dfft** = fft descriptor for the box grid
-  !! 
+  !!
   !! **ia**   = index of the atom with a box grid. Used to find the number
   !!         of planes on this processors, contained in dfft%np3(ia)
-  
+
   USE fft_scalar,    ONLY: cfft3d, cfft3ds
   USE fft_smallbox,  ONLY: cft_b, cft_b_omp
   USE fft_parallel,  ONLY: tg_cft3s
   USE fft_smallbox_type, ONLY: fft_box_descriptor
   USE fft_param,     ONLY: DP
-  
+
   IMPLICIT NONE
 
   TYPE(fft_box_descriptor), INTENT(IN) :: dfft
@@ -512,10 +485,10 @@ SUBROUTINE invfft_b( f, dfft, ia )
 
 !$omp master
   CALL start_clock( 'fftb' )
-!$omp end master 
+!$omp end master
 
 #if defined(__MPI) && !defined(__USE_3D_FFT)
-     
+
   IF( (dfft%np3( ia ) > 0) .AND. (dfft%np2( ia ) > 0) ) THEN
 
 #if defined(_OPENMP)
@@ -560,11 +533,11 @@ END SUBROUTINE invfft_b
 
 SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   !! Compute G-space to R-space for a specific grid type
-  !! 
-  !! **fft_kind = 'Rho'** : 
+  !!
+  !! **fft_kind = 'Rho'** :
   !!   inverse (backward) fourier transform of potentials and charge density f
   !!   On output, f is overwritten
-  !! 
+  !!
   !! **fft_kind = 'Wave'** :
   !!   inverse (backward) fourier transform of  wave functions f
   !!   On output, f is overwritten
@@ -574,7 +547,7 @@ SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   !!   On output, f is overwritten
   !!
   !! **dfft = FFT grid descriptor**, IMPORTANT NOTICE: grid is specified only by dfft.
-  !!   No check is performed on the correspondence between dfft and fft_kind. 
+  !!   No check is performed on the correspondence between dfft and fft_kind.
   !!   from all other cases
   USE cudafor
   USE fft_scalar,    ONLY: cfft3d_gpu, cfft3ds_gpu
@@ -629,7 +602,7 @@ SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
      IF( stream_ /= 0 ) THEN
         CALL fftx_error__( ' invfft ', ' stream support not implemented for parallel driver ', 1 )
      END IF
-     
+
      IF( fft_kind == 'Rho' ) THEN
         IF( howmany_ == 1 ) THEN
            CALL tg_cft3s_gpu( f_d, dfft, 1 )
@@ -667,7 +640,7 @@ SUBROUTINE invfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
      IF( fft_kind == 'Rho' ) THEN
         CALL cfft3d_gpu( f_d, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x, dfft%nr2x, dfft%nr3x, howmany_ , 1, stream_)
-     ELSE 
+     ELSE
         CALL cfft3ds_gpu( f_d, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , 1, &
                         dfft%isind, dfft%iplw, stream_ )
@@ -685,11 +658,11 @@ END SUBROUTINE invfft_y_gpu
 !
 SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   !! Compute R-space to G-space for a specific grid type
-  !! 
+  !!
   !! **fft_kind = 'Rho'**
   !!   forward fourier transform of potentials and charge density f
   !!   On output, f is overwritten
-  !! 
+  !!
   !! **fft_kind = 'Wave'**
   !!   forward fourier transform of  wave functions f
   !!   On output, f is overwritten
@@ -697,7 +670,7 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   !! **fft_kind = 'tgWave'**
   !!   forward fourier transform of wave functions f with task group
   !!   On output, f is overwritten
-  !! 
+  !!
   USE cudafor
   USE fft_scalar,    ONLY: cfft3d_gpu, cfft3ds_gpu
   USE fft_parallel,  ONLY: tg_cft3s_gpu, many_cft3s_gpu
@@ -750,7 +723,7 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
      IF( stream_ /= 0 ) THEN
         CALL fftx_error__( ' fwfft ', ' stream support not implemented for parallel driver ', 1 )
      END IF
-     
+
      IF( fft_kind == 'Rho' ) THEN
         IF( howmany_ == 1 ) THEN
            CALL tg_cft3s_gpu(f_d,dfft,-1)
@@ -788,7 +761,7 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
      IF( fft_kind == 'Rho' ) THEN
         CALL cfft3d_gpu( f_d, dfft%nr1, dfft%nr2, dfft%nr3, &
                         dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1, stream_ )
-     ELSE 
+     ELSE
         CALL cfft3ds_gpu( f_d, dfft%nr1, dfft%nr2, dfft%nr3, &
                          dfft%nr1x,dfft%nr2x,dfft%nr3x, howmany_ , -1, &
                          dfft%isind, dfft%iplw, stream_ )
@@ -797,7 +770,7 @@ SUBROUTINE fwfft_y_gpu( fft_kind, f_d, dfft, howmany, stream )
   END IF
 
   CALL stop_clock_gpu( clock_label )
-  
+
   RETURN
   !
 END SUBROUTINE fwfft_y_gpu

@@ -7,7 +7,7 @@
 !
 
 #if defined(__CUDA)
-#define PINMEM ,PINNED 
+#define PINMEM ,PINNED
 #else
 #define PINMEM
 #endif
@@ -28,7 +28,7 @@
      !
      COMPLEX(DP), ALLOCATABLE, TARGET :: &
        evc(:,:)
-       !! wavefunctions in the PW basis set.  
+       !! wavefunctions in the PW basis set.
        !! noncolinear case: first index is a combined PW + spin index
        !
 #if defined(__CUDA)
@@ -37,12 +37,8 @@
      !
      COMPLEX(DP) , ALLOCATABLE, TARGET :: psic(:)
      !! additional memory for FFT
-     COMPLEX(DP) , ALLOCATABLE, TARGET :: psic_omp(:)
-     !! additional memory for FFT (mapped when OMP offload is active)
      COMPLEX(DP) , ALLOCATABLE, TARGET :: psic_nc(:,:)
      !! additional memory for FFT for the noncolinear case
-     COMPLEX(DP) , ALLOCATABLE, TARGET :: psic_nc_omp(:,:)
-     !! additional memory for FFT (mapped when OMP offload is active)
      !
      !
      ! electronic wave functions, CPV code
@@ -69,17 +65,16 @@
        IF( ALLOCATED( phi ) ) DEALLOCATE( phi )
        IF( ALLOCATED( psic_nc ) ) THEN
 #if defined(__OPENMP_GPU)
-       !$omp target exit data map(delete:psic_nc)
+          !$omp target exit data map(delete:psic_nc)
 #endif
-               DEALLOCATE( psic_nc )
+          DEALLOCATE( psic_nc )
        ENDIF
-       IF( ALLOCATED( psic_nc_omp ) ) THEN
+       IF( ALLOCATED( psic ) ) THEN
 #if defined(__OPENMP_GPU)
-       !$omp target exit data map(delete:psic_nc_omp)
+          !$omp target exit data map(delete:psic)
 #endif
-               DEALLOCATE( psic_nc_omp )
+          DEALLOCATE( psic )
        ENDIF
-       IF( ALLOCATED( psic ) ) DEALLOCATE( psic )
        IF( ALLOCATED( evc ) ) DEALLOCATE( evc )
 #if defined (__CUDA)
        IF( ALLOCATED( c0_d ) ) DEALLOCATE( c0_d )

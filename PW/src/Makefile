@@ -7,7 +7,7 @@ MODFLAGS= $(BASEMOD_FLAGS) \
           $(MOD_FLAG)../../dft-d3/
 
 PWOBJS = \
-pwscf.o 
+pwscf.o
 
 PWLIBS = \
 a2fmod.o \
@@ -258,7 +258,6 @@ wannier_check.o \
 wannier_clean.o \
 wannier_occ.o \
 
-
 # GPU versions of routines
 PWLIBS += \
   g_psi_mod_gpu.o \
@@ -316,7 +315,7 @@ pw.x : $(PWOBJS) libpw.a $(QEMODS)
                ln -fs ../PW/src/$@ dist.x ; ln -fs ../PW/src/$@ manypw.x ; )
 # dist.x and manypw.x link the same executable pw.x
 
-libpw.a : $(PWLIBS) 
+libpw.a : $(PWLIBS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 

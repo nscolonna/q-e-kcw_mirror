@@ -6,9 +6,9 @@ include ../make.inc
 MODFLAGS=$(BASEMOD_FLAGS)
 
 # set an auxiliary compiler (if the compiler is ifx, space_group needs to be compiled with ifort)
-ifeq (,$(shell which ifort)) 
+ifeq (,$(shell which ifort))
   AAUX=$(F90)
-else 
+else
   AAUX='ifort'
 endif
 
@@ -165,13 +165,12 @@ space_group.o : space_group.f90
 	$(AAUX) $(FFLAGS_NOOPT) -c $<
 
 libqemod.a: 	$(MODULES) $(OBJS)
-	$(AR) $(ARFLAGS) $@ $?       
-	$(RANLIB) $@    
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
 
 tldeps :
 	if test -n "$(TLDEPS)" ; then \
 	( cd ../.. ; $(MAKE) $(TLDEPS) || exit 1 ) ; fi
-
 
 clean :
 	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L

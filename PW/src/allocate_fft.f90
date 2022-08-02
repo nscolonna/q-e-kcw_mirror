@@ -9,7 +9,7 @@
 !-----------------------------------------------------------------------
 SUBROUTINE allocate_fft
   !-----------------------------------------------------------------------
-  !! This routine allocates memory for FFT-related arrays.  
+  !! This routine allocates memory for FFT-related arrays.
   !! IMPORTANT:  routine "data_structure" must be called before it in
   !! order to set the proper dimensions and grid distribution across
   !! processors these dimensions.
@@ -24,7 +24,7 @@ SUBROUTINE allocate_fft
                                kedtau, create_scf_type
   USE control_flags,    ONLY : gamma_only
   USE noncollin_module, ONLY : pointlist, factlist, report, noncolin, npol
-  USE wavefunctions,    ONLY : psic, psic_omp, psic_nc, psic_nc_omp
+  USE wavefunctions,    ONLY : psic, psic_nc
   USE xc_lib,           ONLY : xclib_dft_is
   !
   USE scf_gpum,  ONLY : using_vrs
@@ -70,9 +70,8 @@ SUBROUTINE allocate_fft
   ENDIF
   ALLOCATE( rhog_core(ngm)  )
   ALLOCATE( psic(dfftp%nnr) )
-  ALLOCATE( psic_omp(dfftp%nnr) )
 #if defined (__OPENMP_GPU)
-  !$omp target enter data map(alloc:psic_omp)
+  !$omp target enter data map(alloc:psic)
 #endif
   ALLOCATE( vrs(dfftp%nnr,nspin) )
 #if defined(__CUDA)
@@ -81,10 +80,9 @@ SUBROUTINE allocate_fft
 #endif
   !
   IF (noncolin) THEN
-          ALLOCATE( psic_nc(dfftp%nnr,npol) )
-          ALLOCATE( psic_nc_omp(dfftp%nnr,npol) )
+     ALLOCATE( psic_nc(dfftp%nnr,npol) )
 #if defined (__OPENMP_GPU)
-       !$omp target enter data map(alloc:psic_nc_omp)
+     !$omp target enter data map(alloc:psic_nc)
 #endif
   ENDIF
 #if defined(__CUDA)

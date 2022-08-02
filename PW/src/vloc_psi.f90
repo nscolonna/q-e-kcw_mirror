@@ -16,7 +16,10 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
   USE mp_bands,                ONLY : me_bgrp
   USE fft_base,                ONLY : dffts, dfftp
   USE fft_interfaces,          ONLY : fwfft, invfft
-  USE wavefunctions,           ONLY : psic, psic_omp
+#if defined(__OPENMP_GPU)
+  USE fft_interfaces,          ONLY : fwfft_y_omp, invfft_y_omp
+#endif
+  USE wavefunctions,           ONLY : psic
   USE fft_helper_subroutines,  ONLY : fftx_ntgrp, tg_get_nnr, &
                                       tg_get_group_nr3, tg_get_recip_inc
   !
@@ -51,7 +54,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
   CALL start_clock ('vloc_psi')
   incr = 2
   !
-  use_tg = dffts%has_task_groups 
+  use_tg = dffts%has_task_groups
   !
   IF( use_tg ) THEN
      !
@@ -115,20 +118,20 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
         !
         !$omp target teams distribute parallel do
         DO j = 1, v_siz_p
-          psic_omp(j) = (0.d0, 0.d0)
+          psic(j) = (0.d0, 0.d0)
         END DO
         IF (ibnd < m) THEN
            ! two ffts at the same time
            !$omp target teams distribute parallel do
            DO j = 1, n
-              psic_omp(dffts_nl (j))=      psi(j,ibnd) + (0.0d0,1.d0)*psi(j,ibnd+1)
-              psic_omp(dffts_nlm(j))=conjg(psi(j,ibnd) - (0.0d0,1.d0)*psi(j,ibnd+1))
+              psic(dffts_nl (j))=      psi(j,ibnd) + (0.0d0,1.d0)*psi(j,ibnd+1)
+              psic(dffts_nlm(j))=conjg(psi(j,ibnd) - (0.0d0,1.d0)*psi(j,ibnd+1))
            ENDDO
         ELSE
            !$omp target teams distribute parallel do
            DO j = 1, n
-              psic_omp (dffts_nl (j)) =       psi(j, ibnd)
-              psic_omp (dffts_nlm(j)) = conjg(psi(j, ibnd))
+              psic(dffts_nl (j)) =       psi(j, ibnd)
+              psic(dffts_nlm(j)) = conjg(psi(j, ibnd))
            ENDDO
         ENDIF
         !
@@ -152,20 +155,22 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
         !
      ELSE
         !
-#if defined(__USE_DISPATCH)
-        !$omp dispatch
+#if defined(__OPENMP_GPU)
+        CALL invfft_y_omp ('Wave', psic, dffts)
+#else
+        CALL invfft ('Wave', psic, dffts)
 #endif
-        CALL invfft ('Wave', psic_omp, dffts)
         !
 !$omp target teams distribute parallel do
         DO j = 1, v_siz
-           psic_omp (j) = psic_omp (j) * v(j)
+           psic(j) = psic(j) * v(j)
         ENDDO
         !
-#if defined(__USE_DISPATCH)
-        !$omp dispatch
+#if defined(__OPENMP_GPU)
+        CALL fwfft_y_omp ('Wave', psic, dffts)
+#else
+        CALL fwfft ('Wave', psic, dffts)
 #endif
-        CALL fwfft ('Wave', psic_omp, dffts)
         !
      ENDIF
      !
@@ -206,8 +211,8 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
            ! two ffts at the same time
            !$omp target teams distribute parallel do
            DO j = 1, n
-              fp = (psic_omp (dffts_nl(j)) + psic_omp (dffts_nlm(j)))*0.5d0
-              fm = (psic_omp (dffts_nl(j)) - psic_omp (dffts_nlm(j)))*0.5d0
+              fp = (psic (dffts_nl(j)) + psic (dffts_nlm(j)))*0.5d0
+              fm = (psic (dffts_nl(j)) - psic (dffts_nlm(j)))*0.5d0
               hpsi (j, ibnd)   = hpsi (j, ibnd)   + &
                                  cmplx( dble(fp), aimag(fm),kind=DP)
               hpsi (j, ibnd+1) = hpsi (j, ibnd+1) + &
@@ -216,7 +221,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
         ELSE
            !$omp target teams distribute parallel do
            DO j = 1, n
-              hpsi (j, ibnd)   = hpsi (j, ibnd)   + psic_omp (dffts_nl(j))
+              hpsi (j, ibnd)   = hpsi (j, ibnd)   + psic (dffts_nl(j))
            ENDDO
         ENDIF
      ENDIF
@@ -259,9 +264,12 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
   USE mp_bands,               ONLY : me_bgrp
   USE fft_base,               ONLY : dffts
   USE fft_interfaces,         ONLY : fwfft, invfft
+#if defined(__OPENMP_GPU)
+  USE fft_interfaces,          ONLY : fwfft_y_omp, invfft_y_omp
+#endif
   USE fft_helper_subroutines, ONLY : fftx_ntgrp, tg_get_nnr, &
                                      tg_get_group_nr3, tg_get_recip_inc
-  USE wavefunctions,          ONLY : psic, psic_omp
+  USE wavefunctions,          ONLY : psic
   !
   IMPLICIT NONE
   !
@@ -295,7 +303,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
   INTEGER :: v_siz, idx
   !
   CALL start_clock ('vloc_psi')
-  use_tg = dffts%has_task_groups 
+  use_tg = dffts%has_task_groups
   !
   IF( use_tg ) THEN
      !
@@ -309,7 +317,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
      CALL stop_clock ('vloc_psi:tg_gather')
      !
   ELSE
-     !     
+     !
      ALLOCATE(dffts_nl(1:dffts%ngm))
      dffts_nl = dffts%nl
      v_siz=dffts%nnr
@@ -342,7 +350,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
 !$omp end parallel
         !
         CALL  invfft ('tgWave', tg_psic, dffts )
-        !write (6,*) 'wfc R ' 
+        !write (6,*) 'wfc R '
         !write (6,99) (tg_psic(i), i=1,400)
         !
         CALL tg_get_group_nr3( dffts, right_nr3 )
@@ -352,7 +360,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
            tg_psic (j) = tg_psic (j) * tg_v(j)
         ENDDO
 !$omp end parallel do
-        !write (6,*) 'v psi R ' 
+        !write (6,*) 'v psi R '
         !write (6,99) (tg_psic(i), i=1,400)
         !
         CALL fwfft ('tgWave',  tg_psic, dffts )
@@ -378,19 +386,19 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
 #if defined(__OPENMP_GPU)
         !$omp target teams distribute parallel do
         do i=1,v_siz
-           psic_omp(i)=(0.d0, 0.d0)
+           psic(i)=(0.d0, 0.d0)
         enddo
         !$omp target teams distribute parallel do
         DO j = 1, n
-          psic_omp (dffts_nl (igk_k(j, current_k))) = psi(j, ibnd)
+          psic (dffts_nl (igk_k(j, current_k))) = psi(j, ibnd)
         END DO
         !
 #else
 !$omp parallel
-        CALL threaded_barrier_memset(psic_omp, 0.D0, dffts%nnr*2)
+        CALL threaded_barrier_memset(psic, 0.D0, dffts%nnr*2)
         !$omp do
         DO j = 1, n
-           psic_omp (dffts_nl (igk_k(j,current_k))) = psi(j, ibnd)
+           psic (dffts_nl (igk_k(j,current_k))) = psi(j, ibnd)
         ENDDO
         !$omp end do nowait
 !$omp end parallel
@@ -400,31 +408,33 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
         !write (6,*) 'wfc G ', ibnd
         !write (6,99) (psic(i), i=1,400)
         !
-#if defined(__USE_DISPATCH)
-        !$omp dispatch
+#if defined(__OPENMP_GPU)
+        CALL invfft_y_omp ('Wave', psic, dffts)
+#else
+        CALL invfft ('Wave', psic, dffts)
 #endif
-        CALL invfft ('Wave', psic_omp, dffts)
-        !write (6,*) 'wfc R ' 
+        !write (6,*) 'wfc R '
         !write (6,99) (psic(i), i=1,400)
         !
-        !$omp target teams distribute parallel do 
+        !$omp target teams distribute parallel do
         DO j = 1, v_siz
-           psic_omp (j) = psic_omp (j) * v(j)
+           psic (j) = psic (j) * v(j)
         ENDDO
-        !write (6,*) 'v psi R ' 
+        !write (6,*) 'v psi R '
         !write (6,99) (psic(i), i=1,400)
         !
-#if defined(__USE_DISPATCH)
-        !$omp dispatch
+#if defined(__OPENMP_GPU)
+        CALL fwfft_y_omp ('Wave', psic, dffts)
+#else
+        CALL fwfft ('Wave', psic, dffts)
 #endif
-        CALL fwfft ('Wave', psic_omp, dffts)
 !!$omp target update from(psic)
         !
         !   addition to the total product
         !
-        !$omp target teams distribute parallel do 
+        !$omp target teams distribute parallel do
         DO j = 1, n
-           hpsi (j, ibnd)   = hpsi (j, ibnd)   + psic_omp (dffts_nl(igk_k(j,current_k)))
+           hpsi (j, ibnd)   = hpsi (j, ibnd)   + psic (dffts_nl(igk_k(j,current_k)))
         ENDDO
         !write (6,*) 'v psi G ', ibnd
         !write (6,99) (psic(i), i=1,400)
@@ -464,9 +474,12 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
   USE mp_bands,               ONLY : me_bgrp
   USE fft_base,               ONLY : dffts, dfftp
   USE fft_interfaces,         ONLY : fwfft, invfft
+#if defined(__OPENMP_GPU)
+  USE fft_interfaces,          ONLY : fwfft_y_omp, invfft_y_omp
+#endif
   USE lsda_mod,               ONLY : nspin
   USE noncollin_module,       ONLY : npol, domag
-  USE wavefunctions,          ONLY : psic_nc, psic_nc_omp
+  USE wavefunctions,          ONLY : psic_nc
   USE fft_helper_subroutines, ONLY : fftx_ntgrp, tg_get_nnr, &
                                      tg_get_group_nr3, tg_get_recip_inc
   !
@@ -502,7 +515,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
   !
   incr = 1
   !
-  use_tg = dffts%has_task_groups 
+  use_tg = dffts%has_task_groups
   !
   IF( use_tg ) THEN
      CALL start_clock ('vloc_psi:tg_gather')
@@ -570,21 +583,22 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         !$omp target teams distribute parallel do collapse(2)
         DO ipol=1, npol
           DO j = 1, v_siz_p
-              psic_nc_omp(j,ipol) = (0.d0,0.d0)
+              psic_nc(j,ipol) = (0.d0,0.d0)
           END DO
         END DO
 #else
-        psic_nc_omp = (0.d0,0.d0)
+        psic_nc = (0.d0,0.d0)
 #endif
         DO ipol=1,npol
         !$omp target teams distribute parallel do
            DO j = 1, n
-              psic_nc_omp(dffts_nl(igk_k(j,current_k)),ipol) = psi(j+(ipol-1)*lda,ibnd)
+              psic_nc(dffts_nl(igk_k(j,current_k)),ipol) = psi(j+(ipol-1)*lda,ibnd)
            ENDDO
-#if defined(__OMP_DISPATCH)
-           !$omp dispatch
+#if defined(__OPENMP_GPU)
+           CALL invfft_y_omp ('Wave', psic_nc(:,ipol), dffts)
+#else
+           CALL invfft ('Wave', psic_nc(:,ipol), dffts)
 #endif
-           CALL invfft ('Wave', psic_nc_omp(:,ipol), dffts)
         ENDDO
      ENDIF
 
@@ -611,24 +625,24 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         IF (domag) THEN
            !$omp target teams distribute parallel do
            DO j=1, v_siz
-              sup = psic_nc_omp(j,1) * (v(j,1)+v(j,4)) + &
-                    psic_nc_omp(j,2) * (v(j,2)-(0.d0,1.d0)*v(j,3))
-              sdwn = psic_nc_omp(j,2) * (v(j,1)-v(j,4)) + &
-                     psic_nc_omp(j,1) * (v(j,2)+(0.d0,1.d0)*v(j,3))
-              psic_nc_omp(j,1)=sup
-              psic_nc_omp(j,2)=sdwn
+              sup = psic_nc(j,1) * (v(j,1)+v(j,4)) + &
+                    psic_nc(j,2) * (v(j,2)-(0.d0,1.d0)*v(j,3))
+              sdwn = psic_nc(j,2) * (v(j,1)-v(j,4)) + &
+                     psic_nc(j,1) * (v(j,2)+(0.d0,1.d0)*v(j,3))
+              psic_nc(j,1)=sup
+              psic_nc(j,2)=sdwn
            ENDDO
         ELSE
 #if defined(__OPENMP_GPU)
            !$omp target teams distribute parallel do collapse(2)
            DO ipol=1, npol
               DO j=1, v_siz
-                 psic_nc_omp(j,ipol) = psic_nc_omp(j,ipol) * v(j,1)
+                 psic_nc(j,ipol) = psic_nc(j,ipol) * v(j,1)
               END DO
            ENDDO
 #else
            DO j=1, v_siz
-                 psic_nc_omp(j,:) = psic_nc_omp(j,:) * v(j,1)
+                 psic_nc(j,:) = psic_nc(j,:) * v(j,1)
            END DO
 #endif
         ENDIF
@@ -665,9 +679,10 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         !
         DO ipol=1,npol
 #if defined(__OPENMP_GPU)
-        !$omp dispatch
+           CALL fwfft_y_omp ('Wave', psic_nc(:,ipol), dffts)
+#else
+           CALL fwfft ('Wave', psic_nc(:,ipol), dffts)
 #endif
-           CALL fwfft ('Wave', psic_nc_omp(:,ipol), dffts)
         ENDDO
         !
         !   addition to the total product
@@ -676,7 +691,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
         DO ipol=1,npol
            DO j = 1, n
               hpsi(j,ipol,ibnd) = hpsi(j,ipol,ibnd) + &
-                                  psic_nc_omp(dffts_nl(igk_k(j,current_k)),ipol)
+                                  psic_nc(dffts_nl(igk_k(j,current_k)),ipol)
            ENDDO
         ENDDO
 
