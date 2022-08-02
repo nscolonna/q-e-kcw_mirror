@@ -21,12 +21,13 @@ PROGRAM kcw
   !!
   !!  Code written by Nicola Colonna (EPFL April 2019) 
   !
-  USE mp_global,             ONLY : mp_startup,mp_global_end 
-  USE environment,           ONLY : environment_start, environment_end
-  USE control_kcw,               ONLY : calculation
-  USE mp_global,             ONLY : mp_startup
-  USE check_stop,            ONLY : check_stop_init
+  USE mp_global,         ONLY : mp_startup,mp_global_end 
+  USE environment,       ONLY : environment_start, environment_end
+  USE control_kcw,       ONLY : calculation
+  USE mp_global,         ONLY : mp_startup
+  USE check_stop,        ONLY : check_stop_init
   USE coulomb,           ONLY : setup_coulomb
+  USE io_global,         ONLY : stdout
   !
   IMPLICIT NONE
   !
@@ -36,6 +37,11 @@ PROGRAM kcw
   CALL mp_startup ( )
   !
   CALL environment_start ( code )
+  !
+  WRITE( stdout, '(/5x,"=--------------------------------------------------------------------------------=")')
+  WRITE( stdout, '(/5x,"  Koopmans functional implementation based on DFPT; please cite this program as")')
+  WRITE( stdout, '(/5x,"     N.Colonna, R. De Gannaro, E. Linscott, and N. Marzari, arXiv:2202.08155   ")')
+  WRITE( stdout, '(/5x,"=--------------------------------------------------------------------------------=")')
   !
   CALL check_stop_init ()
   !

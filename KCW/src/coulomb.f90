@@ -124,7 +124,7 @@ MODULE coulomb
       IF ( (calculation == "screen" .AND. l_vcut) .OR. calculation == 'cc' ) THEN
          !
          WRITE (stdout,'(  5X, "INFO: Epsilon infinity   ", 3x, 1F12.6 )' )  eps_inf
-         WRITE (stdout,'(  5X, "INFO: Dielectric tesor   ", 3x, 3F12.6 )' )  (eps_mat(:,1))
+         WRITE (stdout,'(  5X, "INFO: Dielectric tensor   ", 3x, 3F12.6 )' )  (eps_mat(:,1))
          WRITE (stdout,'(  5X, "                         ", 3x, 3F12.6 )' )  (eps_mat(:,2))
          WRITE (stdout,'(  5X, "                         ", 3x, 3F12.6 )' )  (eps_mat(:,3))
          !
