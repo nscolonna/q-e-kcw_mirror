@@ -124,7 +124,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   !
   ! ... local variables
   !
-  INTEGER :: ipol, ibnd
+  INTEGER :: ipol, ibnd, jbnd
   REAL(DP) :: ee
   !
   !
@@ -137,6 +137,25 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   !
   ! ... Here we set the kinetic energy (k+G)^2 psi and clean up garbage
   !
+#if defined(__OPENMP_GPU)
+  !$omp target enter data map(to:hpsi,psi,vrs(:,:))
+  !$omp target teams distribute parallel do collapse(2) map(to:g2kin,psi) 
+  DO ibnd = 1, m
+     DO jbnd=1, lda
+        IF (jbnd <= n) THEN
+           hpsi (jbnd, ibnd) = g2kin (jbnd) * psi (jbnd, ibnd)
+           IF ( noncolin ) THEN
+              hpsi (lda+jbnd, ibnd) = g2kin (jbnd) * psi (lda+jbnd, ibnd)
+           END IF
+        ELSE
+           hpsi (jbnd, ibnd) = (0.0_dp, 0.0_dp)
+           IF ( noncolin ) THEN
+              hpsi(lda+jbnd, ibnd) = (0.0_dp, 0.0_dp)
+           END IF
+        END IF
+     END DO
+  END DO
+#else
   !$omp parallel do
   DO ibnd = 1, m
      hpsi(1:n,ibnd) = g2kin(1:n) * psi(1:n,ibnd)
@@ -147,6 +166,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
      ENDIF
   ENDDO
   !$omp end parallel do
+#endif
 
   CALL start_clock( 'h_psi:pot' ); !write (*,*) 'start h_psi:pot';FLUSH(6)
   !
@@ -155,6 +175,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   IF ( gamma_only ) THEN
      ! 
      IF ( real_space .AND. nkb > 0  ) THEN
+     !$omp target update from(hpsi)
         CALL using_becp_auto(1)
         !
         ! ... real-space algorithm
@@ -178,6 +199,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
            CALL fwfft_orbital_gamma( hpsi, ibnd, m, add_to_orbital=.TRUE. )
         ENDDO
         !
+     !$omp target update to(hpsi)
      ELSE
         ! ... usual reciprocal-space algorithm
         CALL vloc_psi_gamma( lda, n, m, psi, vrs(1,current_spin), hpsi ) 
@@ -191,6 +213,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   ELSE  
      ! 
      IF ( real_space .AND. nkb > 0  ) THEN
+        !$omp target update from(hpsi)
         !
         ! ... real-space algorithm
         ! ... fixme: real_space without beta functions does not make sense
@@ -216,6 +239,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
            !
         ENDDO
         !
+        !$omp target update to(hpsi)
      ELSE
         !
         CALL vloc_psi_k( lda, n, m, psi, vrs(1,current_spin), hpsi )
@@ -223,6 +247,9 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
      ENDIF
      !
   ENDIF  
+#if defined(__OPENMP_GPU)
+  !$omp target exit data map(from:hpsi) map(delete:psi,vrs)
+#endif
   !
   ! ... Here the product with the non local potential V_NL psi
   ! ... (not in the real-space case: it is done together with V_loc)

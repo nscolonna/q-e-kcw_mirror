@@ -79,7 +79,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
      v_siz = dffts%nnr
      v_siz_p = dfftp%nnr
 #if defined(__OPENMP_GPU)
-     !$omp target enter data map(to: dffts_nl, dffts_nlm, v, psi, hpsi)
+     !$omp target enter data map(to: dffts_nl, dffts_nlm)
 #endif
      !
   ENDIF
@@ -236,7 +236,7 @@ SUBROUTINE vloc_psi_gamma( lda, n, m, psi, v, hpsi )
    ELSE
      !
 #if defined(__OPENMP_GPU)
-     !$omp target exit data map(delete:dffts_nl,dffts_nlm,v,psi) map(from:hpsi)
+     !$omp target exit data map(delete:dffts_nl,dffts_nlm)
 #endif
      DEALLOCATE( dffts_nl )
      DEALLOCATE( dffts_nlm )
@@ -323,7 +323,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
      v_siz=dffts%nnr
      !
 #if defined(__OPENMP_GPU)
-     !$omp target enter data map(to:v,igk_k,dffts_nl,psi,hpsi)
+     !$omp target enter data map(to:igk_k,dffts_nl)
 #endif
      !
   ENDIF
@@ -450,7 +450,7 @@ SUBROUTINE vloc_psi_k( lda, n, m, psi, v, hpsi )
   ELSE
      !
 #if defined(__OPENMP_GPU)
-     !$omp target exit data map(delete:dffts_nl,v,igk_k,psi) map(from:hpsi)
+     !$omp target exit data map(delete:dffts_nl,igk_k) 
 #endif
      DEALLOCATE(dffts_nl)
      !
@@ -543,7 +543,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
      v_siz_p = dfftp%nnr
      !
 #if defined(__OPENMP_GPU)
-     !$omp target enter data map(to:v,igk_k,dffts_nl,psi,hpsi)
+     !$omp target enter data map(to:igk_k,dffts_nl)
 #endif
      !
   ENDIF
@@ -707,7 +707,7 @@ SUBROUTINE vloc_psi_nc( lda, n, m, psi, v, hpsi )
   ELSE
      !
 #if defined(__OPENMP_GPU)
-     !$omp target exit data map(delete:dffts_nl,igk_k,v,psi) map(from:hpsi)
+     !$omp target exit data map(delete:dffts_nl,igk_k)
 #endif
      DEALLOCATE( dffts_nl )
      !
