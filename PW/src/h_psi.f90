@@ -247,9 +247,6 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
      ENDIF
      !
   ENDIF  
-#if defined(__OPENMP_GPU)
-  !$omp target exit data map(from:hpsi) map(delete:psi,vrs)
-#endif
   !
   ! ... Here the product with the non local potential V_NL psi
   ! ... (not in the real-space case: it is done together with V_loc)
@@ -259,14 +256,19 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
      CALL using_becp_auto(1)
      !
      CALL start_clock( 'h_psi:calbec' )
+     !$omp target update from(psi,hpsi)
      CALL calbec( n, vkb, psi, becp, m )
      CALL stop_clock( 'h_psi:calbec' )
      CALL add_vuspsi( lda, n, m, hpsi )
+     !$omp target update to(hpsi)
      !
   ENDIF
   !
   CALL stop_clock( 'h_psi:pot' ); !write (*,*) 'stop h_psi:pot';FLUSH(6)
-  !  
+  !
+#if defined(__OPENMP_GPU)
+  !$omp target exit data map(from:hpsi) map(delete:psi,vrs)
+#endif  
   IF (xclib_dft_is('meta')) CALL h_psi_meta( lda, n, m, psi, hpsi )
   !
   ! ... Here we add the Hubbard potential times psi
