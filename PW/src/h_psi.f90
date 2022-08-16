@@ -124,7 +124,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   !
   ! ... local variables
   !
-  INTEGER :: ipol, ibnd, jbnd
+  INTEGER :: ipol, ibnd, jbnd, i
   REAL(DP) :: ee
   !
   !
@@ -139,7 +139,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   !
 #if defined(__OPENMP_GPU)
   !$omp target enter data map(to:hpsi,psi,vrs(:,:))
-  !$omp target teams distribute parallel do collapse(2) map(to:g2kin,psi) 
+  !$omp target teams distribute parallel do collapse(2) map(to:g2kin) 
   DO ibnd = 1, m
      DO jbnd=1, lda
         IF (jbnd <= n) THEN
@@ -256,9 +256,9 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
      CALL using_becp_auto(1)
      !
      CALL start_clock( 'h_psi:calbec' )
-     !$omp target update from(psi,hpsi)
      CALL calbec( n, vkb, psi, becp, m )
      CALL stop_clock( 'h_psi:calbec' )
+     !$omp target update from(hpsi)
      CALL add_vuspsi( lda, n, m, hpsi )
      !$omp target update to(hpsi)
      !
@@ -266,14 +266,16 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   !
   CALL stop_clock( 'h_psi:pot' ); !write (*,*) 'stop h_psi:pot';FLUSH(6)
   !
-#if defined(__OPENMP_GPU)
-  !$omp target exit data map(from:hpsi) map(delete:psi,vrs)
-#endif  
-  IF (xclib_dft_is('meta')) CALL h_psi_meta( lda, n, m, psi, hpsi )
+  IF (xclib_dft_is('meta')) THEN
+          !$omp target update from(hpsi)
+          CALL h_psi_meta( lda, n, m, psi, hpsi )
+          !$omp target update to(hpsi)
+  END IF
   !
   ! ... Here we add the Hubbard potential times psi
   !
   IF ( lda_plus_u .AND. Hubbard_projectors.NE."pseudo" ) THEN
+     !$omp target update from(hpsi)
      !
      IF ( noncolin ) THEN
         CALL vhpsi_nc( lda, n, m, psi, hpsi )
@@ -281,11 +283,13 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
         CALL vhpsi( lda, n, m, psi, hpsi )
      ENDIF
      !
+     !$omp target update to(hpsi)
   ENDIF
   !
   ! ... Here the exact-exchange term Vxx psi
   !
   IF ( exx_is_active() ) THEN
+     !$omp target update from(hpsi)
      IF ( use_ace ) THEN
         IF ( gamma_only ) THEN
            CALL vexxace_gamma( lda, m, psi, ee, hpsi )
@@ -296,11 +300,13 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
         CALL using_becp_auto(0)
         CALL vexx( lda, n, m, psi, hpsi, becp )
      ENDIF
+     !$omp target update to(hpsi)
   ENDIF
   !
   ! ... electric enthalpy if required
   !
   IF ( lelfield ) THEN
+     !$omp target update from(hpsi)
      !
      IF ( .NOT.l3dstring ) THEN
         CALL h_epsi_her_apply( lda, n, m, psi, hpsi,gdir, efield )
@@ -310,14 +316,22 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
         ENDDO
      ENDIF
      !
+     !$omp target update to(hpsi)
   ENDIF
   !
   ! ... With Gamma-only trick, Im(H*psi)(G=0) = 0 by definition,
   ! ... but it is convenient to explicitly set it to 0 to prevent trouble
   !
-  IF ( gamma_only .AND. gstart == 2 ) &
-      hpsi(1,1:m) = CMPLX( DBLE( hpsi(1,1:m) ), 0.D0, KIND=DP)
+  IF ( gamma_only .AND. gstart == 2 ) THEN
+      !$omp target teams distribute parallel do
+      DO i = 1, m
+          hpsi(1,i) = CMPLX( DBLE( hpsi(1,i) ), 0.D0, KIND=DP)
+      END DO
+  END IF
   !
+#if defined(__OPENMP_GPU)
+  !$omp target exit data map(from:hpsi) map(delete:psi,vrs)
+#endif
   CALL stop_clock( 'h_psi' )
   !
   !
