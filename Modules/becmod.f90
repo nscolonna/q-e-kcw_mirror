@@ -1,3 +1,7 @@
+#if defined(__ONEMKL)
+#include "mkl_blas_omp_offload_lp64.f90"
+#include "mkl_blas_omp_offload_lp64_no_array_check.f90"
+#endif
 !
 ! Copyright (C) 2001-2007 PWSCF group
 ! This file is distributed under the terms of the
@@ -150,6 +154,11 @@ CONTAINS
     !! $$ betapsi(i,j) = 2Re(\sum_k beta^*(i,k)psi(k,j)) + beta^*(i,0)psi(0,j) $$
     !
     USE mp,        ONLY : mp_sum
+#if defined(__OPENMP_GPU)
+#if defined(__ONEMKL)
+    USE onemkl_blas_omp_offload_lp64_no_array_check 
+#endif
+#endif
     !
     IMPLICIT NONE
     COMPLEX (DP), INTENT (in) :: beta(:,:), psi(:,:)
@@ -158,7 +167,7 @@ CONTAINS
     INTEGER, INTENT (in) :: nbnd
     INTEGER, INTENT (in) :: comm 
     !
-    INTEGER :: nkb, npwx, m
+    INTEGER :: nkb, npwx, m, i
     !
     m = nbnd
     !
@@ -179,16 +188,31 @@ CONTAINS
     !
     IF ( m == 1 ) THEN
         !
+        !$omp target data map(to:psi,beta) map(from:betapsi)
+        !$omp target variant dispatch use_device_ptr(psi, beta, betapsi) 
         CALL DGEMV( 'C', 2*npw, nkb, 2.0_DP, beta, 2*npwx, psi, 1, 0.0_DP, &
                      betapsi, 1 )
-        IF ( gstart == 2 ) betapsi(:,1) = betapsi(:,1) - beta(1,:)*psi(1,1)
+        !$omp end target variant dispatch
+        IF ( gstart == 2 ) THEN 
+            !betapsi(:,1) = betapsi(:,1) - beta(1,:)*psi(1,1)
+            !$omp target teams distribute parallel do
+            DO i = 1, nkb 
+                betapsi(i,1) = betapsi(i,1) - beta(1,i)*psi(1,1)
+            END DO
+        END IF
+        !$omp end target data
         !
     ELSE
         !
+        !$omp target data map(to:psi,beta) map(from:betapsi)
+        !$omp target variant dispatch use_device_ptr(psi, beta, betapsi)
         CALL DGEMM( 'C', 'N', nkb, m, 2*npw, 2.0_DP, beta, 2*npwx, psi, &
                     2*npwx, 0.0_DP, betapsi, nkb )
-        IF ( gstart == 2 ) &
+        IF ( gstart == 2 ) THEN
            CALL DGER( nkb, m, -1.0_DP, beta, 2*npwx, psi, 2*npwx, betapsi, nkb )
+        END IF
+        !$omp end target variant dispatch
+        !$omp end target data
         !
     ENDIF
     !
@@ -209,8 +233,16 @@ CONTAINS
     !
     USE mp_bands, ONLY : intra_bgrp_comm
     USE mp,       ONLY : mp_sum
+#if defined(__OPENMP_GPU)
+#if defined(__ONEMKL)
+    USE onemkl_blas_omp_offload_lp64
+#endif
+#endif
 
     IMPLICIT NONE
+
+!    include 'laxlib.fh'
+
     COMPLEX (DP), INTENT (in) :: beta(:,:), psi(:,:)
     COMPLEX (DP), INTENT (out) :: betapsi(:,:)
     INTEGER, INTENT (in) :: npw
@@ -240,13 +272,30 @@ CONTAINS
     !
     IF ( m == 1 ) THEN
        !
+       ! psi is already offloaded when called from h_psi, otherwise it is not
+       !$omp target data map(to:psi,beta) map(from:betapsi)
+#if defined(__ONEMKL)
+       !$omp target variant dispatch use_device_ptr(psi, beta, betapsi)
+#endif
        CALL ZGEMV( 'C', npw, nkb, (1.0_DP,0.0_DP), beta, npwx, psi, 1, &
                    (0.0_DP, 0.0_DP), betapsi, 1 )
+#if defined(__ONEMKL)
+       !$omp end target variant dispatch
+#endif
+       !$omp end target data 
        !
     ELSE
        !
+       !$omp target data map(to:psi,beta) map(from:betapsi)
+#if defined(__ONEMKL)
+       !$omp target variant dispatch use_device_ptr(psi, beta, betapsi)
+#endif
        CALL ZGEMM( 'C', 'N', nkb, m, npw, (1.0_DP,0.0_DP), &
                  beta, npwx, psi, npwx, (0.0_DP,0.0_DP), betapsi, nkb )
+#if defined(__ONEMKL)
+       !$omp end target variant dispatch
+#endif
+       !$omp end target data
        !
     ENDIF
     !
@@ -269,6 +318,11 @@ CONTAINS
     !
     USE mp_bands, ONLY : intra_bgrp_comm
     USE mp,       ONLY : mp_sum
+#if defined(__OPENMP_GPU)
+#if defined(__ONEMKL)
+    USE onemkl_blas_omp_offload_lp64
+#endif
+#endif
 
     IMPLICIT NONE
     COMPLEX (DP), INTENT (in) :: beta(:,:), psi(:,:)
@@ -299,8 +353,16 @@ CONTAINS
     IF ( nkb /= size (betapsi,1) .or. m > size (betapsi, 3) ) &
       CALL errore ('calbec', 'size mismatch', 3)
     !
+    !$omp target data map(to:psi,beta) map(from:betapsi)
+#if defined(__ONEMKL)
+    !$omp target variant dispatch use_device_ptr(psi, beta, betapsi)
+#endif
     CALL ZGEMM ('C', 'N', nkb, m*npol, npw, (1.0_DP, 0.0_DP), beta, &
               npwx, psi, npwx, (0.0_DP, 0.0_DP),  betapsi, nkb)
+#if defined(__ONEMKL)
+    !$omp end target variant dispatch
+#endif
+    !$omp end target data
     !
     CALL mp_sum( betapsi( :, :, 1:m ), intra_bgrp_comm )
     !

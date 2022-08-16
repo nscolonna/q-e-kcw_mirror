@@ -138,7 +138,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   ! ... Here we set the kinetic energy (k+G)^2 psi and clean up garbage
   !
 #if defined(__OPENMP_GPU)
-  !$omp target enter data map(to:hpsi,psi,vrs(:,:))
+  !$omp target data map(to:psi,vrs(:,:)) map(from:hpsi)
   !$omp target teams distribute parallel do collapse(2) map(to:g2kin) 
   DO ibnd = 1, m
      DO jbnd=1, lda
@@ -330,7 +330,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   END IF
   !
 #if defined(__OPENMP_GPU)
-  !$omp target exit data map(from:hpsi) map(delete:psi,vrs)
+  !$omp end target data 
 #endif
   CALL stop_clock( 'h_psi' )
   !
