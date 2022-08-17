@@ -207,11 +207,12 @@ SUBROUTINE screen_coeff ()
        CALL mp_sum (pi_q_relax, intra_bgrp_comm)
        !
        IF (lgamma .and. l_vcut ) THEN 
+          WRITE(stdout, 9012) iq, iwann, pi_q_relax, pi_q_unrelax+div/omega/nqs
           IF ( ABS(eps_inf - 1.D0) .gt. 1e-6) THEN 
             !WRITE(stdout, '(/, 5X, "INFO: Adding the q+G contribution", 3x, "bare", 1es15.5, 3x,"screen", 1es15.5)') &
             !                -div/omega/nqs, -(1.D0/eps_inf -1.D0)*div/omega/nqs
-            WRITE(stdout, '(/, 5X, "INFO: Adding the q+G contribution", 3x, "bare", 1es15.5, 3x,"screen", 1es15.5)') &
-                            -div/omega/nqs, -(div_eps-div)/omega/nqs
+            WRITE(stdout, '(/, 5X, "INFO: Adding the q+G=0 contribution", 3x, "rPi(q+G=0)", 1F15.8, 3x,"uPi(q+G=0)", 1F15.8)') &
+                            -(div_eps-div)/omega/nqs, -div/omega/nqs
             !pi_q_relax = pi_q_relax - (1.D0/eps_inf -1.D0)*div/omega/nqs 
             pi_q_relax = pi_q_relax - (div_eps-div)/omega/nqs 
           ELSE
@@ -340,6 +341,8 @@ SUBROUTINE screen_coeff ()
                "rPi_q_RS =", 2f15.8, 3x, "uPi_q =", 2f15.8, 3x, "Self Hartree =", 2f15.8)
 9011 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, "uPi_q =", & 
                2f15.8, 3x, "SH_q =", 2f15.8)
+9012 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, "uPi_q =", & 
+               2f15.8)
 
 END subroutine screen_coeff
 
