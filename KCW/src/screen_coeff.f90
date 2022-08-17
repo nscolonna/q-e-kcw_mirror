@@ -65,6 +65,7 @@ SUBROUTINE screen_coeff ()
   COMPLEX(DP) :: int_rho, int_wann, pi_q_unrelax, sh_q, pi_q_relax, pi_q_relax_rs
   COMPLEX(DP) :: struct_fact
   LOGICAL :: do_real_space = .false. 
+  LOGICAL :: exst
   !
   COMPLEX(DP) :: drho_zero
   !
@@ -240,8 +241,12 @@ SUBROUTINE screen_coeff ()
     !
     CALL clean_pw_kcw( )
     !
-    IF (ionode) REWIND(986)
-    IF (ionode) WRITE(986,'(i5)') iq
+    IF (ionode) THEN 
+      INQUIRE(file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status', exist=exst)
+      IF (.NOT. exst) OPEN(986, file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status')
+      REWIND(986)
+      WRITE(986,'(i5)') iq
+    ENDIF
     !
   ENDDO ! qpoints
   !
@@ -359,8 +364,12 @@ SUBROUTINE restart_screen (num_wann, iq_start, vki_r, vki_u, sh, do_real_space)
   INTEGER :: iq_start, num_wann, iwann, iwann_, iq, iq_, iun_res
   LOGICAL :: exst, do_real_space
   !
-  INQUIRE(file="fort.986", exist=exst)
-  IF( .NOT. exst) RETURN
+  INQUIRE(file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status', exist=exst)
+  IF( .NOT. exst) THEN
+    RETURN
+  ELSE 
+    OPEN (986, file = TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status')
+  ENDIF 
   !
   iun_res = 987
   OPEN (iun_res, file = TRIM(tmp_dir_kcw)//TRIM(prefix)//'.LR_res.txt')
