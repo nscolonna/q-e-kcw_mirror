@@ -33,15 +33,13 @@ PROGRAM kcw
   !
   CHARACTER(LEN=9) :: code='KCW'
   !
+  CALL header ()
+  !
   ! 1) Initialize MPI, clocks, print initial messages
   CALL mp_startup ( )
   !
   CALL environment_start ( code )
   !
-  WRITE( stdout, '(/5x,"=--------------------------------------------------------------------------------=")')
-  WRITE( stdout, '(/5x,"  Koopmans functional implementation based on DFPT; please cite this program as")')
-  WRITE( stdout, '(/5x,"     N.Colonna, R. De Gannaro, E. Linscott, and N. Marzari, arXiv:2202.08155   ")')
-  WRITE( stdout, '(/5x,"=--------------------------------------------------------------------------------=")')
   !
   CALL check_stop_init ()
   !
@@ -60,3 +58,23 @@ PROGRAM kcw
   CALL environment_end( code )
   !
 END PROGRAM kcw
+
+
+SUBROUTINE header 
+  !
+  USE io_global,         ONLY : stdout
+  IMPLICIT NONE
+
+  WRITE( stdout, '(/5x,"=--------------------------------------------------------------------------------=")')
+  WRITE(stdout,*) "                     :::    :::           ::::::::         :::       ::: "
+  WRITE(stdout,*) "                    :+:   :+:           :+:    :+:        :+:       :+:  "
+  WRITE(stdout,*) "                   +:+  +:+            +:+               +:+       +:+   "
+  WRITE(stdout,*) "                  +#++:++             +#+               +#+  +:+  +#+    "
+  WRITE(stdout,*) "                 +#+  +#+            +#+               +#+ +#+#+ +#+     "
+  WRITE(stdout,*) "                #+#   #+#           #+#    #+#         #+#+# #+#+#       " 
+  WRITE(stdout,*) "               ###    ###           ########           ###   ###         "
+  WRITE( stdout, '(/5x,"  Koopmans functional implementation based on DFPT; please cite this program as")')
+  WRITE( stdout, '(/5x,"     N.Colonna, R. De Gannaro, E. Linscott, and N. Marzari, arXiv:2202.08155   ")')
+  WRITE( stdout, '( 5x,"=--------------------------------------------------------------------------------=")')
+  !
+END SUBROUTINE header
