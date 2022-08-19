@@ -27,7 +27,7 @@ PROGRAM kcw
   USE mp_global,         ONLY : mp_startup
   USE check_stop,        ONLY : check_stop_init
   USE coulomb,           ONLY : setup_coulomb
-  USE io_global,         ONLY : stdout
+  USE control_flags,     ONLY : use_gpu
   !
   IMPLICIT NONE
   !
