@@ -79,7 +79,7 @@ CONTAINS
       !
       CALL cdiagh( num_wann, ham_int, num_wann, eigvl(:,ik), eigvc )
       !
-      WRITE( stdout, '(6x,8F9.4)' ) eigvl(:,ik)*rytoev
+      WRITE( stdout, '(6x,8F11.4)' ) eigvl(:,ik)*rytoev
       !
     ENDDO
     !

@@ -21,12 +21,13 @@ PROGRAM kcw
   !!
   !!  Code written by Nicola Colonna (EPFL April 2019) 
   !
-  USE mp_global,             ONLY : mp_startup,mp_global_end 
-  USE environment,           ONLY : environment_start, environment_end
-  USE control_kcw,               ONLY : calculation
-  USE mp_global,             ONLY : mp_startup
-  USE check_stop,            ONLY : check_stop_init
-  USE control_flags,         ONLY : use_gpu
+  USE mp_global,         ONLY : mp_startup,mp_global_end 
+  USE environment,       ONLY : environment_start, environment_end
+  USE control_kcw,       ONLY : calculation
+  USE mp_global,         ONLY : mp_startup
+  USE check_stop,        ONLY : check_stop_init
+  USE coulomb,           ONLY : setup_coulomb
+  USE io_global,         ONLY : stdout
   !
   IMPLICIT NONE
   !
@@ -36,16 +37,20 @@ PROGRAM kcw
   use_gpu = check_gpu_support()
   IF(use_gpu) Call errore('KCW', 'KCW with GPU NYI', 1)
   !
+  CALL header ()
+  !
   ! 1) Initialize MPI, clocks, print initial messages
   CALL mp_startup ( )
   !
   CALL environment_start ( code )
+  !
   !
   CALL check_stop_init ()
   !
   ! 2) Read the input file and the PW outputs
   CALL kcw_readin( ) 
   !
+  IF (calculation == 'cc') call setup_coulomb()
   IF (calculation == 'wann2kcw') CALL wann2kcw ( )
   IF (calculation == 'screen')   CALL kcw_screen ( )
   IF (calculation == 'ham' )     CALL kcw_ham ()
@@ -57,3 +62,23 @@ PROGRAM kcw
   CALL environment_end( code )
   !
 END PROGRAM kcw
+
+
+SUBROUTINE header 
+  !
+  USE io_global,         ONLY : stdout
+  IMPLICIT NONE
+
+  WRITE( stdout, '(/5x,"=--------------------------------------------------------------------------------=")')
+  WRITE(stdout,*) "                     :::    :::           ::::::::         :::       ::: "
+  WRITE(stdout,*) "                    :+:   :+:           :+:    :+:        :+:       :+:  "
+  WRITE(stdout,*) "                   +:+  +:+            +:+               +:+       +:+   "
+  WRITE(stdout,*) "                  +#++:++             +#+               +#+  +:+  +#+    "
+  WRITE(stdout,*) "                 +#+  +#+            +#+               +#+ +#+#+ +#+     "
+  WRITE(stdout,*) "                #+#   #+#           #+#    #+#         #+#+# #+#+#       " 
+  WRITE(stdout,*) "               ###    ###           ########           ###   ###         "
+  WRITE( stdout, '(/5x,"  Koopmans functional implementation based on DFPT; please cite this program as")')
+  WRITE( stdout, '(/5x,"     N.Colonna, R. De Gannaro, E. Linscott, and N. Marzari, arXiv:2202.08155   ")')
+  WRITE( stdout, '( 5x,"=--------------------------------------------------------------------------------=")')
+  !
+END SUBROUTINE header

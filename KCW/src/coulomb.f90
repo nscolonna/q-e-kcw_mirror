@@ -44,14 +44,17 @@ MODULE coulomb
     USE io_global,            ONLY : stdout
     USE control_kcw,          ONLY : mp1, mp2, mp3, l_vcut, eps_inf, calculation
     USE martyna_tuckerman,    ONLY : do_comp_mt
+    USE cell_base,            ONLY : omega
     !
     IMPLICIT NONE 
     !
     LOGICAL :: exst
+    INTEGER :: nqs
     !
     CALL start_clock( 'Coulomb setup' )
     !
     nq1=mp1; nq2=mp2; nq3=mp3
+    nqs=nq1*nq2*nq3
     !
     eps_mat = 0.D0
     eps_mat (1,1) = 1.D0; eps_mat (2,2) = 1.D0; eps_mat (3,3) = 1.D0
@@ -104,33 +107,33 @@ MODULE coulomb
       WRITE (stdout,'(/,5X, "INFO: Coulomb q+G=0 treatment:")') 
       WRITE (stdout,'(  5X, "INFO: Divergence         ", 3x, 1A8)'     )  exxdiv_treatment
       WRITE( stdout,'(  5X, "INFO: q-grid dimension   ", 3x, 3I4)'     )  nq1, nq2, nq3
+      WRITE( stdout,'(  5X, "INFO: cell volume        ", 3x, 1F20.12)' )  omega
       WRITE (stdout,'(  5X, "INFO: Gamma Extrapolation", 3x, 1L5 )'    )  x_gamma_extrapolation
       !
       IF ( x_gamma_extrapolation ) THEN
          !
-         WRITE( stdout, '(5X, "INFO: q->0 dealt with 8/7 -1/7 trick ")')
+         WRITE( stdout, '(5X, "INFO: extrapolation q->0 dealt with 8/7 -1/7 trick ")')
          grid_factor = 8.d0 / 7.d0
          !
       ELSE
          !
-         WRITE( stdout, '(5X, "INFO: q->0 term not estimated")' )
+         WRITE( stdout, '(5X, "INFO: extrapolation q->0 term not estimated")' )
          grid_factor = 1.d0
          !
       ENDIF
       !
-      WRITE (stdout,'(  5X, "INFO: Bare Coulomb G0     ", 3x, 1ES15.5 )')  exxdiv
-      IF ( calculation == "screen" .AND. l_vcut ) THEN
+      WRITE (stdout,'(  5X,    "INFO: Bare Coulomb q+G=0     ", 3x, 1ES15.5 )')  exxdiv
+      IF ( (calculation == "screen" .AND. l_vcut) .OR. calculation == 'cc' ) THEN
          !
-         WRITE (stdout,'(  5X, "INFO: Epsilon infinity   ", 3x, 1F12.6 )' )  eps_inf
-         WRITE (stdout,'(  5X, "INFO: Dielectric tesor   ", 3x, 3F12.6 )' )  (eps_mat(:,1))
-         WRITE (stdout,'(  5X, "                         ", 3x, 3F12.6 )' )  (eps_mat(:,2))
-         WRITE (stdout,'(  5X, "                         ", 3x, 3F12.6 )' )  (eps_mat(:,3))
+         WRITE (stdout,'(  5X, "INFO: Epsilon infinity       ", 3x, 1F12.6  )')  eps_inf
+         WRITE (stdout,'(  5X, "INFO: Dielectric tensor      ", 3x, 3F12.6  )') (eps_mat(:,1))
+         WRITE (stdout,'(  5X, "                             ", 3x, 3F12.6  )') (eps_mat(:,2))
+         WRITE (stdout,'(  5X, "                             ", 3x, 3F12.6  )') (eps_mat(:,3))
+         WRITE (stdout,'(  5X, "INFO: Screened Coulomb q+G=0 ", 3x, 1F20.12 )')  exxdiv_eps
+         WRITE (stdout,'(  5X, "      Isotropic estimate     ", 3x, 1F20.12 )')  exxdiv/eps_inf
+         WRITE (stdout,'(  5X, "INFO: uPi(q+G=0) estimation  ", 3X, 1F20.12 )') -exxdiv/omega/nqs
+         WRITE (stdout,'(  5X, "INFO: rPi(q+G=0) estimation  ", 3X, 1F20.12 )') -(exxdiv_eps-exxdiv)/omega/nqs
          !
-      ENDIF
-      !
-      IF (calculation == "screen") THEN
-         WRITE (stdout,'(  5X, "INFO: Screened Coulomb G0 ", 3x, 1ES15.5 )')  exxdiv_eps
-         WRITE (stdout,'(  5X, "      Isotropic estimate  ", 3x, 1ES15.5 )')  exxdiv/eps_inf
       ENDIF
       !
     ELSE 

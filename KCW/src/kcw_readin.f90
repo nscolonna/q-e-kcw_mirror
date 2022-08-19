@@ -159,10 +159,10 @@ SUBROUTINE kcw_readin()
   CALL errore( 'kcw_readin', 'reading CONTROL namelist', ABS( ios ) )
   CALL mp_bcast(calculation, ionode_id, intra_image_comm)
   !
-  IF (calculation /= 'wann2kcw' .AND. calculation /= 'screen' .AND. calculation /= 'ham') &
+  IF (calculation /= 'wann2kcw' .AND. calculation /= 'screen' .AND. calculation /= 'ham' .AND. calculation /= 'cc' ) &
   CALL errore('kcw_readin', 'calculation NOT specified or NOT correct', 1)
   !
-  IF (ionode .AND. .NOT. kcw_at_ks) READ( 5, WANNIER, IOSTAT = ios )
+  IF (ionode .AND. .NOT. kcw_at_ks .AND. (calculation /= 'cc') )  READ( 5, WANNIER, IOSTAT = ios )
   CALL mp_bcast(ios, ionode_id, intra_image_comm)
   CALL errore( 'kcw_readin', 'reading WANNIER namelist', ABS( ios ) )
   !
