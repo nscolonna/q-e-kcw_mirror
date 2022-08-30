@@ -52,6 +52,8 @@ SUBROUTINE read_hr()
       CALL errore('read_hr', 'Number of R/k point DOES not MATCH',num_r)
   ENDIF
   !
+  CALL mp_bcast( num_r, ionode_id, intra_image_comm )
+  CALL mp_bcast( num_wann, ionode_id, intra_image_comm )
   ALLOCATE( Hamlt_R(num_r,num_wann,num_wann), irvect(3,num_r)) 
   !
   IF (ionode ) THEN
