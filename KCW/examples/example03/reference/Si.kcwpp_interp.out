@@ -1,0 +1,323 @@
+
+     Program KC_PP_INT v.7.1 starts on 30Aug2022 at 21:27:34 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     4 processors
+
+     MPI processes distributed on     1 nodes
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     335 MiB available memory on the printing compute node when the environment starts
+ 
+      Title line not specified: using 'default'.
+
+     KC_PP INPUT SUMMARY 
+     ==========================================
+     # title               =           default
+     # out_dir             =/home/nicola/Scriv
+     # prefix              =                Si
+     # seedname            =                Si
+     # kcw_iverbosity                        0
+     # num_wann            =                 4
+     # MP grid             =     2     2     2
+     # use_ws_distance     =                 T
+     # have_empty          =                 T
+     ==========================================
+      Title line not specified: using 'default'.
+      Title line not specified: using 'default'.
+      Title line not specified: using 'default'.
+
+     INFO: Reading pwscf data
+
+     Reading xml data from directory:
+
+     /home/nicola/Scrivania/CODES/git/q-e-kcw/tempdir/Si.save/
+
+     IMPORTANT: XC functional enforced from input :
+     Exchange-correlation= PBE
+                           (   1   4   3   4   0   0   0)
+     Any further DFT definition will be discarded
+     Please, verify this is what you really want
+
+ 
+     Parallelization info
+     --------------------
+     sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          73      73     22                  821      821     152
+     Max          74      74     23                  823      823     153
+     Sum         295     295     91                 3287     3287     609
+ 
+     Using Slab Decomposition
+ 
+     Reading collected, re-writing distributed wavefunctions
+
+     INFO: Reading Hamiltonian
+
+     STARTING BAND STRUCTURE INTERPOLATION
+
+        KC interpolated eigenvalues at k=      0.0000      0.0000      0.0000
+
+        -6.3478   5.6891   5.6891   5.6891  10.1503  10.1503  10.1503  10.1894
+
+        KC interpolated eigenvalues at k=      0.0500      0.0000      0.0500
+
+        -6.3228   5.5733   5.6173   5.6173   9.9527  10.3046  10.3436  10.3436
+
+        KC interpolated eigenvalues at k=      0.1000      0.0000      0.1000
+
+        -6.2443   5.2312   5.4089   5.4090   9.6301  10.3718  10.8967  10.8967
+
+        KC interpolated eigenvalues at k=      0.1500      0.0000      0.1500
+
+        -6.1022   4.6788   5.0845   5.0845   9.1963  10.3598  11.7341  11.7341
+
+        KC interpolated eigenvalues at k=      0.2000      0.0000      0.2000
+
+        -5.8819   3.9415   4.6758   4.6758   8.6785  10.2327  12.7477  12.7477
+
+        KC interpolated eigenvalues at k=      0.2500      0.0000      0.2500
+
+        -5.5662   3.0531   4.2228   4.2228   8.1304   9.9576  13.8171  13.8171
+
+        KC interpolated eigenvalues at k=      0.3000      0.0000      0.3000
+
+        -5.1391   2.0534   3.7700   3.7700   7.6236   9.5273  14.8295  14.8295
+
+        KC interpolated eigenvalues at k=      0.3500      0.0000      0.3500
+
+        -4.5882   0.9864   3.3616   3.3616   7.2354   8.9723  15.6939  15.6939
+
+        KC interpolated eigenvalues at k=      0.4000      0.0000      0.4000
+
+        -3.9082  -0.1033   3.0376   3.0376   7.0337   8.3595  16.3469  16.3469
+
+        KC interpolated eigenvalues at k=      0.4500      0.0000      0.4500
+
+        -3.1019  -1.1724   2.8296   2.8296   7.0609   7.7786  16.7508  16.7508
+
+        KC interpolated eigenvalues at k=      0.5000      0.0000      0.5000
+
+        -2.1824  -2.1824   2.7579   2.7579   7.3215   7.3215  16.8872  16.8872
+
+        KC interpolated eigenvalues at k=      0.5125      0.0250      0.5125
+
+        -2.1872  -2.1786   2.7530   2.7639   7.3245   7.3392  16.8700  16.8984
+
+        KC interpolated eigenvalues at k=      0.5250      0.0500      0.5250
+
+        -2.2018  -2.1670   2.7385   2.7816   7.3335   7.3919  16.8188  16.9313
+
+        KC interpolated eigenvalues at k=      0.5375      0.0750      0.5375
+
+        -2.2267  -2.1473   2.7157   2.8109   7.3491   7.4786  16.7342  16.9841
+
+        KC interpolated eigenvalues at k=      0.5500      0.1000      0.5500
+
+        -2.2629  -2.1187   2.6864   2.8514   7.3718   7.5976  16.6174  17.0540
+
+        KC interpolated eigenvalues at k=      0.5625      0.1250      0.5625
+
+        -2.3114  -2.0806   2.6532   2.9029   7.4024   7.7465  16.4698  17.1370
+
+        KC interpolated eigenvalues at k=      0.5750      0.1500      0.5750
+
+        -2.3737  -2.0318   2.6191   2.9646   7.4417   7.9224  16.2935  17.2285
+
+        KC interpolated eigenvalues at k=      0.5875      0.1750      0.5875
+
+        -2.4509  -1.9711   2.5873   3.0361   7.4905   8.1221  16.0908  17.3235
+
+        KC interpolated eigenvalues at k=      0.6000      0.2000      0.6000
+
+        -2.5441  -1.8973   2.5612   3.1165   7.5491   8.3415  15.8642  17.4162
+
+        KC interpolated eigenvalues at k=      0.6125      0.2250      0.6125
+
+        -2.6540  -1.8090   2.5439   3.2052   7.6180   8.5766  15.6166  17.5012
+
+        KC interpolated eigenvalues at k=      0.6250      0.2500      0.6250
+
+        -2.7809  -1.7048   2.5382   3.3011   7.6971   8.8230  15.3511  17.5727
+
+        KC interpolated eigenvalues at k=      0.3750      0.3750      0.7500
+
+        -2.7809  -1.7048   2.5382   3.3011   7.6971   8.8230  15.3511  17.5727
+
+        KC interpolated eigenvalues at k=      0.3375      0.3375      0.6750
+
+        -3.2552  -1.2847   2.6091   3.6234   7.9905   9.5838  14.4798  17.6551
+
+        KC interpolated eigenvalues at k=      0.3000      0.3000      0.6000
+
+        -3.8288  -0.6842   2.8246   3.9767   8.3463  10.2846  13.5656  17.4514
+
+        KC interpolated eigenvalues at k=      0.2625      0.2625      0.5250
+
+        -4.4283   0.1026   3.1679   4.3349   8.7246  10.8255  12.6908  16.8973
+
+        KC interpolated eigenvalues at k=      0.2250      0.2250      0.4500
+
+        -4.9846   1.0518   3.6026   4.6750   9.0833  11.1455  11.9197  15.9969
+
+        KC interpolated eigenvalues at k=      0.1875      0.1875      0.3750
+
+        -5.4522   2.1070   4.0861   4.9788   9.3897  11.2319  11.2916  14.8242
+
+        KC interpolated eigenvalues at k=      0.1500      0.1500      0.3000
+
+        -5.8121   3.1829   4.5733   5.2340   9.6276  10.8195  11.1195  13.5112
+
+        KC interpolated eigenvalues at k=      0.1125      0.1125      0.2250
+
+        -6.0668   4.1766   5.0181   5.4340   9.7993  10.4938  10.8783  12.2272
+
+        KC interpolated eigenvalues at k=      0.0750      0.0750      0.1500
+
+        -6.2302   4.9818   5.3760   5.5763   9.9236  10.2909  10.5916  11.1506
+
+        KC interpolated eigenvalues at k=      0.0375      0.0375      0.0750
+
+        -6.3196   5.5068   5.6085   5.6610  10.0319  10.1835  10.3230  10.4454
+
+        KC interpolated eigenvalues at k=      0.0000      0.0000      0.0000
+
+        -6.3478   5.6891   5.6891   5.6891  10.1503  10.1503  10.1503  10.1894
+
+        KC interpolated eigenvalues at k=      0.0500      0.0500      0.0500
+
+        -6.3291   5.5552   5.6588   5.6588  10.0637  10.2131  10.2131  10.3807
+
+        KC interpolated eigenvalues at k=      0.1000      0.1000      0.1000
+
+        -6.2707   5.1625   5.5708   5.5708   9.9624  10.3955  10.3955  10.7858
+
+        KC interpolated eigenvalues at k=      0.1500      0.1500      0.1500
+
+        -6.1663   4.5373   5.4338   5.4338   9.8300  10.6795  10.6795  11.3912
+
+        KC interpolated eigenvalues at k=      0.2000      0.2000      0.2000
+
+        -6.0061   3.7210   5.2612   5.2612   9.6692  11.0374  11.0375  12.1482
+
+        KC interpolated eigenvalues at k=      0.2500      0.2500      0.2500
+
+        -5.7790   2.7665   5.0699   5.0699   9.4927  11.4342  11.4342  12.9856
+
+        KC interpolated eigenvalues at k=      0.3000      0.3000      0.3000
+
+        -5.4748   1.7350   4.8785   4.8785   9.3169  11.8309  11.8309  13.8222
+
+        KC interpolated eigenvalues at k=      0.3500      0.3500      0.3500
+
+        -5.0905   0.6945   4.7059   4.7059   9.1586  12.1888  12.1888  14.5767
+
+        KC interpolated eigenvalues at k=      0.4000      0.4000      0.4000
+
+        -4.6431  -0.2736   4.5689   4.5689   9.0330  12.4729  12.4729  15.1754
+
+        KC interpolated eigenvalues at k=      0.4500      0.4500      0.4500
+
+        -4.2075  -1.0435   4.4809   4.4809   8.9524  12.6552  12.6552  15.5597
+
+        KC interpolated eigenvalues at k=      0.5000      0.5000      0.5000
+
+        -3.9974  -1.3689   4.4506   4.4506   8.9247  12.7181  12.7181  15.6922
+
+        KC interpolated eigenvalues at k=      0.5000      0.4750      0.5250
+
+        -3.9845  -1.3570   4.3934   4.4248   8.9045  12.5297  12.7728  15.8351
+
+        KC interpolated eigenvalues at k=      0.5000      0.4500      0.5500
+
+        -3.9448  -1.3243   4.2277   4.3484   8.8431  12.0600  12.9376  16.1701
+
+        KC interpolated eigenvalues at k=      0.5000      0.4250      0.5750
+
+        -3.8747  -1.2792   3.9717   4.2253   8.7401  11.4576  13.2114  16.5527
+
+        KC interpolated eigenvalues at k=      0.5000      0.4000      0.6000
+
+        -3.7691  -1.2369   3.6554   4.0611   8.6009  10.8181  13.5864  16.8948
+
+        KC interpolated eigenvalues at k=      0.5000      0.3750      0.6250
+
+        -3.6222  -1.2203   3.3204   3.8637   8.4390  10.1976  14.0446  17.1506
+
+        KC interpolated eigenvalues at k=      0.5000      0.3500      0.6500
+
+        -3.4288  -1.2580   3.0170   3.6427   8.2741   9.6341  14.5596  17.2957
+
+        KC interpolated eigenvalues at k=      0.5000      0.3250      0.6750
+
+        -3.1862  -1.3776   2.7944   3.4097   8.1279   9.1559  15.0988  17.3193
+
+        KC interpolated eigenvalues at k=      0.5000      0.3000      0.7000
+
+        -2.8966  -1.5906   2.6849   3.1785   8.0195   8.7859  15.6253  17.2223
+
+        KC interpolated eigenvalues at k=      0.5000      0.2750      0.7250
+
+        -2.5688  -1.8830   2.6920   2.9665   7.9587   8.5463  16.0908  17.0257
+
+        KC interpolated eigenvalues at k=      0.5000      0.2500      0.7500
+
+        -2.2213  -2.2213   2.7954   2.7954   7.9409   8.4616  16.3437  16.8644
+
+        KC interpolated eigenvalues at k=      0.5000      0.2250      0.7250
+
+        -2.2203  -2.2203   2.7945   2.7945   7.9255   8.4316  16.3592  16.8653
+
+        KC interpolated eigenvalues at k=      0.5000      0.2000      0.7000
+
+        -2.2176  -2.2176   2.7919   2.7919   7.8808   8.3452  16.4032  16.8676
+
+        KC interpolated eigenvalues at k=      0.5000      0.1750      0.6750
+
+        -2.2133  -2.2133   2.7877   2.7877   7.8114   8.2126  16.4698  16.8710
+
+        KC interpolated eigenvalues at k=      0.5000      0.1500      0.6500
+
+        -2.2079  -2.2079   2.7825   2.7825   7.7244   8.0488  16.5504  16.8748
+
+        KC interpolated eigenvalues at k=      0.5000      0.1250      0.6250
+
+        -2.2019  -2.2019   2.7768   2.7768   7.6285   7.8713  16.6357  16.8786
+
+        KC interpolated eigenvalues at k=      0.5000      0.1000      0.6000
+
+        -2.1959  -2.1959   2.7710   2.7710   7.5330   7.6976  16.7172  16.8818
+
+        KC interpolated eigenvalues at k=      0.5000      0.0750      0.5750
+
+        -2.1905  -2.1905   2.7657   2.7657   7.4474   7.5440  16.7877  16.8843
+
+        KC interpolated eigenvalues at k=      0.5000      0.0500      0.5500
+
+        -2.1862  -2.1862   2.7615   2.7616   7.3797   7.4239  16.8418  16.8860
+
+        KC interpolated eigenvalues at k=      0.5000      0.0250      0.5250
+
+        -2.1834  -2.1834   2.7589   2.7589   7.3364   7.3477  16.8757  16.8869
+
+        KC interpolated eigenvalues at k=      0.5000      0.0000      0.5000
+
+        -2.1824  -2.1824   2.7579   2.7579   7.3215   7.3215  16.8872  16.8872
+
+     ENDING BAND STRUCTURE INTERPOLATION
+
+ 
+     KC_PP_INT    :      0.05s CPU      0.08s WALL
+
+ 
+   This run was terminated on:  21:27:34  30Aug2022            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=
