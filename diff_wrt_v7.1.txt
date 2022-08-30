@@ -1,0 +1,4 @@
+1) Added a calculation="cc". This computes the (estimated) q+G=0 contribution to the bare and screened KC corrections.
+   A report on this quantities is printed on output and can be used to correct a posteriori a calculation performed 
+   without any corrective scheme (l_vcut=.false.) 
+
