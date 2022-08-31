@@ -24,7 +24,7 @@ if (( $(echo "$err > $tol_ene" |bc -l) )); then
  echo -e "${RED}  PWSCF  WARNING: ${NC} Total energy does not match: $a $a_ref $err"
  check=0
 fi
-if (( $check )); then echo -e "  ${GREEN}PWSCF       OK!${NC}"; fi
+if (( $check )); then echo -e "  ${GREEN}PWSCF         OK!${NC}"; fi
 
 check=1
 a=`grep high results/Si.scf.out | awk '{print $7}'`
@@ -41,7 +41,7 @@ if (( $(echo "$err > $tol_eig" |bc -l) )); then
  echo -e "${RED}  PWNSCF WARNING: ${NC} CBM does not match: $a $a_ref $err"
  check=0
 fi
-if (( $check )); then echo -e "  ${GREEN}PWNSCF      OK!${NC}"; fi
+if (( $check )); then echo -e "  ${GREEN}PWNSCF        OK!${NC}"; fi
 
 
 
@@ -73,7 +73,7 @@ if (( $(echo "$err > $tol_r2" |bc -l) )); then
  check=0
 fi
 done
-if (( $check )); then echo -e "  ${GREEN}WANNIER     OK!${NC}"; fi
+if (( $check )); then echo -e "  ${GREEN}WANNIER       OK!${NC}"; fi
 
 check=1
 
@@ -91,7 +91,7 @@ for i in `seq 1 8`; do
   fi
  done
 done
-if (( $check )); then echo -e "  ${GREEN}KC_HAM      OK!${NC}"; fi
+if (( $check )); then echo -e "  ${GREEN}KC_HAM        OK!${NC}"; fi
 rm pp
 
 check=1
@@ -110,6 +110,25 @@ for i in `seq 1 8`; do
   fi
  done
 done
-if (( $check )); then echo -e "  ${GREEN}KCWPP_SH     OK!${NC}"; fi
+if (( $check )); then echo -e "  ${GREEN}KCWPP_SH      OK!${NC}"; fi
+rm pp
+
+check=1
+
+for i in `seq 1 62`; do 
+ grep -A 2 "KC interpolate" results/Si.kcwpp_interp.out | grep -v "KC inter" | grep -v "\-\-" | sed -r '/^\s*$/d' | head -$1 | tail -1 > pp
+ grep -A 2 "KC interpolate" reference/Si.kcwpp_interp.out | grep -v "KC inter" | grep -v "\-\-" | sed -r '/^\s*$/d' | head -$1 | tail -1 > pp
+ for j in `seq 1 8`; do 
+  col=`echo $j+1 | bc`
+  eig=`head -1 pp | awk -v col=$col '{print $col}'`
+  eig_ref=`tail -1 pp | awk -v col=$col '{print $col}'`
+  err=`echo $i $eig $eig_ref | awk '{printf "%20.15f \n", sqrt(($2-$3)*($2-$3))}'`
+  if (( $(echo "$err > $tol_eig" |bc -l) )); then
+   echo -e "  ${RED}KCWPP_INTERP WARNING: ${NC}eig does not match ik=$i,v=$j: $eig $eig_ref $err"
+   check=0
+  fi
+ done
+done
+if (( $check )); then echo -e "  ${GREEN}KCWPP_INTERP  OK!${NC}"; fi
 rm pp
 echo 

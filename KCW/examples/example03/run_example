@@ -238,7 +238,7 @@ exclude_bands     =  1-4
 spin              = up
 use_ws_distance   = .true.
 
-dis_froz_max      = 8.0
+dis_froz_max      = 9.2
 dis_win_max       = 20
 
 conv_window = 5 
@@ -353,15 +353,15 @@ $KCW_COMMAND -in $PREFIX.kcw-wann2kcw.in > $PREFIX.kcw-wann2kcw.out
 $ECHO " done"
 
 cat > file_alpharef.txt << EOF
-    8
-    1     0.303622709611     0.274421653711
-    2     0.303622876035     0.274421651783
-    3     0.303622820714     0.274421651647
-    4     0.303622799415     0.274421653338
-    5     0.206599836426     0.097774143214
-    6     0.206600163004     0.097773994522
-    7     0.206600036771     0.097773999523
-    8     0.206600014709     0.097774022350
+8
+1 0.30362277 0.27442165
+2 0.30362281 0.27442165
+3 0.30362287 0.27442165
+4 0.30362285 0.27442165
+5 0.20944575 0.09535884
+6 0.20944554 0.09535869
+7 0.20944570 0.09535884
+8 0.20944565 0.09535876
 EOF
 
 cat > $PREFIX.kcw-ham.in << EOF
@@ -400,6 +400,7 @@ $KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham.in > $PREFIX.kcw-ham.out
 $ECHO " done"
 
 cat > $PREFIX.kcwpp_interp.in << EOF
+KCWPP interpolate
 &KCW_PP
  prefix='$PREFIX'
  outdir='$TMP_DIR'
@@ -429,6 +430,7 @@ $KCWPP_INTERP_COMMAND -in $PREFIX.kcwpp_interp.in > $PREFIX.kcwpp_interp.out
 $ECHO " done"
 
 cat > $PREFIX.kcwpp_sh.in << EOF
+KCWPP Self Hartree
 &KCW_PP
  prefix='$PREFIX'
  outdir='$TMP_DIR'
