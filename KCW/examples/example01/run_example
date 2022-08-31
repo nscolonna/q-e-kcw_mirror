@@ -234,7 +234,7 @@ exclude_bands     =  1-4
 spin              = up
 use_ws_distance   = .true.
 
-dis_froz_max      = 8.0
+dis_froz_max      = 9.2
 dis_win_max       = 20
 
 conv_window = 5 
