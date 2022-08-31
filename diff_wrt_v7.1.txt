@@ -1,4 +1,8 @@
 1) Added a calculation="cc". This computes the (estimated) q+G=0 contribution to the bare and screened KC corrections.
    A report on this quantities is printed on output and can be used to correct a posteriori a calculation performed 
    without any corrective scheme (l_vcut=.false.) 
-
+2) Restructure solve_linter_koop_mod.f90. Now it call common routines in LR_modules (sternheimer_kernel). 
+   Now the option "fix_orb" does not work anymore. It should be integrated in sternheimer_kernel. Not a big 
+   deal because 1) we never use it 2) should be very easy to re-implement
+3) Add example03 that show how to use kcwpp_interp.x and kcwpp_sh.x
+4) Update example01 with a better wannierization for the empty states. 
