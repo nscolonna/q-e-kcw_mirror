@@ -156,7 +156,7 @@ MODULE coulomb
     !! It then regularizes it according to the specified recipe.
     !
     USE kinds,       ONLY : DP
-    USE cell_base,   ONLY : tpiba, at, tpiba2
+    USE cell_base,   ONLY : at, tpiba2
     USE constants,   ONLY : fpi, e2, pi
     !
     IMPLICIT NONE
@@ -263,7 +263,6 @@ MODULE coulomb
     USE cell_base,          ONLY : bg, at, alat, omega
     USE gvect,              ONLY : ngm, g
     USE gvecw,              ONLY : gcutw
-    USE io_global,          ONLY : stdout
     USE control_flags,      ONLY : gamma_only
     USE mp_global,          ONLY : intra_pool_comm
     USE mp,                 ONLY : mp_sum
