@@ -17,7 +17,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   !!    Driver routine for the solution of the linear system which defines the 
   !!    change of the wavefunction due to an EXTERNAL perturbation. It work 
   !!    exactly as solve_linter in PH but for a genenral perturbation dv delta_vr.
-  !!    In geneREAL, it performs the following tasks:
+  !!    In general, it performs the following tasks:
   !!     a) computes the bare potential term Delta V | psi >, add the scf contribution
   !!     b) applies P_c^+ (orthogonalization to valence states)
   !!     c) calls cgstabsolve_all to solve the linear system
@@ -26,6 +26,8 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   ! ## FIXME delta_vg passed only for debug reason (to test symmetries) Needs to be removed once the
   !          problem will be solved
   !
+  USE control_kcw
+  USE dv_of_drho_lr
   USE kinds,                 ONLY : DP
   USE ions_base,             ONLY : nat
   USE io_global,             ONLY : stdout
@@ -37,7 +39,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   USE gvect,                 ONLY : gstart
   USE gvecs,                 ONLY : doublegrid, ngms
   USE becmod,                ONLY : calbec
-  USE wvfct,                 ONLY : npw, npwx, nbnd
+  USE wvfct,                 ONLY : npw
   USE uspp_param,            ONLY : nhm
   USE control_lr,            ONLY : lgamma, nbnd_occ
   USE units_lr,              ONLY : iuwfc, lrwfc
@@ -49,54 +51,42 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   USE mp,                    ONLY : mp_sum
   USE mp_global,             ONLY : intra_pool_comm, inter_pool_comm 
   USE noncollin_module,      ONLY : npol
-  USE control_kcw
-  USE dv_of_drho_lr
   USE mp_pools,              ONLY : inter_pool_comm, intra_pool_comm
-  USE apply_dpot_mod,        ONLY : apply_dpot_bands
+  USE apply_DPot_mod,        ONLY : apply_DPot_bands
   USE response_kernels,      ONLY : sternheimer_kernel
   !
   !USE cell_base,            ONLY : omega
   !
   IMPLICIT NONE
   !
-  INTEGER, PARAMETER :: npe = 1
+  COMPLEX(DP), INTENT(in) ::delta_vr (dffts%nnr, nspin)
+  COMPLEX(DP), INTENT(out) ::  drhog_scf (ngms, nspin)
+  COMPLEX(DP), INTENT(out), optional :: drhor_scf(dffts%nnr,nspin)
   !
-  COMPLEX(dp), INTENT(in) ::delta_vr (dffts%nnr, nspin)
-  COMPLEX(dp), INTENT(out) ::  drhog_scf (ngms, nspin)
-  COMPLEX(dp), INTENT(out), optional :: drhor_scf(dffts%nnr,nspin)
+  REAL(DP) :: averlt, &
+              thresh, & ! convergence threshold
+              dr2,    & ! self-consistency error
+              dos_ef    ! DOS at Fermi energy (in calculation for a metal)
   !
-  ! input: the imaginary frequency
-  REAL(DP) :: averlt
+  COMPLEX(DP), ALLOCATABLE :: & 
+              drhoscf (:,:),    & !
+              drhoscfh (:,:),   & !
+              dvscfout (:,:),   & !
+              ldos (:,:),       & !
+              ldoss (:,:),      & !
+              dbecsum(:,:,:,:), & !
+              aux(:),           & !
+              drhoc(:)  
   !
-  COMPLEX(DP), ALLOCATABLE :: drhoscf (:,:,:)
-  ! the SCF variation of the density response
-  REAL(DP) :: thresh, dr2
-  ! thresh: convergence threshold
-  ! anorm : the norm of the error
-  ! dr2   : self-consistency error
-  REAL(DP) :: dos_ef
-  ! dos_ef: DOS at Fermi energy (in calculation for a metal)
-  ! weight: weight of k-point     
-  COMPLEX(DP), ALLOCATABLE, target :: dvscfin(:,:,:)
+  COMPLEX(DP), ALLOCATABLE, target :: dvscfin(:,:)
   ! change of the scf potential 
   COMPLEX(DP), pointer :: dvscfins (:,:,:)
   ! change of the scf potential (smooth part only)
-  COMPLEX(DP), ALLOCATABLE :: drhoscfh (:,:,:), dvscfout (:,:,:)
-  ! change of rho / scf potential (output)
-  ! change of scf potential (output)
-  COMPLEX(DP), ALLOCATABLE :: ldos (:,:), ldoss (:,:),&
-       dbecsum (:,:,:,:), aux(:)
-  ! Misc work space
-  ! ldos : local density of states af Ef
-  ! ldoss: as above, without augmentation charges
-  ! dbecsum: the derivative of becsum
-  COMPLEX(DP), ALLOCATABLE :: drhoc(:)
-  ! drhoc: response core charge density
   REAL(DP), ALLOCATABLE :: becsum1(:,:,:)
-  ! for 
   !
-  LOGICAL :: lmetq0        ! true if xq=(0,0,0) in a metal
-  LOGICAL :: all_conv
+  LOGICAL :: lmetq0,     & ! true if xq=(0,0,0) in a metal
+             all_conv,   & ! true if the Linear system converged for all the bands and k-points
+             convt         ! true if the SCF problem converged
 
   INTEGER :: kter,       & ! counter on iterations
              iter0,      & ! starting iteration
@@ -107,18 +97,13 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
              ig,         & ! counter on G vectors
              ir,         & ! counter on mesh points
              is,         & ! counter on spin polarizations
-             ipert,      & ! counter on perturbations
              spin_ref,   & ! the spin of the reference orbital
              i_ref         ! the orbital we want to keep fix
-           
-
-
+  !
   REAL(DP) :: tcpu, get_clock ! timing variables
-
   EXTERNAL cch_psi_all, ccg_psi
   EXTERNAL ch_psi_all,  cg_psi
-  CHARACTER(LEN=256) :: flmixdpot = 'mixd'
-  LOGICAL :: convt
+  CHARACTER(LEN=256) :: flmixDPot = 'mixd'
   !
   !!## DEBUG
   COMPLEX(DP) :: drhok(dffts%nnr)
@@ -131,20 +116,20 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   !
   CALL start_clock ('solve_linter')
   !
-  ALLOCATE (dvscfin (dfftp%nnr, nspin , npe))    
-  dvscfin(:,:,1) = (0.D0, 0.D0)
+  ALLOCATE (dvscfin (dfftp%nnr, nspin)) 
+  dvscfin(:,:) = (0.D0, 0.D0)
   !
   IF (doublegrid) THEN
-     ALLOCATE (dvscfins (dffts%nnr , nspin , npe))    
+     ALLOCATE (dvscfins (dffts%nnr , nspin , 1))
   ELSE
-     dvscfins => dvscfin
+     dvscfins(1:dffts%nnr, 1:nspin, 1:1) => dvscfin
   ENDIF
   !
   !ALLOCATE (drhoscf  (dfftp%nnr, nspin, 1) )
-  ALLOCATE (drhoscf  (dffts%nnr, nspin, 1) ) !! NsC
-  ALLOCATE (drhoscfh (dfftp%nnr, nspin , npe))    
-  ALLOCATE (dvscfout (dfftp%nnr, nspin , npe))    
-  ALLOCATE (dbecsum ( (nhm * (nhm + 1))/2 , nat , nspin , npe))    
+  ALLOCATE (drhoscf  (dffts%nnr, nspin) ) !! NsC
+  ALLOCATE (drhoscfh (dfftp%nnr, nspin))
+  ALLOCATE (dvscfout (dfftp%nnr, nspin))    
+  ALLOCATE (dbecsum ( (nhm * (nhm + 1))/2 , nat , nspin , 1))
   ALLOCATE (aux ( dffts%nnr ))    
   ALLOCATE (drhoc(dfftp%nnr))
   !
@@ -209,7 +194,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   DO kter = 1, niter
      iter = kter + iter0
      !
-     drhoscf(:,:,:) = (0.d0, 0.d0)
+     drhoscf(:,:) = (0.d0, 0.d0)
      dbecsum(:,:,:,:) = (0.d0, 0.d0)
      IF (iter == 1 ) THEN
         thresh = 1.d-6
@@ -238,27 +223,27 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      !
      IF (doublegrid) THEN
         DO is = 1, nspin
-           CALL fft_interpolate (dffts, drhoscf(:,is,1), dfftp, drhoscfh(:,is,1))
+           CALL fft_interpolate (dffts, drhoscf(:,is), dfftp, drhoscfh(:,is))
         ENDDO
      ELSE
-        CALL zcopy (npe*nspin*dfftp%nnr, drhoscf, 1, drhoscfh, 1)
+        CALL zcopy (nspin*dfftp%nnr, drhoscf, 1, drhoscfh, 1)
      ENDIF
      !
      ! if q=0, make sure that charge conservation is guaranteed
      !
      IF ( lgamma ) THEN
-        psic(:) = drhoscfh(:, nspin, npe)
+        psic(:) = drhoscfh(:, nspin)
         CALL fwfft ('Rho', psic, dfftp)
         !CALL cft3 (psic, nr1, nr2, nr3, nrx1, nrx2, nrx3, -1)
         IF ( gstart==2) psic(dfftp%nl(1)) = (0.d0, 0.d0)
         CALL invfft ('Rho', psic, dfftp)
         !CALL cft3 (psic, nr1, nr2, nr3, nrx1, nrx2, nrx3, +1)
-        drhoscfh(:, nspin, npe) = psic(:)
+        drhoscfh(:, nspin) = psic(:)
      ENDIF
      !
      !    Now we compute for all perturbations the total charge and potential
      !
-     !CALL addusddens (drhoscfh, dbecsum, irr, imode0, npe, 0)
+     !CALL addusddens (drhoscfh, dbecsum, irr, imode0, 1, 0)
      !
 #ifdef __MPI
      !
@@ -272,33 +257,26 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      !   ... save them on disk and
      !   compute the corresponding change in scf potential
      !
-     DO ipert = 1, npe
-        !
-        CALL zcopy (dfftp%nnr*nspin,drhoscfh(1,1,ipert),1,dvscfout(1,1,ipert),1)
-        ! NB: always CALL with imode=0 to avoid CALL to addcore in dv_of_drho for 
-        !     nlcc pseudo. The CALL is not needed since we are not moving atoms!!
-        !
-        CALL dv_of_drho (dvscfout(1,1,ipert), .false.) 
-        !
-     ENDDO
+     CALL zcopy (dfftp%nnr*nspin,drhoscfh(1,1),1,dvscfout(1,1),1)
+     ! NB: always CALL with imode=0 to avoid CALL to addcore in dv_of_drho for 
+     !     nlcc pseudo. The CALL is not needed since we are not moving atoms!!
+     !
+     CALL dv_of_drho (dvscfout(1,1), .false.) 
      !
      !
      ! ... On output in dvscfin we have the mixed potential
      !
-     CALL mix_potential (2*npe*dfftp%nnr*nspin, dvscfout, dvscfin, &
-                         alpha_mix(kter), dr2, npe*tr2/npol, iter, &
-                         nmix, flmixdpot, convt)
+     CALL mix_potential (2*dfftp%nnr*nspin, dvscfout, dvscfin, &
+                         alpha_mix(kter), dr2, tr2/npol, iter, &
+                         nmix, flmixDPot, convt)
      !WRITE(mpime+1000, '(1i5,es10.3,1l1,1i5)') my_pool_id, dr2, convt, iter
      !
      ! check that convergent have been reached on ALL processors in this image
      CALL check_all_convt(convt)
 
      IF (doublegrid) THEN
-        DO ipert = 1, npe
-           DO is = 1, nspin
-              !CALL cinterpolate (dvscfin(1,is,ipert), dvscfins(1,is,ipert), -1)
-              CALL fft_interpolate (dffts, drhoscf(:,is,ipert), dfftp, drhoscfh(:,is,ipert))
-           ENDDO
+        DO is = 1, nspin
+           CALL fft_interpolate (dffts, drhoscf(:,is), dfftp, drhoscfh(:,is))
         ENDDO
      ENDIF
      !
@@ -306,7 +284,6 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      !
      WRITE( stdout, '(/,5x," iter # ",i3," total cpu time :",f8.1, &
           &      " secs   av.it.: ",f5.1)') iter, tcpu, averlt
-     dr2 = dr2 / npe
      WRITE( stdout, '(5x," thresh=",es10.3, " alpha_mix = ",f6.3, &
           &      " |ddv_scf|^2 = ",es10.3 )') thresh, alpha_mix (kter) , dr2
      !
@@ -320,16 +297,15 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   !
 155 iter0=0
   !
-  ipert =1  
   ! The density variation in G-space
   !
   DO is = 1, nspin
-     aux(:) = drhoscfh(:,is,ipert)
+     aux(:) = drhoscfh(:,is)
      CALL fwfft ('Rho', aux, dffts)
      drhog_scf(:,is) = aux(dffts%nl(:))
   ENDDO
   !
-  IF (present(drhor_scf)) drhor_scf = drhoscf(:,:,ipert)
+  IF (present(drhor_scf)) drhor_scf = drhoscf(:,:)
   !
   ! The induced density in G space
   !
@@ -383,11 +359,11 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
            thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum)
   !
   USE control_kcw
-  USE apply_dpot_mod,        ONLY : apply_dpot_bands
+  USE apply_DPot_mod,        ONLY : apply_DPot_bands
   USE qpoint,                ONLY : npwq, nksq, ikks, ikqs
   USE wvfct,                 ONLY : npw, npwx, nbnd, et
   USE wavefunctions,         ONLY : evc
-  USE eqv,                   ONLY : dvpsi, dpsi, evq
+  USE eqv,                   ONLY : dvpsi, DPsi, evq
   USE lsda_mod,              ONLY : lsda, nspin, current_spin, isk
   USE control_lr,            ONLY : lgamma, nbnd_occ
   USE buffers,               ONLY : save_buffer, get_buffer
@@ -474,34 +450,34 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
      IF (.NOT. first_iter ) THEN 
         ! 
         aux2(:,:) = (0.D0,0.D0)
-        CALL apply_dpot_bands(ik, nbnd_occ(ikk), dvscfins(:, :, ipert), evc, aux2)
+        CALL apply_DPot_bands(ik, nbnd_occ(ikk), dvscfins(:, :, ipert), evc, aux2)
         dvpsi = dvpsi + aux2
         !
         !
     ENDIF
      !
-     ! iterative solution of the linear system (H-eS)*dpsi=dvpsi,
+     ! iterative solution of the linear system (H-eS)*DPsi=dvpsi,
      ! dvpsi=-P_c^+ (dvbare+dvscf)*psi , dvscf fixed.
      !
      ! Ortogonalize dvpsi to valence states: ps = <evq|dvpsi>
      ! Apply -P_c^+. 
      ! And finally |dvspi> =  -(|dvpsi> - S|evq><evq|dvpsi>)
      !
-     CALL orthogonalize(dvpsi, evq, ikk, ikq, dpsi, npwq, .false.)
+     CALL orthogonalize(dvpsi, evq, ikk, ikq, DPsi, npwq, .false.)
      IF ( first_iter ) THEN
         !
-        !  At the first iteration dpsi is set to zero
+        !  At the first iteration DPsi is set to zero
         !
-        dpsi(:, :) = (0.d0,0.d0)
+        DPsi(:, :) = (0.d0,0.d0)
      ELSE
         !
         ! starting value for delta_psi is read from iudwf
         !
-        CALL get_buffer(dpsi, lrdwf, iudwf, nrec)
+        CALL get_buffer(DPsi, lrdwf, iudwf, nrec)
       ENDIF
      !
      weight = wk (ikk); conv_root = .true.
-     CALL cgsolve_all (ch_psi_all, cg_psi, et(1,ikk), dvpsi, dpsi, &
+     CALL cgsolve_all (ch_psi_all, cg_psi, et(1,ikk), dvpsi, DPsi, &
                        h_diag, npwx, npwq, thresh, ik, lter, conv_root, &
                        anorm, nbnd_occ(ikk), npol)
      !
@@ -512,7 +488,7 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
      ENDIF
      ! writes delta_psi on iunit iudwf, k=kpoint,
      !
-     CALL save_buffer(dpsi, lrdwf, iudwf, nrec)
+     CALL save_buffer(DPsi, lrdwf, iudwf, nrec)
      !
      ltaver = ltaver + lter
      linterCALL = linterCALL + 1
@@ -526,25 +502,25 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
      !
      IF (kcw_at_KS .AND. fix_orb) THEN
        IF (spin_ref == current_spin) THEN 
-          dpsi(:,i_ref) = (0.D0, 0.D0)  !! disregard the variation of the orbital i_ref 
+          DPsi(:,i_ref) = (0.D0, 0.D0)  !! disregard the variation of the orbital i_ref 
        ENDIF
      ENDIF
      !
      CALL incdrhoscf (drhoscf(1,current_spin,1), weight, ik, &
-                      dbecsum(1,1,current_spin,1), dpsi)
+                      dbecsum(1,1,current_spin,1), DPsi)
     !
 !!## DEBUG 
 !   !! This is to check which k points are effectively equivalent (DEBUG/UNDERSTAND)
 !   !! only sum over the band
 !   drhok = CMPLX(0.D0,0.D0,kind=DP)
 !   CALL incdrhoscf ( drhok, weight, ik, &
-!                     dbecsum(1,1,current_spin,1), dpsi)
+!                     dbecsum(1,1,current_spin,1), DPsi)
 !   aux(:) = drhok(:)
 !   CALL fwfft ('Rho', aux, dffts)
 !   !! drhog_scf used as workspace
 !   drhog_scf(:,1) = aux(dffts%nl(:))
 !   !!WRITE(*,'("NICOLA", 6f22.18)') drhok(1:3) 
-!   !!WRITE(*,'("NICOLA", 6f22.18)') dpsi(1:3,1) 
+!   !!WRITE(*,'("NICOLA", 6f22.18)') DPsi(1:3,1) 
 !   !!WRITE(*,'("NICOLA", 6f22.18)')  drhog_scf(1:3,1)
 !   !!WRITE(*,'("NICOLA", 6f22.18)')  delta_vg(1:3,1)
 !   WRITE(*,'("NICOLA", i5, f12.4, 3x, 2f12.8)') ik, weight, sum (CONJG(drhog_scf(:,1)) * delta_vg(:,1))*omega
