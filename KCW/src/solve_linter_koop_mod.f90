@@ -108,10 +108,8 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
              ig,         & ! counter on G vectors
              ir,         & ! counter on mesh points
              is,         & ! counter on spin polarizations
-             ipert,      & ! counter on perturbations
              spin_ref,   & ! the spin of the reference orbital
-             i_ref,      & ! the orbital we want to keep fix
-             nrec          ! the record number for dvpsi and dpsi
+             i_ref         ! the orbital we want to keep fix
            
 
 
@@ -159,6 +157,46 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      call localdos ( ldos , ldoss , becsum1, dos_ef )
   endif
   !
+  DO ik = 1, nksq 
+     !
+     ikk = ikks(ik)
+     ikq = ikqs(ik)
+     npw = ngk(ikk)
+     npwq= ngk(ikq)
+     !
+     IF (lsda) current_spin = isk (ikk)
+     !
+     ! read unperturbed wavefunctions psi(k) and psi(k+q)
+     !
+     IF (nksq .GT. 1) call get_buffer (evc, lrwfc, iuwfc, ikk)
+     ! 
+     ! ... Compute dv_bare*psi and set dvscf to zero
+     !
+     dvpsi(:,:) = (0.D0, 0.D0)
+     DO ibnd = 1, nbnd_occ (ik)
+        aux(:) = (0.d0, 0.d0)
+        DO ig = 1, npw
+           aux (dffts%nl(igk_k(ig,ikk)))=evc(ig,ibnd)
+        ENDDO
+        CALL invfft ('Wave', aux, dffts)
+        DO ir = 1, dffts%nnr
+            aux(ir)=aux(ir)*delta_vr(ir,current_spin) 
+        ENDDO
+        !
+        CALL fwfft ('Wave', aux, dffts)
+        DO ig = 1, npwq
+           dvpsi(ig,ibnd)=aux(dffts%nl(igk_k(ig,ikq)))
+        ENDDO
+        !
+     ENDDO
+     !
+     IF (okvan) THEN
+        call errore('solve_linter_koop', 'USPP not implemented yet', 1)
+     ENDIF
+     !
+     CALL save_buffer (dvpsi, lrdvwfc, iudvwfc, ik)
+     !
+  ENDDO
   !   The outside loop is over the iterations
   !
   dr2=0.d0
@@ -202,43 +240,12 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
         !
         CALL h_prec (ik, evq, h_diag)
         !
-        ipert = 1
-        nrec = (ipert - 1) * nksq + ik
-        !
         ! compute the right hand side of the linear system due to
         ! the perturbation, dvscfin used as work space
         !
         IF (iter == 1 ) THEN 
            ! 
-           ! ... IF first iteration compute dv_bare*psi and set dvscf to zero
-           !
-           dvpsi(:,:) = (0.D0, 0.D0)
-           do ibnd = 1, nbnd_occ (ik)
-              aux(:) = (0.d0, 0.d0)
-              do ig = 1, npw
-                 aux (dffts%nl(igk_k(ig,ikk)))=evc(ig,ibnd)
-              enddo
-              CALL invfft ('Wave', aux, dffts)
-              do ir = 1, dffts%nnr
-                  aux(ir)=aux(ir)*delta_vr(ir,current_spin) 
-              enddo
-              !
-              CALL fwfft ('Wave', aux, dffts)
-              do ig = 1, npwq
-                 dvpsi(ig,ibnd)=aux(dffts%nl(igk_k(ig,ikq)))
-              enddo
-              !
-           enddo
-           if (okvan) then
-              call errore('solve_linter_koop', 'USPP not implemented yet', 1)
-           endif
-           !
-           call save_buffer (dvpsi, lrdvwfc, iudvwfc, nrec)        
-           dvscfin(:,:) = (0.D0, 0.D0)
-           !
-           thresh = 1.d-2
            thresh = 1.d-6
-           !
            !
         ELSE 
            ! ... Else read dv_bare*psi from file 
@@ -246,7 +253,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
            ! ... add it to dv_bare*psi
            !
            !
-           call get_buffer (dvpsi, lrdvwfc, iudvwfc, nrec)
+           call get_buffer (dvpsi, lrdvwfc, iudvwfc, ik)
            !
            aux1(:,:) = (0.D0,0.D0)
            aux2(:,:) = (0.D0,0.D0)
@@ -255,7 +262,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
               !
               ! 
               call cft_wave (ik, evc (1, ibnd), aux1, +1)
-              call apply_dpot(dffts%nnr,aux1, dvscfins(1,1,ipert), current_spin)
+              call apply_dpot(dffts%nnr,aux1, dvscfins(1,1,1), current_spin)
               call cft_wave (ik, aux2 (1, ibnd), aux1, -1)
               !
            ENDDO
@@ -267,7 +274,6 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
               !WRITE(*,*) dvpsi(1:3,ibnd)
            enddo
            !
-           thresh = min (1.d-1 * sqrt (dr2), 1.d-2)
            thresh = min (1.d-2 * sqrt (dr2), 1.d-6)
            !
         ENDIF
