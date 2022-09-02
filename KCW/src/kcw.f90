@@ -12,9 +12,9 @@ PROGRAM kcw
   !
   !! This is the main driver of the kcw.x code, an implementation of koopmans
   !! functionals based on DFPT and Wannier functions. The code reads the output
-  !! of PWSCF and Wannier90 and performe a Koopmanscalculation in a perturbative
+  !! of PWSCF and Wannier90 and performe a Koopmans calculation in a perturbative
   !! way. It performe several task depending on the vaule of the variable "calculation". 
-  !! 1) calculation=wann2kcw: interface between PWSCF and W90 and KCW. 
+  !! 1) calculation=wann2kcw: interface between PWSCF and W90, and KCW. 
   !! 2) calculation=screen: calculates the screening coefficients as described in 
   !!    N. Colonna et al. JCTC 14, 2549 (2018) 
   !!    N.Colonna et al. arXiv:2202.08155
@@ -45,7 +45,6 @@ PROGRAM kcw
   !
   CALL environment_start ( code )
   !
-  !
   CALL check_stop_init ()
   !
   ! 2) Read the input file and the PW outputs
@@ -65,7 +64,9 @@ PROGRAM kcw
 END PROGRAM kcw
 
 
+!-------------------------------------------------------------------
 SUBROUTINE header 
+  !-----------------------------------------------------------------
   !
   USE io_global,         ONLY : stdout, ionode
   IMPLICIT NONE
