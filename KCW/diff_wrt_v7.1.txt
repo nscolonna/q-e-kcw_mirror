@@ -6,3 +6,7 @@
    deal because 1) we never use it 2) should be very easy to re-implement
 3) Add example03 that show how to use kcwpp_interp.x and kcwpp_sh.x
 4) Update example01 with a better wannierization for the empty states. 
+5) New way of writing partial results for the relaxed KC corrections. Now the entire contribution (i.e. the bare <ni|f_Hxc|ni> 
+   plus the response part <ni|f_Hxc \Chi f_Hxc |ni> is printed on output. Before only the response part was printed). This 
+   is totally equivalent to the previous version, but makes it simpler to handle the correction for the g+G=0 terms.
+   Example' references updated consequently

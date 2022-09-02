@@ -13,7 +13,11 @@
           N.Colonna, R. De Gannaro, E. Linscott, and N. Marzari, arXiv:2202.08155   
      =--------------------------------------------------------------------------------=
 
-     Program KCW v.7.1 starts on 31Aug2022 at  8:47:36 
+     Program KCW v.7.1 starts on  2Sep2022 at 13: 3:55 
+        Git branch: restructure_solvelinter
+        Last git commit: aa64910deb7f06913952b1cdf4e50c542c61c4d2-dirty
+        Last git commit date: Fri Sep 2 11:16:23 2022 +0200
+        Last git commit subject: Update input_summary KCW
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -28,7 +32,7 @@
 
      MPI processes distributed on     1 nodes
      R & G space division:  proc/nbgrp/npool/nimage =       4
-     755 MiB available memory on the printing compute node when the environment starts
+     1488 MiB available memory on the printing compute node when the environment starts
  
 
      KCW INPUT SUMMARY 
@@ -41,6 +45,7 @@
        # calculation         =               ham
        # kcw_iverbosity      =                 1
        # kcw_at_ks           =                 F
+       # MP grid             =     2     2     2
        # spin_component      =                 1
        # homo_only           =                 F
        # read_unitary_matrix =                 T
@@ -96,14 +101,14 @@
      READING SCREENING PARAMETERS
 
      INFO: alphas read from:/home/nicola/Scrivania/CODES/git/q-e-kcw/tempdir/kcw/Si.alpha.dat                                                                                                                                                                                               
-     iwann =     1   alpha =      0.30362277
-     iwann =     2   alpha =      0.30362281
-     iwann =     3   alpha =      0.30362287
-     iwann =     4   alpha =      0.30362285
-     iwann =     5   alpha =      0.20944575
-     iwann =     6   alpha =      0.20944554
-     iwann =     7   alpha =      0.20944570
-     iwann =     8   alpha =      0.20944565
+     iwann =     1   alpha =      0.30362265
+     iwann =     2   alpha =      0.30362282
+     iwann =     3   alpha =      0.30362276
+     iwann =     4   alpha =      0.30362276
+     iwann =     5   alpha =      0.20944605
+     iwann =     6   alpha =      0.20944592
+     iwann =     7   alpha =      0.20944599
+     iwann =     8   alpha =      0.20944595
 
      INFO: MLWF read from file: Reading collected, re-writing distributed wavefunctions
 
@@ -340,7 +345,7 @@
 
         KC interpolated eigenvalues at k=      0.5875      0.1750      0.5875
 
-          -2.4509    -1.9711     2.5873     3.0361     7.3308     8.1244    15.9896    17.3140
+          -2.4509    -1.9711     2.5873     3.0361     7.3307     8.1244    15.9896    17.3140
 
         KC interpolated eigenvalues at k=      0.6000      0.2000      0.6000
 
@@ -523,7 +528,7 @@
 
      Writing all to output data dir /home/nicola/Scrivania/CODES/git/q-e-kcw/tempdir/Si_kcw.save/
  
-     KCW          :      0.14s CPU      0.20s WALL
+     KCW          :      0.18s CPU      0.26s WALL
 
      INITIALIZATION: 
  
@@ -544,15 +549,15 @@
       General routines
      calbec       :      0.00s CPU      0.00s WALL (       8 calls)
      fft          :      0.00s CPU      0.00s WALL (      18 calls)
-     ffts         :      0.02s CPU      0.02s WALL (     448 calls)
-     fftw         :      0.00s CPU      0.00s WALL (     128 calls)
-     davcio       :      0.01s CPU      0.01s WALL (      72 calls)
+     ffts         :      0.04s CPU      0.05s WALL (     448 calls)
+     fftw         :      0.01s CPU      0.01s WALL (     128 calls)
+     davcio       :      0.01s CPU      0.02s WALL (      72 calls)
  
  
-     KCW          :      0.14s CPU      0.21s WALL
+     KCW          :      0.18s CPU      0.26s WALL
 
  
-   This run was terminated on:   8:47:36  31Aug2022            
+   This run was terminated on:  13: 3:55   2Sep2022            
 
 =------------------------------------------------------------------------------=
    JOB DONE.

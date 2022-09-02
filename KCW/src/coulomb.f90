@@ -48,7 +48,7 @@ MODULE coulomb
     !
     IMPLICIT NONE 
     !
-    LOGICAL :: exst
+    LOGICAL :: exst, skip_eps
     INTEGER :: nqs
     !
     CALL start_clock( 'Coulomb setup' )
@@ -68,6 +68,7 @@ MODULE coulomb
     ! NOTABENE: The Screened contribution does not work with x_gamma_extrapolation
     !           Leave x_gamma_extrapolation to FALSE unless you know what you are doing
     !
+    skip_eps = .FALSE. 
     IF (l_vcut) THEN
       !
       use_regularization = .true. 
@@ -90,14 +91,16 @@ MODULE coulomb
          !
          ! 3) No information about the dielectric properties: set eps=I
       ELSE 
-         WRITE (stdout,'(/,5X, "INFO: Dielectric tensor = the Identity")')
+         WRITE (stdout,'(/,5X, "INFO: Dielectric tensor = NOT SPECIFIED")')
          WRITE (stdout,'(  5X, "      NO Correction for the Screened Coulomb")')
+         skip_eps = .TRUE.
          !
       ENDIF
       !
     ENDIF
     !
     CALL divergence ()
+    IF (skip_eps) exxdiv_eps = 0.D0
     ! Compute the divergence and set the q+G=0 term (exxdiv and exxdiv_eps, 
     ! to be used to correct the bare and screened coulomb. USed in bare_pot
     ! and screen_coeff. 
@@ -125,14 +128,20 @@ MODULE coulomb
       WRITE (stdout,'(  5X,    "INFO: Bare Coulomb q+G=0     ", 3x, 1ES15.5 )')  exxdiv
       IF ( (calculation == "screen" .AND. l_vcut) .OR. calculation == 'cc' ) THEN
          !
-         WRITE (stdout,'(  5X, "INFO: Epsilon infinity       ", 3x, 1F12.6  )')  eps_inf
-         WRITE (stdout,'(  5X, "INFO: Dielectric tensor      ", 3x, 3F12.6  )') (eps_mat(:,1))
-         WRITE (stdout,'(  5X, "                             ", 3x, 3F12.6  )') (eps_mat(:,2))
-         WRITE (stdout,'(  5X, "                             ", 3x, 3F12.6  )') (eps_mat(:,3))
+         IF (.NOT. skip_eps) THEN 
+           WRITE (stdout,'(  5X, "INFO: Epsilon infinity       ", 3x, 1F12.6  )')  eps_inf
+           WRITE (stdout,'(  5X, "INFO: Dielectric tensor      ", 3x, 3F12.6  )') (eps_mat(:,1))
+           WRITE (stdout,'(  5X, "                             ", 3x, 3F12.6  )') (eps_mat(:,2))
+           WRITE (stdout,'(  5X, "                             ", 3x, 3F12.6  )') (eps_mat(:,3))
+         ENDIF
          WRITE (stdout,'(  5X, "INFO: Screened Coulomb q+G=0 ", 3x, 1F20.12 )')  exxdiv_eps
-         WRITE (stdout,'(  5X, "      Isotropic estimate     ", 3x, 1F20.12 )')  exxdiv/eps_inf
+         IF (.NOT. skip_eps) THEN 
+            WRITE (stdout,'(  5X, "      Isotropic estimate     ", 3x, 1F20.12 )')  exxdiv/eps_inf
+         ELSE
+            WRITE (stdout,'(  5X, "      Isotropic estimate     ", 3x, 1F20.12 )')  0.D0
+         ENDIF
          WRITE (stdout,'(  5X, "INFO: uPi(q+G=0) estimation  ", 3X, 1F20.12 )') -exxdiv/omega/nqs
-         WRITE (stdout,'(  5X, "INFO: rPi(q+G=0) estimation  ", 3X, 1F20.12 )') -(exxdiv_eps-exxdiv)/omega/nqs
+         WRITE (stdout,'(  5X, "INFO: rPi(q+G=0) estimation  ", 3X, 1F20.12 )') -(exxdiv_eps)/omega/nqs
          !
       ENDIF
       !
