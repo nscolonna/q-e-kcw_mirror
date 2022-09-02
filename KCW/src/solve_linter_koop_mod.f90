@@ -32,7 +32,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   USE ions_base,             ONLY : nat
   USE io_global,             ONLY : stdout
   USE wavefunctions,         ONLY : evc, psic
-  USE klist,                 ONLY : lgauss, igk_k, ngk
+  USE klist,                 ONLY : lgauss, ngk
   USE lsda_mod,              ONLY : lsda, nspin, current_spin, isk
   USE fft_base,              ONLY : dffts, dfftp
   USE fft_interfaces,        ONLY : fwfft, invfft, fft_interpolate
@@ -41,11 +41,11 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   USE becmod,                ONLY : calbec
   USE wvfct,                 ONLY : npw
   USE uspp_param,            ONLY : nhm
-  USE control_lr,            ONLY : lgamma, nbnd_occ
+  USE control_lr,            ONLY : lgamma
   USE units_lr,              ONLY : iuwfc, lrwfc
   USE buffers,               ONLY : save_buffer, get_buffer
   USE eqv,                   ONLY : dvpsi
-  USE qpoint,                ONLY : npwq, nksq, ikks, ikqs
+  USE qpoint,                ONLY : nksq, ikks
   USE uspp,                  ONLY : okvan  
   USE uspp_init,             ONLY : init_us_2
   USE mp,                    ONLY : mp_sum
@@ -88,14 +88,8 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
              all_conv,   & ! true if the Linear system converged for all the bands and k-points
              convt         ! true if the SCF problem converged
 
-  INTEGER :: kter,       & ! counter on iterations
-             iter0,      & ! starting iteration
-             ibnd,       & ! counter on bands
-             iter,       & ! counter on iterations
+  INTEGER :: iter,       & ! counter on iterations
              ik, ikk,    & ! counter on k points
-             ikq,        & ! counter on k+q points
-             ig,         & ! counter on G vectors
-             ir,         & ! counter on mesh points
              is,         & ! counter on spin polarizations
              spin_ref,   & ! the spin of the reference orbital
              i_ref         ! the orbital we want to keep fix
@@ -111,7 +105,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   !!## DEBUG 
   !
   LOGICAL :: new
-  ! Set to false to revert to the previous implementation of the Linear solver
+  ! Set to false to revert to the previous implementation of the Linear solver (consistent with QE7.1)
   new = .true.
   !
   CALL start_clock ('solve_linter')
@@ -133,6 +127,10 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   ALLOCATE (aux ( dffts%nnr ))    
   ALLOCATE (drhoc(dfftp%nnr))
   !
+  IF (new .AND. fix_orb) THEN 
+     CALL infomsg('kcw_solve_linter','WARNING: fix_orb not supported anymore; set it to FALSE')
+     fix_orb= .FALSE.
+  ENDIF 
   IF (kcw_at_ks .AND. fix_orb) WRITE (stdout, '("FREEZING ORBITAL #", i4, 3x , "spin", i4)') i_ref, spin_ref
   !
   ! if q=0 for a metal: ALLOCATE and compute local DOS at Ef
@@ -148,9 +146,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   DO ik = 1, nksq 
      !
      ikk = ikks(ik)
-     ikq = ikqs(ik)
      npw = ngk(ikk)
-     npwq= ngk(ikq)
      !
      IF (lsda) current_spin = isk (ikk)
      !
@@ -158,41 +154,20 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      !
      IF (nksq .GT. 1) CALL get_buffer (evc, lrwfc, iuwfc, ikk)
      ! 
-     ! ... Compute dv_bare*psi and set dvscf to zero
-     !
-     dvpsi(:,:) = (0.D0, 0.D0)
-     !
-     DO ibnd = 1, nbnd_occ (ik)
-        aux(:) = (0.d0, 0.d0)
-        DO ig = 1, npw
-           aux (dffts%nl(igk_k(ig,ikk)))=evc(ig,ibnd)
-        ENDDO
-        CALL invfft ('Wave', aux, dffts)
-        DO ir = 1, dffts%nnr
-            aux(ir)=aux(ir)*delta_vr(ir,current_spin) 
-        ENDDO
-        !
-        CALL fwfft ('Wave', aux, dffts)
-        DO ig = 1, npwq
-           dvpsi(ig,ibnd)=aux(dffts%nl(igk_k(ig,ikq)))
-        ENDDO
-        !
-     ENDDO
+     ! ... Compute dv_bare*psi (dvspi) and store it 
+     CALL kcw_dvqpsi (ik, delta_vr)
+     CALL save_buffer (dvpsi, lrdvwfc, iudvwfc, ik)
      !
      IF (okvan) THEN
         CALL errore('solve_linter_koop', 'USPP not implemented yet', 1)
      ENDIF
-     !
-     CALL save_buffer (dvpsi, lrdvwfc, iudvwfc, ik)
      !
   ENDDO 
   !
   !   Loop is over the iterations
   !
   dr2=0.d0
-  iter0 = 0 ! We do not have a restart procedure yet: NsC
-  DO kter = 1, niter
-     iter = kter + iter0
+  DO iter = 1, niter
      !
      drhoscf(:,:) = (0.d0, 0.d0)
      dbecsum(:,:,:,:) = (0.d0, 0.d0)
@@ -209,7 +184,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
            thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum)
      ELSE
        CALL sternheimer_kernel_old(iter==1, 1, i_ref, lrdvwfc, iudvwfc, &
-           thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum)
+           thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum ,delta_vg)
      ENDIF
      !
 #ifdef __MPI
@@ -234,10 +209,8 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      IF ( lgamma ) THEN
         psic(:) = drhoscfh(:, nspin)
         CALL fwfft ('Rho', psic, dfftp)
-        !CALL cft3 (psic, nr1, nr2, nr3, nrx1, nrx2, nrx3, -1)
         IF ( gstart==2) psic(dfftp%nl(1)) = (0.d0, 0.d0)
         CALL invfft ('Rho', psic, dfftp)
-        !CALL cft3 (psic, nr1, nr2, nr3, nrx1, nrx2, nrx3, +1)
         drhoscfh(:, nspin) = psic(:)
      ENDIF
      !
@@ -267,13 +240,13 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      ! ... On output in dvscfin we have the mixed potential
      !
      CALL mix_potential (2*dfftp%nnr*nspin, dvscfout, dvscfin, &
-                         alpha_mix(kter), dr2, tr2/npol, iter, &
+                         alpha_mix(iter), dr2, tr2/npol, iter, &
                          nmix, flmixDPot, convt)
      !WRITE(mpime+1000, '(1i5,es10.3,1l1,1i5)') my_pool_id, dr2, convt, iter
      !
      ! check that convergent have been reached on ALL processors in this image
      CALL check_all_convt(convt)
-
+     !
      IF (doublegrid) THEN
         DO is = 1, nspin
            CALL fft_interpolate (dffts, drhoscf(:,is), dfftp, drhoscfh(:,is))
@@ -285,17 +258,15 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      WRITE( stdout, '(/,5x," iter # ",i3," total cpu time :",f8.1, &
           &      " secs   av.it.: ",f5.1)') iter, tcpu, averlt
      WRITE( stdout, '(5x," thresh=",es10.3, " alpha_mix = ",f6.3, &
-          &      " |ddv_scf|^2 = ",es10.3 )') thresh, alpha_mix (kter) , dr2
+          &      " |ddv_scf|^2 = ",es10.3 )') thresh, alpha_mix (iter) , dr2
      !
      !    Here we save the information for recovering the run from this poin
      ! 
      FLUSH( stdout )
      !
-     IF (convt) GOTO 155
+     IF (convt) EXIT
      !
   ENDDO  ! loop over iteration
-  !
-155 iter0=0
   !
   ! The density variation in G-space
   !
@@ -326,6 +297,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   !
 END SUBROUTINE solve_linter_koop
 
+
 !------------------------------------------------------------------
 SUBROUTINE check_all_convt( convt )
   !---------------------------------------------------------------
@@ -355,8 +327,63 @@ SUBROUTINE check_all_convt( convt )
   !
 END SUBROUTINE
 
+
+!------------------------------------------------------------------
+SUBROUTINE kcw_dvqpsi (ik, delta_vr)
+  !----------------------------------------------------------------
+  ! 
+  ! Apply the bare perturbing potential to the unperturbed KS wfc. 
+  !
+  USE kinds,                 ONLY : DP
+  USE eqv,                   ONLY : dvpsi
+  USE control_lr,            ONLY : nbnd_occ
+  USE wvfct,                 ONLY : npw
+  USE fft_base,              ONLY : dffts
+  USE klist,                 ONLY : igk_k, ngk
+  USE fft_interfaces,        ONLY : fwfft, invfft
+  USE qpoint,                ONLY : npwq, ikks, ikqs
+  USE lsda_mod,              ONLY : nspin, current_spin
+  USE wavefunctions,         ONLY : evc
+  !
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: ik
+  INTEGER :: ibnd, ig, ir, ikk, ikq
+  COMPLEX(DP), INTENT(in) ::delta_vr (dffts%nnr, nspin)
+  COMPLEX(DP) :: aux ( dffts%nnr )    
+  !
+  ikk = ikks(ik)
+  ikq = ikqs(ik)
+  npw = ngk(ikk)
+  npwq= ngk(ikq)
+  !
+  dvpsi(:,:) = (0.D0, 0.D0)
+  !
+  DO ibnd = 1, nbnd_occ (ik)
+     aux(:) = (0.d0, 0.d0)
+     DO ig = 1, npw
+        aux (dffts%nl(igk_k(ig,ikk)))=evc(ig,ibnd)
+     ENDDO
+     CALL invfft ('Wave', aux, dffts)
+     DO ir = 1, dffts%nnr
+         aux(ir)=aux(ir)*delta_vr(ir,current_spin) 
+     ENDDO
+     !
+     CALL fwfft ('Wave', aux, dffts)
+     DO ig = 1, npwq
+        dvpsi(ig,ibnd)=aux(dffts%nl(igk_k(ig,ikq)))
+     ENDDO
+     !
+  ENDDO
+  !
+  RETURN 
+  !
+END SUBROUTINE
+
+
+!-------------------------------------------------------------------------------
 SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
-           thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum)
+           thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum, delta_vg)
+  !-----------------------------------------------------------------------------
   !
   USE control_kcw
   USE apply_DPot_mod,        ONLY : apply_DPot_bands
@@ -369,7 +396,7 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
   USE buffers,               ONLY : save_buffer, get_buffer
   USE uspp_init,             ONLY : init_us_2
   USE mp,                    ONLY : mp_sum
-  USE fft_base,              ONLY : dfftp
+  USE fft_base,              ONLY : dfftp, dffts
   USE klist,                 ONLY : xk, wk, ngk, igk_k
   USE uspp,                  ONLY : vkb
   USE ions_base,             ONLY : nat
@@ -378,6 +405,7 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
   USE units_lr,              ONLY : iuwfc, lrwfc, iudwf, lrdwf 
   USE io_global,             ONLY : stdout
   USE mp_global,             ONLY : inter_pool_comm 
+  USE gvecs,                 ONLY : ngms
   !
   LOGICAL, INTENT (IN) :: first_iter
   INTEGER, INTENT (IN) :: i_ref
@@ -401,6 +429,11 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
   EXTERNAL ch_psi_all,  cg_psi
   INTEGER :: lter, ltaver, lintercall, ibnd, spin_ref
   REAL(DP) :: anorm, weight
+  !
+  !## DEBUG
+  COMPLEX(DP) :: drhok(dffts%nnr)
+  COMPLEX(DP) :: delta_vg(ngms,nspin)
+  !##DEBUG 
   ! 
   all_conv = .TRUE.
   ALLOCATE (aux2(npwx*npol, nbnd))
