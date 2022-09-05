@@ -227,6 +227,10 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      !
 #endif
      !
+     ! Symmetrization of the response charge density.
+     !
+     CALL kcw_psymdvscf (drhoscfh)
+     !
      !   ... save them on disk and
      !   compute the corresponding change in scf potential
      !
