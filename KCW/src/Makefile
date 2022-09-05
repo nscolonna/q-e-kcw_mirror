@@ -56,7 +56,9 @@ kcw_init_q.o\
 kcw_allocate_q.o\
 kcw_deallocate_q.o\
 setup_coulomb_exx.o\
-coulomb.o
+coulomb.o\
+kcw_symdvscf.o\
+kcw_psymdvscf.o
 #restore_symm.o 
 #check_density.o 
 #setup_coulomb.o\
