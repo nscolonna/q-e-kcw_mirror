@@ -22,6 +22,7 @@ SUBROUTINE kcw_deallocate_q()
                                   & dvxc_s, vsgga, segni
   USE eqv,                 ONLY : dmuxc, dpsi, dvpsi, evq
   USE control_lr,          ONLY : lgamma, nbnd_occ
+  USE lr_symm_base,        ONLY : rtau
   !
   IMPLICIT NONE
   INTEGER :: ik
@@ -62,6 +63,7 @@ SUBROUTINE kcw_deallocate_q()
   if (allocated(segni))           deallocate (segni)
   if (allocated(vsgga))           deallocate (vsgga)
   if (allocated(gmag))            deallocate (gmag)
+  if(allocated(rtau))             deallocate (rtau)
   !
   RETURN
   !

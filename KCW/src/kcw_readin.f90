@@ -272,8 +272,8 @@ SUBROUTINE kcw_readin()
   IF ( lgauss .OR. ltetra ) CALL errore( 'kcw_readin', &
       'KC corrections only for insulators!', 1 )
   !
-  IF (calculation /= 'wann2kcw' .AND. (mp1*mp2*mp3 /= nkstot/nspin) ) &
-     CALL errore('kcw_readin', ' WRONG number of k points from input, check mp1, mp2, mp3', 1)
+  !IF (calculation /= 'wann2kcw' .AND. (mp1*mp2*mp3 /= nkstot/nspin) ) &
+  !   CALL errore('kcw_readin', ' WRONG number of k points from input, check mp1, mp2, mp3', 1)
   !
   IF (gamma_only) CALL errore('kcw_readin',&
      'cannot start from pw.x data file using Gamma-point tricks',1)

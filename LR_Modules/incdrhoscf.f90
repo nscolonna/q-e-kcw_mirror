@@ -183,6 +183,7 @@ subroutine incdrhoscf (drhoscf, weight, ik, dbecsum, dpsi)
         ! Calculation of the response charge-density
         !
         !$acc parallel loop present(drhoscf(1:v_siz),psi,dpsic)
+        WRITE(*,'("NICOLA in incdrho", i5, F10.6, 4F20.12, 3X 2F20.12)') ikk, wgt,  psi(1), dpsic(1), CONJG(psi (1) ) * dpsic (1) 
         do ir = 1, v_siz
            drhoscf (ir) = drhoscf (ir) + wgt * CONJG(psi (ir) ) * dpsic (ir)
         enddo

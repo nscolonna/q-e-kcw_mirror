@@ -16,10 +16,9 @@ SUBROUTINE screen_coeff ()
   USE kinds,                ONLY : DP
   USE fft_base,             ONLY : dffts
   USE fft_interfaces,       ONLY : fwfft, invfft
-  USE klist,                ONLY : nkstot
   USE mp,                   ONLY : mp_sum
   USE control_kcw,          ONLY : kcw_iverbosity, spin_component, num_wann, iorb_start, l_do_alpha, &
-                                   iorb_end, alpha_final, nqstot, eps_inf, l_vcut, l_unique_manifold, &  
+                                   iorb_end, alpha_final, nqstot, l_vcut, l_unique_manifold, &  
                                    group_alpha, tmp_dir_kcw, iurho_wann, tmp_dir_kcwq, x_q, tmp_dir_save, &
                                    i_orb
   USE buffers,              ONLY : get_buffer, save_buffer
@@ -69,7 +68,7 @@ SUBROUTINE screen_coeff ()
   !
   COMPLEX(DP) :: drho_zero
   !
-  REAL(DP) :: xq_(3), weight(nkstot)
+  REAL(DP) :: xq_(3), weight(nqstot)
   REAL(DP) :: alpha
   REAL(DP) :: div, div_eps
   !
@@ -245,8 +244,8 @@ SUBROUTINE screen_coeff ()
     CALL clean_pw_kcw( )
     !
     IF (ionode) THEN 
-      INQUIRE(file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status', exist=exst)
-      IF (.NOT. exst) OPEN(986, file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status')
+      INQUIRE(file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.screen.status', exist=exst)
+      IF (.NOT. exst) OPEN(986, file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.screen.status')
       REWIND(986)
       WRITE(986,'(i5)') iq
     ENDIF
@@ -371,11 +370,11 @@ SUBROUTINE restart_screen (num_wann, iq_start, vki_r, vki_u, sh, do_real_space)
   INTEGER :: iq_start, num_wann, iwann, iwann_, iq, iq_, iun_res
   LOGICAL :: exst, do_real_space
   !
-  INQUIRE(file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status', exist=exst)
+  INQUIRE(file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.screen.status', exist=exst)
   IF( .NOT. exst) THEN
     RETURN
   ELSE 
-    OPEN (986, file = TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status')
+    OPEN (986, file = TRIM(tmp_dir_kcw)//TRIM(prefix)//'.screen.status')
   ENDIF 
   !
   iun_res = 987

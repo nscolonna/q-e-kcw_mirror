@@ -30,7 +30,7 @@ subroutine kcw_setup_screen
   USE io_files,          ONLY : prefix
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer
   USE control_kcw,       ONLY : alpha_final, iurho_wann, kcw_iverbosity, &
-                                read_unitary_matrix, num_wann, num_wann_occ, i_orb, iorb_start, &
+                                read_unitary_matrix, num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, &
                                 iorb_end, nqstot, occ_mat, l_do_alpha, group_alpha, &
                                 tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq!, wq
   USE io_global,         ONLY : stdout
@@ -97,8 +97,6 @@ subroutine kcw_setup_screen
   !
   call setup_nbnd_occ ( ) 
   !
-  ALLOCATE ( alpha_final(nbnd) )
-  alpha_final(:) = 1.D0
   !
   ! ... Open buffers for the KS and eventualy the minimizing WFCs 
   !
@@ -114,12 +112,17 @@ subroutine kcw_setup_screen
   ! 8) READ the U matrix from Wannier and set the toal number of WFs
   !
   IF (read_unitary_matrix) THEN 
-    CALL read_wannier ( )
-    if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Unitary matrix, READ from file")')
+    num_wann = num_wann_occ+num_wann_emp
+    WRITE(*,*) "NICOLA", num_wann, num_wann_occ, num_wann_emp
+!    CALL read_wannier ( )
+!    if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Unitary matrix, READ from file")')
   ELSE
     num_wann = nbnd
     num_wann_occ = nbnd_occ(1)
   ENDIF
+  !
+  ALLOCATE ( alpha_final(num_wann) )
+  alpha_final(:) = 1.D0
   ! 
   ! ... Open a buffer for the wannier orbital densities. Those have been written by wann2kcw
   ! ... and must be in the outdir. If not STOP

@@ -226,8 +226,10 @@ SUBROUTINE hp_solve_linear_system (na, iq)
      !
      ! Compute drhoscf, the charge density response to the total potential
      !
+     WRITE(*,'("NICOLA drho      IN ", 6F20.12)') drhoscf(1:3,1)
      CALL sternheimer_kernel(iter==1, .FALSE., 1, lrdvwfc, iudvwfc, &
          thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum, exclude_hubbard=.TRUE.)
+     WRITE(*,'("NICOLA drho      IN ", 6F20.12)') drhoscf(1:3,1)
      !
      IF ((.NOT. all_conv) .AND. (iter == 1)) THEN
         WRITE(stdout, '(6x, "sternheimer_kernel not converged. Try to increase thresh_init.")')
@@ -298,7 +300,9 @@ SUBROUTINE hp_solve_linear_system (na, iq)
      !
      ! Symmetrization of the response charge density.
      !
+     WRITE(*,'("NICOLA drho(1:3) IN ", 6F20.12)') drhoscfh(1:3,1)
      CALL hp_psymdvscf (drhoscfh)
+     WRITE(*,'("NICOLA drho(1:3) OUT", 6F20.12)') drhoscfh(1:3,1)
      !
      ! Symmetrize dbecsum
      !

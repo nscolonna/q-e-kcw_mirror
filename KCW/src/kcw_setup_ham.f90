@@ -107,12 +107,6 @@ subroutine kcw_setup_ham
   !
   call setup_nbnd_occ ( ) 
   !
-  ALLOCATE ( alpha_final(nbnd) )
-  alpha_final(:) = 1.D0
-  IF (nkstot/nspin == 1 ) THEN 
-    ALLOCATE (alpha_final_full(nbnd))
-    alpha_final_full(:) = 1.D0
-  ENDIF
   !
   ! 6) Computes the derivative of the XC potential
   !
@@ -138,7 +132,8 @@ subroutine kcw_setup_ham
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for KS wfcs, OPENED")')
   !
   ! 8) READ the U matrix from Wannier and set the toal number of WFs
-  IF (read_unitary_matrix) THEN 
+  IF (read_unitary_matrix) THEN
+    num_wann = num_wann_occ + num_wann_emp 
     CALL read_wannier ( ) ! This is not needed if the Wannier ware written/read from file.
                           ! For now needed to set-up the number of wannier. To be removed 
                           ! as soon as a proper data-file will be written by wann2kcw: FIXME
@@ -147,6 +142,13 @@ subroutine kcw_setup_ham
     num_wann = nbnd
     num_wann_occ = nbnd_occ(1)
     num_wann_emp = num_wann-num_wann_occ
+  ENDIF
+  !
+  ALLOCATE ( alpha_final(num_wann) )
+  alpha_final(:) = 1.D0
+  IF (nkstot/nspin == 1 ) THEN 
+    ALLOCATE (alpha_final_full(num_wann))
+    alpha_final_full(:) = 1.D0
   ENDIF
   ! 
   ! Open a file to store the KS states in the WANNIER gauge

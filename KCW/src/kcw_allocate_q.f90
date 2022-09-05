@@ -24,6 +24,7 @@ subroutine kcw_allocate_q
   USE lrus,                 ONLY : becp1
   USE eqv,                  ONLY : dpsi, evq, dmuxc, dvpsi
   USE control_lr,           ONLY : lgamma
+  USE lr_symm_base,         ONLY : rtau
   !
   IMPLICIT NONE
   INTEGER :: ik
@@ -48,6 +49,8 @@ subroutine kcw_allocate_q
         CALL allocate_bec_type ( nkb, nbnd, becp1(ik) )
      ENDDO
   ENDIF
+  !
+  ALLOCATE (rtau ( 3, 48, nat))
   !
   RETURN
   !

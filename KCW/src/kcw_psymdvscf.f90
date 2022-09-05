@@ -31,7 +31,7 @@ SUBROUTINE kcw_psymdvscf (dvtosym)
   !
   IF (nsymq == 1 .AND. (.NOT.minus_q) ) RETURN
   !
-  CALL start_clock ('hp_psymdvscf')
+  CALL start_clock ('kcw_psymdvscf')
   !
   ALLOCATE (ddvtosym ( dfftp%nr1x * dfftp%nr2x * dfftp%nr3x, nspin_mag))
   !
@@ -52,7 +52,7 @@ SUBROUTINE kcw_psymdvscf (dvtosym)
   !
   DEALLOCATE (ddvtosym)
   !
-  CALL stop_clock ('hp_psymdvscf')
+  CALL stop_clock ('kcw_psymdvscf')
   !
 #else
   !

@@ -39,6 +39,7 @@ SUBROUTINE hp_symdvscf (dvtosym)
   ! the multiplication factor
   ! the phase factor
   !
+  !WRITE(*,*) "NICOLA drho(1:3) in =", dvtosym(1:3,1,1,1)
   if (nsymq == 1 .and. (.not.minus_q) ) return
   !
   call start_clock ('hp_symdvscf')
@@ -179,6 +180,7 @@ SUBROUTINE hp_symdvscf (dvtosym)
      !
   ENDDO
   !
+  !WRITE(*,*) "NICOLA drho(1:3) in =", dvtosym(1:3,1,1,1)
   deallocate (dvsym)
   !
   call stop_clock ('hp_symdvscf')

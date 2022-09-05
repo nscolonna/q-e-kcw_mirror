@@ -40,7 +40,7 @@ SUBROUTINE kcw_openfilq()
   !
   tmp_dir=tmp_dir_kcwq
   !
-  IF (lgamma.AND.nk1.eq.0.AND.nk2.eq.0.AND.nk3.eq.0) tmp_dir=tmp_dir_save
+  !IF (lgamma.AND.nk1.eq.0.AND.nk2.eq.0.AND.nk3.eq.0) tmp_dir=tmp_dir_save
   !
   iuwfc = 30
   lrwfc = nbnd * npwx * npol

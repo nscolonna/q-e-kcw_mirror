@@ -180,8 +180,10 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      ! 
      IF ( new ) THEN 
        !
+       WRITE(*,'("NICOLA rdhoscf      ", 6F20.12)') drhoscf(1:3,1) 
        CALL sternheimer_kernel(iter==1, .FALSE., 1, lrdvwfc, iudvwfc, &
            thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum)
+       WRITE(*,'("NICOLA rdhoscf      ", 6F20.12)') drhoscf(1:3,1) 
      ELSE
        CALL sternheimer_kernel_old(iter==1, 1, i_ref, lrdvwfc, iudvwfc, &
            thresh, dvscfins, all_conv, averlt, drhoscf, dbecsum ,delta_vg)
@@ -229,7 +231,9 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
      !
      ! Symmetrization of the response charge density.
      !
+     WRITE(*,'("NICOLA drho(1:3) IN ", 6F20.12)') drhoscfh(1:3,1)
      CALL kcw_psymdvscf (drhoscfh)
+     WRITE(*,'("NICOLA drho(1:3) OUT", 6F20.12)') drhoscfh(1:3,1)
      !
      !   ... save them on disk and
      !   compute the corresponding change in scf potential

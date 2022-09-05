@@ -18,8 +18,6 @@ SUBROUTINE kcw_symdvscf (dvtosym)
   USE cell_base,        ONLY : at
   USE symm_base,        ONLY : s, ft
   USE noncollin_module, ONLY : nspin_lsda, nspin_mag
-  USE ions_base,        ONLY : tau
-  USE qpoint,           ONLY : xq
   USE lr_symm_base,     ONLY : minus_q, irotmq, nsymq, gi, gimq
   
   implicit none
@@ -27,7 +25,7 @@ SUBROUTINE kcw_symdvscf (dvtosym)
   complex(DP) :: dvtosym (dfftp%nr1x, dfftp%nr2x, dfftp%nr3x, nspin_mag)
   ! the potential to be symmetrized
   integer :: ftau(3,48), s_scaled(3,3,48)
-  integer :: is, ri, rj, rk, i, j, k, ipol, isym, irot
+  integer :: is, ri, rj, rk, i, j, k, isym, irot
   !  counters
   real(DP) :: gf(3), n(3)
   !  temp variables
@@ -38,10 +36,12 @@ SUBROUTINE kcw_symdvscf (dvtosym)
   ! the multiplication factor
   ! the phase factor
   !
+  WRITE(*,*) "NICOLA", nsymq, minus_q
   if (nsymq == 1 .and. (.not.minus_q) ) return
   !
-  call start_clock ('hp_symdvscf')
+  call start_clock ('kcw_symdvscf')
   !
+  !WRITE(*,*) "NICOLA drho(1:3) in =", dvtosym(1:3,1,1,1)
   allocate ( dvsym(dfftp%nr1x, dfftp%nr2x, dfftp%nr3x) )
   !
   n(1) = tpi / DBLE(dfftp%nr1)
@@ -167,6 +167,7 @@ SUBROUTINE kcw_symdvscf (dvtosym)
      !
   ENDDO
   !
+  !WRITE(*,*) "NICOLA drho(1:3) OUT =", dvtosym(1:3,1,1,1)
   deallocate (dvsym)
   !
   call stop_clock ('kcw_symdvscf')
