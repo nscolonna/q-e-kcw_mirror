@@ -55,9 +55,9 @@ CONTAINS
   IF ( nspin == 2 .OR. nspin == 4) full_occ = 1.0d0
   !
   IF ( nspin == 2 ) THEN
-     IF ( nbnd*full_occ <= nelec/2.d0 ) CALL errore('epsilon', 'bad band number', 2)
+     IF ( nbnd*full_occ <= nelec/2.d0 ) CALL errore('ups', 'bad band number', 2)
   ELSE
-     IF ( nbnd*full_occ <= nelec ) CALL errore('epsilon', 'bad band number', 1)
+     IF ( nbnd*full_occ <= nelec ) CALL errore('ups', 'bad band number', 1)
   ENDIF
   !
   ! USPP are not implemented (dipole matrix elements are not trivial at all)
@@ -131,58 +131,6 @@ END SUBROUTINE grid_destroy
 
 END MODULE grid_module
 !
-MODULE eps_writer
-!------------------------------
-  IMPLICIT NONE
-  !
-  PRIVATE
-  !
-  PUBLIC :: eps_writetofile
-  !
-CONTAINS
-!
-!--------------------------------------------------------------------
-SUBROUTINE eps_writetofile(namein,desc,nw,wgrid,ncol,var,desc2)
-  !------------------------------------------------------------------
-  !
-  USE kinds,          ONLY : DP
-  USE io_files,       ONLY : prefix, tmp_dir
-  !
-  IMPLICIT NONE
-  !
-  CHARACTER(LEN=*),   INTENT(IN)           :: namein
-  CHARACTER(LEN=*),   INTENT(IN)           :: desc
-  INTEGER,            INTENT(IN)           :: nw, ncol
-  REAL(DP),           INTENT(IN)           :: wgrid(nw)
-  REAL(DP),           INTENT(IN)           :: var(ncol,nw)
-  CHARACTER(LEN=*),   INTENT(IN), OPTIONAL :: desc2
-  !
-  CHARACTER(256) :: str
-  INTEGER        :: iw
-  !
-  str = TRIM(namein) // "_" // TRIM(prefix) // ".dat"
-  OPEN(40,FILE=TRIM(str))
-  !
-  WRITE(40,"(a)") "# "// TRIM(desc)
-  !
-  IF (PRESENT(desc2)) THEN
-    WRITE(40, "(a)") "# "// TRIM(desc2)
-  ELSE
-    WRITE(40,"(a)") "#"
-  END IF
-  !
-  DO iw = 1, nw
-     !
-     WRITE(40,"(10f15.9)") wgrid(iw), var(1:ncol,iw)
-     !
-  ENDDO
-  !
-  CLOSE(40)
-  !
-END SUBROUTINE eps_writetofile
-!
-END MODULE eps_writer
-!
 !------------------------------
 PROGRAM ups
 !------------------------------
@@ -250,7 +198,7 @@ PROGRAM ups
 #if defined(__MPI)
   CALL mp_startup ( )
 #endif
-  CALL environment_start ( 'epsilon' )
+  CALL environment_start ( 'ups' )
   !
   ! Set default values for variables in namelist
   !
@@ -296,7 +244,7 @@ PROGRAM ups
   IF ( ionode ) READ (5, inputpp, IOSTAT=ios)
   !
   CALL mp_bcast ( ios, ionode_id, intra_image_comm )
-  IF (ios/=0) CALL errore('epsilon', 'reading namelist INPUTPP', abs(ios))
+  IF (ios/=0) CALL errore('ups', 'reading namelist INPUTPP', abs(ios))
   !
   IF ( ionode ) THEN
      !
@@ -307,7 +255,7 @@ PROGRAM ups
   ENDIF
   !
   CALL mp_bcast ( ios, ionode_id, intra_image_comm )
-  IF (ios/=0) CALL errore('epsilon', 'reading namelist ENERGY_GRID', abs(ios))
+  IF (ios/=0) CALL errore('ups', 'reading namelist ENERGY_GRID', abs(ios))
   !
   ! ... Broadcast variables
   !
@@ -372,14 +320,14 @@ PROGRAM ups
   !
   CASE ( 'photospec' )
       !
-      IF (nspin > 2) CALL errore ('epsilon', 'photospec NOT implemented for non-collinear spin', 1)
+      IF (nspin > 2) CALL errore ('ups', 'photospec NOT implemented for non-collinear spin', 1)
       CALL photoemission_spectr_pw ( intersmear,intrasmear,nbndmin,nbndmax, &
                                      shift,nspin,metalcalc,polar_angle, azimuthal_angle,&
                                      photon_angle,photon_ener,homo_gas,wfc_real,e_fermi, &
                                      modified_pw, othor_pw)
   CASE DEFAULT
       !
-      CALL errore('epsilon','invalid CALCULATION = '//trim(calculation),1)
+      CALL errore('ups','invalid CALCULATION = '//trim(calculation),1)
       !
   END SELECT
   !
@@ -394,7 +342,7 @@ PROGRAM ups
   !
   CALL grid_destroy()
   !
-  CALL environment_end ( 'epsilon' )
+  CALL environment_end ( 'ups' )
   !
   CALL stop_pp ()
 
@@ -575,13 +523,13 @@ SUBROUTINE photoemission_spectr_pw ( intersmear,intrasmear,nbndmin,nbndmax, &
   ! allocate main spectral and auxiliary quantities
   !
   ALLOCATE( g2kin(npwx), STAT=ierr )
-  IF (ierr/=0) CALL errore('epsilon','allocating photoemission_spectr',ABS(ierr))
+  IF (ierr/=0) CALL errore('ups','allocating photoemission_spectr',ABS(ierr))
   !
   ALLOCATE( dipole_2(nbndmax, npwx), STAT=ierr ) 
-  IF (ierr/=0) CALL errore('epsilon','allocating dipole', ABS(ierr) )
+  IF (ierr/=0) CALL errore('ups','allocating dipole', ABS(ierr) )
   !
   ALLOCATE( dipole_aux(3, nbndmax, npwx), STAT=ierr )
-  IF (ierr/=0) CALL errore('epsilon','allocating dipole_aux', ABS(ierr) )
+  IF (ierr/=0) CALL errore('ups','allocating dipole_aux', ABS(ierr) )
   !
   IF (othor_pw) THEN
     ALLOCATE( dipole_opw_gamma(3, nbndmax, npwx) )
@@ -593,7 +541,7 @@ SUBROUTINE photoemission_spectr_pw ( intersmear,intrasmear,nbndmin,nbndmax, &
   ! allocate main spectral and auxiliary quantities
   !
   ALLOCATE( srphotospec(nspin,nw), STAT=ierr )
-      IF (ierr/=0) CALL errore('epsilon','allocating photospectra',ABS(ierr))
+      IF (ierr/=0) CALL errore('ups','allocating photospectra',ABS(ierr))
   !
   ! initialize 
   !
@@ -1000,42 +948,3 @@ IMPLICIT NONE
   !
 END SUBROUTINE dipole_calc_pw
 
-
-
-
-
-
-
-!--------------------------------------------------------------------
-SUBROUTINE eps_writetofile(namein,desc,nw,wgrid,ncol,var)
-  !------------------------------------------------------------------
-  !
-  USE kinds,          ONLY : DP
-  USE io_files,       ONLY : prefix, tmp_dir
-  !
-  IMPLICIT NONE
-  !
-  CHARACTER(LEN=*),   INTENT(IN) :: namein
-  CHARACTER(LEN=*),   INTENT(IN) :: desc
-  INTEGER,            INTENT(IN) :: nw, ncol
-  REAL(DP),           INTENT(IN) :: wgrid(nw)
-  REAL(DP),           INTENT(IN) :: var(ncol,nw)
-  !
-  CHARACTER(256) :: str
-  INTEGER        :: iw
-  
-  str = TRIM(namein) // "_" // TRIM(prefix) // ".dat"
-  OPEN(40,FILE=TRIM(str))
-  ! 
-  WRITE(40,"(a)") "# "// TRIM(desc)
-  WRITE(40,"(a)") "#"
-  !
-  DO iw = 1, nw
-     !     
-     WRITE(40,"(10f15.9)") wgrid(iw), var(1:ncol,iw)
-     !
-  ENDDO
-  !
-  CLOSE(40)
-  !
-END SUBROUTINE eps_writetofile
