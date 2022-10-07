@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2004-2009 Andrea Benassi and Quantum ESPRESSO group
+! Copyright (C) 2004-2009 Quantum ESPRESSO group
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -135,16 +135,13 @@ END MODULE grid_module
 PROGRAM ups
 !------------------------------
   !
-  ! Compute the complex macroscopic dielectric function,
-  ! at the RPA level, neglecting local field effects.
-  ! Eps is computed both on the real or immaginary axis
+  ! Compute the Ultraviolet photoemission spectrum.
+  ! See Phys. Rev. Lett. 114, 166405 for details
+  ! Adapted from epsilon.f90
   !
   ! Authors: 
-  !     2006    Andrea Benassi, Andrea Ferretti, Carlo Cavazzoni:   basic implementation (partly taken from pw2gw.f90)
-  !     2007    Andrea Benassi:                                     intraband contribution, nspin=2
-  !     2016    Tae-Yun Kim, Cheol-Hwan Park:                       bugs fixed
-  !     2016    Tae-Yun Kim, Cheol-Hwan Park, Andrea Ferretti:      non-collinear magnetism implemented
-  !                                                                 code significantly restructured
+  !     2014    Linh Nguyen, Andrea Ferrett:   basic implementation (using routine from epsilon.f90)
+  !     2022    Nicola Colonna:                Ported to the latest QE and restructured
   !
   USE kinds,       ONLY : DP
   USE io_global,   ONLY : stdout, ionode, ionode_id
@@ -347,107 +344,6 @@ PROGRAM ups
   CALL stop_pp ()
 
 END PROGRAM ups
-
-
-!--------------------------------------------------------------------
-SUBROUTINE dipole_calc( ik, dipole_aux, metalcalc, nbndmin, nbndmax )
-  !------------------------------------------------------------------
-  !
-  USE kinds,                ONLY : DP
-  USE wvfct,                ONLY : nbnd, npwx
-  USE wavefunctions,        ONLY : evc
-  USE klist,                ONLY : xk, ngk, igk_k
-  USE gvect,                ONLY : ngm, g
-  USE io_files,             ONLY : restart_dir
-  USE pw_restart_new,       ONLY : read_collected_wfc
-  USE grid_module,          ONLY : focc, full_occ
-  USE mp_bands,             ONLY : intra_bgrp_comm
-  USE mp,                   ONLY : mp_sum
-  USE lsda_mod,             ONLY : nspin
-  !
-  IMPLICIT NONE
-  !
-  ! global variables
-  INTEGER,     INTENT(IN)    :: ik,nbndmin,nbndmax
-  COMPLEX(DP), INTENT(INOUT) :: dipole_aux(3,nbnd,nbnd)
-  LOGICAL,     INTENT(IN)    :: metalcalc
-  !
-  ! local variables
-  INTEGER     :: iband1,iband2,ig,npw
-  COMPLEX(DP) :: caux
-
-  !
-  ! Routine Body
-  !
-  CALL start_clock( 'dipole_calc' )
-  !
-  ! read wfc for the given kpt
-  !
-  CALL read_collected_wfc ( restart_dir(), ik, evc )
-  !
-  ! compute matrix elements
-  !
-  dipole_aux(:,:,:) = (0.0_DP,0.0_DP)
-  !
-  npw = ngk(ik)
-  !
-  DO iband2 = nbndmin,nbndmax
-      IF ( focc(iband2,ik) <  full_occ) THEN
-          DO iband1 = nbndmin,nbndmax
-              !
-              IF ( iband1==iband2 ) CYCLE
-              IF ( focc(iband1,ik) >= 0.5e-4*full_occ ) THEN
-                  !
-                  DO ig=1,npw
-                      !
-                      caux= conjg(evc(ig,iband1))*evc(ig,iband2)
-                      !
-                      ! Non collinear case
-                      IF ( nspin == 4 ) THEN
-                          caux = caux + conjg(evc(ig+npwx,iband1))*evc(ig+npwx,iband2)
-                      ENDIF
-                      !
-                      dipole_aux(:,iband1,iband2) = dipole_aux(:,iband1,iband2) + &
-                            ( g(:,igk_k(ig,ik)) ) * caux
-                      !
-                  ENDDO
-              ENDIF
-              !
-          ENDDO
-      ENDIF
-  ENDDO
-  !
-  ! The diagonal terms are taken into account only if the system is treated like a metal, not
-  ! in the intraband therm. Because of this we can recalculate the diagonal component of the dipole
-  ! tensor directly as we need it for the intraband term, without interference with interband one.
-  !
-  IF (metalcalc) THEN
-     !
-     DO iband1 = nbndmin,nbndmax
-        DO  ig=1,npw
-          !
-          caux= conjg(evc(ig,iband1))*evc(ig,iband1)
-          !
-          ! Non collinear case
-          IF ( nspin == 4 ) THEN
-              caux = caux + conjg(evc(ig+npwx,iband1))*evc(ig+npwx,iband1)
-          ENDIF
-          !
-          dipole_aux(:,iband1,iband1) = dipole_aux(:,iband1,iband1) + &
-                                        ( g(:,igk_k(ig,ik))+ xk(:,ik) ) * caux
-          !
-        ENDDO
-     ENDDO
-     !
-  ENDIF
-  !
-  ! recover over G parallelization (intra_bgrp)
-  !
-  CALL mp_sum( dipole_aux, intra_bgrp_comm )
-  !
-  CALL stop_clock( 'dipole_calc' )
-  !
-END SUBROUTINE dipole_calc
 
 !----------------------------------------------------------------------------------------
 SUBROUTINE photoemission_spectr_pw ( intersmear,intrasmear,nbndmin,nbndmax, &
