@@ -24,8 +24,7 @@ LRMODS = ../../LR_Modules/liblrmod.a
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../KS_Solvers/libks_solvers.a ../../upflib/libupf.a ../../XClib/xc_lib.a \
          ../../FFTXlib/src/libqefft.a ../../LAXlib/libqela.a ../../UtilXlib/libutil.a ../../dft-d3/libdftd3qe.a \
-          ../..//MBD/libmbd.a
-
+          ../..//MBD/libmbd.a ../../PP/src/libpp.a
 
 TLDEPS= kcw-lib  #Dependency. To be compiled first
 
@@ -42,6 +41,10 @@ kcwpp_sh.x:  compute_self_hartree.o $(SH_OBJS) $(LRMODS) $(PWOBJS) $(QEMODS)
         $(SH_OBJS) $(KC_OBJS) $(LRMODS) $(PWOBJS) $(QEMODS)  \
         $(LIBS) $(QELIBS)
 	- ( cd ../../bin ; ln -fs ../KCW/PP/$@ . )
+
+ups.x: ups.o $(PWOBJS) $(QEMODS)
+	$(LD) $(LDFLAGS) -o $@ ups.o $(PWOBJS) $(QEMODS) \
+	$(LIBS) $(QELIBS)
 
 tldeps :
 	if test -n "$(TLDEPS)" ; then \
