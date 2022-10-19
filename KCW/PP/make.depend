@@ -75,3 +75,17 @@ sh_setup.o : ../../UtilXlib/mp.o
 sh_setup.o : ../src/coulomb.o
 sh_setup.o : ../src/kcw_comm.o
 sh_setup.o : ../src/kcw_io_new.o
+ups.o : ../../Modules/cell_base.o
+ups.o : ../../Modules/constants.o
+ups.o : ../../Modules/environment.o
+ups.o : ../../Modules/io_files.o
+ups.o : ../../Modules/io_global.o
+ups.o : ../../Modules/kind.o
+ups.o : ../../Modules/mp_global.o
+ups.o : ../../Modules/mp_images.o
+ups.o : ../../Modules/recvec.o
+ups.o : ../../Modules/wavefunctions.o
+ups.o : ../../PW/src/pw_restart_new.o
+ups.o : ../../PW/src/pwcom.o
+ups.o : ../../UtilXlib/mp.o
+ups.o : ../../upflib/uspp.o

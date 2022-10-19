@@ -16,8 +16,8 @@ PROGRAM kcw
   !! way. It performe several task depending on the vaule of the variable "calculation". 
   !! 1) calculation=wann2kcw: interface between PWSCF and W90, and KCW. 
   !! 2) calculation=screen: calculates the screening coefficients as described in 
-  !!    N. Colonna et al. JCTC 14, 2549 (2018) 
-  !!    N.Colonna et al. arXiv:2202.08155
+  !!    N. Colonna et al. J. Chem. Theory Comput. 14, 2549 (2018) 
+  !!    N. Colonna et al. J. Chem. Theory Comput. 18, 5435 (2022)
   !! 3) calculation=ham: compute, interpolate and diagonalize the KC hamiltonian 
   !!
   !!  Code written by Nicola Colonna (EPFL April 2019) 
