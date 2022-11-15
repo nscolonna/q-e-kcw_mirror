@@ -81,7 +81,7 @@ SUBROUTINE header
   WRITE( stdout,*) "                #+#   #+#           #+#    #+#         #+#+# #+#+#       " 
   WRITE( stdout,*) "               ###    ###           ########           ###   ###         "
   WRITE( stdout, '(/5x,"  Koopmans functional implementation based on DFPT; please cite this program as")')
-  WRITE( stdout, '(/5x,"   N.Colonna, R. De Gannaro, E. Linscott, and N. Marzari, JCTC 18, 5435 (2022)   ")')
+  WRITE( stdout, '(/5x,"   N.Colonna, R. De Gannaro, E. Linscott, and N. Marzari, JCTC 18, 5435 (2022) ")')
   WRITE( stdout, '( 5x,"=--------------------------------------------------------------------------------=")')  
   ENDIF
   !
