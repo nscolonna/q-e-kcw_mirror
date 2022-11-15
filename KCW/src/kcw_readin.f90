@@ -243,7 +243,7 @@ SUBROUTINE kcw_readin()
   IF (i_orb .lt. -1 ) & 
      CALL errore('kcw_readin', ' WRONG i_orb, orbital from input must be positive', 1)
   !
-  IF (calculation /= 'wann2kcw' .AND. (mp1 .lt. 1 .OR. mp2 .lt. 1 .OR. mp3 .lt. 1) )&
+  IF (mp1 .lt. 1 .OR. mp2 .lt. 1 .OR. mp3 .lt. 1 )&
      CALL errore('kcw_readin', ' WRONG k/q grid mp1, mp2, mp3', 1)
   !
   IF (calculation == 'ham' .AND. npool .gt. 1) &

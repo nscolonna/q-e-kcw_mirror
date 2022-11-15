@@ -36,7 +36,7 @@ SUBROUTINE rotate_ks ()
   !
   IMPLICIT NONE
   !
-  INTEGER :: ik, n_orb, ik_eff
+  INTEGER :: ik, n_orb, ik_eff, ik_eff_fbz
   INTEGER :: lrwfc 
   !
   COMPLEX(DP),EXTERNAL :: zdotc
@@ -95,9 +95,14 @@ SUBROUTINE rotate_ks ()
         ik_eff = global_ik - (isk(ik)-1)*(nkstot/nspin)
         !! ... In PW the spin down are treatead as k points. In W90 I have only up or dw
         !! ... and ik run always from 1 to nkstot/nspin (see read_wannier.f90). 
+        !  
+        CALL find_ik_fbz (ik_eff, ik_eff_fbz) 
+        !! ... Here we find the what is the index of kpoint at hand (i.e. that whose index
+        !! ... in the IBZ is ik_eff) in the full list of all the k-points on the regular MP
+        !! ...  grid used by Wannier
         !
         occ_mat_aux = 0.D0
-        CALL apply_u_matrix(evc, evc0, occ_mat_aux, ik_eff,n_orb)
+        CALL apply_u_matrix(evc, evc0, occ_mat_aux, ik_eff_fbz,n_orb)
         !
      ENDIF
      ! 

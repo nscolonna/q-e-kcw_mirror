@@ -96,5 +96,7 @@ MODULE control_kcw
   LOGICAL, ALLOCATABLE :: lgamma_iq(:)
   !! if TRUE this q is gamma.
   !
+  REAL (DP), ALLOCATABLE ::  xk_fbz(:,:)
+  !
 END MODULE control_kcw
 
