@@ -9,7 +9,7 @@
 #define ONE (0.D0,1.D0)
 !#define DEBUG
 !-----------------------------------------------------------------------
-SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all)
+SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
   !-----------------------------------------------------------------------
   !
   !! This sunroutine compute the periodic part of the Wannier density 
@@ -18,6 +18,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all)
   !! The k+q is rewritten as p+G with p in the 1BZ, then u_{k+q,n}(r) = u_p(r)exp{-iGr}
   !
   USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
   USE fft_base,             ONLY : dffts
   USE klist,                ONLY : nkstot, xk, igk_k, ngk, nks
   USE mp,                   ONLY : mp_sum
@@ -25,7 +26,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all)
   USE buffers,              ONLY : get_buffer, save_buffer
   USE wvfct,                ONLY : npwx !, wg
   USE noncollin_module,     ONLY : npol
-  USE control_kcw,          ONLY : map_ikq, shift_1bz
+  USE control_kcw,          ONLY : map_ikq, shift_1bz, kcw_iverbosity
   USE cell_base,            ONLY : at
   USE mp_pools,             ONLY : inter_pool_comm
   USE lsda_mod,             ONLY : lsda, current_spin, isk, nspin
@@ -39,6 +40,9 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all)
   ! 
   INTEGER :: ik, ikq, npw_k, npw_kq
   !! Counter for the k/q points in the BZ, total number of q points and number of pw for a given k (k+q) point
+  !
+  INTEGER, INTENT(IN) :: iq
+  !! index of the q point at hand
   !
   INTEGER :: iband, lrwfc 
   !! Band counter
@@ -66,6 +70,8 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all)
   INTEGER, INTENT(IN) :: &
        igk_k_all(npwx,nkstot),&    ! index of G corresponding to a given index of k+G
        ngk_all(nkstot)             ! number of plane waves for each k point
+  !
+  INTEGER :: isym
   !
 #ifdef DEBUG
   INTEGER :: ig_save, ig, ip, ir
@@ -97,8 +103,12 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all)
     CALL get_buffer ( evc0, lrwfc, iuwfc_wann, ik_eff )
     !! ... Retrive the ks function (in the Wannier Gauge)
     !
-    ikq = map_ikq(global_ik)
-    g_vect(:) = shift_1bz(:,global_ik)
+    CALL find_index_1bz_smart(global_ik, iq, g_vect, ikq) ! see also other implementations
+    !! of the search inside compute_map_ikq_single.f90 if the search fails
+    !CALL find_index_1bz_smart_ibz(global_ik, iq, g_vect, ikq, isym) 
+    !
+    !ikq = map_ikq(global_ik)
+    !g_vect(:) = shift_1bz(:,global_ik)
     !! ... The index ikq in the 1BZ corresponding at the k+q, and the vector G_bar defining the shift 
     !! ... xk(:,ikq)+G_bar = xk(:,k+q)
     !! ... see compute_map_ikq_single.f90

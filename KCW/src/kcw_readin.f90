@@ -38,6 +38,7 @@ SUBROUTINE kcw_readin()
   USE martyna_tuckerman,  ONLY : do_comp_mt
   USE exx_base,           ONLY : x_gamma_extrapolation
   USE mp_pools,           ONLY : npool
+  USE symm_base,            ONLY : s, nsym
   !
   IMPLICIT NONE
   !
@@ -50,6 +51,8 @@ SUBROUTINE kcw_readin()
   LOGICAL, EXTERNAL   :: imatches
   LOGICAL, EXTERNAL   :: has_xml
   LOGICAL             :: exst, parallelfs
+  !
+  INTEGER :: i, isym
   !
   NAMELIST / CONTROL /  outdir, prefix, read_unitary_matrix, kcw_at_ks, &
                         spread_thr, homo_only, kcw_iverbosity, calculation, &
@@ -268,6 +271,11 @@ SUBROUTINE kcw_readin()
   !
   WRITE( stdout, '(5X,"INFO: Reading pwscf data")')
   CALL read_file ( )
+  ! 
+  DO isym = 1, nsym
+    WRITE(*,*) "isym =", isym, nsym
+    WRITE(stdout, '(8X, 3F12.8)') (s(:,i,isym),i=1,3)
+  ENDDO 
   !
   IF ( lgauss .OR. ltetra ) CALL errore( 'kcw_readin', &
       'KC corrections only for insulators!', 1 )

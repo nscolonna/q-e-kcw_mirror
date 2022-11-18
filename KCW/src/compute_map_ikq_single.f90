@@ -73,7 +73,8 @@ SUBROUTINE compute_map_ikq_single (iq)
       ! the index of the corresponding k point in the IBZ
       !
       !CALL find_index_1bz(xkq, gvect, ikq)
-      CALL find_index_1bz_iterate(xkq, gvect, ikq)
+      CALL find_index_1bz_iterate(ik, iq, gvect, ikq)
+      !CALL find_index_1bz_smart(ik, iq, gvect, ikq)
       !
       ! ... Store the result in a global variable 
       map_ikq(ik) = ikq
@@ -88,8 +89,6 @@ SUBROUTINE compute_map_ikq_single (iq)
       WRITE(mpime+100,'("ikq, xkq_1BZ", i5, 3f8.4,/)') ikq, xq_(:) + xk_(:) -gvect_(:)
 #endif
       !
-      IF (kcw_iverbosity .gt. 1) WRITE(stdout,'(8X, "The map (iq,ik) --> ip + G", 5x, & 
-                                                &  " (", 2i3, "  ) " , 5x, i3 , 8x, "+", 3f8.4, " [Cryst]" )') iq, ik, ikq, gvect_
     ENDDO
     !
   ENDIF 
@@ -98,7 +97,7 @@ SUBROUTINE compute_map_ikq_single (iq)
   CALL mp_bcast ( shift_1bz, ionode_id, intra_image_comm )
   !
   IF (kcw_iverbosity .gt. 1) WRITE(stdout, *) ""
-  WRITE( stdout, '(8X,"INFO: Map k+q -> p in 1BZ DONE  ",/)') 
+  WRITE( stdout, '(8X,"INFO: Map k+q -> p in 1BZ DONE  ")') 
   CALL stop_clock ('map')
   !
 END subroutine
@@ -177,7 +176,117 @@ END subroutine
 
 
 !-----------------------------------------------------------------------
-SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
+SUBROUTINE find_index_1bz_smart(ik_, iq_, gvect, ikq)
+  !-----------------------------------------------------------------------
+  !
+  ! Find  g such that the k+q = p+g with k and p belonging 
+  ! to the original mesh of k points. 
+  ! 
+  USE kinds,                ONLY : DP
+  USE cell_base,            ONLY : at, bg
+  USE klist,                ONLY : xk, nkstot
+  USE lsda_mod,             ONLY : nspin
+  USE io_global,            ONLY : stdout
+  USE control_kcw,          ONLY : kcw_iverbosity
+  !
+  IMPLICIT NONE
+  !
+  INTEGER, INTENT(IN) :: ik_, iq_
+  REAL(DP), INTENT(OUT) :: gvect(3)
+  INTEGER, INTENT (OUT) :: ikq
+  REAL(DP):: xkq(3), xkq_1bz(3)
+  ! 
+  xkq(:) = xk(:,ik_)+xk(:,iq_)
+  ! The k+q in crystal coordinates 
+  CALL cryst_to_cart(1, xkq, at, -1)
+  !
+  DO ikq = 1, nkstot/nspin 
+    !
+    xkq_1bz (:) = xk(:,ikq) 
+    CALL cryst_to_cart(1, xkq_1bz, at, -1)
+    !
+    gvect = xkq - xkq_1bz
+    IF ( all( abs(nint(gvect) - gvect) < 1d-5 ) ) THEN
+       IF (kcw_iverbosity .gt. 1) WRITE(stdout,'(8X, "The map (iq,ik) --> ip + G", 5x, & 
+                                                &  " (", 2i3, "  ) " , 5x, i3 , 8x, "+", 3f8.4, " [Cryst]" )') iq_, ik_, ikq, gvect
+       ! back to cartesian coordinates
+       CALL cryst_to_cart(1, gvect, bg, 1)
+       RETURN
+    ENDIF
+  ENDDO
+  WRITE(stdout, '(/, 8X, "Something WRONG: ikq  not found for (ik, iq) = ", 2I5)') ik_, iq_
+  CALL errore('find_index_1bz_smart','No match Found! ',1)
+  !
+  RETURN
+  !
+END SUBROUTINE
+
+
+!-----------------------------------------------------------------------
+SUBROUTINE find_index_1bz_smart_ibz(ik_, iq_, gvect, ikq, isym)
+  !-----------------------------------------------------------------------
+  !
+  ! Find  g such that the k+q = p+g with k and p belonging 
+  ! to the original mesh of k points. 
+  ! 
+  USE kinds,                ONLY : DP
+  USE cell_base,            ONLY : at, bg
+  USE klist,                ONLY : xk, nkstot
+  USE lsda_mod,             ONLY : nspin
+  USE io_global,            ONLY : stdout
+  USE control_kcw,          ONLY : kcw_iverbosity
+  USE symm_base,            ONLY : s, nsym
+  !
+  IMPLICIT NONE
+  !
+  INTEGER, INTENT(IN) :: ik_, iq_
+  REAL(DP), INTENT(OUT) :: gvect(3)
+  INTEGER, INTENT (OUT) :: ikq
+  REAL(DP):: xkq(3), xkq_1bz(3)
+  INTEGER :: isym, i
+  ! 
+  xkq(:) = xk(:,ik_)+xk(:,iq_)
+  ! The k+q in crystal coordinates 
+  CALL cryst_to_cart(1, xkq, at, -1)
+  !
+  DO isym = 1, nsym
+    WRITE(*,*) "isym =", isym, nsym
+    WRITE(stdout, '(8X, 3F12.8)') (s(:,i,isym),i=1,3)
+  ENDDO 
+  
+  !
+  DO isym = 1, nsym
+  DO ikq = 1, nkstot/nspin
+    !
+    !WRITE(*,*) "NICOLA", ikq, isym
+    xkq_1bz (:) = xk(:,ikq)
+    CALL cryst_to_cart(1, xkq_1bz, at, -1)
+    xkq_1bz = matmul(s(:,:,isym), xkq_1bz)
+    !
+    gvect = xkq - xkq_1bz
+    IF ( all( abs(nint(gvect) - gvect) < 1d-5 ) ) THEN
+       IF (kcw_iverbosity .gt. 1) THEN 
+          WRITE(stdout,'(8X, "The map (iq,ik) --> (ip, isym) + G", 5x, & 
+          &  " (", 2i3, "  ) " , 5x, " (", 2i3, "  ) ", 8x, "+", 3f8.4, " [Cryst]" )') iq_, ik_, ikq, isym, gvect
+          WRITE(stdout, '(8X, 3F12.8)') (s(:,i,isym),i=1,3)
+       ENDIF
+       ! back to cartesian coordinates
+       CALL cryst_to_cart(1, gvect, bg, 1)
+       RETURN
+    ENDIF
+  ENDDO
+  ENDDO
+  WRITE(stdout, '(/, 8X, "Something WRONG: ikq, isym not found for (ik, iq) = ", 2I5)') ik_, iq_
+  CALL errore('find_index_1bz_smart_ibz','No match Found! ',1)
+  !
+  RETURN
+  !
+END SUBROUTINE
+
+
+
+!-----------------------------------------------------------------------
+SUBROUTINE find_index_1bz_iterate(ik_, iq_, gvect, ikq)
   !-----------------------------------------------------------------------
   !
   ! Find  g such that the k+q = p+g with k and p belonging 
@@ -188,13 +297,15 @@ SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
   USE cell_base,            ONLY : at, bg
   USE klist,                ONLY : xk, nkstot
   USE lsda_mod,             ONLY : nspin
+  USE io_global,            ONLY : stdout
+  USE control_kcw,          ONLY : kcw_iverbosity
   !USE mp_world,             ONLY : mpime
   
   !USE io_global,            ONLY : stdout
   !
   IMPLICIT NONE
   !
-  REAL(DP), INTENT(IN) :: xkq(3)
+  INTEGER, INTENT(IN) :: ik_, iq_
   REAL(DP), INTENT(OUT) :: gvect(3)
   REAL(DP) :: xkq_(3), dist, xk_(3)
   INTEGER :: ikq, ik, cntr
@@ -208,7 +319,8 @@ SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
      DO g2=-2,2
        DO g3=-2,2
          !
-         xkq_(:) = xkq(:) ! the k+q from input
+         xkq_(:) = xk(:,ik_)+xk(:,iq_)
+         !xkq_(:) = xkq(:) ! the k+q from input
          ! The k+q in crystal coordinates 
          CALL cryst_to_cart(1, xkq_, at, -1)
          found = .false. 
@@ -258,6 +370,9 @@ SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
   CALL errore('find_index_1bz','No match Found! ',1)
   !
 100 continue
+  !
+  IF (kcw_iverbosity .gt. 1) WRITE(stdout,'(8X, "The map (iq,ik) --> ip + G", 5x, & 
+                            &  " (", 2i3, "  ) " , 5x, i3 , 8x, "+", 3f8.4, " [Cryst]" )') iq_, ik_, ikq, gvect
   ! In cart coordinates
   CALL cryst_to_cart(1, xkq_, bg, 1)
   CALL cryst_to_cart(1, gvect, bg, 1)
