@@ -17,7 +17,7 @@ $ECHO "to calculate the KI electronic structure of FCC Silicon. "
 . ../../../environment_variables
 
 # required executables and pseudopotentials
-BIN_LIST="pw.x kcw.x"
+BIN_LIST="pw.x open_grid.x pw2wannier90.x wannier90.x kcw.x"
 PSEUDO_LIST="Si_ONCV_PBE-1.0.upf"
 
 $ECHO
@@ -77,12 +77,14 @@ $ECHO " done"
 # how to run executables
 PW_COMMAND="$PARA_PREFIX $BIN_DIR/pw.x $PARA_POSTFIX"
 W90_COMMAND="$BIN_DIR/wannier90.x"
+OG_COMMAND="$BIN_DIR/open_grid.x"
 PW2W90_COMMAND="$PARA_PREFIX $BIN_DIR/pw2wannier90.x"
 KCW_COMMAND_noPOSTFIX="$PARA_PREFIX $BIN_DIR/kcw.x"
 KCW_COMMAND="$PARA_PREFIX $BIN_DIR/kcw.x $PARA_POSTFIX"
 $ECHO
 $ECHO "  running pw.x as:   $PW_COMMAND"
 $ECHO "  running kcw.x as:   $KCW_COMMAND"
+$ECHO "  running open_grid.x as:   $OG_COMMAND"
 $ECHO
 
 # clean TMP_DIR
@@ -125,20 +127,28 @@ ATOMIC_POSITIONS crystal
 Si 0.00 0.00 0.00
 Si 0.25 0.25 0.25
 
-K_POINTS crystal
-8
-  0.00000000  0.00000000  0.00000000  1.250000e-01
-  0.00000000  0.00000000  0.50000000  1.250000e-01
-  0.00000000  0.50000000  0.00000000  1.250000e-01
-  0.00000000  0.50000000  0.50000000  1.250000e-01
-  0.50000000  0.00000000  0.00000000  1.250000e-01
-  0.50000000  0.00000000  0.50000000  1.250000e-01
-  0.50000000  0.50000000  0.00000000  1.250000e-01
-  0.50000000  0.50000000  0.50000000  1.250000e-01
+K_POINTS automatic
+2 2 2 0 0 0
 EOF
 $ECHO "  Running the SCF calculation for $PREFIX...\c"
 $PW_COMMAND < $PREFIX.scf.in > $PREFIX.scf.out
 $ECHO " done"
+
+
+cat > $PREFIX.openg.in << EOF
+&inputpp
+   outdir = '$TMP_DIR/'
+   prefix = '$PREFIX'
+/
+EOF
+$ECHO "  running open_grid ...\c"
+$OG_COMMAND < $PREFIX.openg.in > $PREFIX.openg.out
+$ECHO " done"
+
+$ECHO "  getting list of k-points from open_grid output...\c"
+grep -A 8 List $PREFIX.openg.out|grep -v List > k_points.txt
+
+
 
 if [ ! -d wann_occ ]; then  mkdir wann_occ ; fi
 cd wann_occ
@@ -191,14 +201,7 @@ end unit_cell_cart
 mp_grid      = 2 2 2
 
 begin kpoints
-  0.00000000  0.00000000  0.00000000
-  0.00000000  0.00000000  0.50000000
-  0.00000000  0.50000000  0.00000000
-  0.00000000  0.50000000  0.50000000
-  0.50000000  0.00000000  0.00000000
-  0.50000000  0.00000000  0.50000000
-  0.50000000  0.50000000  0.00000000
-  0.50000000  0.50000000  0.50000000
+$(cat ../k_points.txt)
 end kpoints
 EOF
 $ECHO "  Running W90 -pp for $PREFIX...\c"
@@ -207,7 +210,7 @@ $ECHO " done"
 
 cat > $PREFIX.pw2wann.in << EOF
 &inputpp
-  prefix='$PREFIX'
+  prefix='${PREFIX}_open'
   outdir='$TMP_DIR/'
   seedname = '$SEEDNAME'
   wan_mode   =  'standalone'
@@ -279,14 +282,7 @@ end unit_cell_cart
 mp_grid      = 2 2 2
 
 begin kpoints
-  0.00000000  0.00000000  0.00000000
-  0.00000000  0.00000000  0.50000000
-  0.00000000  0.50000000  0.00000000
-  0.00000000  0.50000000  0.50000000
-  0.50000000  0.00000000  0.00000000
-  0.50000000  0.00000000  0.50000000
-  0.50000000  0.50000000  0.00000000
-  0.50000000  0.50000000  0.50000000
+$(cat ../k_points.txt)
 end kpoints
 EOF
 $ECHO "  Running W90 -pp for $PREFIX EMPTY...\c"
@@ -295,7 +291,7 @@ $ECHO " done"
 
 cat > ${PREFIX}_emp.pw2wann.in << EOF
 &inputpp
-  prefix='$PREFIX'
+  prefix='${PREFIX}_open'
   outdir='$TMP_DIR/'
   seedname = '${SEEDNAME}_emp'
   wan_mode   =  'standalone'
