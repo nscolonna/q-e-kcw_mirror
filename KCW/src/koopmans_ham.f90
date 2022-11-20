@@ -440,7 +440,7 @@ SUBROUTINE koopmans_ham ()
     ! Retrive the ks function at k (in the Wannier Gauge)
     ! IF (kcw_iverbosity .gt. 0 ) WRITE(stdout,'(8X, "INFO: u_k(g) RETRIEVED"/)') 
     !
-    CALL compute_map_ikq_single (ik)
+    !CALL compute_map_ikq_single (ik)
     ! find tha map k+q --> k'+G and store the res 
     !
     DO iq = 1, nqs
@@ -461,8 +461,9 @@ SUBROUTINE koopmans_ham ()
       !
       !WRITE(stdout, '("weight =", i5, f12.8)') iq, weight(iq)
       !
-      ikq = map_ikq(iq)
-      g_vect(:) = shift_1bz(:,iq)
+      CALL find_index_1bz_smart(ik, iq, g_vect, ikq) ! see also other implementations
+      !ikq = map_ikq(iq)
+      !g_vect(:) = shift_1bz(:,iq)
       ! The index ikq in the 1BZ corresponding at the k+q, and the vector G_bar defining the shift 
       ! xk(:,ikq)+G_bar = xk(:,k+q)
       ! see compute_map_ikq_single.f90

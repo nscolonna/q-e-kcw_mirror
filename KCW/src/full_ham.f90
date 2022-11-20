@@ -93,7 +93,7 @@ SUBROUTINE full_ham (ik)
   ! Retrive the ks function at k 
   IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8X, "INFO: u_k(g) RETRIEVED"/)')
   !
-  CALL compute_map_ikq_single (ik)
+  !CALL compute_map_ikq_single (ik)
   ! find tha map k+q --> k'+G and store the res 
   !
   dim_ham = num_wann
