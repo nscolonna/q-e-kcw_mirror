@@ -43,7 +43,7 @@ subroutine kcw_setup
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer, get_buffer
   USE control_kcw,       ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, kcw_iverbosity, lgamma_iq, &
                                 spin_component, isq, read_unitary_matrix, x_q, tmp_dir_save, & 
-                                num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq!, wq, nqstot
+                                num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, irr_bz!, wq, nqstot
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk
   USE cell_base,         ONLY : at, omega!, bg
@@ -117,6 +117,8 @@ subroutine kcw_setup
   ENDIF
   !
   ! ... Computes the number of occupied bands for each k point
+  !
+  IF (irr_bz) CALL kcw_set_symm(dffts%nr1, dffts%nr2, dffts%nr3, dffts%nr1x, dffts%nr2x, dffts%nr3x)
   !
   call setup_nbnd_occ ( ) 
   !

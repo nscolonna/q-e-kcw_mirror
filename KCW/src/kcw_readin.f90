@@ -56,7 +56,7 @@ SUBROUTINE kcw_readin()
   !
   NAMELIST / CONTROL /  outdir, prefix, read_unitary_matrix, kcw_at_ks, &
                         spread_thr, homo_only, kcw_iverbosity, calculation, &
-                        l_vcut, assume_isolated, spin_component, mp1, mp2, mp3, lrpa
+                        l_vcut, assume_isolated, spin_component, mp1, mp2, mp3, lrpa, irr_bz
   !
   NAMELIST / WANNIER /  num_wann_occ, num_wann_emp, have_empty, has_disentangle, &
                         seedname, check_ks, l_unique_manifold
@@ -81,6 +81,7 @@ SUBROUTINE kcw_readin()
   !! mp*             : Monhkost-Pack grid, need to be consistent with PW and W90
   !! lrpa            : If true the response of the system is evaluated at the RPA level (no xc contribution) 
   !! spread_thr      : the tollerance within which two orbital are considered to have the same spread 
+  !! irr_bz          : if TRUE, work with the Irreducible wedge of the brillouin zone and use symmetry to unroll KC state when needed
   !
   !### WANNIER 
   !! seedname        : seedname for the Wannier calculation
@@ -148,6 +149,7 @@ SUBROUTINE kcw_readin()
   lrpa                =.FALSE.
   fix_orb             =.FALSE.
   spread_thr          = 0.001 !(Rydberg)
+  irr_bz              =.FALSE.
   homo_only           =.FALSE.
   read_unitary_matrix =.FALSE.
   qp_symm             =.FALSE.
@@ -272,11 +274,6 @@ SUBROUTINE kcw_readin()
   WRITE( stdout, '(5X,"INFO: Reading pwscf data")')
   CALL read_file ( )
   ! 
-  DO isym = 1, nsym
-    WRITE(*,*) "isym =", isym, nsym
-    WRITE(stdout, '(8X, 3F12.8)') (s(:,i,isym),i=1,3)
-  ENDDO 
-  !
   IF ( lgauss .OR. ltetra ) CALL errore( 'kcw_readin', &
       'KC corrections only for insulators!', 1 )
   !

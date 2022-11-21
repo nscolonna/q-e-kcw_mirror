@@ -249,11 +249,6 @@ SUBROUTINE find_index_1bz_smart_ibz(ik_, iq_, gvect, ikq, isym)
   ! The k+q in crystal coordinates 
   CALL cryst_to_cart(1, xkq, at, -1)
   !
-  DO isym = 1, nsym
-    WRITE(*,*) "isym =", isym, nsym
-    WRITE(stdout, '(8X, 3F12.8)') (s(:,i,isym),i=1,3)
-  ENDDO 
-  
   !
   DO isym = 1, nsym
   DO ikq = 1, nkstot/nspin
@@ -268,7 +263,7 @@ SUBROUTINE find_index_1bz_smart_ibz(ik_, iq_, gvect, ikq, isym)
        IF (kcw_iverbosity .gt. 1) THEN 
           WRITE(stdout,'(8X, "The map (iq,ik) --> (ip, isym) + G", 5x, & 
           &  " (", 2i3, "  ) " , 5x, " (", 2i3, "  ) ", 8x, "+", 3f8.4, " [Cryst]" )') iq_, ik_, ikq, isym, gvect
-          WRITE(stdout, '(8X, 3F12.8)') (s(:,i,isym),i=1,3)
+          WRITE(stdout, '(8X, 3I5)') (s(:,i,isym),i=1,3)
        ENDIF
        ! back to cartesian coordinates
        CALL cryst_to_cart(1, gvect, bg, 1)

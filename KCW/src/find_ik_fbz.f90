@@ -36,9 +36,9 @@ SUBROUTINE find_ik_fbz (ik, ik_fbz)
   nkstot_fbz = mp1*mp2*mp3 
   found = .FALSE.
   !
-  WRITE(*,'("NICOLA", i5, 3F12.4)') ik, xk(:,ik)
+  !WRITE(*,'("NICOLA", i5, 3F12.4)') ik, xk(:,ik)
   DO ik_fbz = 1, nkstot_fbz 
-     WRITE(*,'("NICOLA FBZ", i5, 3F12.4)') ik_fbz, xk_fbz(:,ik_fbz)
+     !WRITE(*,'("NICOLA FBZ", i5, 3F12.4)') ik_fbz, xk_fbz(:,ik_fbz)
      dk(:)=xk(:,ik)-xk_fbz(:,ik_fbz)
      IF ( all( abs( dk ) < 1d-5 ) ) THEN 
         !WRITE(stdout,'("Match found", 2I5, 3x, 6F7.4 )') ik, ik_fbz, xk(:,ik),xk_fbz(:,ik_fbz)

@@ -20,13 +20,14 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   USE fft_base,             ONLY : dffts
-  USE klist,                ONLY : nkstot, xk, igk_k, ngk, nks
+  USE klist,                ONLY : nkstot, xk, igk_k, ngk, nks, wk
   USE mp,                   ONLY : mp_sum
-  USE control_kcw,          ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, spin_component, num_wann
+  USE control_kcw,          ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, spin_component, num_wann, &
+                                   mp1, mp2, mp3
   USE buffers,              ONLY : get_buffer, save_buffer
-  USE wvfct,                ONLY : npwx !, wg
+  USE wvfct,                ONLY : npwx, wg
   USE noncollin_module,     ONLY : npol
-  USE control_kcw,          ONLY : map_ikq, shift_1bz, kcw_iverbosity
+  USE control_kcw,          ONLY : map_ikq, shift_1bz, kcw_iverbosity, irr_bz
   USE cell_base,            ONLY : at
   USE mp_pools,             ONLY : inter_pool_comm
   USE lsda_mod,             ONLY : lsda, current_spin, isk, nspin
@@ -72,6 +73,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
        ngk_all(nkstot)             ! number of plane waves for each k point
   !
   INTEGER :: isym
+  REAL(DP) :: weight
   !
 #ifdef DEBUG
   INTEGER :: ig_save, ig, ip, ir
@@ -89,6 +91,8 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
     IF ( lsda ) current_spin = isk(ik)
     IF ( lsda .AND. current_spin /= spin_component) CYCLE
     !
+    weight = 1.D0/(mp1*mp2*mp3)
+    !
     xk_ = xk(:,ik)
     CALL cryst_to_cart(1, xk_, at, -1)
     !
@@ -103,9 +107,13 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
     CALL get_buffer ( evc0, lrwfc, iuwfc_wann, ik_eff )
     !! ... Retrive the ks function (in the Wannier Gauge)
     !
-    CALL find_index_1bz_smart(global_ik, iq, g_vect, ikq) ! see also other implementations
-    !! of the search inside compute_map_ikq_single.f90 if the search fails
-    !CALL find_index_1bz_smart_ibz(global_ik, iq, g_vect, ikq, isym) 
+    IF (irr_bz) THEN 
+       CALL find_index_1bz_smart_ibz(global_ik, iq, g_vect, ikq, isym) 
+    ELSE
+       CALL find_index_1bz_smart(global_ik, iq, g_vect, ikq) 
+    ENDIF 
+    ! see also other implementations (more robust?)of the search inside compute_map_ikq_single.f90 
+    ! if the search fails
     !
     !ikq = map_ikq(global_ik)
     !g_vect(:) = shift_1bz(:,global_ik)
@@ -142,9 +150,13 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
     !
     lrwfc = num_wann * npwx 
     CALL get_buffer ( evc0_kq, lrwfc, iuwfc_wann_allk, ikq )
-    !! ... Retrive the ks function (in the Wannier Gauge): 
+    !! ... Retrive the ks function (in the Wannier Gauge) at the k-point in the 1BZ
+    !! ... (possibly in the Irreducible wedge) connected to k+q 
     !
     DO iband = 1, num_wann
+       !
+       IF (irr_bz) weight = wk(ik)
+       WRITE(*,'("ik, ibndn, weight=", 2I5, 3F12.6)'), ik, iband, weight 
        !
        npw_k = ngk(ik)
        evc_k_g(:) =  evc0(:,iband)
@@ -156,11 +168,21 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
        evc_kq_g = evc0_kq(:,iband)
        evc_kq_r = ZERO
        CALL invfft_wave (npw_kq, igk_k_all (1,ikq), evc_kq_g , evc_kq_r )
-       ! ... The wfc in R-space at k' <-- k+q where k' = (k+q)-G_bar
-       ! ... evc_k+q(r) = sum_G exp[iG r] c_(k+q+G) = sum_G exp[iG r] c_k'+G_bar+G 
-       !            = exp[-iG_bar r] sum_G' exp[iG'r] c_k'+G' = exp[-iG_bar r] *evc_k'(r)
        !
-       rhowann(:,iband) = rhowann(:,iband) + conjg(evc_k_r(:))*evc_kq_r(:)*phase(:)/(nkstot/nspin) !*wg(iband,ik)
+       IF (irr_bz) THEN 
+          CALL rotate_evc(isym, phase, evc_kq_r)
+       ELSE 
+          evc_kq_r(:) = evc_kq_r(:)*phase(:)
+       ENDIF 
+       !! ... Rotate the KS state in the IBZ with the symmetry operation to get the KS state
+       !! ... at k+q 
+       !
+       ! ... The wfc in R-space at S(k')+G_bar <-- k+q where S(k')-G_bar = (k+q)
+       ! ... evc_k+q(r) = sum_G exp[iG r] c_(k+q+G) = sum_G exp[iG r] c_S(k')+G_bar+G 
+       !            = exp[-iG_bar r] sum_G' exp[iG'r] c_S(k')+G' = exp[-iG_bar r] *evc_S(k')(r) = exp[-iG_bar r] *evc_k'(S^-1(r))
+       !
+       !rhowann(:,iband) = rhowann(:,iband) + conjg(evc_k_r(:))*evc_kq_r(:)*phase(:)/weight !*wg(iband,ik)
+       rhowann(:,iband) = rhowann(:,iband) + conjg(evc_k_r(:))*evc_kq_r(:)*weight !*wg(iband,ik)
        ! ... The periodic part of the wannier-orbital density in real space
        ! ... rho_q(r) = sum_k [ evc_k,v(r)* evc_k+q,v(r)] = sum_k [ evc_k,v(r)* evc_k',v(r) exp[-iG_bar r]]
        ! 

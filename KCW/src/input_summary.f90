@@ -40,6 +40,7 @@ subroutine input_summary ( )
     WRITE(stdout, 43)  "# check_ks            =", check_ks
     WRITE(stdout, 43)  "# l_vcut              =", l_vcut    
     WRITE(stdout, 42)  "# assume_isolated     =", TRIM(assume_isolated)
+    WRITE(stdout, 43)  "# irr_bz              =", irr_bz
     !
     IF ( .NOT. kcw_at_ks .AND. .NOT. calculation=='cc' ) THEN 
 !!! WANNIER

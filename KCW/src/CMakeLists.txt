@@ -47,7 +47,9 @@ set(src_kcw
     kcw_deallocate_q.f90
     setup_coulomb_exx.f90
     coulomb.f90
-    find_ik_fbz)
+    find_ik_fbz
+    rotate_evc
+    kcw_set_sym)
 
 qe_add_library(qe_kcw ${src_kcw})
 target_link_libraries(
