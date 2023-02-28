@@ -46,7 +46,7 @@ subroutine kcw_setup
                                 num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, irr_bz!, wq, nqstot
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk
-  USE cell_base,         ONLY : at, omega!, bg
+  USE cell_base,         ONLY : at, omega, bg
   USE fft_base,          ONLY : dffts
   !
   USE control_lr,       ONLY : nbnd_occ, lgamma
@@ -58,10 +58,12 @@ subroutine kcw_setup
   USE io_rho_xml,       ONLY : write_scf
   !
   USE mp_bands,         ONLY : inter_bgrp_comm, intra_bgrp_comm
-  USE io_kcw,        ONLY : write_rhowann
+  USE io_kcw,           ONLY : write_rhowann
   !
   USE mp,               ONLY : mp_sum
   USE control_lr,       ONLY : lrpa
+  USE lr_symm_base,     ONLY : nsymq
+  USE qpoint,           ONLY : xq
   !
   implicit none
 
@@ -71,7 +73,7 @@ subroutine kcw_setup
   INTEGER   :: lrwfc, iun_qlist
   LOGICAL   :: exst, exst_mem
   INTEGER :: iq, nqs
-  REAL(DP) :: xq(3)
+  REAL(DP) :: xq_(3)
   COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
   CHARACTER (LEN=256) :: filename, file_base
   CHARACTER (LEN=6), EXTERNAL :: int_to_char
@@ -116,9 +118,9 @@ subroutine kcw_setup
      !if (dft_is_gradient()) call compute_ux(m_loc,ux,nat)
   ENDIF
   !
-  ! ... Computes the number of occupied bands for each k point
-  !
   IF (irr_bz) CALL kcw_set_symm(dffts%nr1, dffts%nr2, dffts%nr3, dffts%nr1x, dffts%nr2x, dffts%nr3x)
+  !
+  ! ... Computes the number of occupied bands for each k point
   !
   call setup_nbnd_occ ( ) 
   !
@@ -183,7 +185,7 @@ subroutine kcw_setup
   !
   CALL bcast_wfc ( igk_k_all, ngk_all )
   !
-  DEALLOCATE ( nbnd_occ )  ! otherwise allocate_ph complains: FIXME
+  !DEALLOCATE ( nbnd_occ )  ! otherwise allocate_ph complains: FIXME
   !
   ! 8)
   !CALL compute_map_ikq ()
@@ -223,17 +225,27 @@ subroutine kcw_setup
   DO iq = 1, nqs
     !! For each q in the mesh 
     !
-    xq = x_q(:,iq)
+    xq_ = x_q(:,iq)
+    xq  = x_q(:,iq)
     !
-    ! IF (ionode) WRITE(iun_qlist,'(3f12.8)') xq
+    ! IF (ionode) WRITE(iun_qlist,'(3f12.8)') xq_
     !
     lgamma_iq(iq)=(x_q(1,iq)==0.D0.AND.x_q(2,iq)==0.D0.AND.x_q(3,iq)==0.D0)
-    CALL cryst_to_cart(1, xq, at, -1)
+    CALL cryst_to_cart(1, xq_, at, -1)
     WRITE( stdout, '(/,8X, 78("="))')
     WRITE( stdout, '(  8X, "iq = ", i5)') iq
     WRITE( stdout, '(  8X, "The Wannier density at  q = ",3F12.7, "  [Cart ]")') x_q(:,iq)
-    WRITE( stdout, '(  8X, "The Wannier density at  q = ",3F12.7, "  [Cryst]")') xq(:)
+    WRITE( stdout, '(  8X, "The Wannier density at  q = ",3F12.7, "  [Cryst]")') xq_(:)
     WRITE( stdout, '(  8X, 78("="),/)')
+    !
+    IF (irr_bz) THEN
+      ! This is to find the small group of q and the corresponding IBZ(q)
+      CALL setup_nscf ( .FALSE., xq, .FALSE. )
+      CALL cryst_to_cart(nkstot, xk, at, -1)
+      WRITE(*,'("NICOLA nkstot, nsymq", 2I5)') nkstot, nsymq 
+      WRITE(*,'("NICOLA xk", 3F10.4)') (xk(1:3,ik), ik=1,nkstot) 
+      CALL cryst_to_cart(nkstot, xk, bg, 1)
+    ENDIF
     !
     ! CALL compute_map_ikq_single (iq)
     ! The map to identify which k point in the 1BZ corresponds to k+q and the G vector that produce the mapping
