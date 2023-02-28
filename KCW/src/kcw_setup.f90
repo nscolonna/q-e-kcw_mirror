@@ -295,10 +295,13 @@ subroutine kcw_setup
   ! Print on output the self-Hatree
   CALL mp_sum (sh, intra_bgrp_comm)
   
+  OPEN (128, file = TRIM(tmp_dir_kcw)//'sh.txt')
   WRITE(stdout,'(5X, "INFO: Orbital Self-Hartree (SH)")') 
   DO i = 1, num_wann
     WRITE(stdout,'(5X, "orb ", 1i5, 5X, "SH ", 1F10.6)') i, REAL(sh(i))
+    WRITE(128,*) REAL(sh(i))
   ENDDO
+  CLOSE (128)
   !
   WRITE( stdout, '(/,5X,"INFO: PREPARING THE KCW CALCULATION ... DONE")')
   WRITE(stdout,'(/)')
