@@ -219,6 +219,7 @@ subroutine kcw_setup
   !
   WRITE( stdout, '(/, 5X,"INFO: Compute Wannier-orbital Densities ...")')
   !
+  call setup_coulomb()
   DO iq = 1, nqs
     !! For each q in the mesh 
     !
@@ -249,7 +250,6 @@ subroutine kcw_setup
     WRITE( stdout, '(8X,"INFO: rho_q(r) DONE ",/)')
     !
     ! Compute the Self Hartree
-    call setup_coulomb()
     weight(iq) = 1.D0/nqs ! No SYMM 
     lrpa_save=lrpa
     lrpa = .true.
