@@ -337,6 +337,9 @@ W2K Silicon
   kcw_at_ks=.false.
   read_unitary_matrix = .true.
   calculation = 'wann2kcw'
+  mp1 = 2
+  mp2 = 2
+  mp3 = 2
 /
 &wannier
   seedname = 'Si'
@@ -408,7 +411,7 @@ KCWPP interpolate
  mp2 = 2
  mp3 = 2
  num_wann = 4
- seedname = Si
+ seedname = 'Si'
  use_ws_distance = .true. 
  num_wann_occ =4
  num_wann_emp = 4
