@@ -23,11 +23,11 @@ and [Maximally Localized Wannier Functions](http://journals.aps.org/prb/abstract
 The details of this implementation are described [here](https://arxiv.org/abs/2202.08155). 
 The code consists of 3 modules specified by the "calculation" variable in CONTROL namelist:
 
-1) interface between Wannier90 and the KCW code (calculation="wann_to_kc") 
+1) interface between Wannier90 and the KCW code (calculation="wann2kcw") 
 
 2) calcuation of the screening coefficients (calculation="screen")
 
-3) calculation, interpolation and diagonalization of the KC hamiltonian (calculation = "kc_ham") 
+3) calculation, interpolation and diagonalization of the KC hamiltonian (calculation = "ham") 
 
 KCW is developed and maintained by [Nicola Colonna](https://www.psi.ch/en/lns/people/nicola-colonna),  [Riccardo de Gennaro](https://people.epfl.ch/riccardo.degennaro), and [Edward Linscott](https://people.epfl.ch/edward.linscott)
 
