@@ -62,6 +62,7 @@ subroutine kcw_setup
   !
   USE mp,               ONLY : mp_sum
   USE control_lr,       ONLY : lrpa
+  USE coulomb,           ONLY : setup_coulomb
   !
   implicit none
 
@@ -248,6 +249,7 @@ subroutine kcw_setup
     WRITE( stdout, '(8X,"INFO: rho_q(r) DONE ",/)')
     !
     ! Compute the Self Hartree
+    call setup_coulomb()
     weight(iq) = 1.D0/nqs ! No SYMM 
     lrpa_save=lrpa
     lrpa = .true.
