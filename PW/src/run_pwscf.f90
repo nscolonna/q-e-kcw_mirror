@@ -55,7 +55,7 @@ SUBROUTINE run_pwscf( exit_status )
   USE qmmm,                 ONLY : qmmm_initialization, qmmm_shutdown, &
                                    qmmm_update_positions, qmmm_update_forces
   USE qexsd_module,         ONLY : qexsd_set_status
-  USE xc_lib,               ONLY : xclib_dft_is, stop_exx
+  USE xc_lib,               ONLY : xclib_dft_is, stop_exx, exx_is_active
   USE beef,                 ONLY : beef_energies
   USE ldaU,                 ONLY : lda_plus_u
   USE add_dmft_occ,         ONLY : dmft
@@ -121,6 +121,9 @@ SUBROUTINE run_pwscf( exit_status )
   !
   ! call to void routine for user defined / plugin patches initializations
   !
+#if defined(__LEGACY_PLUGINS)
+  CALL plugin_initialization()
+#endif 
 #if defined (__ENVIRON)
   IF (use_environ) THEN
      IF (is_ms_gcs()) CALL init_ms_gcs()
@@ -187,7 +190,11 @@ SUBROUTINE run_pwscf( exit_status )
            ENDIF
         ENDIF
         CALL qexsd_set_status(exit_status)
-        CALL punch( 'config' )
+        IF(exx_is_active()) then
+          CALL punch( 'all' )
+        ELSE
+          CALL punch( 'config' )
+        ENDIF
         RETURN
      ENDIF
      !
