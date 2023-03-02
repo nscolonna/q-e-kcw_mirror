@@ -301,7 +301,7 @@ subroutine kcw_setup
   WRITE(stdout,'(5X, "INFO: Orbital Self-Hartree (SH)")') 
   DO i = 1, num_wann
     WRITE(stdout,'(5X, "orb ", 1i5, 5X, "SH ", 1F10.6)') i, REAL(sh(i))
-    WRITE(128,*) REAL(sh(i))
+    WRITE(128,*) sh(i)
   ENDDO
   CLOSE (128)
   !

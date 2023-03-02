@@ -46,7 +46,7 @@ SUBROUTINE read_hr()
     IF (ierr /= 0 ) call errore('read_hr', 'Error while opening H(R) file ', abs (ierr) )
     !
     READ( 100, *) header
-    READ( 100, '(4x,"Rtot =",i5,6x,"num_wann =",i5)' ) num_r, num_wann
+    READ( 100, '(10x,i5,16x,i5)' ) num_r, num_wann
     !WRITE(*,*) num_r, nkstot
     IF (num_r /= nkstot/nspin) & 
       CALL errore('read_hr', 'Number of R/k point DOES not MATCH',num_r)
