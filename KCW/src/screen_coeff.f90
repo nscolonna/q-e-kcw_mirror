@@ -213,7 +213,7 @@ SUBROUTINE screen_coeff ()
        IF (lgamma .and. l_vcut ) THEN 
           !
           !WRITE(stdout, 9013) iq, iwann, pi_q_relax, pi_q_unrelax_
-          WRITE(stdout, '(/, 7X, "INFO: Result withou q+G=0   ", 3x, "rPi*      ", 1F15.8, 3x,"uPi*      ", 1F15.8)') &
+          WRITE(stdout, '(/, 7X, "INFO: Result without q+G=0   ", 3x, "rPi*      ", 1F15.8, 3x,"uPi*      ", 1F15.8)') &
                          DBLE(pi_q_relax), DBLE(pi_q_unrelax_)
           WRITE(stdout, '(   7X, "INFO: The q+G=0 contribution", 3x, "rPi(q+G=0)", 1F15.8, 3x,"uPi(q+G=0)", 1F15.8)') &
                          -(div_eps)/omega/nqs, -div/omega/nqs

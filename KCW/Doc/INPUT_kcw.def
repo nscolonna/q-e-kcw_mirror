@@ -71,13 +71,21 @@ input_description -distribution {Quantum Espresso} -package KCW -program kcw.x {
                      calculation}
 
                 opt -val 'screen' {
-                     Performe the calculation of KCW screening coefficient using a
+                     Perform the calculation of KCW screening coefficient using a
                      LR approach as described here https://doi.org/10.1021/acs.jctc.7b01116
                      and arXiv:2202.08155 
                 }
 
                 opt -val 'ham' {
-                     Performe the calculation interpolation and diagonalization of the KI hamiltonian 
+                     Perform the calculation interpolation and diagonalization of the KI hamiltonian 
+                }
+
+                opt -val 'cc' {
+                     Computes the (estimated) q+G=0 contribution to the bare and screened KC corrections.
+                     A report on this quantities is printed on output and can be used to correct a 
+                     posteriori a "screen" calculation performed without any corrective scheme (@ref l_vcut=.false.)
+                     avoiding the need of re-doing a "screen" calculation.
+
                 }
 
 
