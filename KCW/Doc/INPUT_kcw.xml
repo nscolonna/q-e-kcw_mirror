@@ -70,12 +70,18 @@ Read previous PWSCF and possibly W90 outputs and prepare the KCW
 calculation
             </opt>
             <opt val="'screen'" >
-Performe the calculation of KCW screening coefficient using a
+Perform the calculation of KCW screening coefficient using a
 LR approach as described here <link>https://doi.org/10.1021/acs.jctc.7b01116</link>
 and <a href="https://arxiv.org/abs/2202.08155">arXiv:2202.08155</a>
             </opt>
             <opt val="'ham'" >
-Performe the calculation interpolation and diagonalization of the KI hamiltonian
+Perform the calculation interpolation and diagonalization of the KI hamiltonian
+            </opt>
+            <opt val="'cc'" >
+Computes the (estimated) q+G=0 contribution to the bare and screened KC corrections.
+A report on this quantities is printed on output and can be used to correct a
+posteriori a &quot;screen&quot; calculation performed without any corrective scheme (<ref>l_vcut</ref>=.false.)
+avoiding the need of re-doing a &quot;screen&quot; calculation.
             </opt>
          </options>
       </var>

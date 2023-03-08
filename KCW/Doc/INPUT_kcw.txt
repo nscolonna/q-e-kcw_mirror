@@ -77,12 +77,18 @@ NAMELIST: &CONTROL
                         calculation
     
                    'screen' :
-                        Performe the calculation of KCW screening coefficient using a
+                        Perform the calculation of KCW screening coefficient using a
                         LR approach as described here https://doi.org/10.1021/acs.jctc.7b01116
                         and arXiv:2202.08155
     
                    'ham' :
-                        Performe the calculation interpolation and diagonalization of the KI hamiltonian
+                        Perform the calculation interpolation and diagonalization of the KI hamiltonian
+    
+                   'cc' :
+                        Computes the (estimated) q+G=0 contribution to the bare and screened KC corrections.
+                        A report on this quantities is printed on output and can be used to correct a
+                        posteriori a "screen" calculation performed without any corrective scheme ("l_vcut"=.false.)
+                        avoiding the need of re-doing a "screen" calculation.
    +--------------------------------------------------------------------
    
    +--------------------------------------------------------------------
@@ -407,4 +413,4 @@ CARD: K_POINTS
 ===END OF CARD==========================================================
 
 
-This file has been created by helpdoc utility on Tue Aug 30 17:05:59 CEST 2022
+This file has been created by helpdoc utility on Wed Mar 08 13:08:38 CET 2023
