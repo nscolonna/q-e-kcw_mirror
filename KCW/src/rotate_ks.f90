@@ -61,6 +61,7 @@ SUBROUTINE rotate_ks ()
   !
   ! ... Loop over k_point
   !
+  WRITE(*,*) "NICOLA DBG nks=", nks
   k_loop: DO ik = 1, nks
      !
      current_k = ik
@@ -97,9 +98,9 @@ SUBROUTINE rotate_ks ()
         !! ... and ik run always from 1 to nkstot/nspin (see read_wannier.f90). 
         !  
         CALL find_ik_fbz (ik_eff, ik_eff_fbz) 
-        !! ... Here we find the what is the index of kpoint at hand (i.e. that whose index
+        !! ... Here we find what is the index of kpoint at hand (i.e. that whose index
         !! ... in the IBZ is ik_eff) in the full list of all the k-points on the regular MP
-        !! ...  grid used by Wannier
+        !! ... grid used by Wannier
         !
         occ_mat_aux = 0.D0
         CALL apply_u_matrix(evc, evc0, occ_mat_aux, ik_eff_fbz,n_orb)

@@ -57,7 +57,9 @@ kcw_allocate_q.o\
 kcw_deallocate_q.o\
 setup_coulomb_exx.o\
 coulomb.o\
-find_ik_fbz.o
+find_ik_fbz.o\
+kcw_set_sym.o\
+rotate_evc.o
 #restore_symm.o 
 #check_density.o 
 #setup_coulomb.o\

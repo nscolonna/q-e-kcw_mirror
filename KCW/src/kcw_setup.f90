@@ -25,6 +25,7 @@ subroutine kcw_setup
   !
   !
   USE kinds,             ONLY : DP
+  USE parameters,        ONLY : npk
   USE ions_base,         ONLY : nat, ityp
   USE io_files,          ONLY : tmp_dir
   USE lsda_mod,          ONLY : nspin, starting_magnetization, lsda, isk
@@ -43,9 +44,10 @@ subroutine kcw_setup
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer, get_buffer
   USE control_kcw,       ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, kcw_iverbosity, lgamma_iq, &
                                 spin_component, isq, read_unitary_matrix, x_q, tmp_dir_save, & 
-                                num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, irr_bz!, wq, nqstot
+                                num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, &
+                                irr_bz, mp1, mp2, mp3!, wq, nqstot
   USE io_global,         ONLY : stdout
-  USE klist,             ONLY : nkstot, xk
+  USE klist,             ONLY : nkstot, xk, wk, nks
   USE cell_base,         ONLY : at, omega, bg
   USE fft_base,          ONLY : dffts
   !
@@ -62,6 +64,10 @@ subroutine kcw_setup
   !
   USE mp,               ONLY : mp_sum
   USE control_lr,       ONLY : lrpa
+  !
+  USE symm_base,        ONLY : s, t_rev, nrot, nsym, time_reversal
+  USE start_k,          ONLY : nk1, nk2, nk3, k1, k2, k3
+  !
   USE lr_symm_base,     ONLY : nsymq
   USE qpoint,           ONLY : xq
   !
@@ -91,6 +97,9 @@ subroutine kcw_setup
   REAL(DP), ALLOCATABLE :: weight(:)
   LOGICAL :: lrpa_save
   !
+  INTEGER  :: t_rev_eff(48)
+  LOGICAL  :: skip_equivalence
+  !
   ALLOCATE ( rhog (ngms) , delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
   call start_clock ('kcw_setup')
@@ -118,7 +127,19 @@ subroutine kcw_setup
      !if (dft_is_gradient()) call compute_ux(m_loc,ux,nat)
   ENDIF
   !
-  IF (irr_bz) CALL kcw_set_symm(dffts%nr1, dffts%nr2, dffts%nr3, dffts%nr1x, dffts%nr2x, dffts%nr3x)
+  IF (irr_bz) THEN 
+     CALL kcw_set_symm(dffts%nr1, dffts%nr2, dffts%nr3, dffts%nr1x, dffts%nr2x, dffts%nr3x)
+     t_rev_eff=0
+     skip_equivalence=.false.
+     CALL kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
+                      bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot, xk, wk)
+     IF (lsda) CALL set_kup_and_kdw( xk, wk, isk, nkstot, npk )
+     CALL cryst_to_cart(nkstot, xk, at, -1)
+     WRITE(*,'("NICOLA nkstot, nsymq", 2I5)') nkstot, nsym
+     WRITE(*,'("NICOLA xk", 3F10.4)') (xk(1:3,ik), ik=1,nkstot) 
+     CALL cryst_to_cart(nkstot, xk, bg, 1)
+     CALL divide_et_impera( nkstot, xk, wk, isk, nks )
+  ENDIF
   !
   ! ... Computes the number of occupied bands for each k point
   !
@@ -238,14 +259,14 @@ subroutine kcw_setup
     WRITE( stdout, '(  8X, "The Wannier density at  q = ",3F12.7, "  [Cryst]")') xq_(:)
     WRITE( stdout, '(  8X, 78("="),/)')
     !
-    IF (irr_bz) THEN
-      ! This is to find the small group of q and the corresponding IBZ(q)
-      CALL setup_nscf ( .FALSE., xq, .FALSE. )
-      CALL cryst_to_cart(nkstot, xk, at, -1)
-      WRITE(*,'("NICOLA nkstot, nsymq", 2I5)') nkstot, nsymq 
-      WRITE(*,'("NICOLA xk", 3F10.4)') (xk(1:3,ik), ik=1,nkstot) 
-      CALL cryst_to_cart(nkstot, xk, bg, 1)
-    ENDIF
+    !IF (irr_bz) THEN
+    !  ! This is to find the small group of q and the corresponding IBZ(q)
+    !  CALL setup_nscf ( .FALSE., xq, .FALSE. )
+    !  CALL cryst_to_cart(nkstot, xk, at, -1)
+    !  WRITE(*,'("NICOLA nkstot, nsymq", 2I5)') nkstot, nsymq 
+    !  WRITE(*,'("NICOLA xk", 3F10.4)') (xk(1:3,ik), ik=1,nkstot) 
+    !  CALL cryst_to_cart(nkstot, xk, bg, 1)
+    !ENDIF
     !
     ! CALL compute_map_ikq_single (iq)
     ! The map to identify which k point in the 1BZ corresponds to k+q and the G vector that produce the mapping
@@ -262,7 +283,7 @@ subroutine kcw_setup
     WRITE( stdout, '(/, 8X,"INFO: rho_q(r) DONE ",/)')
     !
     ! Compute the Self Hartree
-    weight(iq) = 1.D0/nqs ! No SYMM 
+    weight(iq) = wk(iq)*nspin ! No SYMM 
     lrpa_save=lrpa
     lrpa = .true.
     DO i = 1, num_wann
@@ -277,6 +298,8 @@ subroutine kcw_setup
       !
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
       !! The periodic part of the perturbation DeltaV_q(G)
+      WRITE(*,'(" iq = ", i5, " iwann = ", i5, " SH =", F12.8)') iq, i, &
+               0.5D0 * REAL(sum (CONJG(rhog (:)) * vh_rhog(:))*weight(iq)*omega)
       ! 
       sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:) )*weight(iq)*omega
       !
