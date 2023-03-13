@@ -369,7 +369,7 @@ NAMELIST: &HAM
    Default:        .FALSE.
    Description:    If .true. the interpolated band structure is computed along
                    a path secified with the K_POINTS card ( see PW documentation
-                   https://www.quantum-espresso.org/Doc/INPUT_PW.html#idm1346 )
+                   https://www.quantum-espresso.org/Doc/INPUT_PW.html#idm1487 )
    +--------------------------------------------------------------------
    
    +--------------------------------------------------------------------
@@ -408,9 +408,9 @@ NAMELIST: &HAM
 ========================================================================
 CARD: K_POINTS 
 
-   see https://www.quantum-espresso.org/Doc/INPUT_PW.html#idm1346
+   see https://www.quantum-espresso.org/Doc/INPUT_PW.html#idm1487
    
 ===END OF CARD==========================================================
 
 
-This file has been created by helpdoc utility on Wed Mar 08 13:08:38 CET 2023
+This file has been created by helpdoc utility on Mon Mar 13 12:03:45 CET 2023

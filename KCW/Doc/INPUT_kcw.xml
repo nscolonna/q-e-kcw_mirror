@@ -332,7 +332,7 @@ than 1e-4 Ry (Hard coded for now, see <ref>spread_thr</ref>).
          <info>
 If .true. the interpolated band structure is computed along
 a path secified with the K_POINTS card ( see PW documentation
-<link>https://www.quantum-espresso.org/Doc/INPUT_PW.html#idm1346</link> )
+<link>https://www.quantum-espresso.org/Doc/INPUT_PW.html#idm1487</link> )
          </info>
       </var>
       <var name="use_ws_distance" type="LOGICAL" >
@@ -364,7 +364,7 @@ are computed (R=0 and n=m).
       </var>
    </namelist>
    <card name="K_POINTS" >
-      <message> see <link>https://www.quantum-espresso.org/Doc/INPUT_PW.html#idm1346</link>
+      <message> see <link>https://www.quantum-espresso.org/Doc/INPUT_PW.html#idm1487</link>
       </message>
    </card>
 </input_description>
