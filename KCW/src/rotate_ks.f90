@@ -103,7 +103,7 @@ SUBROUTINE rotate_ks ()
         !! ... grid used by Wannier
         !
         occ_mat_aux = 0.D0
-        CALL apply_u_matrix(evc, evc0, occ_mat_aux, ik_eff_fbz,n_orb)
+        CALL apply_u_matrix(evc, evc0, occ_mat_aux, ik_eff_fbz, n_orb)
         !
      ENDIF
      ! 

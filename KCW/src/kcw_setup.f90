@@ -100,6 +100,9 @@ subroutine kcw_setup
   INTEGER  :: t_rev_eff(48)
   LOGICAL  :: skip_equivalence
   !
+  integer :: isk_ibz(npk), nkstot_ibz
+  real(DP) :: xk_ibz(3,npk), wk_ibz(npk)
+  !
   ALLOCATE ( rhog (ngms) , delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
   call start_clock ('kcw_setup')
@@ -132,13 +135,14 @@ subroutine kcw_setup
      t_rev_eff=0
      skip_equivalence=.false.
      CALL kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
-                      bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot, xk, wk)
-     IF (lsda) CALL set_kup_and_kdw( xk, wk, isk, nkstot, npk )
-     CALL cryst_to_cart(nkstot, xk, at, -1)
-     WRITE(*,'("NICOLA nkstot, nsymq", 2I5)') nkstot, nsym
-     WRITE(*,'("NICOLA xk", 3F10.4)') (xk(1:3,ik), ik=1,nkstot) 
-     CALL cryst_to_cart(nkstot, xk, bg, 1)
-     CALL divide_et_impera( nkstot, xk, wk, isk, nks )
+                      bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot_ibz, xk_ibz, wk_ibz)
+     IF (lsda) CALL set_kup_and_kdw( xk_ibz, wk_ibz, isk_ibz, nkstot_ibz, npk )
+     WRITE(*,'("NICOLA nkstot, nsym", 2I5)') nkstot_ibz, nsym
+     CALL cryst_to_cart(nkstot_ibz, xk_ibz, at, -1)
+     WRITE(*,'("NICOLA xk", 3F10.4)') (xk_ibz(1:3,ik), ik=1,nkstot_ibz) 
+     CALL cryst_to_cart(nkstot_ibz, xk_ibz, bg, 1)
+     WRITE(*,'("NICOLA xk", 3F10.4)') (xk_ibz(1:3,ik), ik=1,nkstot_ibz) 
+     !CALL divide_et_impera( nkstot, xk, wk, isk, nks )
   ENDIF
   !
   ! ... Computes the number of occupied bands for each k point

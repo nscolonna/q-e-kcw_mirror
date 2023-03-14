@@ -155,7 +155,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
     !
     DO iband = 1, num_wann
        !
-       IF (irr_bz) weight = wk(ik)
+       IF (irr_bz) weight = wk(ik)*nspin
        WRITE(*,'("ik, ibndn, weight=", 2I5, 3F12.6)'), ik, iband, weight 
        !
        npw_k = ngk(ik)
