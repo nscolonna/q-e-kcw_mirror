@@ -45,7 +45,7 @@ subroutine kcw_setup
   USE control_kcw,       ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, kcw_iverbosity, lgamma_iq, &
                                 spin_component, isq, read_unitary_matrix, x_q, tmp_dir_save, & 
                                 num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, &
-                                irr_bz, mp1, mp2, mp3!, wq, nqstot
+                                irr_bz, mp1, mp2, mp3, seedname!, wq, nqstot
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, wk, nks
   USE cell_base,         ONLY : at, omega, bg
@@ -65,7 +65,7 @@ subroutine kcw_setup
   USE mp,               ONLY : mp_sum
   USE control_lr,       ONLY : lrpa
   !
-  USE symm_base,        ONLY : s, t_rev, nrot, nsym, time_reversal
+  USE symm_base,        ONLY : s, t_rev, nrot, nsym, time_reversal, sr
   USE start_k,          ONLY : nk1, nk2, nk3, k1, k2, k3
   !
   USE lr_symm_base,     ONLY : nsymq
@@ -73,7 +73,7 @@ subroutine kcw_setup
   !
   implicit none
 
-  integer :: na, i, ik
+  integer :: na, i, ik, iwann, isym
   ! counters
   !
   INTEGER   :: lrwfc, iun_qlist
@@ -103,6 +103,14 @@ subroutine kcw_setup
   integer :: isk_ibz(npk), nkstot_ibz
   real(DP) :: xk_ibz(3,npk), wk_ibz(npk)
   !
+  INTEGER                  :: nsym_w(num_wann_occ), nsym_aux
+  REAL(DP)                 :: sr_w (3,3,48,num_wann_occ) ! rotation in cart. coord
+  REAL(DP)                 ::  s_w (3,3,48,num_wann_occ) ! rotation in Crystal coord
+  REAL(DP)                 :: tvec_w (3,48,num_wann_occ) ! fractional translation in cartesian coord.
+  INTEGER                  :: wsym2sym(48, num_wann_occ)
+  INTEGER                  :: iun_lg
+  CHARACTER (len=60)       :: header
+  !
   ALLOCATE ( rhog (ngms) , delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
   call start_clock ('kcw_setup')
@@ -131,13 +139,52 @@ subroutine kcw_setup
   ENDIF
   !
   IF (irr_bz) THEN 
-     CALL kcw_set_symm(dffts%nr1, dffts%nr2, dffts%nr3, dffts%nr1x, dffts%nr2x, dffts%nr3x)
+     wsym2sym  = 0
+     sr_w =0.D0
+     tvec_w = 0.D0
+     nsym_w = 0
+     !
+     filename=TRIM(seedname)//'.lg'
+     OPEN (101, file=filename, form='formatted')
+     write(*,*) filename
+     READ (101,*) header
+     WRITE(*,*) header 
+     READ (101,*)
+     DO i = 1, num_wann_occ
+        WRITE(*,*) "iwann =", i
+        READ(101,*) iwann, nsym_w(i)
+        WRITE(*,*) iwann, nsym_w(i)
+        !nsym_w(i)=nsym_aux
+        READ(101, "(2x, 10i4)") (wsym2sym(isym, i), isym=1,nsym_w(i))
+        write(stdout,"(2x, 10i4)") wsym2sym(1:nsym_w(i), i)
+        DO isym = 1, nsym_w(i)
+           WRITE(*,*) isym, wsym2sym(isym,i)
+           READ(101,"(3f15.7)") sr_w(:,:,isym, i), tvec_w(:,isym, i) !reading rotation matrix and translation vector in Cartesian coordinates.
+           WRITE(*,"(3f15.7)")  sr_w(:,:,isym, i), tvec_w(:,isym, i) 
+           s_w(:,:,isym,i) = s(:,:,wsym2sym(isym,i))
+           sr_w(:,:,isym,i) = sr(:,:,wsym2sym(isym,i)) ! actually we know the map and we can select the rotation belonging to the
+                                                       ! little group among all the symmetry of the system
+           ! here NEED to can add a check sr_w(from file) == sr_w (from index)
+           WRITE(*,"(3f15.7)")  sr_w(:,:,isym, i), tvec_w(:,isym, i) 
+           CALL cryst_to_cart(1, tvec_w(1:3,isym,i), at, -1)        ! fractional translation in crystal coord.
+           ! here NEED to can add a check sr_w(from file) == sr_w (from index)
+           WRITE(*,"(3f15.7)")  s_w(:,:,isym, i), tvec_w(:,isym, i) ! rotation and fractional translation in cryst. coord.
+           !
+           READ(101,*)
+           WRITE(*,*)
+        ENDDO
+     ENDDO
+     !
+     !CALL kcw_set_symm(dffts%nr1, dffts%nr2, dffts%nr3, dffts%nr1x, dffts%nr2x, dffts%nr3x)
      t_rev_eff=0
      skip_equivalence=.false.
+     nrot = nsym_w(1)
+     s(:,:,1:nsym_w(1)) = s_w(:,:,1:nsym_w(1),1)
      CALL kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
                       bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot_ibz, xk_ibz, wk_ibz)
+     WRITE(*,'("NICOLA nkstot, nsym", 2I5)') nkstot_ibz, nrot
      IF (lsda) CALL set_kup_and_kdw( xk_ibz, wk_ibz, isk_ibz, nkstot_ibz, npk )
-     WRITE(*,'("NICOLA nkstot, nsym", 2I5)') nkstot_ibz, nsym
+     WRITE(*,'("NICOLA nkstot, nsym", 2I5)') nkstot_ibz, nrot
      CALL cryst_to_cart(nkstot_ibz, xk_ibz, at, -1)
      WRITE(*,'("NICOLA xk", 3F10.4)') (xk_ibz(1:3,ik), ik=1,nkstot_ibz) 
      CALL cryst_to_cart(nkstot_ibz, xk_ibz, bg, 1)
@@ -230,7 +277,7 @@ subroutine kcw_setup
   ALLOCATE (weight(nqs) )
   iq=1
   IF (ionode) THEN 
-     WRITE(iun_qlist,'(i5)') nkstot/nspin 
+     WRITE(iun_qlist,'(i5)') nqs
      DO ik = 1, nkstot
        IF (lsda .AND. isk(ik) /= spin_component) CYCLE
        WRITE(iun_qlist, '(3f12.8)') xk(:,ik)
@@ -247,9 +294,13 @@ subroutine kcw_setup
   !
   WRITE( stdout, '(/, 5X,"INFO: Compute Wannier-orbital Densities ...")')
   !
+  IF (irr_bz) nqs = nkstot_ibz/nspin
   DO iq = 1, nqs
     !! For each q in the mesh 
     !
+    IF (irr_bz) THEN 
+     x_q(:,iq) = xk_ibz(:,iq)
+    ENDIF
     xq_ = x_q(:,iq)
     xq  = x_q(:,iq)
     !
@@ -287,7 +338,8 @@ subroutine kcw_setup
     WRITE( stdout, '(/, 8X,"INFO: rho_q(r) DONE ",/)')
     !
     ! Compute the Self Hartree
-    weight(iq) = wk(iq)*nspin ! No SYMM 
+    weight(iq) = 1./nqs
+    IF (irr_bz) weight(iq) = wk_ibz(iq) 
     lrpa_save=lrpa
     lrpa = .true.
     DO i = 1, num_wann

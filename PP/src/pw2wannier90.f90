@@ -1392,6 +1392,14 @@ SUBROUTINE compute_dmn
    INTEGER                  :: ibnd_n, ibnd_m,nsym, nxxs
    COMPLEX(DP), ALLOCATABLE :: psic_all(:), temppsic_all(:)
    LOGICAL                  :: have_sym
+   !
+   ! NsC >>
+   INTEGER                  :: nsym_w(n_wannier) 
+   REAL(DP)                 :: sr_w (3,3,48,n_wannier)
+   REAL(DP)                 :: tvec_w (3,48,n_wannier)
+   INTEGER                  :: wsym2sym(48,n_wannier)
+   INTEGER                  :: iun_lg
+   ! NsC <<
 
    CALL start_clock( 'compute_dmn' )
 
@@ -1583,6 +1591,53 @@ SUBROUTINE compute_dmn
          end if
       end if
    end do
+   !
+   ! (NsC >>
+   IF (ionode) THEN 
+      iun_lg = find_free_unit()
+      OPEN (unit=iun_lg, file=trim(seedname)//".lg",form='formatted')
+      CALL date_and_tim( cdate, ctime )
+      header='Created on '//cdate//' at '//ctime
+      WRITE (iun_lg,*) header
+   ENDIF
+   !
+   wsym2sym  = 0
+   sr_w =0.D0
+   tvec_w = 0.D0
+   nsym_w = 0
+   do ip=1,n_wannier
+      nsym_w(ip)=0
+      v1=center_w(:,ip)
+      do isym=1,nsym
+        v2=matmul(sr(:,:,isym),(v1+tvec(:,isym)))
+        v4=matmul(v1-v2,bg)
+        if(sum(abs(dble(nint(v4))-v4)).lt.1d-2) then
+          nsym_w(ip)=nsym_w(ip)+1
+          sr_w(:,:,nsym_w(ip),ip) = sr(:,:,isym)
+          tvec_w(:,nsym_w(ip),ip) = tvec(:,isym)
+          wsym2sym(nsym_w(ip),ip)=isym
+        endif
+      enddo
+      write(stdout,*)
+      write(stdout,'(2x, a, 2x, i5, 2x, a, i4)') "Little group of iw =", ip
+      write(stdout,"(2x,a,i5)") "  Number of symmetry operations = ", nsym_w(ip)
+      do isym = 1, nsym_w(ip)
+         write(stdout,"(2x,i4, a, i4, a)") isym, "( --> ", wsym2sym(isym, ip), ") -th Wannier symmetry operators is"
+         write(stdout,"(3f15.7)") sr_w(:,:,isym, ip), tvec_w(:,isym,ip) !Writing rotation matrix and translation vector in Cartesian coordinates.
+      enddo
+      IF (ionode) THEN
+         WRITE (iun_lg,"(/, 2i9)") ip, nsym_w(ip)
+         write(iun_lg,"(2x, 10i4)") wsym2sym(1:nsym_w(ip), ip)
+         do isym = 1, nsym_w(ip)
+            !write(iun_lg,"(2x,i4, i4)") isym,  wsym2sym(isym, ip)
+            write(iun_lg,"(3f15.7)") sr_w(:,:,isym, ip), tvec_w(:,isym,ip) !Writing rotation matrix and translation vector in Cartesian coordinates.
+            write(iun_lg, '("")')
+         enddo
+      ENDIF
+   enddo
+   CLOSE (iun_lg )
+   ! NsC <<
+   !
    do isym=1,nsym
       lfound=.false.
       do ip=1,np

@@ -107,11 +107,11 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
     CALL get_buffer ( evc0, lrwfc, iuwfc_wann, ik_eff )
     !! ... Retrive the ks function (in the Wannier Gauge)
     !
-    IF (irr_bz) THEN 
-       CALL find_index_1bz_smart_ibz(global_ik, iq, g_vect, ikq, isym) 
-    ELSE
+    !IF (irr_bz) THEN 
+    !   CALL find_index_1bz_smart_ibz(global_ik, iq, g_vect, ikq, isym) 
+    !ELSE
        CALL find_index_1bz_smart(global_ik, iq, g_vect, ikq) 
-    ENDIF 
+    !ENDIF 
     ! see also other implementations (more robust?)of the search inside compute_map_ikq_single.f90 
     ! if the search fails
     !
@@ -155,7 +155,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
     !
     DO iband = 1, num_wann
        !
-       IF (irr_bz) weight = wk(ik)*nspin
+       !IF (irr_bz) weight = wk(ik)*nspin
        WRITE(*,'("ik, ibndn, weight=", 2I5, 3F12.6)'), ik, iband, weight 
        !
        npw_k = ngk(ik)
@@ -169,11 +169,11 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
        evc_kq_r = ZERO
        CALL invfft_wave (npw_kq, igk_k_all (1,ikq), evc_kq_g , evc_kq_r )
        !
-       IF (irr_bz) THEN 
-          CALL rotate_evc(isym, phase, evc_kq_r)
-       ELSE 
+       !IF (irr_bz) THEN 
+       !   CALL rotate_evc(isym, phase, evc_kq_r)
+       !ELSE 
           evc_kq_r(:) = evc_kq_r(:)*phase(:)
-       ENDIF 
+       !ENDIF 
        !! ... Rotate the KS state in the IBZ with the symmetry operation to get the KS state
        !! ... at k+q 
        !
