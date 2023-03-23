@@ -59,7 +59,9 @@ setup_coulomb_exx.o\
 coulomb.o\
 find_ik_fbz.o\
 kcw_set_sym.o\
-rotate_evc.o
+rotate_evc.o \
+kcw_kpoint_grid.o\
+map_ikibz2ik.o\
 #restore_symm.o 
 #check_density.o 
 #setup_coulomb.o\

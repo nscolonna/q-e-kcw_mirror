@@ -78,7 +78,7 @@ subroutine kcw_setup
   !
   INTEGER   :: lrwfc, iun_qlist
   LOGICAL   :: exst, exst_mem
-  INTEGER :: iq, nqs
+  INTEGER :: iq, nqs, iq_eff
   REAL(DP) :: xq_(3)
   COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
   CHARACTER (LEN=256) :: filename, file_base
@@ -110,6 +110,7 @@ subroutine kcw_setup
   INTEGER                  :: wsym2sym(48, num_wann_occ)
   INTEGER                  :: iun_lg
   CHARACTER (len=60)       :: header
+  INTEGER, ALLOCATABLE     :: ik_ibz2ik(:)
   !
   ALLOCATE ( rhog (ngms) , delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
@@ -180,15 +181,16 @@ subroutine kcw_setup
      skip_equivalence=.false.
      nrot = nsym_w(1)
      s(:,:,1:nsym_w(1)) = s_w(:,:,1:nsym_w(1),1)
-     CALL kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
+     CALL kcw_kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
                       bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot_ibz, xk_ibz, wk_ibz)
-     WRITE(*,'("NICOLA nkstot, nsym", 2I5)') nkstot_ibz, nrot
-     IF (lsda) CALL set_kup_and_kdw( xk_ibz, wk_ibz, isk_ibz, nkstot_ibz, npk )
      WRITE(*,'("NICOLA nkstot, nsym", 2I5)') nkstot_ibz, nrot
      CALL cryst_to_cart(nkstot_ibz, xk_ibz, at, -1)
      WRITE(*,'("NICOLA xk", 3F10.4)') (xk_ibz(1:3,ik), ik=1,nkstot_ibz) 
      CALL cryst_to_cart(nkstot_ibz, xk_ibz, bg, 1)
-     WRITE(*,'("NICOLA xk", 3F10.4)') (xk_ibz(1:3,ik), ik=1,nkstot_ibz) 
+     IF (lsda) CALL set_kup_and_kdw( xk_ibz, wk_ibz, isk_ibz, nkstot_ibz, npk )
+     ALLOCATE (ik_ibz2ik (nkstot_ibz) )
+     CALL map_ikibz2ik (xk_ibz, nkstot_ibz, ik_ibz2ik, isk_ibz)
+     WRITE(*,*) ik_ibz2ik
      !CALL divide_et_impera( nkstot, xk, wk, isk, nks )
   ENDIF
   !
@@ -298,19 +300,21 @@ subroutine kcw_setup
   DO iq = 1, nqs
     !! For each q in the mesh 
     !
-    IF (irr_bz) THEN 
-     x_q(:,iq) = xk_ibz(:,iq)
-    ENDIF
-    xq_ = x_q(:,iq)
-    xq  = x_q(:,iq)
+    !IF (irr_bz) THEN 
+    ! x_q(:,iq) = xk_ibz(:,iq)
+    !ENDIF
+    iq_eff = iq 
+    IF (irr_bz) iq_eff = ik_ibz2ik(iq)
+    xq_ = x_q(:,iq_eff)
+    xq  = x_q(:,iq_eff)
     !
     ! IF (ionode) WRITE(iun_qlist,'(3f12.8)') xq_
     !
     lgamma_iq(iq)=(x_q(1,iq)==0.D0.AND.x_q(2,iq)==0.D0.AND.x_q(3,iq)==0.D0)
     CALL cryst_to_cart(1, xq_, at, -1)
     WRITE( stdout, '(/,8X, 78("="))')
-    WRITE( stdout, '(  8X, "iq = ", i5)') iq
-    WRITE( stdout, '(  8X, "The Wannier density at  q = ",3F12.7, "  [Cart ]")') x_q(:,iq)
+    WRITE( stdout, '(  8X, "iq = ", 2i5)') iq, iq_eff
+    WRITE( stdout, '(  8X, "The Wannier density at  q = ",3F12.7, "  [Cart ]")') xq(:)
     WRITE( stdout, '(  8X, "The Wannier density at  q = ",3F12.7, "  [Cryst]")') xq_(:)
     WRITE( stdout, '(  8X, 78("="),/)')
     !
@@ -331,7 +335,7 @@ subroutine kcw_setup
     rhowann(:,:)=ZERO
     !! Initialize the periodic part of the wannier orbtal density at this q
     !
-    CALL rho_of_q (rhowann, ngk_all, igk_k_all, iq)
+    CALL rho_of_q (rhowann, ngk_all, igk_k_all, iq_eff)
     ! Compute the peridic part rho_q(r) of the wannier density rho(r)
     ! rho(r)   = \sum_q exp[iqr]rho_q(r)
     !
@@ -340,6 +344,7 @@ subroutine kcw_setup
     ! Compute the Self Hartree
     weight(iq) = 1./nqs
     IF (irr_bz) weight(iq) = wk_ibz(iq) 
+    WRITE(*,*) "NICOLA", weight(iq)
     lrpa_save=lrpa
     lrpa = .true.
     DO i = 1, num_wann
@@ -352,7 +357,7 @@ subroutine kcw_setup
       rhor(:) = rhowann(:,i) 
       !! The periodic part of the orbital desity in real space
       !
-      CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
+      CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq_eff, delta_vr_, delta_vg_ )
       !! The periodic part of the perturbation DeltaV_q(G)
       WRITE(*,'(" iq = ", i5, " iwann = ", i5, " SH =", F12.8)') iq, i, &
                0.5D0 * REAL(sum (CONJG(rhog (:)) * vh_rhog(:))*weight(iq)*omega)
