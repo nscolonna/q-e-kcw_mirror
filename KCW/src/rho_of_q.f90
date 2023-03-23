@@ -9,7 +9,7 @@
 #define ONE (0.D0,1.D0)
 !#define DEBUG
 !-----------------------------------------------------------------------
-SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
+SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq, rhowann_k)
   !-----------------------------------------------------------------------
   !
   !! This sunroutine compute the periodic part of the Wannier density 
@@ -48,7 +48,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
   INTEGER :: iband, lrwfc 
   !! Band counter
   !
-  COMPLEX(DP), INTENT(OUT) :: rhowann(dffts%nnr, num_wann)
+  COMPLEX(DP), INTENT(OUT) :: rhowann(dffts%nnr, num_wann), rhowann_k(dffts%nnr, nkstot/nspin, num_wann)
   !! The periodic part of the wannier orbital density
   !
   COMPLEX(DP) ::  evc0_kq(npwx*npol, num_wann)
@@ -156,7 +156,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
     DO iband = 1, num_wann
        !
        !IF (irr_bz) weight = wk(ik)*nspin
-       WRITE(*,'("ik, ibndn, weight=", 2I5, 3F12.6)'), ik, iband, weight 
+       WRITE(*,'("ik, ibndn, weight=", 2I5, 3F12.6)') ik, iband, weight 
        !
        npw_k = ngk(ik)
        evc_k_g(:) =  evc0(:,iband)
@@ -183,6 +183,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all, iq)
        !
        !rhowann(:,iband) = rhowann(:,iband) + conjg(evc_k_r(:))*evc_kq_r(:)*phase(:)/weight !*wg(iband,ik)
        rhowann(:,iband) = rhowann(:,iband) + conjg(evc_k_r(:))*evc_kq_r(:)*weight !*wg(iband,ik)
+       rhowann_k(:,ik,iband) = conjg(evc_k_r(:))*evc_kq_r(:)*weight !*wg(iband,ik)
        ! ... The periodic part of the wannier-orbital density in real space
        ! ... rho_q(r) = sum_k [ evc_k,v(r)* evc_k+q,v(r)] = sum_k [ evc_k,v(r)* evc_k',v(r) exp[-iG_bar r]]
        ! 

@@ -63,6 +63,7 @@ subroutine kcw_setup
   USE io_kcw,           ONLY : write_rhowann
   !
   USE mp,               ONLY : mp_sum
+  USE mp_world,         ONLY :  mpime
   USE control_lr,       ONLY : lrpa
   !
   USE symm_base,        ONLY : s, t_rev, nrot, nsym, time_reversal, sr
@@ -80,7 +81,7 @@ subroutine kcw_setup
   LOGICAL   :: exst, exst_mem
   INTEGER :: iq, nqs, iq_eff
   REAL(DP) :: xq_(3)
-  COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
+  COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:), rhowann_k(:,:,:)
   CHARACTER (LEN=256) :: filename, file_base
   CHARACTER (LEN=6), EXTERNAL :: int_to_char
   !
@@ -165,7 +166,7 @@ subroutine kcw_setup
            s_w(:,:,isym,i) = s(:,:,wsym2sym(isym,i))
            sr_w(:,:,isym,i) = sr(:,:,wsym2sym(isym,i)) ! actually we know the map and we can select the rotation belonging to the
                                                        ! little group among all the symmetry of the system
-           ! here NEED to can add a check sr_w(from file) == sr_w (from index)
+           ! here NEED to add a check sr_w(from file) == sr_w (from index)
            WRITE(*,"(3f15.7)")  sr_w(:,:,isym, i), tvec_w(:,isym, i) 
            CALL cryst_to_cart(1, tvec_w(1:3,isym,i), at, -1)        ! fractional translation in crystal coord.
            ! here NEED to can add a check sr_w(from file) == sr_w (from index)
@@ -176,7 +177,6 @@ subroutine kcw_setup
         ENDDO
      ENDDO
      !
-     !CALL kcw_set_symm(dffts%nr1, dffts%nr2, dffts%nr3, dffts%nr1x, dffts%nr2x, dffts%nr3x)
      t_rev_eff=0
      skip_equivalence=.false.
      nrot = nsym_w(1)
@@ -191,7 +191,6 @@ subroutine kcw_setup
      ALLOCATE (ik_ibz2ik (nkstot_ibz) )
      CALL map_ikibz2ik (xk_ibz, nkstot_ibz, ik_ibz2ik, isk_ibz)
      WRITE(*,*) ik_ibz2ik
-     !CALL divide_et_impera( nkstot, xk, wk, isk, nks )
   ENDIF
   !
   ! ... Computes the number of occupied bands for each k point
@@ -226,6 +225,7 @@ subroutine kcw_setup
   !  ... Allocate relevant quantities ...
   !
   ALLOCATE (rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
+  ALLOCATE (rhowann_k ( dffts%nnr, nkstot/nspin, num_wann) )
   ALLOCATE ( evc0(npwx, num_wann) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   ALLOCATE ( sh(num_wann) )
@@ -300,9 +300,6 @@ subroutine kcw_setup
   DO iq = 1, nqs
     !! For each q in the mesh 
     !
-    !IF (irr_bz) THEN 
-    ! x_q(:,iq) = xk_ibz(:,iq)
-    !ENDIF
     iq_eff = iq 
     IF (irr_bz) iq_eff = ik_ibz2ik(iq)
     xq_ = x_q(:,iq_eff)
@@ -319,12 +316,12 @@ subroutine kcw_setup
     WRITE( stdout, '(  8X, 78("="),/)')
     !
     !IF (irr_bz) THEN
-    !  ! This is to find the small group of q and the corresponding IBZ(q)
-    !  CALL setup_nscf ( .FALSE., xq, .FALSE. )
-    !  CALL cryst_to_cart(nkstot, xk, at, -1)
-    !  WRITE(*,'("NICOLA nkstot, nsymq", 2I5)') nkstot, nsymq 
-    !  WRITE(*,'("NICOLA xk", 3F10.4)') (xk(1:3,ik), ik=1,nkstot) 
-    !  CALL cryst_to_cart(nkstot, xk, bg, 1)
+      !! This is to find the small group of q and the corresponding IBZ(q)
+      !CALL setup_nscf ( .FALSE., xq, .TRUE. )
+      !CALL cryst_to_cart(nkstot, xk, at, -1)
+      !WRITE(*,'("NICOLA nkstot, nsymq", 2I5)') nkstot, nsymq 
+      !WRITE(*,'("NICOLA xk", 3F10.4)') (xk(1:3,ik), ik=1,nkstot) 
+      !CALL cryst_to_cart(nkstot, xk, bg, 1)
     !ENDIF
     !
     ! CALL compute_map_ikq_single (iq)
@@ -335,7 +332,7 @@ subroutine kcw_setup
     rhowann(:,:)=ZERO
     !! Initialize the periodic part of the wannier orbtal density at this q
     !
-    CALL rho_of_q (rhowann, ngk_all, igk_k_all, iq_eff)
+    CALL rho_of_q (rhowann, ngk_all, igk_k_all, iq_eff, rhowann_k)
     ! Compute the peridic part rho_q(r) of the wannier density rho(r)
     ! rho(r)   = \sum_q exp[iqr]rho_q(r)
     !
@@ -359,6 +356,13 @@ subroutine kcw_setup
       !
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq_eff, delta_vr_, delta_vg_ )
       !! The periodic part of the perturbation DeltaV_q(G)
+      DO ik = 1, nkstot/nspin
+         !WRITE(*,'(3x, " ik = ", i5, " iwann = ", i5, " rhokq(1:3) =", 6F12.8)') ik, i,  rhowann_k(1:3,ik,i)
+         WRITE(*,'(3x, " ik = ", i5, " iwann = ", i5, " <rhokq|DV> =", F12.8)') ik, i, &
+                  0.5D0 * REAL(sum (CONJG(rhowann_k (:,ik,i)) * delta_vr(:,spin_component))/( dffts%nnr))*weight(iq)
+      ENDDO
+      WRITE(*,'(" iq = ", i5, " iwann = ", i5, " <rho|DV> =", F12.8)') iq, i, &
+               0.5D0 * REAL(sum (CONJG(rhor (:)) * delta_vr(:,spin_component))/dffts%nnr)*weight(iq)
       WRITE(*,'(" iq = ", i5, " iwann = ", i5, " SH =", F12.8)') iq, i, &
                0.5D0 * REAL(sum (CONJG(rhog (:)) * vh_rhog(:))*weight(iq)*omega)
       ! 

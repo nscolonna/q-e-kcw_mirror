@@ -87,11 +87,11 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
   ENDDO
 
   IF ( skip_equivalence ) THEN
-    CALL infomsg('kpoint_grid', 'ATTENTION: skip check of k-points equivalence')
+    CALL infomsg('kcw_kpoint_grid', 'ATTENTION: skip check of k-points equivalence')
     wkk = 1.d0
   ELSE
     DO nk=1,nkr
-    WRITE(*,*) "NICOLAi ik=", nk
+    WRITE(*,*) "NICOLA ik=", nk
     WRITE(*,'(a,3F12.4)') "NICOLA xk(ik)=", xkg(:,nk)
     !  check if this k-point has already been found equivalent to another
       IF (equiv(nk) == nk) THEN
@@ -124,7 +124,7 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
                  wkk(nk)=wkk(nk)+1.0d0
                  WRITE(*,'(a,3i5, 1F8.4)') "NICOLA", n, equiv(n), nk, wkk(nk)
               ELSE
-                 IF (equiv(n)/=nk .or. n<nk ) CALL errore('kpoint_grid', &
+                 IF (equiv(n)/=nk .or. n<nk ) CALL errore('kcw_kpoint_grid', &
                     'something wrong in the checking algorithm',1)
               ENDIF
            ENDIF
