@@ -14,6 +14,7 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
   USE kinds, ONLY: DP
   USE klist,                 ONLY : xk
   USE cell_base,             ONLY : at
+  USE io_global,             ONLY : stdout
   !
   IMPLICIT NONE
   !
@@ -55,7 +56,7 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
   !
   REAL(DP) :: xkr(3), fact, xx, yy, zz
   REAL(DP), ALLOCATABLE :: xkg(:,:), wkk(:)
-  INTEGER :: nkr, i, j, k, ns, n, nk
+  INTEGER :: nkr, i, j, k, ns, n, nk, nkk
   INTEGER, ALLOCATABLE :: equiv(:)
   LOGICAL :: in_the_list
   REAL(DP), PARAMETER :: eps=1.0d-5
@@ -91,8 +92,8 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
     wkk = 1.d0
   ELSE
     DO nk=1,nkr
-    WRITE(*,*) "NICOLA ik=", nk
-    WRITE(*,'(a,3F12.4)') "NICOLA xk(ik)=", xkg(:,nk)
+    !WRITE(*,*) "NICOLA ik=", nk
+    !WRITE(*,'(a,3F12.4)') "NICOLA xk(ik)=", xkg(:,nk)
     !  check if this k-point has already been found equivalent to another
       IF (equiv(nk) == nk) THEN
         wkk(nk)   = 1.0d0
@@ -100,7 +101,7 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
         !  (excepted those previously found to be equivalent to another)
         !  check both k and -k
         DO ns=1,nrot
-           WRITE(*,*) "NICOLA is=", ns
+           !WRITE(*,*) "NICOLA is=", ns
            DO i=1,3
               xkr(i) = s(i,1,ns) * xkg(1,nk) &
                      + s(i,2,ns) * xkg(2,nk) &
@@ -122,7 +123,7 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
               IF (n>nk .and. equiv(n)==n) THEN
                  equiv(n) = nk
                  wkk(nk)=wkk(nk)+1.0d0
-                 WRITE(*,'(a,3i5, 1F8.4)') "NICOLA", n, equiv(n), nk, wkk(nk)
+                 !WRITE(*,'(a,3i5, 1F8.4)') "NICOLA", n, equiv(n), nk, wkk(nk)
               ELSE
                  IF (equiv(n)/=nk .or. n<nk ) CALL errore('kcw_kpoint_grid', &
                     'something wrong in the checking algorithm',1)
@@ -154,7 +155,6 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
   ENDIF
 
   !  count irreducible points and order them
-
   nks=0
   fact=0.0d0
   DO nk=1,nkr
@@ -169,14 +169,31 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
         ENDDO
      ENDIF
   ENDDO
-  WRITE(*,*) "NICOLA nks, nrot", nks, nrot
   !  go to cartesian axis (in units 2pi/a0)
   CALL cryst_to_cart(nks,xk_,bg,1)
   !  normalize weights to one
   DO nk=1,nks
      wk(nk) = wk(nk)/fact
   ENDDO
-
+  !
+  ! Summary of the search 
+  WRITE(stdout, '(3x,"ik_IBZ   ik        equivalent ik in the full BZ")') 
+  DO nk=1,nkr
+     IF (equiv(nk)==nk) THEN
+        WRITE (stdout,'(i5, 4x, i5, a)', advance='no') nks, nk, " <-- "
+        DO nkk = 1, nkr
+          IF (equiv(nkk)==nk) THEN
+             WRITE (stdout,'(i5)', advance='no') nkk
+          ENDIF
+        ENDDO
+     write(stdout,*)
+     ENDIF
+     FLUSH(stdout)
+  ENDDO
+  !
+  WRITE(stdout,'(/, 3x, "nkstot_IBZ=", i5, " nsym", I5)') nks, nrot
+  WRITE(stdout,'(3x, "xk (",i5, ")", 3F10.4,3x, F10.6)') (nk, xk_(1:3,nk), wk(nk), nk=1,nks) 
+  !
   DEALLOCATE(equiv)
   DEALLOCATE(xkg,wkk)
 

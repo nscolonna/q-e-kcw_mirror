@@ -62,6 +62,7 @@ kcw_set_sym.o\
 rotate_evc.o \
 kcw_kpoint_grid.o\
 map_ikibz2ik.o\
+kcw_symm.o
 #restore_symm.o 
 #check_density.o 
 #setup_coulomb.o\

@@ -66,11 +66,13 @@ subroutine kcw_setup
   USE mp_world,         ONLY :  mpime
   USE control_lr,       ONLY : lrpa
   !
-  USE symm_base,        ONLY : s, t_rev, nrot, nsym, time_reversal, sr
+  USE symm_base,        ONLY : s, t_rev, nrot, nsym, time_reversal, sr, ft
   USE start_k,          ONLY : nk1, nk2, nk3, k1, k2, k3
   !
   USE lr_symm_base,     ONLY : nsymq
   USE qpoint,           ONLY : xq
+  !
+  USE kcw_symm,         ONLY : nsym_w, s_w
   !
   implicit none
 
@@ -104,14 +106,12 @@ subroutine kcw_setup
   integer :: isk_ibz(npk), nkstot_ibz
   real(DP) :: xk_ibz(3,npk), wk_ibz(npk)
   !
-  INTEGER,  EXTERNAL       :: find_free_unit
-  INTEGER                  :: nsym_w(num_wann_occ)
-  REAL(DP)                 :: sr_w (3,3,48,num_wann_occ) ! rotation in cart. coord
-  INTEGER(DP)              :: s_w (3,3,48,num_wann_occ) ! rotation in Crystal coord
-  REAL(DP)                 :: ft_w (3,48,num_wann_occ) ! fractional translation in cartesian coord.
-  INTEGER                  :: wsym2sym(48, num_wann_occ)
-  INTEGER                  :: iun_lg, ipol, ierr
-  CHARACTER (len=60)       :: header
+  !INTEGER, ALLOCATABLE     :: nsym_w(:)
+  !REAL(DP)                 :: sr_w (3,3,48,num_wann_occ) ! rotation in cart. coord
+  !INTEGER(DP)              :: s_w (3,3,48,num_wann_occ) ! rotation in Crystal coord
+  !REAL(DP)                 :: ft_w (3,48,num_wann_occ) ! fractional translation in cryst. coord.
+  !REAL(DP)                 :: ftcart_w (3,48,num_wann_occ) ! fractional translation in cartesian coord.
+  !INTEGER                  :: wsym2sym(48, num_wann_occ)
   INTEGER, ALLOCATABLE     :: ik_ibz2ik(:)
   !
   ALLOCATE ( rhog (ngms) , delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
@@ -141,83 +141,6 @@ subroutine kcw_setup
      !if (dft_is_gradient()) call compute_ux(m_loc,ux,nat)
   ENDIF
   !
-  IF (irr_bz) THEN 
-     !
-     wsym2sym  = 0
-     sr_w =0.D0
-     ft_w = 0.D0
-     nsym_w = 0
-     !
-     filename=TRIM(seedname)//'.lg'
-     INQUIRE( file=filename, exist=exst )
-     IF ( .NOT. exst) THEN 
-        CALL infomsg('kcw_setup','WARNING: file with Wannier symmetry subgroup NOT FOUND. &
-                Going to Use the full BZ')
-        irr_bz = .false.
-        GOTO 101
-     ENDIF 
-     !
-     iun_lg=find_free_unit()
-     WRITE(stdout,'(/,5x, a,2x, a)') "Reading Wanniey symmetry subgroup from:", TRIM(filename)
-     OPEN (UNIT = iun_lg, FILE = filename, FORM = 'formatted', STATUS = 'old', IOSTAT=ierr )
-     IF (ierr /= 0 ) call errore('kcw_setup', 'Error while reading Wannier symmetry subgroup', abs (ierr) )
-     !write(*,*) filename
-     READ (iun_lg,*) header
-     !WRITE(*,*) header 
-     READ (iun_lg,*)
-     DO i = 1, num_wann_occ
-        READ(iun_lg,*) iwann, nsym_w(i)
-        write(stdout,'(/, 5x, a, 2x, i5, 2x, a, i4)') "Symmetry subgroup of iwann =", i
-        write(stdout,"(5x,a,i5,/)") "Number of symmetry operations = ", nsym_w(i)
-        READ(iun_lg, "(2x, 10i4)") (wsym2sym(isym, i), isym=1,nsym_w(i))
-        !write(stdout,"(5x, a)") "Map isym_wann --> isym"
-        !write(stdout,"(5x, 10i4)")  wsym2sym(1:nsym_w(i), i)
-        DO isym = 1, nsym_w(i)
-           READ(iun_lg,"(3f15.7)") sr_w(:,:,isym, i), ft_w(:,isym, i) !reading rotation matrix and translation vector in Cartesian coordinates.
-           s_w(:,:,isym,i) = s(:,:,wsym2sym(isym,i))
-           sr_w(:,:,isym,i) = sr(:,:,wsym2sym(isym,i)) ! actually we know the map and we can select the rotation belonging to the
-                                                       ! little group among all the symmetry of the system
-           ! here NEED to add a check sr_w(from file) == sr_w (from index)
-           ! Cartisian coordinates
-           write(stdout,"(2x,a, i4, a, i4, a/)") "isym_w = ", isym, " ( --> isym =", wsym2sym(isym, i), ")"
-           WRITE( stdout, '(1x,"cart. ",3x,"s_w(",i2,") = (",3f11.7, &
-                &        " )    f =( ",f10.7," )")') &
-                isym, (sr_w(1,ipol,isym,i),ipol=1,3), ft_w(1,isym,i)
-           WRITE( stdout, '(19x," (",3f11.7, " )       ( ",f10.7," )")') &
-                (sr_w(2,ipol,isym,i),ipol=1,3), ft_w(2,isym,i)
-           WRITE( stdout, '(19x," (",3f11.7, " )       ( ",f10.7," )"/)') &
-                (sr_w(3,ipol,isym,i),ipol=1,3), ft_w(3,isym,i)
-           !
-           ! Crystal coordinates
-           CALL cryst_to_cart(1, ft_w(1:3,isym,i), at, -1)        ! fractional translation in crystal coord.
-           WRITE( stdout, '(1x,"cryst.",3x,"s_w(",i2,") = (",3(i6,5x), &
-                &        " )    f =( ",f10.7," )")') &
-                isym, (s_w(1,ipol,isym,i),ipol=1,3), ft_w(1,isym,i)
-           WRITE( stdout, '(19x," (",3(i6,5x), " )       ( ",f10.7," )")') &
-                (s_w(2,ipol,isym,i),ipol=1,3), ft_w(2,isym,i)
-           WRITE( stdout, '(19x," (",3(i6,5x), " )       ( ",f10.7," )"/)') &
-                (s_w(3,ipol,isym,i),ipol=1,3), ft_w(3,isym,i)
-           !
-           READ(iun_lg,*)
-           !WRITE(*,*)
-        ENDDO
-     ENDDO
-     !
-     t_rev_eff=0
-     skip_equivalence=.false.
-     nrot = nsym_w(1)
-     s(:,:,1:nsym_w(1)) = s_w(:,:,1:nsym_w(1),1)
-     CALL kcw_kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
-                      bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot_ibz, xk_ibz, wk_ibz)
-     IF (lsda) CALL set_kup_and_kdw( xk_ibz, wk_ibz, isk_ibz, nkstot_ibz, npk )
-     ALLOCATE (ik_ibz2ik (nkstot_ibz) )
-     CALL map_ikibz2ik (xk_ibz, nkstot_ibz, ik_ibz2ik, isk_ibz)
-     ! FIXME: This is to make sure kcw_kpoint_grid does find irreducible k-points
-     ! that are in the original set of k-points (full BZ from Wannier).
-     ! In principle it should not be needed or can be incorporate in kcw_point_grid
-  ENDIF
-101 CONTINUE
-  !
   ! ... Computes the number of occupied bands for each k point
   !
   call setup_nbnd_occ ( ) 
@@ -234,6 +157,7 @@ subroutine kcw_setup
        WRITE(stdout,'(/,5X, "INFO: Buffer for KS wfcs, OPENED")')
   !
   ! ... READ the U matrix from Wannier and set the toal number of WFs
+  ! ... and possibly READ Wannier symmertry subgroups
   !
   IF (read_unitary_matrix) THEN 
     !
@@ -256,6 +180,21 @@ subroutine kcw_setup
   ALLOCATE ( sh(num_wann) )
   sh(:) = CMPLX(0.D0,0.D0,kind=DP)
   occ_mat = 0.D0
+  !
+  IF (irr_bz) THEN 
+     t_rev_eff=0
+     skip_equivalence=.false.
+     nrot = nsym_w(1)
+     s(:,:,1:nsym_w(1)) = s_w(:,:,1:nsym_w(1),1)
+     CALL kcw_kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
+                      bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot_ibz, xk_ibz, wk_ibz)
+     IF (lsda) CALL set_kup_and_kdw( xk_ibz, wk_ibz, isk_ibz, nkstot_ibz, npk )
+     ALLOCATE (ik_ibz2ik (nkstot_ibz) )
+     CALL map_ikibz2ik (xk_ibz, nkstot_ibz, ik_ibz2ik, isk_ibz)
+     ! FIXME: This is to make sure kcw_kpoint_grid does find irreducible k-points
+     ! that are in the original set of k-points (full BZ from Wannier).
+     ! In principle it should not be needed or can be incorporate in kcw_point_grid
+  ENDIF
   !
   ! ... Open a new buffer to store the KS states in the WANNIER gauge
   !

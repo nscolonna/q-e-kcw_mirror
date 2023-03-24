@@ -36,6 +36,7 @@ subroutine read_wannier ()
    !
    ! ... Separate wannierization (No occ-emp mixing)
    CALL read_wannier_two_manifold ( )
+   CALL read_wannier_symmetry ()
    !
   ENDIF
   !
@@ -364,7 +365,7 @@ END subroutine read_wannier_unique_manifold
     DO i = 1, num_wann_occ; unimatrx_opt(i,i,:) = CMPLX(1.D0, 0.D0, kind=DP); ENDDO
     DEALLOCATE (unimatrx_occ)
     !
-    RETURN   ! Nothing more to do
+    RETURN  !nothing else to do
     !
   ENDIF
   !
@@ -564,3 +565,164 @@ END subroutine read_wannier_unique_manifold
   RETURN
   !
 END subroutine read_wannier_two_manifold
+!
+!
+!-----------------------------------------------------------------------
+SUBROUTINE read_wannier_symmetry ()
+  !
+  USE symm_base,            ONLY : s, sr, ft
+  USE cell_base,            ONLY : bg
+  USE control_kcw,          ONLY : irr_bz, num_wann, num_wann_occ, &
+                                   num_wann_emp, seedname, have_empty
+  USE io_global,            ONLY : stdout
+  USE kcw_symm
+  !
+  IMPLICIT NONE 
+  !
+  INTEGER,  EXTERNAL       :: find_free_unit
+  INTEGER                  :: iun_lg, ipol, i, ieff
+  CHARACTER (len=60)       :: header
+  LOGICAL                  :: exst
+  CHARACTER (LEN=256)      :: filename
+  INTEGER                  :: isym, iwann, ierr
+  !
+  IF ( .NOT. irr_bz) RETURN 
+  !
+  ALLOCATE ( nsym_w(num_wann) )
+  ALLOCATE ( sr_w(3,3,48,num_wann) )
+  ALLOCATE ( s_w(3,3,48,num_wann) )
+  ALLOCATE ( ft_w(3,48,num_wann) )
+  ALLOCATE ( ftcart_w(3,48,num_wann) )
+  ALLOCATE ( wsym2sym(48,num_wann) )
+  !
+  wsym2sym  = 0
+  sr_w =0.D0
+  ft_w = 0.D0
+  ftcart_w = 0.00
+  nsym_w = 0
+  !
+  ! #################
+  ! # OCC. MANIFOLD #
+  ! #################
+  filename=TRIM(seedname)//'.lg'
+  INQUIRE( file=filename, exist=exst )
+  IF ( .NOT. exst) THEN
+     CALL infomsg('kcw_setup','WARNING: file with Wannier symmetry subgroup occ. manifold &
+             NOT FOUND. Going to Use the full BZ')
+     irr_bz = .false.
+     GOTO 101
+  ENDIF
+  !
+  iun_lg=find_free_unit()
+  OPEN (UNIT = iun_lg, FILE = filename, FORM = 'formatted', STATUS = 'old', IOSTAT=ierr )
+  IF (ierr /= 0 ) call errore('kcw_setup', 'Error while reading Wannier symmetry subgroup', abs (ierr) )
+  WRITE(stdout,'(/,5x, a,2x, a)') "Reading Wanniey symmetry subgroup from:", TRIM(filename)
+  READ (iun_lg,*) header
+  READ (iun_lg,*)
+  !
+  DO i = 1, num_wann_occ
+     READ(iun_lg,*) iwann, nsym_w(i)
+     write(stdout,'(/, 5x, a, 2x, i5, 2x, a, i4)') "Symmetry subgroup of iwann =", i
+     write(stdout,"(5x,a,i5,/)") "Number of symmetry operations = ", nsym_w(i)
+     READ(iun_lg, "(2x, 10i4)") (wsym2sym(isym, i), isym=1,nsym_w(i))
+     !write(stdout,"(5x, a)") "Map isym_wann --> isym"
+     !write(stdout,"(5x, 10i4)")  wsym2sym(1:nsym_w(i), i)
+     DO isym = 1, nsym_w(i)
+        READ(iun_lg,"(3f15.7)") sr_w(:,:,isym, i), ftcart_w(:,isym, i) !reading rotation matrix and translation vector in Cartesian coordinates.
+        ft_w(:,isym,i) = ft(:,wsym2sym(isym,i))
+        ftcart_w(:,:,:) = ft_w(:,:,:)
+        CALL cryst_to_cart(1, ftcart_w(1:3,isym,i), bg, 1)        ! fractional translation in crystal coord.
+        s_w(:,:,isym,i) = s(:,:,wsym2sym(isym,i))
+        sr_w(:,:,isym,i) = sr(:,:,wsym2sym(isym,i)) ! actually we know the map and we can select the rotation belonging to the
+                                                    ! little group among all the symmetry of the system
+        ! here NEED to add a check sr_w(from file) == sr_w (from index)
+        ! Cartisian coordinates
+        write(stdout,"(2x,a, i4, a, i4, a/)") "isym_w = ", isym, " ( --> isym =", wsym2sym(isym, i), ")"
+        WRITE( stdout, '(1x,"cart. ",3x,"s_w(",i2,") = (",3f11.7, &
+             &        " )    f =( ",f10.7," )")') &
+             isym, (sr_w(1,ipol,isym,i),ipol=1,3), ftcart_w(1,isym,i)
+        WRITE( stdout, '(19x," (",3f11.7, " )       ( ",f10.7," )")') &
+             (sr_w(2,ipol,isym,i),ipol=1,3), ftcart_w(2,isym,i)
+        WRITE( stdout, '(19x," (",3f11.7, " )       ( ",f10.7," )"/)') &
+             (sr_w(3,ipol,isym,i),ipol=1,3), ftcart_w(3,isym,i)
+        !
+        ! Crystal coordinates
+        WRITE( stdout, '(1x,"cryst.",3x,"s_w(",i2,") = (",3(i6,5x), &
+             &        " )    f =( ",f10.7," )")') &
+             isym, (s_w(1,ipol,isym,i),ipol=1,3), ft_w(1,isym,i)
+        WRITE( stdout, '(19x," (",3(i6,5x), " )       ( ",f10.7," )")') &
+             (s_w(2,ipol,isym,i),ipol=1,3), ft_w(2,isym,i)
+        WRITE( stdout, '(19x," (",3(i6,5x), " )       ( ",f10.7," )"/)') &
+             (s_w(3,ipol,isym,i),ipol=1,3), ft_w(3,isym,i)
+        !
+        READ(iun_lg,*)
+        !WRITE(*,*)
+     ENDDO
+  ENDDO
+  CLOSE (iun_lg)
+101 CONTINUE
+  !
+  IF (.NOT. have_empty) RETURN ! nothing else to do
+  !
+  filename=TRIM(seedname)//'_emp.lg'
+  INQUIRE( file=filename, exist=exst )
+  IF ( .NOT. exst) THEN
+     CALL infomsg('kcw_setup','WARNING: file with Wannier symmetry subgroup emp. manifold &
+             NOT FOUND. Going to Use the full BZ')
+     irr_bz = .false.
+     GOTO 102
+  ENDIF
+  !
+  iun_lg=find_free_unit()
+  OPEN (UNIT = iun_lg, FILE = filename, FORM = 'formatted', STATUS = 'old', IOSTAT=ierr )
+  IF (ierr /= 0 ) call errore('read_wannier_symmetry', 'Error while reading Wannier symmetry subgroup', abs (ierr) )
+  WRITE(stdout,'(/,5x, a,2x, a)') "Reading Wanniey symmetry subgroup from:", TRIM(filename)
+  READ (iun_lg,*) header
+  READ (iun_lg,*)
+  !
+  DO i = 1, num_wann_emp
+     ieff=num_wann_occ+i
+     READ(iun_lg,*) iwann, nsym_w(ieff)
+     write(stdout,'(/, 5x, a, 2x, i5, 2x, a, i4)') "Symmetry subgroup of iwann =", ieff
+     write(stdout,"(5x,a,i5,/)") "Number of symmetry operations = ", nsym_w(ieff)
+     READ(iun_lg, "(2x, 10i4)") (wsym2sym(isym, ieff), isym=1,nsym_w(ieff))
+     !write(stdout,"(5x, a)") "Map isym_wann --> isym"
+     !write(stdout,"(5x, 10i4)")  wsym2sym(1:nsym_w(ieff), ieff)
+     DO isym = 1, nsym_w(ieff)
+        READ(iun_lg,"(3f15.7)") sr_w(:,:,isym, ieff), ftcart_w(:,isym, ieff) !reading rotation matrix and translation vector in Cartesian coordinates.
+        ft_w(:,isym,ieff) = ft(:,wsym2sym(isym,ieff))
+        ftcart_w(:,:,:) = ft_w(:,:,:)
+        CALL cryst_to_cart(1, ftcart_w(1:3,isym,ieff), bg, 1)        ! fractional translation in crystal coord.
+        s_w(:,:,isym,ieff) = s(:,:,wsym2sym(isym,ieff))
+        sr_w(:,:,isym,ieff) = sr(:,:,wsym2sym(isym,ieff)) ! actually we know the map and we can select the rotation belonging to the
+                                                    ! little group among all the symmetry of the system
+        ! here NEED to add a check sr_w(from file) == sr_w (from index)
+        ! Cartisian coordinates
+        write(stdout,"(2x,a, i4, a, i4, a/)") "isym_w = ", isym, " ( --> isym =", wsym2sym(isym, ieff), ")"
+        WRITE( stdout, '(1x,"cart. ",3x,"s_w(",i2,") = (",3f11.7, &
+             &        " )    f =( ",f10.7," )")') &
+             isym, (sr_w(1,ipol,isym,ieff),ipol=1,3), ftcart_w(1,isym,ieff)
+        WRITE( stdout, '(19x," (",3f11.7, " )       ( ",f10.7," )")') &
+             (sr_w(2,ipol,isym,ieff),ipol=1,3), ftcart_w(2,isym,ieff)
+        WRITE( stdout, '(19x," (",3f11.7, " )       ( ",f10.7," )"/)') &
+             (sr_w(3,ipol,isym,ieff),ipol=1,3), ftcart_w(3,isym,ieff)
+        !
+        ! Crystal coordinates
+        WRITE( stdout, '(1x,"cryst.",3x,"s_w(",i2,") = (",3(i6,5x), &
+             &        " )    f =( ",f10.7," )")') &
+             isym, (s_w(1,ipol,isym,ieff),ipol=1,3), ft_w(1,isym,ieff)
+        WRITE( stdout, '(19x," (",3(i6,5x), " )       ( ",f10.7," )")') &
+             (s_w(2,ipol,isym,ieff),ipol=1,3), ft_w(2,isym,ieff)
+        WRITE( stdout, '(19x," (",3(i6,5x), " )       ( ",f10.7," )"/)') &
+             (s_w(3,ipol,isym,ieff),ipol=1,3), ft_w(3,isym,ieff)
+        !
+        READ(iun_lg,*)
+        !WRITE(*,*)
+     ENDDO
+  ENDDO
+  CLOSE (iun_lg)
+102 CONTINUE
+  !
+  RETURN
+  !
+END SUBROUTINE
