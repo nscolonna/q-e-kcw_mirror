@@ -14,11 +14,6 @@
 SUBROUTINE  map_ikibz2ik (xk_ibz, nkstot_ibz, ik_ibz2ik, isk_ibz)
   !-----------------------------------------------------------------------
   !
-  !! Given the index of the kpoint in the IBZ (ik), this routine 
-  !! finds the corresponding index of the kpoint in the full BZ
-  !! Needed to "select" the correct U matrix read from W90
-  !! 
-  !
   USE kinds,                 ONLY : DP
   USE control_kcw,           ONLY: xk_fbz, mp1, mp2, mp3
   USE klist,                 ONLY :xk, nkstot, nks
@@ -50,7 +45,7 @@ SUBROUTINE  map_ikibz2ik (xk_ibz, nkstot_ibz, ik_ibz2ik, isk_ibz)
          CYCLE
       ENDIF
     ENDDO
-    write(*,*) ik_ibz, ik_ibz2ik(ik_ibz)
+    !write(*,*) ik_ibz, ik_ibz2ik(ik_ibz)
   ENDDO 
   IF ( ANY (.NOT. found)) CALL errore('map ikibz2ik', 'No match found',1)
   !

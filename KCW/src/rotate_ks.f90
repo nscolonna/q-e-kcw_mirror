@@ -61,7 +61,6 @@ SUBROUTINE rotate_ks ()
   !
   ! ... Loop over k_point
   !
-  WRITE(*,*) "NICOLA DBG nks=", nks
   k_loop: DO ik = 1, nks
      !
      current_k = ik

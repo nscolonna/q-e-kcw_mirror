@@ -49,7 +49,10 @@ set(src_kcw
     coulomb.f90
     find_ik_fbz
     rotate_evc
-    kcw_set_sym)
+    kcw_set_sym
+    rotate_evc
+    kcw_kpoint_grid
+    map_ikibz2ik)
 
 qe_add_library(qe_kcw ${src_kcw})
 target_link_libraries(
