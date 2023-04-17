@@ -725,7 +725,7 @@ MODULE io_kcw
      !
      IF ( nbnd_ < num_wann ) THEN
         WRITE (msg,'("The number of bands for this run is",I6,", but only",&
-             & I6," bands were read from file")')  nbnd, nbnd_  
+             & I6," bands were read from file")')  num_wann, nbnd_
         CALL errore ('pw_restart - read_collected_wfc', msg, 1 )
      END IF
      !
