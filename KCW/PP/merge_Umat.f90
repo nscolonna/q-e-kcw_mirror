@@ -50,7 +50,7 @@ PROGRAM merge
    write(*, '(3I12)') nk1, nb1, nb1
    ni=1+nb1_
    nf=nb1+nb1_
-   write(*,*) ni, nf
+   write(*,*) ni, nf, nb1_
    do ik = 1, nk1
       read (27, *)
       !write(*,*) 
@@ -61,7 +61,7 @@ PROGRAM merge
       !write (* , '(f15.10,sp,f15.10)') ((U(ib, jb, ik), ib=ni, nf), jb=ni, nf)
       !read (27, *) ((U(ib, jb, ik), ib=ni, nf), jb=ni, nf)
    enddo
-   nb1_=nb1
+   nb1_=nb1_+nb1
    close(27)
    !
  end do
