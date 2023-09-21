@@ -14,8 +14,7 @@ SUBROUTINE run_pwscf( exit_status )
   !
   !! Run an instance of the Plane Wave Self-Consistent Field code 
   !! MPI initialization and input data reading is performed in the 
-  !! calling code - returns in exit_status the exit code for pw.x, 
-  !! returned in the shell. Values are:  
+  !! calling code - returns in exit_status the exit code for pw.x:
   !! * 0: completed successfully
   !! * 1: an error has occurred (value returned by the errore() routine)
   !! * 2-127: convergence error
@@ -27,6 +26,10 @@ SUBROUTINE run_pwscf( exit_status )
   !!     (note: in the future, check_stop_now could also return a value
   !!     to specify the reason of exiting, and the value could be used
   !!     to return a different value for different reasons)
+  !! @Note
+  !! 20/04/23 Unless preprocessing flag __RETURN_EXIT_STATUS is set (see
+  !! routine do_stop) pw.x no longer returns an exit status != 0  to the shell
+  !! @endnote
   !
   !! @Note
   !! 10/01/17 Samuel Ponce: Add Ford documentation
@@ -67,6 +70,11 @@ SUBROUTINE run_pwscf( exit_status )
 #if defined (__ENVIRON)
   USE plugin_flags,      ONLY : use_environ
   USE environ_pw_module, ONLY : is_ms_gcs, init_ms_gcs
+#endif
+#if defined (__OSCDFT)
+  USE plugin_flags,      ONLY : use_oscdft
+  USE oscdft_base,       ONLY : oscdft_ctx
+  USE oscdft_functions,  ONLY : oscdft_run_pwscf
 #endif
   !
   IMPLICIT NONE
@@ -171,11 +179,19 @@ SUBROUTINE run_pwscf( exit_status )
      !
      ! ... electronic self-consistency or band structure calculation
      !
+#if defined (__OSCDFT)
+     IF (use_oscdft) THEN
+        CALL oscdft_run_pwscf(oscdft_ctx)
+     ELSE
+#endif
      IF ( .NOT. lscf) THEN
         CALL non_scf()
      ELSE
         CALL electrons()
      END IF
+#if defined (__OSCDFT)
+     END IF
+#endif
      !
      ! ... code stopped by user or not converged
      !

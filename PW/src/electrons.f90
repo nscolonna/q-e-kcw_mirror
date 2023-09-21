@@ -56,6 +56,9 @@ SUBROUTINE electrons()
   !
   USE add_dmft_occ,         ONLY : dmft
   USE rism_module,          ONLY : lrism, rism_calc3d
+  USE makovpayne,           ONLY : makov_payne
+  USE vlocal,               ONLY : strf, vloc
+  USE ions_base,            ONLY : tau
   !
   IMPLICIT NONE
   !
@@ -332,7 +335,10 @@ SUBROUTINE electrons()
         ENDIF
         !
         IF ( dexx < tr2_final ) THEN
-           IF ( do_makov_payne ) CALL makov_payne( etot )
+           IF ( do_makov_payne ) CALL makov_payne( etot, tau, &
+                rho%of_r(:,1), rho%of_g(:,1), strf, vloc, gamma_only,&
+                etot_in_hartree = .false., output_in_hartree = .false., &
+                vacuum_level = .true. )
            WRITE( stdout, 9101 )
            RETURN
         ENDIF
@@ -407,7 +413,7 @@ SUBROUTINE electrons_scf ( printout, exxen )
                                    two_fermi_energies, tot_charge
   USE fixed_occ,            ONLY : one_atom_occupations
   USE lsda_mod,             ONLY : lsda, nspin, magtot, absmag, isk
-  USE vlocal,               ONLY : strf
+  USE vlocal,               ONLY : strf, vloc
   USE wvfct,                ONLY : nbnd, et
   USE gvecw,                ONLY : ecutwfc
   USE ener,                 ONLY : etot, hwf_energy, eband, deband, ehart, &
@@ -425,7 +431,7 @@ SUBROUTINE electrons_scf ( printout, exxen )
                                    gamma_only, iverbosity, textfor,     &
                                    llondon, ldftd3, scf_must_converge, lxdm, ts_vdw, &
                                    mbd_vdw, use_gpu
-  USE control_flags,        ONLY : n_scf_steps, scf_error, scissor
+  USE control_flags,        ONLY : n_scf_steps, scf_error, scissor, gamma_only
   USE sci_mod,              ONLY : sci_iter
 
   USE io_files,             ONLY : iunmix, output_drho
@@ -469,11 +475,20 @@ SUBROUTINE electrons_scf ( printout, exxen )
   USE scf_gpum,             ONLY : using_vrs
   USE device_fbuff_m,       ONLY : dev_buf, pin_buf
   USE pwcom,                ONLY : report_mag 
+  USE makovpayne,           ONLY : makov_payne
   !
 #if defined (__ENVIRON)
   USE plugin_flags,         ONLY : use_environ
   USE environ_base_module,  ONLY : calc_environ_energy, print_environ_energies
   USE environ_pw_module,    ONLY : calc_environ_potential
+#endif
+#if defined (__OSCDFT)
+  USE plugin_flags,         ONLY : use_oscdft
+  USE oscdft_base,          ONLY : oscdft_ctx
+  USE oscdft_functions,     ONLY : oscdft_electrons,&
+                                   oscdft_scf_energy,&
+                                   oscdft_print_energies,&
+                                   oscdft_print_ns
 #endif
   !
   IMPLICIT NONE
@@ -524,8 +539,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
   REAL(DP), EXTERNAL :: ewald, get_clock
   REAL(DP) :: etot_cmp_paw(nat,2,2)
   ! 
-  REAL(DP) :: latvecs(3,3)
-  !! auxiliary variables for grimme-d3
+  REAL(DP), ALLOCATABLE :: taupbc(:,:)
+  !! atomic positions centered around r=0 - for grimme-d3
   INTEGER:: atnum(1:nat), na
   !! auxiliary variables for grimme-d3
   LOGICAL :: lhb
@@ -571,14 +586,18 @@ SUBROUTINE electrons_scf ( printout, exxen )
   !
   IF (ldftd3) THEN
      CALL start_clock('energy_dftd3')
-     latvecs(:,:)=at(:,:)*alat
-     tau(:,:)=tau(:,:)*alat
+     ! taupbc are atomic positions in alat units, centered around r=0
+     ALLOCATE ( taupbc(3,nat) )
+     taupbc(:,:) = tau(:,:)
+     CALL cryst_to_cart( nat, taupbc, bg, -1 ) 
+     taupbc(:,:) = taupbc(:,:) - NINT(taupbc(:,:))
+     CALL cryst_to_cart( nat, taupbc, at,  1 ) 
      DO na = 1, nat
         atnum(na) = get_atomic_number(TRIM(atm(ityp(na))))
      ENDDO
-     call dftd3_pbc_dispersion(dftd3,tau,atnum,latvecs,edftd3)
+     call dftd3_pbc_dispersion(dftd3, alat*taupbc, atnum, alat*at, edftd3)
      edftd3=edftd3*2.d0
-     tau(:,:)=tau(:,:)/alat
+     DEALLOCATE( taupbc)
      CALL stop_clock('energy_dftd3')
   ELSE
      edftd3= 0.0
@@ -659,11 +678,19 @@ SUBROUTINE electrons_scf ( printout, exxen )
         !
         ! ... diagonalization of the KS hamiltonian
         !
+#if defined (__OSCDFT)
+        IF (use_oscdft) THEN
+           CALL oscdft_electrons(oscdft_ctx, iter, et, nbnd, nkstot, nks)
+        ELSE
+#endif
         IF ( lelfield ) THEN
            CALL c_bands_efield( iter )
         ELSE
            CALL c_bands( iter )
         ENDIF
+#if defined (__OSCDFT)
+        END IF
+#endif
         !
         IF ( stopped_by_user ) THEN
            conv_elec=.FALSE.
@@ -944,6 +971,11 @@ SUBROUTINE electrons_scf ( printout, exxen )
         CALL calc_environ_potential(rhoin, conv_elec, dr2, vltot)
      END IF
 #endif
+#if defined (__OSCDFT)
+     IF (use_oscdft) THEN
+        CALL oscdft_scf_energy(oscdft_ctx, plugin_etot)
+     END IF
+#endif
      !
      ! ... define the total local potential (external + scf)
      !
@@ -1012,6 +1044,11 @@ SUBROUTINE electrons_scf ( printout, exxen )
            ENDIF
            !
         ENDIF
+#if defined (__OSCDFT)
+        IF (use_oscdft) THEN
+           CALL oscdft_print_ns(oscdft_ctx)
+        END IF
+#endif
         CALL print_ks_energies()
         !
      ENDIF
@@ -1109,7 +1146,10 @@ SUBROUTINE electrons_scf ( printout, exxen )
         ! ... if system is charged add a Makov-Payne correction to the energy
         ! ... (not in case of hybrid functionals: it is added at the end)
         !
-        IF ( do_makov_payne .AND. printout/= 0 ) CALL makov_payne( etot )
+        IF ( do_makov_payne .AND. printout/= 0 ) CALL makov_payne( etot, tau, &
+                rho%of_r(:,1), rho%of_g(:,1), strf, vloc, gamma_only,&
+                etot_in_hartree=.false., output_in_hartree = .false., &
+                vacuum_level = .true. )
         !
         ! ... print out ESM potentials if desired
         !
@@ -1636,6 +1676,9 @@ SUBROUTINE electrons_scf ( printout, exxen )
 #if defined (__ENVIRON)
        IF (use_environ) CALL print_environ_energies('PW')
 #endif
+#if defined (__OSCDFT)
+       IF (use_oscdft .AND. conv_elec) CALL oscdft_print_energies(oscdft_ctx)
+#endif
        !
        IF ( lsda ) WRITE( stdout, 9017 ) magtot, absmag
        !
@@ -1707,20 +1750,20 @@ FUNCTION exxenergyace( )
   !--------------------------------------------------------------------------
   !! Compute exchange energy using ACE
   !
-  USE kinds,           ONLY : DP
-  USE buffers,         ONLY : get_buffer
-  USE exx,             ONLY : vexxace_gamma, vexxace_k, domat
-  USE klist,           ONLY : nks, ngk
-  USE wvfct,           ONLY : nbnd, npwx, current_k
-  USE lsda_mod,        ONLY : lsda, isk, current_spin
-  USE io_files,        ONLY : iunwfc, nwordwfc
-  USE mp_pools,        ONLY : inter_pool_comm
-  USE mp_bands,        ONLY : intra_bgrp_comm
-  USE mp,              ONLY : mp_sum
-  USE control_flags,   ONLY : gamma_only
-  USE wavefunctions,   ONLY : evc
-  !
-  USE wavefunctions_gpum, ONLY : using_evc
+  USE kinds,              ONLY : DP
+  USE buffers,            ONLY : get_buffer
+  USE exx,                ONLY : vexxace_gamma, vexxace_k, domat, &
+                                 vexxace_gamma_gpu, vexxace_k_gpu
+  USE klist,              ONLY : nks, ngk
+  USE wvfct,              ONLY : nbnd, npwx, current_k
+  USE lsda_mod,           ONLY : lsda, isk, current_spin
+  USE io_files,           ONLY : iunwfc, nwordwfc
+  USE mp_pools,           ONLY : inter_pool_comm
+  USE mp_bands,           ONLY : intra_bgrp_comm
+  USE mp,                 ONLY : mp_sum
+  USE control_flags,      ONLY : gamma_only, use_gpu
+  USE wavefunctions,      ONLY : evc
+  USE wavefunctions_gpum, ONLY : evc_d, using_evc, using_evc_d
   !
   IMPLICIT NONE
   !
@@ -1735,18 +1778,27 @@ FUNCTION exxenergyace( )
   domat = .TRUE.
   exxenergyace=0.0_dp
   !
-  CALL using_evc(0)
+  IF (.NOT. use_gpu) CALL using_evc(0)
+  IF (      use_gpu) CALL using_evc_d(0)
   !
   DO ik = 1, nks
      npw = ngk (ik)
+     !
      current_k = ik
      IF ( lsda ) current_spin = isk(ik)
-     IF (nks > 1) CALL get_buffer(evc, nwordwfc, iunwfc, ik)
-     IF (nks > 1) CALL using_evc(2)
+     !
+     IF (nks > 1) THEN
+        CALL using_evc(2)
+        CALL get_buffer( evc, nwordwfc, iunwfc, ik )
+        IF (use_gpu) CALL using_evc_d(0)
+     ENDIF
+     !
      IF (gamma_only) THEN
-        CALL vexxace_gamma( npw, nbnd, evc, ex )
+        IF (.NOT. use_gpu) CALL vexxace_gamma( npw, nbnd, evc, ex )
+        IF (      use_gpu) CALL vexxace_gamma_gpu( npw, nbnd, evc_d, ex )
      ELSE
-        CALL vexxace_k( npw, nbnd, evc, ex )
+        IF (.NOT. use_gpu) CALL vexxace_k( npw, nbnd, evc, ex )
+        IF (      use_gpu) CALL vexxace_k_gpu( npw, nbnd, evc_d, ex )
      ENDIF
      exxenergyace = exxenergyace + ex
   ENDDO

@@ -51,6 +51,11 @@ SUBROUTINE sum_band()
   USE wvfct_gpum,           ONLY : using_et
   USE becmod_subs_gpum,     ONLY : using_becp_auto
   USE fft_interfaces,       ONLY : invfft
+#if defined (__OSCDFT)
+  USE plugin_flags,     ONLY : use_oscdft
+  USE oscdft_base,      ONLY : oscdft_ctx
+  USE oscdft_functions, ONLY : oscdft_sum_band
+#endif
   !
   IMPLICIT NONE
   !
@@ -135,6 +140,9 @@ SUBROUTINE sum_band()
        !
     ENDIF
   ENDIF
+#if defined (__OSCDFT)
+  IF (use_oscdft) CALL oscdft_sum_band(oscdft_ctx)
+#endif
   !
   ! ... for band parallelization: set band computed by this processor
   !
@@ -414,8 +422,8 @@ SUBROUTINE sum_band()
                 DO j = 1, 3
                    DO i = 1, npw
                      kplusgi = (xk(j,ik)+g(j,i)) * tpiba
-                     kplusg_evc(i,1) = CMPLX(0.D0,kplusgi) * evc(i,ibnd)
-                     IF ( ibnd < ibnd_end ) kplusg_evc(i,2) = CMPLX(0.d0,kplusgi) * evc(i,ibnd+1)
+                     kplusg_evc(i,1) = CMPLX(0._DP,kplusgi,KIND=DP) * evc(i,ibnd)
+                     IF ( ibnd < ibnd_end ) kplusg_evc(i,2) = CMPLX(0._DP,kplusgi,KIND=DP) * evc(i,ibnd+1)
                    ENDDO
                    !
                    ebnd = ibnd
@@ -704,7 +712,7 @@ SUBROUTINE sum_band()
                    DO j = 1, 3
                       DO i = 1, npw
                         kplusgi = (xk(j,ik)+g(j,igk_k(i,ik))) * tpiba
-                        kplusg_evc(i,1) = CMPLX(0.D0,kplusgi,kind=DP) * evc(i,ibnd)
+                        kplusg_evc(i,1) = CMPLX(0._DP,kplusgi,KIND=DP) * evc(i,ibnd)
                       ENDDO
                       !
                       CALL wave_g2r( kplusg_evc(1:npw,1:1), psic, dffts, igk=igk_k(:,ik) )
