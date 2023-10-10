@@ -30,8 +30,8 @@ TLDEPS= kcw-lib  #Dependency. To be compiled first
 
 all : tldeps kcwpp_sh.x kcwpp_interp.x clean_partial
 
-merge_Umat.x: merge_Umat.o
-	$(LD) $(LDFLAGS) -o $@ merge_Umat.o 
+merge_wann.x: merge_wann.o
+	$(LD) $(LDFLAGS) -o $@ merge_wann.o 
 	- ( cd ../../bin ; ln -fs ../KCW/PP/$@ . )
 
 kcwpp_interp.x: interp_r_to_k.o $(PP_OBJS) $(LRMODS) $(PWOBJS) $(QEMODS) 
