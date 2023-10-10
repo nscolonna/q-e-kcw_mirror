@@ -2,7 +2,8 @@
 
 PROGRAM merge
  ! Utility program to merge different U matrices in a single U
- ! Usage: merge_Umat.x seedname <path/to/Umat1> <path/to/Umat2> ... <path/to/UmatN>
+ ! Usage: merge_Umat.x <what> <path/to/what1> <path/to/what2> ... <path/to/whatN>
+ ! <what>:  U matrices or centres (seedname_u.mat or seedname_centres.xyz
  !
  IMPLICIT NONE
  integer :: nk1, nk2, nb1, nb2
@@ -13,7 +14,7 @@ PROGRAM merge
  real*16, allocatable :: k(:,:)
  real*16 :: re, im
  integer :: ik, ib, jb, ii, iib, jjb
- character(256) :: dum,arg, seedname
+ character(256) :: dum,arg, what
  character(256), allocatable :: filename(:)
  integer :: nargs, iarg, ni, nf, nb1_
  !
@@ -21,19 +22,23 @@ PROGRAM merge
  !write(*,*) nargs 
  IF (nargs == 0 ) STOP
  allocate (filename(nargs) )
- WRITE(*,*) "Merging ",nargs-1, " blocks" !, seedname
+ WRITE(*,*) "Merging ",nargs-1, " blocks" !, what
  !
  nb=0
  iarg = 1
  CALL get_command_argument( iarg, arg )
- seedname=trim(arg)
- WRITE(*,*) "Seedname = ",  trim(seedname)
+ what=trim(arg)
+ WRITE(*,*) "what = ",  trim(seedname)
+ IF ( trim(what) == "centres" ) THEN 
+    WRITE(*,*) "Merging centres not implemented yet. GOING to STOP"
+    STOP
+ ENDIF
  !
  DO WHILE ( iarg < nargs )
    iarg=iarg +1
    CALL get_command_argument( iarg, arg )
    !write (*,*) trim(arg), seedname, 'u_mat'
-   filename(iarg)=trim(arg)//'/'//trim(seedname)//trim('_u.mat')
+   filename(iarg)=trim(arg) !//'/'//trim(seedname)//trim('_u.mat')
    open (27, file=filename(iarg))
    read(27,*) dum
    read(27,*) nk1, nb1, nb1
@@ -87,7 +92,7 @@ PROGRAM merge
    !write(40, *) ((U(ib, jb, ik), ib=1, nb), jb=1, nb)
    !write(*, *) ((U(ib, jb, ik), ib=1, nb), jb=1, nb)
  enddo
- WRite (*,'(/, " GAME OVER", /)') 
+ WRITE (*,'(/, " GAME OVER", /)') 
  !
  !
 END program
