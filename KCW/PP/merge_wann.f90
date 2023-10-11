@@ -74,7 +74,7 @@ SUBROUTINE merge_centres (nargs, filename)
  !WRITE(*,*) "number of centres = ", ncentres(2:nargs)
  WRITE(*,*) "Final number of centres = ", ncentres(1)
  !
- ALLOCATE (centres(3, ncentres_tot) )
+ ALLOCATE (centres(3, ncentres(1)) )
  nat = nlines - ncentres(nargs)
  WRITE(*,*) "number of atoms = ", nat
  ALLOCATE (atoms_name (nat)) 
@@ -95,7 +95,6 @@ SUBROUTINE merge_centres (nargs, filename)
         STOP
      ENDIF
      READ(27,*) dum, (centres (i,icentres), i =1,3)
-     WRITE(*,'(I2, 3x, A ,6x,3(f14.8,3x))') icentres, TRIM(dum), (centres (i,icentres), i =1,3)
    ENDDO
    IF (iarg == 2 ) THEN
      DO iline = 1, nat
