@@ -1,6 +1,6 @@
 #!/bin/sh
 
-nk=3
+nk=2
 
 # run from directory where this script is
 cd `dirname $0`

@@ -4,7 +4,7 @@
  block #            2 file = wann_block2/wann_u.mat nbnd =            5
  block #            3 file = wann_block3/wann_u.mat nbnd =            4
  Final # of bands   =           14
- Final # of kpoints =           27
+ Final # of kpoints =            8
  Reading wann_block1/wann_u.mat
  istart =            1  iend =            5
  Reading wann_block2/wann_u.mat
@@ -12,7 +12,7 @@
  Reading wann_block3/wann_u.mat
  istart =           11  iend =           14
  Final # of bands   =           14
- Final # of kpoints =           27
+ Final # of kpoints =            8
  Writing wann_u.mat
 
  GAME OVER
