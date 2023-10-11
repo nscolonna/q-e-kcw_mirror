@@ -70,7 +70,7 @@
              | 675 Mass Ave, Cambridge, MA 02139, USA.           |
              |                                                   |
              +---------------------------------------------------+
-             |    Execution started on 11Oct2023 at 08:42:33     |
+             |    Execution started on 11Oct2023 at 11:19:56     |
              +---------------------------------------------------+
  
  ******************************************************************************
@@ -151,7 +151,7 @@
  |    From: L       0.500  0.500  0.500     To: W       0.500  0.250  0.750   |
  |    From: W       0.500  0.250  0.750     To: X       0.500  0.000  0.500   |
  *----------------------------------------------------------------------------*
- Time to read parameters        0.005 (sec)
+ Time to read parameters        0.004 (sec)
 
  *---------------------------------- K-MESH ----------------------------------*
  +----------------------------------------------------------------------------+
@@ -228,7 +228,7 @@
  |             4         0.370558    0.370558    0.370558                     |
  +----------------------------------------------------------------------------+
   
- Time to get kmesh              0.014 (sec)
+ Time to get kmesh              0.013 (sec)
  *============================================================================*
  |                              MEMORY ESTIMATE                               |
  |         Maximum RAM allocated during each phase of the calculation         |
@@ -240,11 +240,11 @@
  Starting a new Wannier90 calculation ...
 
 
- Reading overlaps from wann.mmn    :  Created on 11Oct2023 at  8:42:32
+ Reading overlaps from wann.mmn    :  Created on 11Oct2023 at 11:19:56
 
- Reading projections from wann.amn :  Created on 11Oct2023 at  8:42:29
+ Reading projections from wann.amn :  Created on 11Oct2023 at 11:19:53
 
- Time to read overlaps          0.004 (sec)
+ Time to read overlaps          0.005 (sec)
 
  Writing checkpoint file wann.chk... done
 
@@ -292,21 +292,21 @@
  
  Calculating interpolated band-structure
  
- Time to calculate interpolated band structure       0.039 (sec)
+ Time to calculate interpolated band structure       0.040 (sec)
  
- Time for plotting              0.043 (sec)
- Total Execution Time           0.067 (sec)
+ Time for plotting              0.044 (sec)
+ Total Execution Time           0.066 (sec)
 
  *===========================================================================*
  |                             TIMING INFORMATION                            |
  *===========================================================================*
  |    Tag                                                Ncalls      Time (s)|
  |---------------------------------------------------------------------------|
- |kmesh: get                                        :         1         0.014|
+ |kmesh: get                                        :         1         0.013|
  |overlap: allocate                                 :         1         0.000|
  |overlap: read                                     :         1         0.004|
  |wann: main                                        :         1         0.000|
- |plot: main                                        :         1         0.043|
+ |plot: main                                        :         1         0.044|
  *---------------------------------------------------------------------------*
  
  All done: wannier90 exiting

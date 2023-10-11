@@ -204,15 +204,26 @@ $PW_COMMAND < $PREFIX.nscf.in > $PREFIX.nscf.out
 rm k_points.txt 
 $ECHO " done"
 
-if [ ! -d wann_block1 ]; then  mkdir wann_block1 ; fi
-cd wann_block1
+
+for ib in 1 2 3; do 
+
+if [ ! -d wann_block$ib ]; then  mkdir wann_block$ib ; fi
+cd wann_block$ib
 
 $KMESH_COMMAND $nk $nk $nk  wann > k_points.txt
 
+if [ $ib = 1 ]; then 
+ nw=5; eb="6-16"; proj="As : l=2"
+elif [ $ib = 2 ]; then 
+ nw=5; eb="1-5, 11-16"; proj="Ga : l=2"
+elif [ $ib = 3 ]; then 
+ nw=4; eb="1-10, 15-16"; proj="As : sp3"
+fi
+
 cat > $SEEDNAME.win << EOF
-num_bands         =   5
-num_wann          =   5
-exclude_bands     =   6-16
+num_bands         =   $nw
+num_wann          =   $nw
+exclude_bands     =   $eb
 
 wannier_plot = .false.
 wannier_plot_list = 1
@@ -239,7 +250,7 @@ ang
 end unit_cell_cart
     
 Begin Projections     
-As : l=2
+$proj
 End Projections       
 
 bands_plot = .true.
@@ -271,7 +282,7 @@ cat > pw2wann.in <<EOF
 /
 EOF
 
-$ECHO "  Running Wannierization block 1 for $PREFIX...\c"
+$ECHO "  Running Wannierization block $ib for $PREFIX...\c"
 $W90_COMMAND -pp $SEEDNAME.win
 $PW2W90_COMMAND -in pw2wann.in > pw2wann.out
 $W90_COMMAND $SEEDNAME.win
@@ -279,157 +290,7 @@ rm k_points.txt
 $ECHO "DONE"
 cd ../
 
-if [ ! -d wann_block2 ]; then  mkdir wann_block2 ; fi
-cd wann_block2
-
-$KMESH_COMMAND $nk $nk $nk wann > k_points.txt
-
-cat > $SEEDNAME.win << EOF
-num_bands         =   5
-num_wann          =   5
-exclude_bands     =   1-5, 11-16
-
-wannier_plot = .false.
-wannier_plot_list = 1
-
-num_iter          = 0
-num_print_cycles  = 10
-conv_window = 5
-conv_tol = 1e-10
-
-write_u_matrices = .true.
-write_xyz = .true.
-
-Begin Atoms_Cart
-ang
-As       1.4130000000     4.2390000000     4.2390000000
-Ga       0.0000000000     0.0000000000     0.0000000000
-End Atoms_Cart
-
-begin unit_cell_cart
-ang
-    0.0000000000     2.8260000000     2.8260000000
-    2.8260000000     0.0000000000     2.8260000000
-    2.8260000000     2.8260000000     0.0000000000
-end unit_cell_cart
-
-Begin Projections
-Ga : l=2
-End Projections
-
-bands_plot = .true.
-begin kpoint_path
-G 0.0000000000     0.0000000000     0.0000000000  X 0.5000000000     0.0000000000     0.5000000000
-X 0.5000000000     0.0000000000     0.5000000000  U 0.6250000000     0.2500000000     0.6250000000
-K 0.3750000000     0.3750000000     0.7500000000  G 0.0000000000     0.0000000000     0.0000000000
-G 0.0000000000     0.0000000000     0.0000000000  L 0.5000000000     0.5000000000     0.5000000000
-L 0.5000000000     0.5000000000     0.5000000000  W 0.5000000000     0.2500000000     0.7500000000
-W 0.5000000000     0.2500000000     0.7500000000  X 0.5000000000     0.0000000000     0.5000000000
-end kpoint_path
-
-
-
-mp_grid      = $nk $nk $nk
-
-begin kpoints
-$(cat k_points.txt)
-end kpoints
-EOF
-
-cat >pw2wann.in <<EOF 
-&inputpp
- prefix='$PREFIX'
- outdir='$TMP_DIR/'
- seedname = 'wann'
- wan_mode   =  'standalone'
- write_unk  = .false.
-/
-EOF
-
-$ECHO "  Running Wannierization block 2 for $PREFIX...\c"
-$W90_COMMAND -pp $SEEDNAME.win
-$PW2W90_COMMAND -in pw2wann.in > pw2wann.out
-$W90_COMMAND $SEEDNAME.win
-rm k_points.txt
-$ECHO "DONE"
-cd ../
-
-
-if [ ! -d wann_block3 ]; then  mkdir wann_block3 ; fi
-cd wann_block3
-
-$KMESH_COMMAND $nk $nk $nk wann > k_points.txt
-
-cat > $SEEDNAME.win << EOF
-num_bands         =   4
-num_wann          =   4
-exclude_bands     =   1-10, 15-16
-
-wannier_plot = .false.
-wannier_plot_list = 1
-
-num_iter          = 0
-num_print_cycles  = 10
-conv_window = 5
-conv_tol = 1e-10
-
-write_u_matrices = .true.
-write_xyz = .true.
-
-Begin Atoms_Cart
-ang
-As       1.4130000000     4.2390000000     4.2390000000
-Ga       0.0000000000     0.0000000000     0.0000000000
-End Atoms_Cart
-
-begin unit_cell_cart
-ang
-    0.0000000000     2.8260000000     2.8260000000
-    2.8260000000     0.0000000000     2.8260000000
-    2.8260000000     2.8260000000     0.0000000000
-end unit_cell_cart
-
-Begin Projections
-As : sp3
-End Projections
-
-bands_plot = .true.
-begin kpoint_path
-G 0.0000000000     0.0000000000     0.0000000000  X 0.5000000000     0.0000000000     0.5000000000
-X 0.5000000000     0.0000000000     0.5000000000  U 0.6250000000     0.2500000000     0.6250000000
-K 0.3750000000     0.3750000000     0.7500000000  G 0.0000000000     0.0000000000     0.0000000000
-G 0.0000000000     0.0000000000     0.0000000000  L 0.5000000000     0.5000000000     0.5000000000
-L 0.5000000000     0.5000000000     0.5000000000  W 0.5000000000     0.2500000000     0.7500000000
-W 0.5000000000     0.2500000000     0.7500000000  X 0.5000000000     0.0000000000     0.5000000000
-end kpoint_path
-
-
-
-mp_grid      = $nk $nk $nk
-
-begin kpoints
-$(cat k_points.txt)
-end kpoints
-EOF
-
-cat >pw2wann.in <<EOF 
-&inputpp
- prefix='$PREFIX'
- outdir='$TMP_DIR/'
- seedname = 'wann'
- wan_mode   =  'standalone'
- write_unk  = .false.
-/
-EOF
-
-$ECHO "  Running Wannierization block 3 for $PREFIX...\c"
-$W90_COMMAND -pp $SEEDNAME.win
-$PW2W90_COMMAND -in pw2wann.in > pw2wann.out
-$W90_COMMAND $SEEDNAME.win
-rm k_points.txt
-$ECHO "DONE" 
-
-cd ../
+done 
 
 $ECHO "  Running merge_wann.x for $PREFIX...\c"
 $MERGE_WANN_COMMAND U       wann_block1/wann_u.mat       wann_block2/wann_u.mat       wann_block3/wann_u.mat       > merge_U.out 

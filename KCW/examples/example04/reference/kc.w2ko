@@ -13,7 +13,7 @@
         N.Colonna, R. De Gannaro, E. Linscott, and N. Marzari, JCTC 18, 5435 (2022) 
      =--------------------------------------------------------------------------------=
 
-     Program KCW v.7.2 starts on 11Oct2023 at  8:42:37 
+     Program KCW v.7.2 starts on 11Oct2023 at 11:20: 1 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -27,7 +27,7 @@
      Parallel version (MPI), running on     1 processors
 
      MPI processes distributed on     1 nodes
-     24548 MiB available memory on the printing compute node when the environment starts
+     24478 MiB available memory on the printing compute node when the environment starts
  
       Title line not specified: using 'default'.
 
@@ -41,7 +41,7 @@
        # calculation         =          wann2kcw
        # kcw_iverbosity      =                 2
        # kcw_at_ks           =                 F
-       # MP grid             =     4     4     4
+       # MP grid             =     3     3     3
        # spin_component      =                 1
        # homo_only           =                 F
        # read_unitary_matrix =                 T
@@ -866,11 +866,11 @@
 
      INFO: Coulomb q+G=0 treatment:
      INFO: Divergence            gb      
-     INFO: q-grid dimension         4   4   4
+     INFO: q-grid dimension         3   3   3
      INFO: cell volume               304.609237373853
      INFO: Gamma Extrapolation       F
      INFO: extrapolation q->0 term not estimated
-     INFO: Bare Coulomb q+G=0           -4.18426E+03
+     INFO: Bare Coulomb q+G=0           -2.35364E+03
 
         ==============================================================================
         iq =     1
@@ -1925,57 +1925,57 @@
         INFO: rho_q(r) DONE 
 
      INFO: Orbital Self-Hartree (SH)
-     orb     1     SH   1.219006
-     orb     2     SH   1.218372
-     orb     3     SH   1.218372
-     orb     4     SH   1.219006
-     orb     5     SH   1.218372
-     orb     6     SH   1.106095
-     orb     7     SH   1.084108
-     orb     8     SH   1.084108
-     orb     9     SH   1.106095
-     orb    10     SH   1.084108
-     orb    11     SH   0.480524
-     orb    12     SH   0.480524
-     orb    13     SH   0.480524
-     orb    14     SH   0.480524
+     orb     1     SH   1.107715
+     orb     2     SH   1.107082
+     orb     3     SH   1.107082
+     orb     4     SH   1.107715
+     orb     5     SH   1.107082
+     orb     6     SH   0.994805
+     orb     7     SH   0.972817
+     orb     8     SH   0.972817
+     orb     9     SH   0.994805
+     orb    10     SH   0.972817
+     orb    11     SH   0.369233
+     orb    12     SH   0.369233
+     orb    13     SH   0.369233
+     orb    14     SH   0.369233
 
      INFO: PREPARING THE KCW CALCULATION ... DONE
 
 
  
-     KCW          :     11.72s CPU     12.14s WALL
+     KCW          :     11.48s CPU     11.97s WALL
 
      INITIALIZATION: 
      map          :      0.01s CPU      0.01s WALL (      27 calls)
-     rho_of_q     :     10.13s CPU     10.29s WALL (      27 calls)
+     rho_of_q     :      9.97s CPU     10.17s WALL (      27 calls)
  
-     init_vloc    :      0.02s CPU      0.02s WALL (       1 calls)
+     init_vloc    :      0.03s CPU      0.03s WALL (       1 calls)
      init_us_1    :      0.03s CPU      0.03s WALL (       1 calls)
  
  
  
  
  
-     h_psi        :      0.24s CPU      0.24s WALL (      27 calls)
+     h_psi        :      0.23s CPU      0.23s WALL (      27 calls)
  
-     h_psi        :      0.24s CPU      0.24s WALL (      27 calls)
-     add_vuspsi   :      0.01s CPU      0.01s WALL (      27 calls)
+     h_psi        :      0.23s CPU      0.23s WALL (      27 calls)
+     add_vuspsi   :      0.00s CPU      0.01s WALL (      27 calls)
  
  
  
       General routines
      calbec       :      0.01s CPU      0.01s WALL (      27 calls)
      fft          :      0.00s CPU      0.00s WALL (      11 calls)
-     ffts         :      0.37s CPU      0.37s WALL (    1890 calls)
-     fftw         :      4.67s CPU      4.74s WALL (   21168 calls)
-     davcio       :      0.17s CPU      0.20s WALL (    1620 calls)
+     ffts         :      0.38s CPU      0.38s WALL (    1890 calls)
+     fftw         :      4.66s CPU      4.74s WALL (   21168 calls)
+     davcio       :      0.17s CPU      0.19s WALL (    1620 calls)
  
  
-     KCW          :     11.72s CPU     12.14s WALL
+     KCW          :     11.48s CPU     11.97s WALL
 
  
-   This run was terminated on:   8:42:49  11Oct2023            
+   This run was terminated on:  11:20:13  11Oct2023            
 
 =------------------------------------------------------------------------------=
    JOB DONE.
