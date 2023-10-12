@@ -26,7 +26,7 @@ subroutine kcw_setup
   !
   USE kinds,             ONLY : DP
   USE ions_base,         ONLY : nat, ityp
-  USE io_files,          ONLY : tmp_dir
+  USE io_files,          ONLY : tmp_dir, iunhub, nwordwfcU
   USE lsda_mod,          ONLY : nspin, starting_magnetization, lsda, isk
   USE scf,               ONLY : v, vrs, vltot,  kedtau
   USE fft_base,          ONLY : dfftp, dffts
@@ -63,6 +63,7 @@ subroutine kcw_setup
   USE mp,               ONLY : mp_sum
   USE control_lr,       ONLY : lrpa
   USE coulomb,           ONLY : setup_coulomb
+  USE ldaU,              ONLY : lda_plus_u, Hubbard_projectors, nwfcU
   !
   implicit none
 
@@ -171,6 +172,10 @@ subroutine kcw_setup
   io_level = 1
   lrwfc = num_wann * npwx
   CALL open_buffer ( iuwfc_wann_allk, 'wfc_wann_allk', lrwfc, io_level, exst )
+  !
+  nwordwfcU = npwx*nwfcU
+  IF ( lda_plus_u .AND. (Hubbard_projectors.NE.'pseudo') ) &
+     CALL open_buffer( iunhub,  'hub',  nwordwfcU, io_level, exst )
   !
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WFs ALL-k, OPENED")')
   !

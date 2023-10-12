@@ -15,7 +15,7 @@ subroutine kcw_setup_ham
   !
   USE kinds,             ONLY : DP
   USE ions_base,         ONLY : nat, ityp
-  USE io_files,          ONLY : tmp_dir
+  USE io_files,          ONLY : tmp_dir, iunhub, nwordwfcU
   USE scf,               ONLY : v, vrs, vltot,  kedtau
   USE fft_base,          ONLY : dfftp, dffts
   USE gvecs,             ONLY : doublegrid
@@ -49,6 +49,7 @@ subroutine kcw_setup_ham
   USE lsda_mod,          ONLY : lsda, isk, nspin, current_spin, starting_magnetization
   !
   USE coulomb,           ONLY : setup_coulomb
+  USE ldaU,              ONLY : lda_plus_u, Hubbard_projectors, nwfcU
   !
   !
   !USE symm_base,       ONLY : s, t_rev, irt, nrot, nsym, invsym, nosym, &
@@ -166,6 +167,11 @@ subroutine kcw_setup_ham
   CALL open_buffer ( iurho_wann, 'rho_wann', lrrho, io_level, exst )
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WF rho, OPENED")')
   !
+  nwordwfcU = npwx*nwfcU
+  !
+  IF ( lda_plus_u .AND. (Hubbard_projectors.NE.'pseudo') ) &
+     CALL open_buffer( iunhub,  'hub',  nwordwfcU, io_level, exst )
+  !
   ALLOCATE ( rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
   ALLOCATE ( evc0(npwx, num_wann) )
   ALLOCATE ( hamlt(nkstot, num_wann, num_wann) )
@@ -199,6 +205,7 @@ subroutine kcw_setup_ham
         CALL ks_hamiltonian(evc0, ik, num_wann) 
     END DO
   ENDIF
+  !
   !
   DEALLOCATE ( nbnd_occ )  ! otherwise allocate_ph complains: FIXME
   !

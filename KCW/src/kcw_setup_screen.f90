@@ -15,7 +15,7 @@ subroutine kcw_setup_screen
   !
   USE kinds,             ONLY : DP
   USE ions_base,         ONLY : nat, ityp
-  USE io_files,          ONLY : tmp_dir
+  USE io_files,          ONLY : tmp_dir, iunhub, nwordwfcU
   USE lsda_mod,          ONLY : nspin, starting_magnetization
   USE scf,               ONLY : v, vrs, vltot,  kedtau
   USE fft_base,          ONLY : dfftp, dffts
@@ -43,6 +43,7 @@ subroutine kcw_setup_screen
   USE io_kcw,            ONLY : read_rhowann
   !
   USE coulomb,           ONLY : setup_coulomb
+  USE ldaU,              ONLY : lda_plus_u, Hubbard_projectors, nwfcU
   !
   IMPLICIT NONE
   !
@@ -129,6 +130,10 @@ subroutine kcw_setup_screen
   lrrho=num_wann*dffts%nnr
   CALL open_buffer ( iurho_wann, 'rho_wann', lrrho, io_level, exst )
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WF rho, OPENED")')
+  !
+  nwordwfcU = npwx*nwfcU
+  IF ( lda_plus_u .AND. (Hubbard_projectors.NE.'pseudo') ) &
+     CALL open_buffer( iunhub,  'hub',  nwordwfcU, io_level, exst )
   !
   ALLOCATE (rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )

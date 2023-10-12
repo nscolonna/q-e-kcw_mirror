@@ -19,11 +19,14 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE gvect,                ONLY : ngm, g
   USE gvecw,                ONLY : gcutw
-  USE klist,                ONLY : init_igk, xk, nkstot
+  USE klist,                ONLY : init_igk, xk, nkstot, nks
+  USE ldaU,                 ONLY : lda_plus_u, lda_plus_u_kind, Hubbard_projectors, wfcU
   USE mp,                   ONLY : mp_sum
   USE constants,            ONLY : rytoev
   USE control_kcw,          ONLY : Hamlt, calculation, spin_component, check_ks
   USE lsda_mod,             ONLY : nspin
+  USE io_files,             ONLY : iunhub, nwordwfcU
+  USE buffers,              ONLY : get_buffer
   ! 
   IMPLICIT NONE
   !
@@ -44,6 +47,10 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
   CALL init_igk ( npwx, ngm, g, gcutw )
   !
   call g2_kin( ik )
+  !
+  IF ( nks > 1 .AND. lda_plus_u .AND. (Hubbard_projectors .NE. 'pseudo') ) &
+        CALL get_buffer ( wfcU, nwordwfcU, iunhub, ik )
+  !
   hpsi(:,:) = (0.D0, 0.D0)
   !
   CALL h_psi( npwx, npw, h_dim, evc, hpsi )
