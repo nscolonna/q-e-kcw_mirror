@@ -76,6 +76,7 @@ subroutine input_summary ( )
       WRITE(stdout, 43)  "# write_hr            =", write_hr
       WRITE(stdout, 43)  "# l_alpha_corr        =", l_alpha_corr
       WRITE(stdout, 43)  "# on_site_only        =", on_site_only
+      WRITE(stdout, 43)  "# h_proj              =", h_proj
     ENDIF
     !
     WRITE(stdout,'(5X, 44("="),/)')

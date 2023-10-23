@@ -61,7 +61,7 @@ SUBROUTINE kcw_readin()
   NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
-                        write_hr, l_alpha_corr, on_site_only
+                        write_hr, l_alpha_corr, on_site_only, h_proj
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -178,6 +178,7 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
+  h_proj              = .FALSE.
   ! 
   ! ...  reading the namelists (if needed)
   !

@@ -48,6 +48,7 @@ convert_kpts_names.o\
 write_hr_to_file.o\
 alpha_corr.o \
 koopmans_ham.o \
+koopmans_ham_proj.o \
 full_ham.o \
 self_hartree.o\
 group_orbitals.o\

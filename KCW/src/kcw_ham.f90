@@ -16,7 +16,7 @@ SUBROUTINE kcw_ham
   !!   
   !!  Code written by Nicola Colonna and Riccardo de Gennaro (EPFL April 2019) 
   !
-  USE control_kcw,               ONLY : do_bands, write_hr
+  USE control_kcw,           ONLY : do_bands, write_hr, h_proj
   USE interpolation,         ONLY : interpolate_ham, dealloc_interpolation
   !
   USE io_rho_xml,            ONLY : write_scf
@@ -35,16 +35,21 @@ SUBROUTINE kcw_ham
   ! 2a) Diagonal term only to 2nd order
   !     OBSOLETE: inside koopmans_ham this is triggered by "on_site_only": FIXME
   !CALL ham_R0_2nd ( )
-  ! 2b) Full Hamiltonian to 2nd order 
-  CALL koopmans_ham ( )
-  !
-  ! 3) If do_bands=TRUE interpolate H(k) and prints bands
-  IF ( do_bands ) CALL interpolate_ham( )
-  !
-  ! 4) If write_hr=TRUE write H(R) to file
-  IF ( write_hr ) CALL write_hr_to_file( )
-  !
-  IF (do_bands) CALL dealloc_interpolation( )
+  IF ( h_proj ) THEN 
+     CALL koopmans_ham_proj ( )
+  ELSE 
+    ! 2b) Full Hamiltonian to 2nd order 
+    CALL koopmans_ham ( )
+    !
+    ! 3) If do_bands=TRUE interpolate H(k) and prints bands
+    IF ( do_bands ) CALL interpolate_ham( )
+    !
+    ! 4) If write_hr=TRUE write H(R) to file
+    IF ( write_hr ) CALL write_hr_to_file( )
+    !
+    IF (do_bands) CALL dealloc_interpolation( )
+    !
+  ENDIF
   ! 
   ! WRITE data file
   iunwfc = iuwfc
