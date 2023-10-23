@@ -38,6 +38,7 @@ SUBROUTINE kcw_readin()
   USE martyna_tuckerman,  ONLY : do_comp_mt
   USE exx_base,           ONLY : x_gamma_extrapolation
   USE mp_pools,           ONLY : npool
+  USE ldaU,               ONLY : lda_plus_u
   !
   IMPLICIT NONE
   !
@@ -50,6 +51,7 @@ SUBROUTINE kcw_readin()
   LOGICAL, EXTERNAL   :: imatches
   LOGICAL, EXTERNAL   :: has_xml
   LOGICAL             :: exst, parallelfs
+  LOGICAL             :: switch_off_U = .TRUE. 
   !
   NAMELIST / CONTROL /  outdir, prefix, read_unitary_matrix, kcw_at_ks, &
                         spread_thr, homo_only, kcw_iverbosity, calculation, &
@@ -268,6 +270,11 @@ SUBROUTINE kcw_readin()
   !
   WRITE( stdout, '(5X,"INFO: Reading pwscf data")')
   CALL read_file ( )
+  !
+  IF ( lda_plus_u .AND. switch_off_U) THEN 
+     CALL infomsg('kcw_readin','WARNING: switch-off +U correction')
+     lda_plus_u=.FALSE.
+  ENDIF
   !
   IF ( lgauss .OR. ltetra ) CALL errore( 'kcw_readin', &
       'KC corrections only for insulators!', 1 )
