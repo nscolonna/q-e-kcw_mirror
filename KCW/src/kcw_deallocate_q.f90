@@ -22,6 +22,7 @@ SUBROUTINE kcw_deallocate_q()
                                   & dvxc_s, vsgga, segni
   USE eqv,                 ONLY : dmuxc, dpsi, dvpsi, evq
   USE control_lr,          ONLY : lgamma, nbnd_occ
+  USE ldaU_lr,             ONLY : swfcatomk, swfcatomkpq
   !
   IMPLICIT NONE
   INTEGER :: ik
@@ -62,6 +63,14 @@ SUBROUTINE kcw_deallocate_q()
   if (allocated(segni))           deallocate (segni)
   if (allocated(vsgga))           deallocate (vsgga)
   if (allocated(gmag))            deallocate (gmag)
+  !
+  if (allocated(swfcatomk))       deallocate (swfcatomk)
+  !
+  if (lgamma) then
+     if (associated(swfcatomkpq)) nullify (swfcatomkpq)
+  else
+     if (associated(swfcatomkpq)) deallocate (swfcatomkpq)
+  endif
   !
   RETURN
   !

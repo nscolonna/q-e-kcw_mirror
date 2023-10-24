@@ -24,6 +24,9 @@ subroutine kcw_allocate_q
   USE lrus,                 ONLY : becp1
   USE eqv,                  ONLY : dpsi, evq, dmuxc, dvpsi
   USE control_lr,           ONLY : lgamma
+  USE ldaU,                 ONLY : Hubbard_lmax, nwfcU
+  USE ldaU_lr,              ONLY : swfcatomk, swfcatomkpq
+
   !
   IMPLICIT NONE
   INTEGER :: ik
@@ -47,6 +50,15 @@ subroutine kcw_allocate_q
      DO ik = 1,nksq
         CALL allocate_bec_type ( nkb, nbnd, becp1(ik) )
      ENDDO
+  ENDIF
+  !
+  !! DFT+U
+  !
+  ALLOCATE (swfcatomk(npwx,nwfcU))
+  IF (lgamma) THEN
+     swfcatomkpq  => swfcatomk
+  ELSE
+     ALLOCATE (swfcatomkpq(npwx,nwfcU))
   ENDIF
   !
   RETURN

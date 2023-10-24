@@ -32,6 +32,7 @@ SUBROUTINE kcw_init_q()
   USE units_lr,             ONLY : lrwfc, iuwfc
   USE qpoint,               ONLY : xq, nksq, eigqts, ikks, ikqs
   USE uspp_init,            ONLY : init_us_2
+  USE ldaU,                 ONLY : lda_plus_u
   !
   IMPLICIT NONE
   !
@@ -106,6 +107,10 @@ SUBROUTINE kcw_init_q()
      ENDIF
      !
   ENDDO
+  !
+  ! 3) Calculate and write to file S\phi for k and k+q
+  !
+  IF (lda_plus_U) CALL lr_orthoUwfc (.FALSE.)
   !
   CALL stop_clock ( 'kcw_init_q' )
   !

@@ -13,8 +13,8 @@ SUBROUTINE kcw_openfilq()
   !! calculation at a given q.
   !
   USE control_flags,   ONLY : io_level
-  USE units_lr,        ONLY : iuwfc, lrwfc, iudwf, lrdwf
-  USE io_files,        ONLY : tmp_dir, diropn, seqopn
+  USE units_lr,        ONLY : iuwfc, lrwfc, iuatswfc, iudwf, lrdwf
+  USE io_files,        ONLY : tmp_dir, diropn, seqopn, nwordwfcU
   USE control_kcw,     ONLY : tmp_dir_kcwq, iudvwfc, lrdvwfc, tmp_dir_save
   USE wvfct,           ONLY : nbnd, npwx
   USE io_files,        ONLY : prefix
@@ -23,6 +23,7 @@ SUBROUTINE kcw_openfilq()
   USE input_parameters,ONLY : nk1, nk2, nk3
 
   USE control_lr,      ONLY : lgamma
+  USE ldaU,             ONLY : nwfcU, lda_plus_u
   !
   IMPLICIT NONE
   !
@@ -66,6 +67,12 @@ SUBROUTINE kcw_openfilq()
   iudwf = 32
   lrdwf =  nbnd * npwx * npol
   CALL open_buffer (iudwf, 'dwf', lrdwf, io_level, exst_mem, exst, tmp_dir)
+  !
+  IF (lda_plus_U) THEN 
+    iuatswfc  = 33
+    nwordwfcU = npwx * nwfcU * npol
+    CALL open_buffer (iuatswfc, 'satwfc', nwordwfcU, io_level, exst_mem, exst, tmp_dir)
+  ENDIF
   !
   RETURN
   !
