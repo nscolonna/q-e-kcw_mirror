@@ -31,6 +31,8 @@ SUBROUTINE koopmans_ham_proj ()
   USE wavefunctions,         ONLY : evc
   USE buffers,               ONLY : get_buffer, save_buffer
   USE io_files,              ONLY : nwordwfc
+  USE mp_bands,              ONLY : intra_bgrp_comm
+  USE mp,                    ONLY : mp_sum
   !
   IMPLICIT NONE
   !
@@ -106,6 +108,7 @@ SUBROUTINE koopmans_ham_proj ()
       delta_k = CMPLx(0.D0, 0.D0, kind=DP)
       DO iwann = 1, num_wann
         overlap = SUM(CONJG(evc(1:npw,ibnd))*(evc0(1:npw,iwann)))
+        CALL mp_sum (overlap, intra_bgrp_comm)
         overlap = CONJG(overlap)*overlap
         delta_k = delta_k + (0.5D0 - occ_mat(iwann)) * deltah_scal(iwann) * overlap
         !WRITE(*,'(3X, 2I5, 2F20.12, F20.12, 2F20.12)') ibnd, iwann, deltah_scal(iwann), occ_mat(iwann), overlap 
@@ -132,7 +135,7 @@ SUBROUTINE koopmans_ham_proj ()
   !Overwrite et
   DO ik = 1, nkstot/nspin
     ik_pw = ik + (spin_component-1)*(nkstot/nspin)
-    et(ibnd, ik_pw) = et_ki(ibnd,ik)
+    et(1:nbnd, ik_pw) = et_ki(1:nbnd,ik)
   ENDDO
   ! 
 9043 FORMAT(/,8x,'KS       highest occupied level (ev): ',F10.4 )
@@ -155,6 +158,8 @@ SUBROUTINE koopmans_ham_proj ()
     USE lsda_mod,              ONLY : nspin
     USE klist,                 ONLY : nkstot, ngk, wk
     USE wvfct,                 ONLY : wg
+    USE mp_bands,              ONLY : intra_bgrp_comm
+    USE mp,                    ONLY : mp_sum
     !
     REAL(DP), INTENT(INOUT) :: occ_mat(num_wann)
     INTEGER :: iwann, ik, ibnd, ik_pw
@@ -173,8 +178,10 @@ SUBROUTINE koopmans_ham_proj ()
         CALL get_buffer ( evc0, lrwannfc, iuwfc_wann, ik )
         CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
         !
+        overlap = CMPLX(0.D0, 0.D0, kind=DP)
         DO ibnd = 1, nbnd
           overlap = SUM(CONJG(evc(1:npw,ibnd))*(evc0(1:npw,iwann)))
+          CALL mp_sum (overlap, intra_bgrp_comm)
           overlap = CONJG(overlap)*overlap
           f=CMPLX(wg(ibnd,ik)/wk(ik), 0.D0, kind = DP)
           occ_mat(iwann) = occ_mat(iwann) + f * REAL(overlap)
