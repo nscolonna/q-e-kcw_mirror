@@ -375,9 +375,6 @@ SUBROUTINE koopmans_ham ()
     USE cell_base,            ONLY : omega
     USE noncollin_module,     ONLY : npol
     !
-    USE constants,            ONLY : rytoev
-    ! 
-    !
     IMPLICIT NONE
     ! 
     INTEGER, INTENT(IN) :: ik

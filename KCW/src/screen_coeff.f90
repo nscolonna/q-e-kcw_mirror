@@ -19,7 +19,7 @@ SUBROUTINE screen_coeff ()
   USE klist,                ONLY : nkstot
   USE mp,                   ONLY : mp_sum
   USE control_kcw,          ONLY : kcw_iverbosity, spin_component, num_wann, iorb_start, l_do_alpha, &
-                                   iorb_end, alpha_final, nqstot, eps_inf, l_vcut, l_unique_manifold, &  
+                                   iorb_end, alpha_final, nqstot, l_vcut, l_unique_manifold, &  
                                    group_alpha, tmp_dir_kcw, iurho_wann, tmp_dir_kcwq, x_q, tmp_dir_save, &
                                    i_orb
   USE buffers,              ONLY : get_buffer, save_buffer
@@ -343,10 +343,6 @@ SUBROUTINE screen_coeff ()
                "rPi_q_RS =", 2f15.8, 3x, "uPi_q =", 2f15.8, 3x, "Self Hartree =", 2f15.8)
 9011 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, "uPi_q =", & 
                2f15.8, 3x, "SH_q =", 2f15.8)
-9012 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, "uPi_q =", & 
-               2f15.8)
-9013 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q* =", 2f15.8, 3x, "uPi_q* =", & 
-               2f15.8)
 
 END subroutine screen_coeff
 
@@ -364,11 +360,12 @@ SUBROUTINE restart_screen (num_wann, iq_start, vki_r, vki_u, sh, do_real_space)
   !
   IMPLICIT NONE
   !
+  INTEGER :: num_wann
   COMPLEX(DP) :: vki_u(num_wann), sh(num_wann), vki_r(num_wann)
   ! ki unrelaxed and relaxed potential and self-hartree
   COMPLEX(DP) :: pi_q_unrelax, sh_q, pi_q_relax, pi_q_relax_rs
   !
-  INTEGER :: iq_start, num_wann, iwann, iwann_, iq, iq_, iun_res
+  INTEGER :: iq_start, iwann, iwann_, iq, iq_, iun_res
   LOGICAL :: exst, do_real_space
   !
   INQUIRE(file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.status', exist=exst)
@@ -392,7 +389,7 @@ SUBROUTINE restart_screen (num_wann, iq_start, vki_r, vki_u, sh, do_real_space)
         IF ( .NOT. l_do_alpha (iwann)) CYCLE
         IF (do_real_space) THEN 
           READ(iun_res, '(2I5,8F20.12)') iq_, iwann_ , pi_q_relax, pi_q_relax_rs, pi_q_unrelax, sh_q
-          WRITE(stdout, 9011) iq, iwann, pi_q_relax, pi_q_relax_rs, pi_q_unrelax, sh_q
+          WRITE(stdout, 9010) iq, iwann, pi_q_relax, pi_q_relax_rs, pi_q_unrelax, sh_q
           !
           vki_u(iwann) = vki_u(iwann) + pi_q_unrelax
           vki_r(iwann) = vki_r(iwann) + pi_q_relax

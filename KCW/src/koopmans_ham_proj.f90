@@ -23,11 +23,11 @@ SUBROUTINE koopmans_ham_proj ()
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : nkstot, xk, ngk
   USE lsda_mod,              ONLY : nspin
-  USE control_kcw,           ONLY : num_wann, Hamlt, nqstot, l_alpha_corr, evc0, &
+  USE control_kcw,           ONLY : num_wann, l_alpha_corr, evc0, &
                                     alpha_final, num_wann_occ, iuwfc_wann, spin_component
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
-  USE units_lr,              ONLY : lrwfc, iuwfc
+  USE units_lr,              ONLY : iuwfc
   USE wavefunctions,         ONLY : evc
   USE buffers,               ONLY : get_buffer, save_buffer
   USE io_files,              ONLY : nwordwfc
@@ -43,9 +43,6 @@ SUBROUTINE koopmans_ham_proj ()
   COMPLEX(DP) :: deltah_scal (num_wann)
   REAL(DP) :: occ_mat(num_wann)
   !
-  ! the KI hamiltonian, the KI contribution, and the new eigenvectors at a given k-point
-  COMPLEX(DP) :: ham(num_wann,num_wann), deltaH(num_wann,num_wann), eigvc(npwx,num_wann)
-  !
   COMPLEX(DP) :: delta_k, overlap
   !
   ! The new eigenalues 
@@ -54,7 +51,7 @@ SUBROUTINE koopmans_ham_proj ()
   ! The correction to the diagonal term beyond second order
   REAL(DP) :: ddH(num_wann)
   !
-  INTEGER :: i, iwann, jwann
+  INTEGER :: i, iwann
   ! 
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
@@ -156,18 +153,16 @@ SUBROUTINE koopmans_ham_proj ()
     USE control_kcw,           ONLY : num_wann, spin_component
     USE wvfct,                 ONLY : nbnd
     USE lsda_mod,              ONLY : nspin
-    USE klist,                 ONLY : nkstot, ngk, wk
+    USE klist,                 ONLY : nkstot, ngk
     USE wvfct,                 ONLY : wg
     USE mp_bands,              ONLY : intra_bgrp_comm
     USE mp,                    ONLY : mp_sum
     !
     REAL(DP), INTENT(INOUT) :: occ_mat(num_wann)
     INTEGER :: iwann, ik, ibnd, ik_pw
-    COMPLEX(DP) :: f
     !
     ! The canonical occupation matrix (fermi dirac or alike)
-    f = CMPLX(0.D0, 0.D0, kind=DP)
-    occ_mat = CMPLX(0.D0,0.D0, kind=DP)
+    occ_mat = REAL(0.D0, kind=DP)
     !
     DO iwann= 1, num_wann
       !
@@ -183,13 +178,10 @@ SUBROUTINE koopmans_ham_proj ()
           overlap = SUM(CONJG(evc(1:npw,ibnd))*(evc0(1:npw,iwann)))
           CALL mp_sum (overlap, intra_bgrp_comm)
           overlap = CONJG(overlap)*overlap
-          f=CMPLX(wg(ibnd,ik)/wk(ik), 0.D0, kind = DP)
-          occ_mat(iwann) = occ_mat(iwann) + f * REAL(overlap)
+          occ_mat(iwann) = occ_mat(iwann) + wg(ibnd,ik) * REAL(overlap)
         ENDDO
       ENDDO
     ENDDO
-    !
-    occ_mat = occ_mat/(nkstot/nspin)
     !
   END SUBROUTINE occupations
 

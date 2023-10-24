@@ -99,7 +99,7 @@ SUBROUTINE group_orbitals ( )
  DO i = 1, num_wann  
    !
    IF (l_do_alpha(i) ) THEN
-     WRITE(stdout,'(8X, "iwann=", i5, 3X, "DO_LR =", L)') i, l_do_alpha (i)
+     WRITE(stdout,'(8X, "iwann=", i5, 3X, "DO_LR =", L )') i, l_do_alpha (i)
    ELSE
      WRITE(stdout,'(8X, "iwann=", i5, 3X, "DO_LR =", L, 3x, "--> " i5)') i, l_do_alpha(i), group_alpha(i)
    ENDIF

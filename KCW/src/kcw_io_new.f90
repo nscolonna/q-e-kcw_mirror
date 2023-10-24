@@ -56,7 +56,7 @@ MODULE io_kcw
       INTEGER               :: nr1,nr2,nr3, nr1x, nr2x,nr3x
       INTEGER               :: rhounit, ierr, i, j, jj, k, kk, ldr, ip
       CHARACTER(LEN=256)    :: rho_file
-      CHARACTER(LEN=256)    :: rho_file_hdf5
+      !CHARACTER(LEN=256)    :: rho_file_hdf5
       CHARACTER(LEN=10)     :: rho_extension
       COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
       INTEGER,  ALLOCATABLE :: kowner(:)
@@ -242,7 +242,7 @@ MODULE io_kcw
      INTEGER               :: me_group, me_group2, me_group3, &
                               nproc_group, nproc_group2, nproc_group3
      CHARACTER(LEN=256)    :: rho_file
-     CHARACTER(LEN=256)    :: rho_file_hdf5
+     !CHARACTER(LEN=256)    :: rho_file_hdf5
      COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
      INTEGER,  ALLOCATABLE :: kowner(:)
      LOGICAL               :: exst
@@ -398,7 +398,7 @@ MODULE io_kcw
      USE buffers,              ONLY : get_buffer
      USE klist,                ONLY : nks, nkstot, xk, ngk, igk_k
      USE gvect,                ONLY : mill
-     USE wvfct,                ONLY : npwx, nbnd
+     USE wvfct,                ONLY : npwx
      USE lsda_mod,             ONLY : nspin, isk, lsda, nspin
      USE mp_pools,             ONLY : intra_pool_comm
      USE mp_bands,             ONLY : me_bgrp, root_bgrp, intra_bgrp_comm, &
@@ -625,7 +625,7 @@ MODULE io_kcw
      !
      USE control_flags,        ONLY : gamma_only
      USE klist,                ONLY : nkstot, nks, ngk, igk_k
-     USE wvfct,                ONLY : npwx, nbnd
+     USE wvfct,                ONLY : npwx
      USE gvect,                ONLY : ig_l2g
      USE mp_bands,             ONLY : root_bgrp, intra_bgrp_comm
      USE mp_pools,             ONLY : me_pool, root_pool, &

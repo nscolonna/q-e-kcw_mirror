@@ -138,7 +138,7 @@ SUBROUTINE alpha_corr ( iwann, delta)
         evc_r(:) = ZERO
         CALL invfft_wave (npw, igk_k (1,ik), evc_g , evc_r )
         !! The wfc in R-space at k
-        eig_k = sum ( vxc(:,spin_component) * evc_r(:) * CONJG(evc_r(:) ) )
+        eig_k = REAL(sum ( vxc(:,spin_component) * evc_r(:) * CONJG(evc_r(:) ) ), kind=DP)
         eig_k = eig_k/( dffts%nr1*dffts%nr2*dffts%nr3 )
         CALL mp_sum (eig_k, intra_bgrp_comm) 
         eig = eig + eig_k
@@ -171,7 +171,7 @@ SUBROUTINE alpha_corr ( iwann, delta)
           CALL fwfft ('Rho', aux, dffts)
           delta_vg(:,is) = aux(dffts%nl(:))
         ENDDO
-        krnl_q = sum (CONJG(rho_wann_g (:)) * delta_vg(:,spin_component))*omega
+        krnl_q = REAL(sum (CONJG(rho_wann_g (:)) * delta_vg(:,spin_component))*omega, kind=DP)
         CALL mp_sum (krnl_q, intra_bgrp_comm)
         krnl = krnl + krnl_q/nqstot
       ENDDO

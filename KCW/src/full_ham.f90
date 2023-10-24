@@ -214,7 +214,7 @@ SUBROUTINE full_ham (ik)
         !
         vpsi_r(:) = (0.D0, 0.D0)
         DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0) * psic_1(ir)
+           vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0, kind=DP) * psic_1(ir)
         ENDDO
         !
         CALL fwfft ('Wave', vpsi_r, dffts)
@@ -255,14 +255,14 @@ SUBROUTINE full_ham (ik)
         etmp2 = (0.D0, 0.D0)
         DO ir = 1, dffts%nnr
            vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
-                                  delta_eig(ibnd)),0.D0) * psic_1(ir)
-           IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
+                                  delta_eig(ibnd)),0.D0, kind=DP) * psic_1(ir)
+           IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0, kind=DP) * psic_1(ir)
            etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
         ENDDO 
 !!        WRITE(*,'("NICOLA i, vi_r", i5, 10F16.8)') ibnd, v(1:5,spin_component)
         etmp2=etmp2/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
         CALL mp_sum (etmp2, intra_bgrp_comm)
-        delta_eig(ibnd) = etmp2 
+        delta_eig(ibnd) = REAL(etmp2, kind=DP)
         !
         ! 1) GO to G-space and store the ki gradient 
         CALL fwfft ('Wave', vpsi_r, dffts)
@@ -303,7 +303,7 @@ SUBROUTINE full_ham (ik)
         vpsi_r(:) = (0.D0, 0.D0)
         etmp2 = (0.D0, 0.D0)
         DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0) * psic_1(ir)
+           vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0, kind=DP) * psic_1(ir)
            etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
 !           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
         ENDDO
@@ -341,7 +341,7 @@ SUBROUTINE full_ham (ik)
      !
   ENDDO orb_loop
   !
-101  CONTINUE
+!101  CONTINUE
   !
   ! ##### Build up the KI Hamiltonian 
   !
