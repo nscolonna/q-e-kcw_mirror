@@ -61,7 +61,7 @@ SUBROUTINE kcw_readin()
   NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
-                        write_hr, l_alpha_corr, on_site_only, h_proj
+                        write_hr, l_alpha_corr, on_site_only, h_proj, l_diag
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -108,6 +108,9 @@ SUBROUTINE kcw_readin()
   !! kipz_corr       : Compute the pKIPZ hamiltonian (only for finite systems: Gamma-only calculation in SC) 
   !! l_alpha_corr    : If true a correction is applied to the screening coefficient to mimick effect beyond the 
   !!                   second order
+  !! h_porj          : if true an alterantive definition of the KI Hamitlonian is built and diagonalized
+  !!                   using projectors (see koopmans_ham_proj.f90)
+  !! l_diag          : if true the projectors-KI hamiltonian is applied perturbatively on KS states
   ! 
   IF (ionode) THEN
     !
@@ -179,6 +182,7 @@ SUBROUTINE kcw_readin()
   on_site_only        = .FALSE.
   calculation         = " " 
   h_proj              = .FALSE.
+  l_diag              = .FALSE.
   ! 
   ! ...  reading the namelists (if needed)
   !

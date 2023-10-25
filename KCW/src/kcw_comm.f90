@@ -97,6 +97,7 @@ MODULE control_kcw
   !! if TRUE this q is gamma.
   !
   LOGICAL :: h_proj
+  LOGICAL :: l_diag
   !
 END MODULE control_kcw
 

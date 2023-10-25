@@ -64,6 +64,7 @@ subroutine bcast_kcw_input ( )
   call mp_bcast ( on_site_only,        ionode_id, intra_image_comm )
   call mp_bcast ( calculation,         ionode_id, intra_image_comm )
   call mp_bcast ( h_proj,              ionode_id, intra_image_comm )
+  call mp_bcast ( l_diag,              ionode_id, intra_image_comm )
    !
 #endif
   !

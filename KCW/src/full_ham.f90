@@ -106,7 +106,7 @@ SUBROUTINE full_ham (ik)
   !
   ! ... KS Hamiltonian ....
   ik_eff = ik + (spin_component -1)*nkstot/nspin
-  CALL ks_hamiltonian (evc0, ik_eff, dim_ham)
+  CALL ks_hamiltonian (evc0, ik_eff, dim_ham, .true.)
   !
   v_ki(:,:) = (0.D0,0.D0)
   !GOTO 101

@@ -35,7 +35,7 @@ subroutine kcw_setup_ham
                                 read_unitary_matrix, hamlt, alpha_corr_done, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq !, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, h_proj !, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, nks, ngk, igk_k
   USE cell_base,         ONLY : at !, bg
@@ -168,7 +168,11 @@ subroutine kcw_setup_ham
   !
   ALLOCATE ( rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
   ALLOCATE ( evc0(npwx, num_wann) )
-  ALLOCATE ( hamlt(nkstot, num_wann, num_wann) )
+  IF (h_proj) THEN 
+    ALLOCATE ( hamlt(nkstot, nbnd, nbnd) )
+  ELSE
+    ALLOCATE ( hamlt(nkstot, num_wann, num_wann) )
+  ENDIF
   ALLOCATE ( alpha_corr_done (num_wann) ) 
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   occ_mat = 0.D0
@@ -196,7 +200,7 @@ subroutine kcw_setup_ham
         CALL read_mlwf ( dirname, ik, evc0 )
         ik_eff = ik-(spin_component-1)*nkstot/nspin
         CALL save_buffer ( evc0, lrwfc, iuwfc_wann, ik_eff )
-        CALL ks_hamiltonian(evc0, ik, num_wann) 
+        CALL ks_hamiltonian(evc0, ik, num_wann, .true.) 
     END DO
   ENDIF
   !
