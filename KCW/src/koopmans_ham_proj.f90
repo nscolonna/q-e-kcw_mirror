@@ -45,7 +45,7 @@ SUBROUTINE koopmans_ham_proj ()
   REAL(DP) :: occ_mat(num_wann)
   !
   COMPLEX(DP) :: delta_k, overlap
-  COMPLEX(DP) :: ham(nbnd,nbnd), eigvc(npwx,nbnd), deltah(nbnd,nbnd)
+  COMPLEX(DP) :: ham(nbnd,nbnd), eigvc(nbnd,nbnd), deltah(nbnd,nbnd), eigvc_all(nbnd,nbnd,nkstot/nspin)
   !
   ! The new eigenalues 
   REAL(DP) :: et_ki(nbnd,nkstot)
@@ -70,8 +70,8 @@ SUBROUTINE koopmans_ham_proj ()
   CALL occupations(occ_mat)
   ! 
 #ifdef DEBUG
-  WRITE( stdout,'(/,5X," "Bare on-site correction:")')
-  WRITE(stdout,'(5X,10(2F10.6, 2x))') (delta(iwann), iwann=1, num_wann)
+  WRITE(stdout,'(/,5X,"Bare on-site correction:")')
+  WRITE(stdout,'(5X,2(F10.6, 2x), F10.6)') (delta(iwann), occ_mat(iwann), iwann=1, num_wann)
 #endif
   !
   ! ... The correction beyond 2nd order 
@@ -79,11 +79,6 @@ SUBROUTINE koopmans_ham_proj ()
   !
   ! Apply alpha to get the screened on-site KI correction
   delta(1:num_wann) = alpha_final(1:num_wann) * delta(1:num_wann)
-  !
-#ifdef DEBUG
-  WRITE( stdout,'(/,5X," Screened on-site correction:")')
-  WRITE(stdout,'(5X,10(2F10.6, 2x))') (delta(iwann), iwann=1, num_wann)
-#endif
   !
   IF (.NOT. l_diag) WRITE(stdout, '(/, 5x, "INFO: FULL KI")')
   IF (l_diag)       WRITE(stdout, '(/, 5x, "INFO: PERTURBATIVE KI")') 
@@ -146,6 +141,7 @@ SUBROUTINE koopmans_ham_proj ()
       CALL cdiagh( nbnd, ham, nbnd, eigvl, eigvc )
       !
       et_ki(1:nbnd,ik)=eigvl(1:nbnd)
+      eigvc_all(:,:,ik) = eigvc(:,:)
       !
     ELSE ! Perturbative, corrects only eigenvalues. 
       !
@@ -186,11 +182,22 @@ SUBROUTINE koopmans_ham_proj ()
      WRITE( stdout, 9045 ) ehomo*rytoev
   END IF
   !
-  !Overwrite et
+  !Overwrite et and evc
   DO ik = 1, nkstot/nspin
     ik_pw = ik + (spin_component-1)*(nkstot/nspin)
     et(1:nbnd, ik_pw) = et_ki(1:nbnd,ik)
+    !
+    ! Canonical wfc at each k point (overwrite the evc from DFT)
+    CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
+    ! Retrive the ks function at k (in the Wannier Gauge)
+    eigvc(:,:) = eigvc_all(:,:,ik)
+    CALL ZGEMM( 'N','N', npw, nbnd, nbnd, ONE, evc, npwx, eigvc, nbnd, &
+                 ZERO, evc, npwx )
+    !write (*,'("NICOLA lrwfc", i20)') lrwfc, iuwfc, nbnd, SIZE(evc)
+    CALL save_buffer ( evc, nwordwfc, iuwfc, ik )
+    !
   ENDDO
+
   ! 
 9043 FORMAT(/,8x, 'KS       highest occupied level (ev): ',F10.4 )
 9042 FORMAT(/,8x, 'KS       highest occupied, lowest unoccupied level (ev): ',2F10.4 )
@@ -259,7 +266,7 @@ SUBROUTINE koopmans_ham_proj ()
     USE mp,                    ONLY : mp_sum
     !
     REAL(DP), INTENT(INOUT) :: occ_mat(num_wann)
-    INTEGER :: iwann, ik, ibnd, ik_pw
+    INTEGER :: iwann, ik, ibnd, ik_pw, spin_deg
     !
     ! The canonical occupation matrix (fermi dirac or alike)
     occ_mat = REAL(0.D0, kind=DP)
@@ -273,12 +280,14 @@ SUBROUTINE koopmans_ham_proj ()
         CALL get_buffer ( evc0, lrwannfc, iuwfc_wann, ik )
         CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
         !
+        spin_deg=1
+        IF(nspin == 1) spin_deg = 2
         overlap = CMPLX(0.D0, 0.D0, kind=DP)
         DO ibnd = 1, nbnd
           overlap = SUM(CONJG(evc(1:npw,ibnd))*(evc0(1:npw,iwann)))
           CALL mp_sum (overlap, intra_bgrp_comm)
           overlap = CONJG(overlap)*overlap
-          occ_mat(iwann) = occ_mat(iwann) + wg(ibnd,ik) * REAL(overlap)
+          occ_mat(iwann) = occ_mat(iwann) + wg(ibnd,ik)/spin_deg * REAL(overlap)
         ENDDO
       ENDDO
     ENDDO

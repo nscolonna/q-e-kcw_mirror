@@ -36,7 +36,7 @@ SUBROUTINE koopmans_ham ()
   COMPLEX(DP) deltah_real (num_wann, num_wann)
   !
   ! the KI hamiltonian, the KI contribution, and the new eigenvectors at a given k-point
-  COMPLEX(DP) :: ham(num_wann,num_wann), deltaH(num_wann,num_wann), eigvc(npwx,num_wann)
+  COMPLEX(DP) :: ham(num_wann,num_wann), deltaH(num_wann,num_wann), eigvc(num_wann,num_wann)
   !
   ! The new eigenalues 
   REAL(DP) :: eigvl(num_wann)
