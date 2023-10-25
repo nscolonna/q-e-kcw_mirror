@@ -39,8 +39,8 @@ SUBROUTINE koopmans_ham_proj ()
   ! The k point index 
   INTEGER :: ik, ibnd, ik_pw
   !
-  ! The scalar part (independent on k) <rho_0i|v_0i|rho_0i>delta_ij, and occupations numbers of WFs
-  COMPLEX(DP) :: deltah_scal (num_wann)
+  ! The on-site KI correction <W_0n^2|f_Hxc|W_0n^2>, and occupations numbers of WFs
+  COMPLEX(DP) :: delta (num_wann)
   REAL(DP) :: occ_mat(num_wann)
   !
   COMPLEX(DP) :: delta_k, overlap
@@ -60,24 +60,24 @@ SUBROUTINE koopmans_ham_proj ()
   WRITE(stdout, '(/,5X, "INFO: KI Hamiltonian using Projections")')
   !
   ! The scalar term R=0 i=j 
-  deltah_scal=CMPLX(0.D0,0.D0,kind=DP)
-  CALL ham_scalar (deltah_scal)
+  delta=CMPLX(0.D0,0.D0,kind=DP)
+  CALL ham_scalar (delta)
   CALL occupations(occ_mat)
   ! 
 #ifdef DEBUG
   WRITE( stdout,'(/,5X," "Bare on-site correction:")')
-  WRITE(stdout,'(5X,10(2F10.6, 2x))') (deltah_scal(iwann), iwann=1, num_wann)
+  WRITE(stdout,'(5X,10(2F10.6, 2x))') (delta(iwann), iwann=1, num_wann)
 #endif
   !
   ! ... The correction beyond 2nd order 
-  IF (l_alpha_corr) CALL beyond_2nd (deltah_scal, ddH)
+  IF (l_alpha_corr) CALL beyond_2nd (delta, ddH)
   !
-  ! Apply alpha
-  deltah_scal = alpha_final * deltah_scal
+  ! Apply alpha to get the screened on-site KI correction
+  delta = alpha_final * delta
   !
 #ifdef DEBUG
   WRITE( stdout,'(/,5X," Screened on-site correction:")')
-  WRITE(stdout,'(5X,10(2F10.6, 2x))') (deltah_scal(iwann), iwann=1, num_wann)
+  WRITE(stdout,'(5X,10(2F10.6, 2x))') (delta(iwann), iwann=1, num_wann)
 #endif
   !
   ehomo=-1D+6
@@ -107,8 +107,8 @@ SUBROUTINE koopmans_ham_proj ()
         overlap = SUM(CONJG(evc(1:npw,ibnd))*(evc0(1:npw,iwann)))
         CALL mp_sum (overlap, intra_bgrp_comm)
         overlap = CONJG(overlap)*overlap
-        delta_k = delta_k + (0.5D0 - occ_mat(iwann)) * deltah_scal(iwann) * overlap
-        !WRITE(*,'(3X, 2I5, 2F20.12, F20.12, 2F20.12)') ibnd, iwann, deltah_scal(iwann), occ_mat(iwann), overlap 
+        delta_k = delta_k + (0.5D0 - occ_mat(iwann)) * delta(iwann) * overlap
+        !WRITE(*,'(3X, 2I5, 2F20.12, F20.12, 2F20.12)') ibnd, iwann, delta(iwann), occ_mat(iwann), overlap 
       ENDDO
       et_ki(ibnd,ik) = et(ibnd,ik_pw) + REAL(delta_k)
       !WRITE (*,'(3I5, 2X, 4F20.12)') ik, ik_pw, ibnd, et(ibnd,ik_pw)*rytoev, et_ki(ibnd,ik)*rytoev, delta_k*rytoev
@@ -259,7 +259,7 @@ SUBROUTINE koopmans_ham_proj ()
   END SUBROUTINE beyond_2nd
   !
   !----------------------------------------------------------------
-  SUBROUTINE ham_scalar (deltah_scal)
+  SUBROUTINE ham_scalar (delta)
     !----------------------------------------------------------------
     !
     USE kinds,                ONLY : DP
@@ -276,7 +276,7 @@ SUBROUTINE koopmans_ham_proj ()
     IMPLICIT NONE
     !
     ! The scalar contribution to the hamiltonian 
-    COMPLEX(DP), INTENT(INOUT) :: deltah_scal (num_wann)
+    COMPLEX(DP), INTENT(INOUT) :: delta (num_wann)
     !
     ! Couters for the q point, wannier index. record length for the wannier density
     INTEGER :: iq, iwann, lrrho
@@ -319,7 +319,7 @@ SUBROUTINE koopmans_ham_proj ()
          !! The periodic part of the perturbation DeltaV_q(G)
          ! 
          sh(iwann) = sh(iwann) + 0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:)                )*weight(iq)*omega
-         deltah_scal(iwann) = deltah_scal(iwann) + sum (CONJG(rhog (:)) * delta_vg(:,spin_component)) &
+         delta(iwann) = delta(iwann) + sum (CONJG(rhog (:)) * delta_vg(:,spin_component)) &
                                      * weight(iq) * omega
          !
       ENDDO
@@ -329,7 +329,7 @@ SUBROUTINE koopmans_ham_proj ()
     !
     DEALLOCATE ( rhog , delta_vg, vh_rhog, delta_vg_ )
     !
-    CALL mp_sum (deltah_scal, intra_bgrp_comm)
+    CALL mp_sum (delta, intra_bgrp_comm)
     CALL mp_sum (sh, intra_bgrp_comm)
    !
   END SUBROUTINE ham_scalar
