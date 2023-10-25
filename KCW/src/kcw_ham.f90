@@ -31,25 +31,23 @@ SUBROUTINE kcw_ham
   ! 1) Set up for the KC calculation. 
   CALL kcw_setup_ham( )
   !
-  ! 2) Build up the Hamiltonian
-  ! 2a) Diagonal term only to 2nd order
-  !     OBSOLETE: inside koopmans_ham this is triggered by "on_site_only": FIXME
+  !OBSOLETE: inside koopmans_ham this is triggered by "on_site_only": FIXME
   !CALL ham_R0_2nd ( )
   IF ( h_proj ) THEN 
+     ! Use Projectors to build a unique Hamiltonian
      CALL koopmans_ham_proj ( )
   ELSE 
-    ! 2b) Full Hamiltonian to 2nd order 
+    ! Standard procedure using MLWFs
     CALL koopmans_ham ( )
-    !
-    ! 3) If do_bands=TRUE interpolate H(k) and prints bands
-    IF ( do_bands ) CALL interpolate_ham( )
-    !
-    ! 4) If write_hr=TRUE write H(R) to file
-    IF ( write_hr ) CALL write_hr_to_file( )
-    !
-    IF (do_bands) CALL dealloc_interpolation( )
-    !
   ENDIF
+  !
+  ! 3) If do_bands=TRUE interpolate H(k) and prints bands
+  IF ( do_bands ) CALL interpolate_ham( )
+  !
+  ! 4) If write_hr=TRUE write H(R) to file
+  IF ( write_hr ) CALL write_hr_to_file( )
+  !
+  IF (do_bands) CALL dealloc_interpolation( )
   ! 
   ! WRITE data file
   iunwfc = iuwfc

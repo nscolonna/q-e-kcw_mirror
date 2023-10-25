@@ -21,7 +21,7 @@ SUBROUTINE koopmans_ham_proj ()
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : nkstot, xk, ngk, igk_k
-  USE control_kcw,           ONLY : num_wann, l_alpha_corr, evc0, hamlt, l_diag, &
+  USE control_kcw,           ONLY : num_wann, l_alpha_corr, evc0, Hamlt, l_diag, &
                                     alpha_final, num_wann_occ, iuwfc_wann, spin_component
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd, current_k
@@ -117,6 +117,7 @@ SUBROUTINE koopmans_ham_proj ()
         current_k = ik_pw
         IF ( lsda ) current_spin = isk(ik_pw)
         IF ( nkb > 0 ) CALL init_us_2( npw, igk_k(1,ik_pw), xk(1,ik_pw), vkb )
+        ! FIXME: ned o modify ks_hamiltonian to pass the hammiltonian (and not use Hamlt of kcw_comm)
         CALL ks_hamiltonian (evc, ik_pw, nbnd, .false.)
         !
         ! The KS hamiltonian in the Wannier Gauge (just to check)
@@ -130,9 +131,9 @@ SUBROUTINE koopmans_ham_proj ()
       ELSE
         !
         ! The KS Hamiltonian in the KS basis
-        Hamlt(ik,:,:)=CMPLX(0.D0, 0.D0, kind=DP)
+        ham(:,:)=CMPLX(0.D0, 0.D0, kind=DP)
         DO i = 1, nbnd 
-          Hamlt(ik,i,i)=et(i,ik_pw)
+          ham(i,i)=et(i,ik_pw)
         ENDDO
         !
       ENDIF
@@ -140,9 +141,8 @@ SUBROUTINE koopmans_ham_proj ()
       CALL dki_hamiltonian (evc, ik, nbnd, occ_mat, delta, deltah) 
       !
       ! Add to the KS Hamiltonian
-      Hamlt(ik,:,:) = Hamlt(ik,:,:) + deltah(:,:) 
+      ham(:,:) = ham(:,:) + deltah(:,:) 
       !
-      ham(:,:) = Hamlt(ik,:,:) 
       CALL cdiagh( nbnd, ham, nbnd, eigvl, eigvc )
       !
       et_ki(1:nbnd,ik)=eigvl(1:nbnd)

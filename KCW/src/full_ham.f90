@@ -27,7 +27,7 @@ SUBROUTINE full_ham (ik)
   USE gvect,                 ONLY : ngm
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
-  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final_full, hamlt, num_wann_occ, iuwfc_wann, &
+  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final_full, Hamlt, num_wann_occ, iuwfc_wann, &
                                     kcw_iverbosity, qp_symm, evc0, kipz_corr, num_wann, spin_component
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum

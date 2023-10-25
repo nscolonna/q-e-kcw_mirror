@@ -32,7 +32,7 @@ subroutine kcw_setup_ham
   USE io_files,          ONLY : prefix
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer
   USE control_kcw,       ONLY : alpha_final, evc0, iuwfc_wann, iurho_wann, kcw_iverbosity, &
-                                read_unitary_matrix, hamlt, alpha_corr_done, &
+                                read_unitary_matrix, Hamlt, alpha_corr_done, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
                                 tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, h_proj !, wq
@@ -168,16 +168,12 @@ subroutine kcw_setup_ham
   !
   ALLOCATE ( rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
   ALLOCATE ( evc0(npwx, num_wann) )
-  IF (h_proj) THEN 
-    ALLOCATE ( hamlt(nkstot, nbnd, nbnd) )
-  ELSE
-    ALLOCATE ( hamlt(nkstot, num_wann, num_wann) )
-  ENDIF
+  ALLOCATE ( Hamlt(nkstot, num_wann, num_wann) )
   ALLOCATE ( alpha_corr_done (num_wann) ) 
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   occ_mat = 0.D0
   alpha_corr_done = .FALSE.
-  hamlt(:,:,:) = ZERO
+  Hamlt(:,:,:) = ZERO
   !
   mlwf_from_u = .FALSE. ! Set this to true to revert to the previous behaviour (March 2021)
   IF (mlwf_from_u) THEN 

@@ -269,6 +269,14 @@ SUBROUTINE kcw_readin()
      l_vcut = .true.
   ENDIF
   !
+  IF (h_proj .AND. do_bands) THEN 
+     CALL infomsg('kcw_readin','WARNING: "do_bands" set to FALSE. Bands interpolation not available when h_proj=.TRUE.')
+     CALL infomsg('kcw_readin','WARNING: "write_hr" set to FALSE. Bands interpolation not available when h_proj=.TRUE.')
+     do_bands = .FALSE.
+     write_hr = .FALSE.
+  ENDIF
+
+  !
   ! read data produced by pwscf
   !
   WRITE( stdout, '(5X,"INFO: Reading pwscf data")')
