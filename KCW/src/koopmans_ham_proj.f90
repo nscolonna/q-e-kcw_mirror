@@ -194,7 +194,7 @@ SUBROUTINE koopmans_ham_proj ()
     CALL ZGEMM( 'N','N', npw, nbnd, nbnd, ONE, evc, npwx, eigvc, nbnd, &
                  ZERO, evc, npwx )
     !write (*,'("NICOLA lrwfc", i20)') lrwfc, iuwfc, nbnd, SIZE(evc)
-    CALL save_buffer ( evc, nwordwfc, iuwfc, ik )
+    CALL save_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     !
   ENDDO
 

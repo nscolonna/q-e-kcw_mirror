@@ -5,7 +5,7 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-!#define DEBUG
+#define DEBUG
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
 !-----------------------------------------------------------------------
@@ -16,7 +16,7 @@ SUBROUTINE koopmans_ham ()
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : nkstot, xk
   USE lsda_mod,              ONLY : nspin
-  USE control_kcw,           ONLY : num_wann, Hamlt, nqstot, l_alpha_corr, evc0, &
+  USE control_kcw,           ONLY : num_wann, Hamlt, nqstot, l_alpha_corr, evc0, spin_component, &
                                     alpha_final, num_wann_occ, on_site_only, iuwfc_wann
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
@@ -27,7 +27,7 @@ SUBROUTINE koopmans_ham ()
   IMPLICIT NONE
   !
   ! The k point index 
-  INTEGER :: ik
+  INTEGER :: ik, ik_pw
   !
   ! The scalar part (independent on k) <rho_0i|v_0i|rho_0i>delta_ij
   COMPLEX(DP) :: deltah_scal (num_wann, num_wann)
@@ -158,12 +158,13 @@ SUBROUTINE koopmans_ham ()
     CALL ZGEMM( 'N','N', npw, num_wann, num_wann, ONE, evc0, npwx, eigvc, num_wann, &
                  ZERO, evc, npwx )
     lrwfc = nbnd * npwx
+    ik_pw = ik + (spin_component-1)*(nkstot/nspin)
     !write (*,'("NICOLA lrwfc", i20)') lrwfc, iuwfc, nbnd, SIZE(evc)
-    CALL save_buffer ( evc, lrwfc, iuwfc, ik )
+    CALL save_buffer ( evc, lrwfc, iuwfc, ik_pw )
     !
     nbnd = num_wann
     DO iwann = 1, nbnd
-      et(iwann,ik) = eigvl(iwann)
+      et(iwann,ik_pw) = eigvl(iwann)
     ENDDO
     !
     ehomo = MAX ( ehomo, eigvl(num_wann_occ ) )
