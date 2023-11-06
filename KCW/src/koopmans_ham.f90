@@ -5,7 +5,7 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-#define DEBUG
+!#define DEBUG
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
 !-----------------------------------------------------------------------
@@ -49,6 +49,7 @@ SUBROUTINE koopmans_ham ()
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
   INTEGER  :: lrwannfc
+  REAL(DP), EXTERNAL :: get_clock
   !
   !
   IF (on_site_only) WRITE(stdout, '(/,5X, "INFO: Skipping off-diag: only R=0 and i=j")') 
@@ -56,6 +57,7 @@ SUBROUTINE koopmans_ham ()
   ! The scalar term R=0 i=j 
   deltah_scal=CMPLX(0.D0,0.D0,kind=DP)
   CALL ham_scalar (deltah_scal)
+  WRITE(stdout, 900) get_clock('KCW')
   ! 
 #ifdef DEBUG
   WRITE( stdout,'(/,5X," Scalar term Hamiltonian:")')
@@ -149,6 +151,7 @@ SUBROUTINE koopmans_ham ()
     ham(:,:) = Hamlt(ik,:,:) 
     CALL cdiagh( num_wann, ham, num_wann, eigvl, eigvc )
     WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
+    WRITE(stdout, 901) get_clock('KCW')
     !
     ! Canonical wfc at each k point (overwrite the evc from DFT)
     lrwannfc = num_wann*npwx
@@ -190,6 +193,8 @@ SUBROUTINE koopmans_ham ()
 9045 FORMAT(  8x, 'KI[2nd]  highest occupied level (ev): ',F10.4 )
 9044 FORMAT(  8x, 'KI[2nd]  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
+900 FORMAT(/'     total cpu time spent up to now is ',F10.1,' secs' )
+901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
   !
   RETURN
   !
@@ -215,6 +220,8 @@ SUBROUTINE koopmans_ham ()
     REAL(DP) second_der(num_wann), delta 
     !
     INTEGER :: iwann
+    !
+    !REAL(DP), EXTERNAL :: get_clock
     !
     ddH = 0.D0
     !
@@ -263,8 +270,10 @@ SUBROUTINE koopmans_ham ()
        ! Re-define the corrected screening parameter. 
        alpha_final(iwann) = alpha_(iwann) 
        WRITE( stdout, '(5X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
+       WRITE(stdout, 900) get_clock('KCW')
       !
     ENDDO
+900 FORMAT('     total cpu time spent up to now is ',F10.1,' secs' )
     !
   END SUBROUTINE beyond_2nd
   !
@@ -552,9 +561,12 @@ SUBROUTINE koopmans_ham ()
     CALL mp_sum (deltaH, intra_bgrp_comm)
     CALL mp_sum (sh, intra_bgrp_comm)
     ! Sum over different processes (G vectors) 
+    !WRITE(stdout, 900) get_clock('KCW')
     !
     RETURN 
     !
+900 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
+  !
   END subroutine 
   ! 
 END SUBROUTINE koopmans_ham

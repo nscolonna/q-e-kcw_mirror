@@ -63,12 +63,14 @@ SUBROUTINE koopmans_ham_proj ()
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
   INTEGER  :: lrwannfc
+  REAL(DP), EXTERNAL :: get_clock
   !
   WRITE(stdout, '(/,5X, "INFO: KI Hamiltonian using Projectors")')
   !
   ! The scalar term R=0 i=j 
   delta=CMPLX(0.D0,0.D0,kind=DP)
   CALL ham_scalar (delta)
+  WRITE(stdout, 900) get_clock('KCW')
   CALL occupations(occ_mat)
   ! 
 #ifdef DEBUG
@@ -201,6 +203,7 @@ SUBROUTINE koopmans_ham_proj ()
     !
     WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (et(ibnd,ik_pw)*rytoev, ibnd=1,nbnd)
     WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (et_ki(ibnd,ik)*rytoev, ibnd=1,nbnd)
+    WRITE(stdout, 901) get_clock('KCW')
     !
   ENDDO
   !
@@ -234,6 +237,8 @@ SUBROUTINE koopmans_ham_proj ()
 9045 FORMAT(  8x, 'KI[2nd]  highest occupied level (ev): ',F10.4 )
 9044 FORMAT(  8x, 'KI[2nd]  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
+900 FORMAT(/'     total cpu time spent up to now is ',F10.1,' secs' )
+901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
   !
   RETURN
   !
