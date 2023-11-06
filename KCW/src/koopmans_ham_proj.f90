@@ -21,7 +21,7 @@ SUBROUTINE koopmans_ham_proj ()
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : nkstot, xk, ngk, igk_k
-  USE control_kcw,           ONLY : num_wann, l_alpha_corr, evc0, Hamlt, l_diag, &
+  USE control_kcw,           ONLY : num_wann, l_alpha_corr, evc0, Hamlt, l_diag, kcw_iverbosity, &
                                     alpha_final, num_wann_occ, iuwfc_wann, spin_component
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd, current_k
@@ -38,7 +38,7 @@ SUBROUTINE koopmans_ham_proj ()
   IMPLICIT NONE
   !
   ! The k point index 
-  INTEGER :: ik, ibnd, ik_pw
+  INTEGER :: ik, ibnd, ik_pw, k, eig_start, eig_win
   !
   ! The on-site KI correction <W_0n^2|f_Hxc|W_0n^2>, and occupations numbers of WFs
   COMPLEX(DP) :: delta (num_wann)
@@ -49,6 +49,8 @@ SUBROUTINE koopmans_ham_proj ()
   !
   ! The new eigenalues 
   REAL(DP) :: et_ki(nbnd,nkstot)
+  REAL(DP), ALLOCATABLE :: eigvl_aux(:)
+  COMPLEX(DP) , ALLOCATABLE :: eigvc_aux(:,:), ham_aux(:,:)
   !
   ! The correction to the diagonal term beyond second order
   REAL(DP) :: ddH(num_wann)
@@ -90,6 +92,7 @@ SUBROUTINE koopmans_ham_proj ()
   !
   DO ik = 1, nkstot/nspin
     !
+    WRITE( stdout, 9020 ) ( xk(i,ik_pw), i = 1, 3 )
     ik_pw = ik + (spin_component-1)*(nkstot/nspin)
     CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     npw = ngk(ik_pw)
@@ -97,8 +100,6 @@ SUBROUTINE koopmans_ham_proj ()
     ehomo_ks = MAX ( ehomo_ks, et(num_wann_occ  , ik_pw) )
     elumo_ks = MIN ( elumo_ks, et(num_wann_occ+1, ik_pw) )
     !
-    WRITE( stdout, 9020 ) ( xk(i,ik_pw), i = 1, 3 )
-    WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (et(ibnd,ik_pw)*rytoev, ibnd=1,nbnd)
     !
     IF ( .NOT. l_diag ) THEN 
       ! Build and diagonalize the projector-based KI Hamiltonian on the Hilbert space spanned
@@ -143,6 +144,34 @@ SUBROUTINE koopmans_ham_proj ()
       et_ki(1:nbnd,ik)=eigvl(1:nbnd)
       eigvc_all(:,:,ik) = eigvc(:,:)
       !
+      IF (kcw_iverbosity .gt. 1) THEN
+        eig_win=5
+        eig_start = MAX(num_wann_occ-eig_win+1, 1) 
+        WRITE(stdout,'( 12x, "KI Eigenvalues around Fermi as a function of the Hilbert space")')
+        WRITE(stdout,'( 12x, "KI Eigenvaluse from", I5, " to", I5, " (i.e. +/-", I3, " around VBM),/")') eig_start, num_wann_occ+eig_win, eig_win
+        WRITE(stdout,'( 12x, " dim   eig1      eig2      ...")')
+        DO k = eig_start, nbnd
+           !
+           ALLOCATE (ham_aux(k,k), eigvl_aux(k), eigvc_aux(k,k))
+           !ham_aux(1:k,1:k) = ham(1:k,1:k)
+           ham_aux(1:k,1:k) = ham(1:k,1:k)
+           !
+           CALL cdiagh( k, ham_aux, k, eigvl_aux, eigvc_aux )
+           !
+           !neig_max = MIN (20, nbnd)
+           IF (k.le.num_wann_occ+eig_win) THEN 
+              WRITE(stdout,'(12x, I3, 10F10.4)') k, eigvl_aux(eig_start:k)*rytoev   
+           ELSE 
+              WRITE(stdout,'(12x, I3, 10F10.4)') k, eigvl_aux(eig_start:num_wann_occ+eig_win)*rytoev 
+           ENDIF
+           !
+           DEALLOCATE (ham_aux)
+           DEALLOCATE (eigvl_aux, eigvc_aux)
+           !
+        ENDDO
+        WRITE(stdout,*)
+      ENDIF
+      !
     ELSE ! Perturbative, corrects only eigenvalues. 
       !
       ! Build a diagonal correction using the projector-based KI Hamiltonian 
@@ -170,6 +199,7 @@ SUBROUTINE koopmans_ham_proj ()
     ehomo = MAX ( ehomo, et_ki(num_wann_occ, ik ) )
     IF (nbnd > num_wann_occ) elumo = MIN ( elumo, et_ki(num_wann_occ+1, ik ) )
     !
+    WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (et(ibnd,ik_pw)*rytoev, ibnd=1,nbnd)
     WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (et_ki(ibnd,ik)*rytoev, ibnd=1,nbnd)
     !
   ENDDO
