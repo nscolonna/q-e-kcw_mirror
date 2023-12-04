@@ -9,8 +9,6 @@ set(src_upflib
     init_us_1.f90
     init_tab_atwfc.f90
     init_tab_beta.f90
-    init_tab_qrad.f90
-    init_tab_rho.f90
     interp_atwfc.f90
     init_us_2_base.f90
     gth.f90
@@ -48,6 +46,8 @@ set(src_upflib
     uspp_param.f90
     vloc_mod.f90
     rhoc_mod.f90
+    rhoat_mod.f90
+    qrad_mod.f90
     write_upf_new.f90
     ylmr2.f90
     dylmr2.f90

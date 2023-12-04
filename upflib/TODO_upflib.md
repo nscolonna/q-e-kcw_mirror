@@ -60,17 +60,17 @@
       CP     PW      better name     contains 	           computed in
     betagx   tab     tab_beta      beta(G) functions	 compute_betagx,
     dbetagx             	   dbeta(G)/dG 		 compute_betagx
-    qradx    qrad    tab_q         Q(G) for  USPP/PAW	 init_tab_qrad
     dqradx              	   dQ(G)/dG  		 compute_qradx
              tab_at  tab_atwfc?    atomic R_nl(G)	 init_tab_atwfc
-             tab_rho               atomic rho(G)	 init_tab_rho
-             tab_rhc               pseudocore rho(G)	 init_tab_rhc
-	             tab_vloc      local pseudopotential init_tab_vloc
+    qradx    tab_qrad              Q(G) for  USPP/PAW	 qrad_mod
+             tab_rho               atomic rho(G)	 rhoa_mod
+             tab_rhc               pseudocore rho(G)	 rhoc_mod
+	     tab_vloc              local pseudopotential vloc_mod
 ```
   - Interpolation tables: rationalize the structure of the code.
     Move allocation  of interpolation tables into initialization routines,
     setting max |G| as input. Collect interpolation data and related routines
-    into a module, one per variable. DONE: for Vloc.
+    into a module, one per variable. DONE: for Vloc, rhoc, rhoat
   - Interpolation tables: get rid of CUDA Fortran. Currently interpolation
     tables are computed on CPU, copied to GPU using OpenACC, used via OpenACC.
     Exception: init_us_2 still use CUDA Fortran, so tab_d has DEVICE

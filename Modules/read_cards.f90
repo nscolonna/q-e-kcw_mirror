@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2002-2014 Quantum ESPRESSO group
+! Copyright (C) 2002-2023 Quantum ESPRESSO group
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -3040,14 +3040,14 @@ CONTAINS
          ELSEIF (ANY(ABS(Hubbard_V(:,:,:))>eps16)) THEN
             ! DFT+U+V(+J0)
             lda_plus_u_kind = 2
-            IF (noncolin) CALL errore('card_hubbard', &
-                    'Hubbard V is not supported with noncolin=.true.', i)
-         ELSEIF (ANY(ABS(Hubbard_U(:))>eps16) .AND. noncolin) THEN
-            ! DFT+U
-            lda_plus_u_kind = 1
-         ELSEIF (ANY(ABS(Hubbard_U(:))>eps16) .OR. ANY(ABS(Hubbard_J0(:))>eps16)) THEN
+            ! 
+            IF (noncolin .and. ANY(Hubbard_J0(:)>eps16)) CALL errore('card_hubbard', &
+                    & 'Currently Hund J0 is not compatible with noncolin=.true.', i)
+         ELSEIF (ANY(Hubbard_U(:)>eps16) .OR. ANY(Hubbard_J0(:)>eps16)) THEN
             ! DFT+U(+J0)
             lda_plus_u_kind = 0
+            IF (noncolin .and. ANY(Hubbard_J0(:)>eps16)) CALL errore('card_hubbard', &
+                    & 'Currently Hund J0 is not compatible with noncolin=.true.', i)
          ELSE
             CALL errore('card_hubbard', 'Unknown case for lda_plus_u_kind...', i)
          ENDIF

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2001-2020 Quantum ESPRESSO group
+! Copyright (C) 2001-2023 Quantum ESPRESSO group
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -91,12 +91,13 @@ SUBROUTINE potinit()
      IF ( .NOT.lforcet ) THEN
         CALL read_scf ( rho, nspin, gamma_only )
      ELSE
+        IF ( okpaw )  CALL errore( 'potinit', &
+                                   'force theorem with PAW not implemented', 1 )
         !
         ! ... 'force theorem' calculation of MAE: read rho only from previous
         ! ... lsda calculation, set noncolinear magnetization from angles
         ! ... (not if restarting! the charge density saved to file in that
         ! ...  case has already the required magnetization direction)
-        ! ... FIXME: why not calling read_scf also in this case?
         !
         CALL read_rhog ( filename, root_bgrp, intra_bgrp_comm, &
              ig_l2g, nspin, rho%of_g, gamma_only )
@@ -152,8 +153,12 @@ SUBROUTINE potinit()
      !
      IF (lda_plus_u) THEN
         !
-        IF (lda_plus_u_kind == 0) THEN
-           CALL init_ns()
+        IF (lda_plus_u_kind == 0) THEN    
+           IF (noncolin) THEN
+              CALL init_ns_nc() 
+           ELSE 
+              CALL init_ns()
+           ENDIF   
         ELSEIF (lda_plus_u_kind == 1) THEN
            IF (noncolin) THEN
               CALL init_ns_nc()
@@ -284,7 +289,11 @@ SUBROUTINE potinit()
      WRITE( stdout, '(/5X,"STARTING HUBBARD OCCUPATIONS:")')
      !
      IF (lda_plus_u_kind == 0) THEN
-        CALL write_ns()
+        IF (noncolin) THEN
+           CALL write_ns_nc() 
+        ELSE   
+           CALL write_ns()
+        ENDIF
      ELSEIF (lda_plus_u_kind == 1) THEN
         IF (noncolin) THEN
            CALL write_ns_nc()
@@ -293,7 +302,11 @@ SUBROUTINE potinit()
         ENDIF
      ELSEIF (lda_plus_u_kind == 2) THEN
         nsgnew = nsg
-        CALL write_nsg()
+        IF(noncolin) THEN
+           CALL write_nsg_nc()
+        ELSE
+           CALL write_nsg()
+        ENDIF
      ENDIF
      !
   END IF
@@ -319,6 +332,8 @@ SUBROUTINE nc_magnetization_from_lsda ( ngm, nspin, rho )
   IMPLICIT NONE
   INTEGER, INTENT (in):: ngm, nspin
   COMPLEX(dp), INTENT (inout):: rho(ngm,nspin)
+  !
+  IF ( nspin < 4 ) RETURN
   !---  
   !  set up noncollinear m_x,y,z from collinear m_z (AlexS) 
   !
@@ -332,12 +347,11 @@ SUBROUTINE nc_magnetization_from_lsda ( ngm, nspin, rho )
   !         rho(3)=magn*sin(theta)*sin(phi)   y
   !         rho(4)=magn*cos(theta)            z
   !
-  rho(:,2) = rho(:,4)*sin(angle1(1))
+  rho(:,4) = rho(:,2)*cos(angle1(1))
+  rho(:,2) = rho(:,2)*sin(angle1(1))
   rho(:,3) = rho(:,2)*sin(angle2(1))
-  rho(:,4) = rho(:,4)*cos(angle1(1))
   rho(:,2) = rho(:,2)*cos(angle2(1))
   !
   RETURN
   !
 END SUBROUTINE nc_magnetization_from_lsda
-
