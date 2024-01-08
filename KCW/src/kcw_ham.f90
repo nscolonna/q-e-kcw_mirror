@@ -60,6 +60,8 @@ SUBROUTINE kcw_ham
     !
   ENDIF
   !
+  DEALLOCATE (dH_wann) 
+  !
   ! WRITE data file
   iunwfc = iuwfc
   prefix = TRIM(prefix)//"_kcw"
