@@ -100,7 +100,7 @@ SUBROUTINE koopmans_ham_proj_alternative ()
     npw = ngk(ik_pw)
     !
     ehomo_ks = MAX ( ehomo_ks, et(num_wann_occ  , ik_pw) )
-    elumo_ks = MIN ( elumo_ks, et(num_wann_occ+1, ik_pw) )
+    IF (nbnd > num_wann_occ) elumo_ks = MIN ( elumo_ks, et(num_wann_occ+1, ik_pw) )
     !
     !
     IF ( .NOT. l_diag ) THEN 

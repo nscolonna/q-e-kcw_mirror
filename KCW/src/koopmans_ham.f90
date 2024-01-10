@@ -23,6 +23,7 @@ SUBROUTINE koopmans_ham (dH_wann)
   USE units_lr,              ONLY : lrwfc, iuwfc
   USE wavefunctions,         ONLY : evc
   USE buffers,               ONLY : get_buffer, save_buffer
+  USE control_lr,            ONLY : nbnd_occ
   !
   IMPLICIT NONE
   !
@@ -64,7 +65,7 @@ SUBROUTINE koopmans_ham (dH_wann)
     WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
     !
     ehomo_ks = MAX ( ehomo_ks, eigvl(num_wann_occ ) )
-    elumo_ks = MIN ( elumo_ks, eigvl(num_wann_occ+1 ) )
+    IF (num_wann > num_wann_occ) elumo_ks = MIN ( elumo_ks, eigvl(num_wann_occ+1 ) )
     !
     ! Add the KI contribution to the KS Hamiltonian in the wannier basis
     Hamlt(ik,:,:) = Hamlt(ik,:,:) + dH_wann(ik,:,:) 

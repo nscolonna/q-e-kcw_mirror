@@ -94,7 +94,7 @@ SUBROUTINE koopmans_ham_proj ( dH_wann )
     ENDDO
     !
     ehomo_ks = MAX ( ehomo_ks, et(num_wann_occ  , ik_pw) )
-    elumo_ks = MIN ( elumo_ks, et(num_wann_occ+1, ik_pw) )
+    IF (nbnd > num_wann_occ) elumo_ks = MIN ( elumo_ks, et(num_wann_occ+1, ik_pw) )
     !
     ! The Delta H_KI_ij = \sum_nm <phi_i|w_n> \Delta H_nm <w_m|phi_j>
     CALL dki_hamiltonian (evc, ik, nbnd, dH_wann_aux(:,:), deltah)
