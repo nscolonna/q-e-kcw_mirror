@@ -65,6 +65,8 @@ SUBROUTINE kcw_ham
   ! WRITE data file
   iunwfc = iuwfc
   prefix = TRIM(prefix)//"_kcw"
+  ! Append an extra _proj to save the temporary files of a proj calculation on an other dir
+  IF ( h_proj ) prefix = TRIM(prefix)//"_proj"
   CALL write_scf(rho, nspin)
   !CALL punch('config-only')
   CALL punch ('all')
