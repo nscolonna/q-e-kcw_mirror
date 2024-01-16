@@ -150,7 +150,8 @@ SUBROUTINE koopmans_ham_proj_alternative ()
         eig_win=5
         eig_start = MAX(num_wann_occ-eig_win+1, 1) 
         WRITE(stdout,'( 12x, "KI Eigenvalues around Fermi as a function of the Hilbert space")')
-        WRITE(stdout,'( 12x, "KI Eigenvaluse from", I5, " to", I5, " (i.e. +/-", I3, " around VBM),/")') eig_start, num_wann_occ+eig_win, eig_win
+        WRITE(stdout,'( 12x, "KI Eigenvaluse from", I5, " to", I5, " (i.e. +/-", I3, " around VBM),/")') &
+                eig_start, num_wann_occ+eig_win, eig_win
         WRITE(stdout,'( 12x, " dim   eig1      eig2      ...")')
         DO k = eig_start, nbnd
            !
