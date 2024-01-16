@@ -359,6 +359,9 @@ SUBROUTINE dH_ki_wann (dH_wann)
     LOGICAL :: off_diag = .TRUE.
     ! compute Off-diagonal elements. NsC: not sure off_diag=.false. here makes sense: DO NOT CHANGE!!!!
     !
+    ! If there are no empty wannier functions, RETURN 
+    IF (num_wann == num_wann_occ) RETURN 
+    !
     WRITE( stdout, '(/,/,5X,"INFO: KI[2nd] HAMILTONIAN CALCULATION ik= ", i4, " ...", /)') ik
     !
     nqs = nqstot

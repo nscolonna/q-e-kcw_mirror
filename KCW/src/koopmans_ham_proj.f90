@@ -12,6 +12,17 @@
 SUBROUTINE koopmans_ham_proj ( dH_wann )
   !---------------------------------------------------------------------
   !
+  ! Here the KI hamiltonian is written in terms of projectors on Wannnier
+  ! functions:
+  ! \Delta H_KI = \sum_nm |w_n> \Delta H_nm < w_m| where \Delta H_nm = <w_n | h_m |w_m> 
+  ! computed in the standard way (see dH_ki_wann.f90). 
+  ! Then we build and Diagonalize the KI hamiltoinan H_KS+\Delta H_KI on the basis of the 
+  ! KS orbitals from the NSCF calculation: espilon_i = Diag [ < \phi_i | H_KS + \Delta H_KI | phi_j > ] 
+  ! < \phi_i | H_KS | phi_j > = \delta_ij \epsilon_i^KS 
+  ! < \phi_i | \Delta H_KI | phi_j > = \sum_nm <phi_i|w_n> \Delta H_nm <w_m|phi_j> 
+  !
+  ! NB: In principle one can use any other basis or iterative digonalization technique.  
+
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : nkstot, xk, ngk
@@ -52,6 +63,7 @@ SUBROUTINE koopmans_ham_proj ( dH_wann )
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
   REAL(DP), EXTERNAL :: get_clock
+  EXTERNAL :: ZGEMM, CDIAGH
   !
   !
   ehomo=-1D+6
@@ -74,6 +86,7 @@ SUBROUTINE koopmans_ham_proj ( dH_wann )
     WRITE( stdout, 9020 ) ( xk(i,ik_pw), i = 1, 3 )
     CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     npw = ngk(ik_pw)
+    !
     ! The KS Hamiltonian in the KS basis
     ham(:,:)=CMPLX(0.D0, 0.D0, kind=DP)
     DO i = 1, nbnd
@@ -81,15 +94,18 @@ SUBROUTINE koopmans_ham_proj ( dH_wann )
     ENDDO
     !
     ehomo_ks = MAX ( ehomo_ks, et(num_wann_occ  , ik_pw) )
-    elumo_ks = MIN ( elumo_ks, et(num_wann_occ+1, ik_pw) )
+    IF (nbnd > num_wann_occ) elumo_ks = MIN ( elumo_ks, et(num_wann_occ+1, ik_pw) )
     !
+    ! The Delta H_KI_ij = \sum_nm <phi_i|w_n> \Delta H_nm <w_m|phi_j>
     CALL dki_hamiltonian (evc, ik, nbnd, dH_wann_aux(:,:), deltah)
     !
     ! Add to the KS Hamiltonian
     ham(:,:) = ham(:,:) + deltah(:,:)
     !
-    CALL cdiagh( nbnd, ham, nbnd, eigvl, eigvc )
+    ! Diagonalize it 
+    CALL CDIAGH( nbnd, ham, nbnd, eigvl, eigvc )
     !
+    ! Store the eigenvalues and eigenvector at this k point 
     et_ki(1:nbnd,ik)=eigvl(1:nbnd)
     eigvc_all(:,:,ik) = eigvc(:,:)
     !
@@ -156,22 +172,34 @@ SUBROUTINE koopmans_ham_proj ( dH_wann )
     COMPLEX(DP), INTENT(OUT) :: deltah(h_dim,h_dim)
     !
     INTEGER :: lrwannfc, ib, jb, nwann, mwann
-    COMPLEX(DP) :: overlap_in, overlap_mj, overlap
+    COMPLEX(DP) :: overlap
+    !
+    COMPLEX (DP) :: overlap_mat(nbnd,num_wann)
+    !
+    EXTERNAL :: ZGEMM
     !
     lrwannfc = num_wann*npwx
     CALL get_buffer ( evc0, lrwannfc, iuwfc_wann, ik )
     !
     deltah = CMPLX(0.D0, 0.D0, kind=DP)
+    !
+    CALL ZGEMM( 'C','N', nbnd, num_wann, npwx, ONE, evc, npwx, evc0, npwx, &
+                 ZERO, overlap_mat, nbnd) 
+    CALL mp_sum (overlap_mat, intra_bgrp_comm)
+    !     
     DO ib = 1, nbnd
       DO jb = ib, nbnd
         !
         DO nwann = 1, num_wann
          DO mwann = 1, num_wann
-          overlap_in = SUM(CONJG(evc(1:npw,ib))*(evc0(1:npw,nwann)))
-          overlap_mj = SUM(CONJG(evc0(1:npw,mwann))*(evc(1:npw,jb)))
-          CALL mp_sum (overlap_in, intra_bgrp_comm)
-          CALL mp_sum (overlap_mj, intra_bgrp_comm)
-          overlap = overlap_in*overlap_mj
+          ! OLD 
+          !overlap_in = SUM(CONJG(evc(1:npw,ib))*(evc0(1:npw,nwann)))
+          !overlap_mj = SUM(CONJG(evc0(1:npw,mwann))*(evc(1:npw,jb)))
+          !CALL mp_sum (overlap_in, intra_bgrp_comm)
+          !CALL mp_sum (overlap_mj, intra_bgrp_comm)
+          !overlap = overlap_in*overlap_mj
+          ! 
+          overlap = (overlap_mat(ib,nwann )) * CONJG(overlap_mat(jb,mwann))
           deltah(ib,jb) = deltah(ib,jb) + delta(nwann,mwann) * overlap
           !WRITE(*,'(3X, 2I5, 2F20.12, F20.12, 2F20.12)') ibnd, iwann, delta(iwann), occ_mat(iwann), overlap
          ENDDO

@@ -108,7 +108,6 @@ subroutine kcw_setup_ham
   call setup_nbnd_occ ( ) 
   !
   ALLOCATE ( alpha_final(nbnd) )
-  ALLOCATE (l_do_alpha(num_wann), group_alpha(num_wann) ) 
   alpha_final(:) = 1.D0
   IF (nkstot/nspin == 1 ) THEN 
     ALLOCATE (alpha_final_full(nbnd))
@@ -149,6 +148,7 @@ subroutine kcw_setup_ham
     num_wann_occ = nbnd_occ(1)
     num_wann_emp = num_wann-num_wann_occ
   ENDIF
+  !
   ! 
   ! Open a file to store the KS states in the WANNIER gauge
   !
@@ -271,6 +271,7 @@ subroutine kcw_setup_ham
     !
   ENDIF
   !
+  ALLOCATE (l_do_alpha(num_wann), group_alpha(num_wann) ) 
   l_do_alpha = .TRUE.
   DO i = 1, num_wann; group_alpha(i)=i; ENDDO
   CALL group_orbitals ( )
