@@ -28,7 +28,7 @@ SUBROUTINE group_orbitals ( )
   l_do_alpha = .TRUE. 
   ! ... if .TRUE. the LR calculation for the orbital needs to be done 
   ! 
-  IF (.NOT. check_spread .AND. .NOT. calculation=="ham") RETURN 
+  IF (.NOT. check_spread ) RETURN 
   ! If no check has to be performed, nothing else to do. RETURN
   !
   WRITE( stdout,'(/,5X,"INFO: Group the orbitals according to the SH ... ",/)')

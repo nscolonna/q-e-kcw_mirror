@@ -131,7 +131,7 @@ SUBROUTINE dH_ki_wann (dH_wann)
     !----------------------------------------------------------------
     !
     USE kinds,                 ONLY : DP
-    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final_full
+    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final_full, group_alpha, l_do_alpha
     USE control_lr,            ONLY : lrpa
     !
     IMPLICIT NONE  
@@ -139,7 +139,7 @@ SUBROUTINE dH_ki_wann (dH_wann)
     COMPLEX(DP), INTENT(INOUT) :: dH_wann(num_wann,num_wann)
     REAL(DP), INTENT(OUT) :: ddH(num_wann)
     !
-    REAL(DP) :: alpha_(num_wann), alpha_fd
+    REAL(DP) :: alpha_(num_wann), alpha_fd(num_wann)
     ! weight of the q points, alpha from LR, alpha after the all-order correction. 
     !
     REAL(DP) second_der(num_wann), delta 
@@ -167,35 +167,50 @@ SUBROUTINE dH_ki_wann (dH_wann)
     !
     !DO iwann = 1, num_wann_occ
     DO iwann = 1, num_wann
+      !
       delta =0.D0 
       alpha_(iwann) = alpha_final(iwann) 
       !
+      ! Only if this is one of the unique orbitals
+      IF ( l_do_alpha (iwann)) THEN 
+        !
+        !
+        ! ... Compute the difference between the parabolic extrapolation at N \pm 1 and the real 
+        ! ... value of the energy in the frozen orbital approximation ...
+        CALL alpha_corr (iwann, delta)
+        ddH(iwann) = delta
+        !dH_wann(iwann,iwann) = dH_wann(iwann,iwann)-ddH(iwann)
+        !
+        ! ... The new alpha that should be closer to the Finite-difference one ...
+        ! ... Remember DeltaH is nothing but the second derivative wrt the orbital occupation ...
+        alpha_fd (iwann)= (alpha_final(iwann)*second_der(iwann) + delta)/ (second_der(iwann)+delta)
+        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_fd(iwann)
+        !
+        ! ... Since the ham in the frozen approximation is approximated to second
+        ! ... order only, this is the alpha we want to use. Only the
+        ! ... numerator matters.
+        alpha_(iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/second_der(iwann)
+      ELSE 
+        !
+        alpha_fd(iwann) = alpha_fd(group_alpha(iwann))
+        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_final_full(group_alpha(iwann))
+        alpha_(iwann) = alpha_(group_alpha(iwann))
+        !
+      ENDIF
       !
-       ! ... Compute the difference between the parabolic extrapolation at N \pm 1 and the real 
-       ! ... value of the energy in the frozen orbital approximation ...
-       CALL alpha_corr (iwann, delta)
-       ddH(iwann) = delta
-       !dH_wann(iwann,iwann) = dH_wann(iwann,iwann)-ddH(iwann)
-       !
-       ! ... The new alpha that should be closer to the Finite-difference one ...
-       ! ... Remember DeltaH is nothing but the second derivative wrt the orbital occupation ...
-       alpha_fd = (alpha_final(iwann)*second_der(iwann) + delta)/ (second_der(iwann)+delta)
-       IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_fd
-       !
-       ! ... Since the ham in the frozen approximation is approximated to second
-       ! ... order only, this is the alpha we want to use. Only the
-       ! ... numerator matters.
-       alpha_(iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/second_der(iwann)
-       !
-       ! ... Write it just to compare with the FD one from CP ... 
-       WRITE(stdout,'(5X, "INFO: iwann, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd,  alpha_(iwann)
-       !
-       !WRITE(stdout,'("Nicola", i3, 6f12.8)') iwann, dH_wann(iwann,iwann)
-       !
-       ! Re-define the corrected screening parameter. 
-       alpha_final(iwann) = alpha_(iwann) 
-       WRITE( stdout, '(5X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
-       WRITE(stdout, 900) get_clock('KCW')
+      ! ... Write it just to compare with the FD one from CP ... 
+      IF (l_do_alpha (iwann)) THEN
+       WRITE(stdout,'(5X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
+      ELSE
+       WRITE(stdout,'(5X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
+      ENDIF
+      !
+      !WRITE(stdout,'("Nicola", i3, 6f12.8)') iwann, dH_wann(iwann,iwann)
+      !
+      ! Re-define the corrected screening parameter. 
+      alpha_final(iwann) = alpha_(iwann) 
+      WRITE( stdout, '(5X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
+      WRITE(stdout, 900) get_clock('KCW')
       !
     ENDDO
 900 FORMAT('     total cpu time spent up to now is ',F10.1,' secs' )
