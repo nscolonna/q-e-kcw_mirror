@@ -53,7 +53,7 @@ SUBROUTINE kcw_readin()
   !
   NAMELIST / CONTROL /  outdir, prefix, read_unitary_matrix, kcw_at_ks, &
                         spread_thr, homo_only, kcw_iverbosity, calculation, &
-                        l_vcut, assume_isolated, spin_component, mp1, mp2, mp3, lrpa
+                        l_vcut, assume_isolated, spin_component, mp1, mp2, mp3, lrpa, write_sgl
   !
   NAMELIST / WANNIER /  num_wann_occ, num_wann_emp, have_empty, has_disentangle, &
                         seedname, check_ks, l_unique_manifold
@@ -108,6 +108,7 @@ SUBROUTINE kcw_readin()
   !! kipz_corr       : Compute the pKIPZ hamiltonian (only for finite systems: Gamma-only calculation in SC) 
   !! l_alpha_corr    : If true a correction is applied to the screening coefficient to mimick effect beyond the 
   !!                   second order
+  !! write_sgl       : write wannier orbital densities in single precision to same disk space
   ! 
   IF (ionode) THEN
     !
@@ -178,6 +179,7 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
+  write_sgl           = .FALSE.
   ! 
   ! ...  reading the namelists (if needed)
   !
