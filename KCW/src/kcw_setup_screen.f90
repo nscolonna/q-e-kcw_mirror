@@ -235,6 +235,7 @@ subroutine kcw_setup_screen
   CALL stop_clock ('kcw_setup')
   !
   DEALLOCATE (rhowann, rhowann_aux)
+  IF (write_sgl) DEALLOCATE (rhowann_aux_sgl)
   !
   RETURN
   !
