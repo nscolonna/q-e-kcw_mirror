@@ -406,7 +406,7 @@ MODULE io_kcw
       IMPLICIT NONE
       !
       CHARACTER(LEN=*),  INTENT(IN) :: file_base
-      COMPLEX(sgl),       INTENT(IN) :: rho(:)
+      COMPLEX(DP),       INTENT(IN) :: rho(:)
       TYPE(fft_type_descriptor),INTENT(IN) :: fft_desc
       INTEGER,           INTENT(IN) :: inter_group_comm
       LOGICAL,           INTENT(IN) :: ionode
@@ -416,7 +416,8 @@ MODULE io_kcw
       CHARACTER(LEN=256)    :: rho_file
       CHARACTER(LEN=256)    :: rho_file_hdf5
       CHARACTER(LEN=10)     :: rho_extension
-      COMPLEX(sgl), ALLOCATABLE :: rho_plane(:)
+      COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
+      COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
       INTEGER,  ALLOCATABLE :: kowner(:)
       INTEGER               :: my_group_id, me_group, me_group2, me_group3, &
                                             nproc_group, nproc_group2, nproc_group3, &
@@ -469,7 +470,9 @@ MODULE io_kcw
 #endif
       !
       ALLOCATE( rho_plane( nr1*nr2 ) )
+      ALLOCATE( rho_plane_sgl( nr1*nr2 ) )
       rho_plane = (0.D0, 0.D0)
+      rho_plane_sgl = (0.D0, 0.D0)
       ALLOCATE( kowner( nr3 ) )
       !
 #if defined(__HDF5)
@@ -535,18 +538,21 @@ MODULE io_kcw
             IF ( kowner(k) /= io_group3 .and. me_group2==io_group2) & 
                CALL mp_get( rho_plane, rho_plane, me_group3, io_group3, kowner(k), k, fft_desc%comm3 )
             !
+            ! NsC: write in Single-precision
+            rho_plane_sgl = CMPLX(rho_plane, kind = sgl)
+            !
             IF ( ionode ) THEN
 #if defined(__HDF5)
               CALL qeh5_set_file_hyperslab ( rhowann_dset,  OFFSET = [0,k-1], COUNT = [2*nr1*nr2,1] ) 
-              CALL qeh5_write_dataset ( rho_plane, rhowann_dset)   
+              CALL qeh5_write_dataset ( rho_plane_sgl, rhowann_dset)   
 #else
               !
               IF (rho_binary) THEN 
                  WRITE(rhounit) k
-                 WRITE(rhounit) rho_plane
+                 WRITE(rhounit) rho_plane_sgl
               ELSE
                  WRITE(rhounit, '("z= ", i5)') k
-                 WRITE(rhounit, '(E23.16)') rho_plane
+                 WRITE(rhounit, '(E23.16)') rho_plane_sgl
               ENDIF
               !
 #endif
@@ -593,7 +599,7 @@ MODULE io_kcw
      !
      CHARACTER(LEN=*),  INTENT(IN)  :: rho_file_base
      TYPE(fft_type_descriptor),INTENT(IN) :: fft_desc
-     COMPLEX(sgl),          INTENT(OUT) :: rho(:)
+     COMPLEX(DP),          INTENT(OUT) :: rho(:)
      !
      INTEGER               :: rhounit, ierr, i, j, jj, k, kk, ldr, ip, k_
      INTEGER               :: nr( 3 ), nr1, nr2, nr3, nr1x, nr2x, nr3x
@@ -601,7 +607,8 @@ MODULE io_kcw
                               nproc_group, nproc_group2, nproc_group3
      CHARACTER(LEN=256)    :: rho_file
      CHARACTER(LEN=256)    :: rho_file_hdf5
-     COMPLEX(sgl), ALLOCATABLE :: rho_plane(:)
+     COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
+     COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
      INTEGER,  ALLOCATABLE :: kowner(:)
      LOGICAL               :: exst
      INTEGER,  EXTERNAL    :: find_free_unit
@@ -664,12 +671,13 @@ MODULE io_kcw
      !
      !
      ALLOCATE( rho_plane( nr1*nr2 ) )
+     ALLOCATE( rho_plane_sgl( nr1*nr2 ) )
      ALLOCATE( kowner( nr3 ) )
      !
 #if defined(__HDF5) 
      IF (ionode ) THEN
        CALL qeh5_open_dataset( h5file, rhowann_dset, ACTION = 'read', NAME = 'rhowann')
-       CALL qeh5_set_space ( rhowann_dset, rho_plane(1), RANK = 1, DIMENSIONS = [nr1*nr2], MODE = 'm') 
+       CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), RANK = 1, DIMENSIONS = [nr1*nr2], MODE = 'm') 
      ENDIF
 #endif
      !
@@ -694,19 +702,22 @@ MODULE io_kcw
 #if defined(__HDF5)
            !CALL  read_rho_hdf5(h5desc , k,rho_plane)
            CALL qeh5_set_file_hyperslab (rhowann_dset, OFFSET = [0,k-1], COUNT = [2*nr1*nr2,1] )
-           CALL qeh5_read_dataset (rho_plane, rhowann_dset )
+           CALL qeh5_read_dataset (rho_plane_sgl, rhowann_dset )
 #else
            IF (rho_binary) THEN 
               READ(rhounit) k_
-              READ(rhounit) rho_plane
+              READ(rhounit) rho_plane_sgl
            ELSE
               READ(rhounit,*) string, k_
-              READ(rhounit, '(E23.16)') rho_plane
+              READ(rhounit, '(E23.16)') rho_plane_sgl
            ENDIF
 #endif
         ENDIF
         !
         ! ... planes are sent to the destination processor (all processors in this image)
+        !
+        ! NsC >> convert to DP
+        rho_plane = CMPLX(rho_plane_sgl, kind = DP)
         !
         CALL mp_bcast( rho_plane, ionode_id, intra_image_comm )
         !
@@ -742,15 +753,6 @@ MODULE io_kcw
      RETURN
      !
    END SUBROUTINE read_rhowann_sgl
-   
-
-
-
-
-
-
-
-
    !
    !
    ! NsC: Adapted from pw_write_binaries inside PW/scr/pw_restart_new.f90

@@ -24,7 +24,7 @@ subroutine kcw_setup
   !!    a separate directory is generated for each q 
   !
   !
-  USE kinds,             ONLY : DP, sgl
+  USE kinds,             ONLY : DP
   USE ions_base,         ONLY : nat, ityp
   USE io_files,          ONLY : tmp_dir
   USE lsda_mod,          ONLY : nspin, starting_magnetization, lsda, isk
@@ -44,7 +44,7 @@ subroutine kcw_setup
   USE control_kcw,       ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, kcw_iverbosity, lgamma_iq, &
                                 spin_component, isq, read_unitary_matrix, x_q, tmp_dir_save, & 
                                 num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq,&
-                                write_sgl!, wq, nqstot
+                                io_sp!, wq, nqstot
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk
   USE cell_base,         ONLY : at, omega!, bg
@@ -75,7 +75,6 @@ subroutine kcw_setup
   INTEGER :: iq, nqs
   REAL(DP) :: xq(3)
   COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
-  COMPLEX(sgl), ALLOCATABLE :: rhowann_aux_sgl(:)
   CHARACTER (LEN=256) :: filename, file_base
   CHARACTER (LEN=6), EXTERNAL :: int_to_char
   !
@@ -151,7 +150,6 @@ subroutine kcw_setup
   !  ... Allocate relevant quantities ...
   !
   ALLOCATE (rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
-  IF (write_sgl) ALLOCATE (rhowann_aux_sgl(dffts%nnr))
   ALLOCATE ( evc0(npwx, num_wann) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   ALLOCATE ( sh(num_wann) )
@@ -289,17 +287,11 @@ subroutine kcw_setup
     CALL write_scf( rho, nspin )
     ! write the periodic part of the wannier orbital density on file
     DO i = 1, num_wann
-      IF (write_sgl) THEN 
-        rhowann_aux_sgl (:) = CMPLX(rhowann(:,i), kind=sgl)
-        WRITE(*,*) "NICOLA SP", SIZE (rhowann_aux_sgl)
-        WRITE(*,*) "NICOLA SP", rhowann_aux_sgl(1)
-        file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-        CALL write_rhowann_sgl( file_base, rhowann_aux_sgl, dffts, ionode, inter_bgrp_comm )
+      rhowann_aux (:) = rhowann(:,i)
+      file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
+      IF (io_sp) THEN 
+        CALL write_rhowann_sgl( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
       ELSE
-        rhowann_aux (:) = rhowann(:,i) 
-        WRITE(*,*) "NICOLA DP", SIZE (rhowann_aux)
-        WRITE(*,*) "NICOLA DP", rhowann_aux(1)
-        file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
         CALL write_rhowann( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
       ENDIF
     ENDDO

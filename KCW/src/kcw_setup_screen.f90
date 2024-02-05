@@ -13,7 +13,7 @@ subroutine kcw_setup_screen
   !! As kcw_setup.f90 plus screening specific setups
   !
   !
-  USE kinds,             ONLY : DP,sgl
+  USE kinds,             ONLY : DP
   USE ions_base,         ONLY : nat, ityp
   USE io_files,          ONLY : tmp_dir
   USE lsda_mod,          ONLY : nspin, starting_magnetization
@@ -32,7 +32,7 @@ subroutine kcw_setup_screen
   USE control_kcw,       ONLY : alpha_final, iurho_wann, kcw_iverbosity, &
                                 read_unitary_matrix, num_wann, num_wann_occ, i_orb, iorb_start, &
                                 iorb_end, nqstot, occ_mat, l_do_alpha, group_alpha, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, write_sgl!, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_sp!, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : xk, nkstot
   USE cell_base,         ONLY : at !, bg
@@ -62,7 +62,6 @@ subroutine kcw_setup_screen
   ! the q-point coordinatew
   !
   COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
-  COMPLEX(sgl), ALLOCATABLE :: rhowann_aux_sgl(:)
   ! the periodic part of the wannier orbital density
   !
   CHARACTER (LEN=256) :: file_base
@@ -132,7 +131,6 @@ subroutine kcw_setup_screen
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WF rho, OPENED")')
   !
   ALLOCATE (rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
-  IF ( write_sgl) ALLOCATE (rhowann_aux_sgl(dffts%nnr) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   ALLOCATE (l_do_alpha(num_wann), group_alpha(num_wann) ) 
   !
@@ -182,13 +180,12 @@ subroutine kcw_setup_screen
     !
     DO i = 1, num_wann
       file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-      IF (write_sgl) THEN 
-       CALL read_rhowann_sgl( file_base, dffts, rhowann_aux_sgl )
-       rhowann(:,i) = CMPLX(rhowann_aux_sgl(:), kind=DP)
+      IF (io_sp) THEN 
+       CALL read_rhowann_sgl( file_base, dffts, rhowann_aux )
       ELSE
        CALL read_rhowann( file_base, dffts, rhowann_aux )
-       rhowann(:,i) = rhowann_aux(:)
       ENDIF
+      rhowann(:,i) = rhowann_aux(:)
     ENDDO
     !
     ! ... Save the rho_q on a direct access file
@@ -235,7 +232,6 @@ subroutine kcw_setup_screen
   CALL stop_clock ('kcw_setup')
   !
   DEALLOCATE (rhowann, rhowann_aux)
-  IF (write_sgl) DEALLOCATE (rhowann_aux_sgl)
   !
   RETURN
   !

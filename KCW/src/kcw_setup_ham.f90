@@ -13,7 +13,7 @@ subroutine kcw_setup_ham
   !! As kcw_setup.f90 plus hamiltonian specific setups
   !
   !
-  USE kinds,             ONLY : DP,sgl
+  USE kinds,             ONLY : DP
   USE ions_base,         ONLY : nat, ityp
   USE io_files,          ONLY : tmp_dir
   USE scf,               ONLY : v, vrs, vltot,  kedtau
@@ -35,7 +35,7 @@ subroutine kcw_setup_ham
                                 read_unitary_matrix, hamlt, alpha_corr_done, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, write_sgl !, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_sp !, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, nks, ngk, igk_k
   USE cell_base,         ONLY : at !, bg
@@ -66,7 +66,6 @@ subroutine kcw_setup_ham
   INTEGER :: iq, nqs
   REAL(DP) :: xq(3)
   COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
-  COMPLEX(sgl), ALLOCATABLE :: rhowann_aux_sgl(:)
   CHARACTER (LEN=256) :: file_base
   CHARACTER (LEN=6), EXTERNAL :: int_to_char
   !
@@ -168,7 +167,6 @@ subroutine kcw_setup_ham
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WF rho, OPENED")')
   !
   ALLOCATE ( rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
-  IF (write_sgl) ALLOCATE ( rhowann_aux_sgl(dffts%nnr) )
   ALLOCATE ( evc0(npwx, num_wann) )
   ALLOCATE ( hamlt(nkstot, num_wann, num_wann) )
   ALLOCATE ( alpha_corr_done (num_wann) ) 
@@ -239,13 +237,12 @@ subroutine kcw_setup_ham
     !
     DO i = 1, num_wann
       file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-      IF (write_sgl) THEN
-       CALL read_rhowann_sgl( file_base, dffts, rhowann_aux_sgl )
-       rhowann(:,i) = CMPLX(rhowann_aux_sgl(:), kind=DP)
+      IF (io_sp) THEN
+       CALL read_rhowann_sgl( file_base, dffts, rhowann_aux )
       ELSE
        CALL read_rhowann( file_base, dffts, rhowann_aux )
-       rhowann(:,i) = rhowann_aux(:)
       ENDIF
+      rhowann(:,i) = rhowann_aux(:)
     ENDDO
 
     !
@@ -303,7 +300,6 @@ subroutine kcw_setup_ham
   CALL stop_clock ('kcw_setup')
   !
   DEALLOCATE (rhowann, rhowann_aux)
-  IF (write_sgl) DEALLOCATE (rhowann_aux_sgl)
   !
   RETURN
   !

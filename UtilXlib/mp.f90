@@ -11,7 +11,7 @@
 !------------------------------------------------------------------------------!
 MODULE mp
 !------------------------------------------------------------------------------!
-  USE util_param,     ONLY : DP, stdout, i8b, sgl
+  USE util_param,     ONLY : DP, stdout, i8b
   USE parallel_include
 #if defined(__CUDA)
   USE cudafor,        ONLY : cudamemcpy, cudamemcpy2d, &
@@ -39,7 +39,7 @@ MODULE mp
       mp_bcast_iv, mp_bcast_i8v, mp_bcast_rv, mp_bcast_cv, mp_bcast_l, mp_bcast_rm, &
       mp_bcast_cm, mp_bcast_im, mp_bcast_it, mp_bcast_i4d, mp_bcast_rt, mp_bcast_lv, &
       mp_bcast_lm, mp_bcast_r4d, mp_bcast_r5d, mp_bcast_ct,  mp_bcast_c4d,&
-      mp_bcast_c5d, mp_bcast_c6d, mp_bcast_cv_sgl
+      mp_bcast_c5d, mp_bcast_c6d
 #if defined(__CUDA)
     MODULE PROCEDURE mp_bcast_i1_gpu, mp_bcast_r1_gpu, mp_bcast_c1_gpu, &
       !mp_bcast_z_gpu, mp_bcast_zv_gpu, &
@@ -55,7 +55,7 @@ MODULE mp
       mp_sum_r1, mp_sum_rv, mp_sum_rm, mp_sum_rm_nc, mp_sum_rt, mp_sum_r4d, &
       mp_sum_c1, mp_sum_cv, mp_sum_cm, mp_sum_cm_nc, mp_sum_ct, mp_sum_c4d, &
       mp_sum_c5d, mp_sum_c6d, mp_sum_rmm, mp_sum_cmm, mp_sum_r5d, &
-      mp_sum_r6d, mp_sum_cv_sgl
+      mp_sum_r6d
 #if defined(__CUDA)
     MODULE PROCEDURE  mp_sum_i1_gpu, mp_sum_iv_gpu, mp_sum_im_gpu, mp_sum_it_gpu, &
       mp_sum_r1_gpu, mp_sum_rv_gpu, mp_sum_rm_gpu, mp_sum_rm_nc_gpu, mp_sum_rt_gpu, mp_sum_r4d_gpu, &
@@ -73,7 +73,7 @@ MODULE mp
   END INTERFACE
   ! 
   INTERFACE mp_get
-    MODULE PROCEDURE mp_get_r1, mp_get_rv, mp_get_cv, mp_get_i1, mp_get_iv, mp_get_rm, mp_get_cm, mp_get_cv_sgl
+    MODULE PROCEDURE mp_get_r1, mp_get_rv, mp_get_cv, mp_get_i1, mp_get_iv, mp_get_rm, mp_get_cm
 #if defined(__CUDA)
     MODULE PROCEDURE mp_get_r1_gpu, mp_get_rv_gpu, mp_get_cv_gpu, mp_get_i1_gpu, mp_get_iv_gpu, &
       mp_get_rm_gpu, mp_get_cm_gpu
@@ -648,23 +648,6 @@ MODULE mp
 #endif
       END SUBROUTINE mp_bcast_cv
 !
-
-! NsC >>>
-!------------------------------------------------------------------------------!
-      SUBROUTINE mp_bcast_cv_sgl(msg,source,gid)
-        IMPLICIT NONE
-        COMPLEX (sgl) :: msg(:)
-        INTEGER, INTENT(IN) :: source
-        INTEGER, INTENT(IN) :: gid
-#if defined(__MPI)
-        INTEGER :: msglen
-        msglen = size(msg)
-        CALL bcast_real( msg, 2 * msglen, source, gid )
-#endif
-      END SUBROUTINE mp_bcast_cv_sgl
-
-
-
 !------------------------------------------------------------------------------!
       SUBROUTINE mp_bcast_cm(msg,source,gid)
         IMPLICIT NONE
@@ -1138,55 +1121,6 @@ MODULE mp
 #endif
         RETURN
       END SUBROUTINE mp_get_cv
-
-! NsC >>
-
-      SUBROUTINE mp_get_cv_sgl(msg_dest, msg_sour, mpime, dest, sour, ip, gid)
-        COMPLEX (sgl)             :: msg_dest(:)
-        COMPLEX (sgl), INTENT(IN) :: msg_sour(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-
-        IF( dest .NE. sour ) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour, SIZE(msg_sour), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 8035 )
-             msglen = SIZE(msg_sour)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest, SIZE(msg_dest), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 8036 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 8037 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest(1:SIZE(msg_sour)) = msg_sour(:)
-          msglen = SIZE(msg_sour)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 8038 )
-#endif
-        RETURN
-      END SUBROUTINE mp_get_cv_sgl
-
-! NsC <<<
 
 
 
@@ -1813,22 +1747,6 @@ MODULE mp
       END SUBROUTINE mp_sum_cv
 !
 !------------------------------------------------------------------------------!
-
-!>> NsC
-      SUBROUTINE mp_sum_cv_sgl(msg,gid)
-        IMPLICIT NONE
-        COMPLEX (sgl), INTENT (INOUT) :: msg(:)
-        INTEGER, INTENT(IN) :: gid
-#if defined(__MPI)
-        INTEGER :: msglen
-        msglen = size(msg)
-        CALL reduce_base_real( 2 * msglen, msg, gid, -1 )
-#endif
-      END SUBROUTINE mp_sum_cv_sgl
-!
-!------------------------------------------------------------------------------!
-
-!<< NsC
 
       SUBROUTINE mp_sum_cm(msg, gid)
         IMPLICIT NONE
