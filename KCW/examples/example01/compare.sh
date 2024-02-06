@@ -111,8 +111,8 @@ check=1
 
 for i in `seq 1 8`; do
  ii=`echo $i*3| bc`
- grep "KI  " results/Si.kcw-ham_proj.out | head -$ii | tail -3 | xargs | sed -e "s/KI//g" > pp
- grep "KI  " reference/Si.kcw-ham_proj.out | head -$ii | tail -3 | xargs | sed -e "s/KI//g" >> pp
+ grep "KI  " results/Si.kcw-ham_uniq.out | head -$ii | tail -3 | xargs | sed -e "s/KI//g" > pp
+ grep "KI  " reference/Si.kcw-ham_uniq.out | head -$ii | tail -3 | xargs | sed -e "s/KI//g" >> pp
  for j in `seq 1 20`; do
   col=`echo $j | bc`
   eig=`head -1 pp | awk -v col=$col '{print $col}'`

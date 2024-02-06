@@ -31,19 +31,22 @@ SUBROUTINE kcw_ham
   IMPLICIT NONE
   !
   COMPLEX(DP), ALLOCATABLE :: dH_wann(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dH_wann_proj(:)
   !
   ! 1) Set up for the KC calculation. 
   CALL kcw_setup_ham ( )
   !
+  ALLOCATE ( dH_wann(nkstot/nspin,num_wann,num_wann) )
+  ALLOCATE ( dH_wann_proj(num_wann) )
+  !
+  ! 2) compute the KI correction on the Wannier basis
+  CALL dH_ki_wann ( dH_wann, dH_wann_proj )
+  !
   IF (h_proj) THEN 
      ! This is an alternative formulation based on a DFT+U like hamiltonian 
      ! see koopmans_ham_proj.f90 for details
-     CALL koopmans_ham_proj ()
+     CALL koopmans_ham_proj ( dH_wann_proj )
   ELSE 
-     !
-     ALLOCATE ( dH_wann(nkstot/nspin,num_wann,num_wann) )
-     ! 2) compute the KI correction on the Wannier basis
-     CALL dH_ki_wann ( dH_wann )
      !
      IF ( h_uniq ) THEN 
         ! Use Projectors to build a unique Hamiltonian and diagonalize it 
@@ -63,7 +66,7 @@ SUBROUTINE kcw_ham
        !
     ENDIF
     !
-    DEALLOCATE (dH_wann) 
+    DEALLOCATE (dH_wann, dH_wann_proj) 
     !
   ENDIF 
   !

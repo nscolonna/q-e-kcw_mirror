@@ -430,7 +430,7 @@ $ECHO "  Running the KI hamiltonian calculation for $PREFIX...\c"
 $KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham.in > $PREFIX.kcw-ham.out
 $ECHO " done"
 
-cat > $PREFIX.kcw-ham_proj.in << EOF
+cat > $PREFIX.kcw-ham_uniq.in << EOF
 KI H2O
 &control
   prefix='$PREFIX'
@@ -458,7 +458,7 @@ KI H2O
   use_ws_distance = .true.
   write_hr = .true.
   on_site_only = .true.
-  h_proj = .true.
+  h_uniq = .true.
 /
 K_POINTS crystal_b
 8
@@ -473,5 +473,5 @@ K_POINTS crystal_b
 EOF
 
 $ECHO "  Running the perturbative KI hamiltonian calculation for $PREFIX...\c"
-$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_proj.in > $PREFIX.kcw-ham_proj.out
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_uniq.in > $PREFIX.kcw-ham_uniq.out
 $ECHO " done"

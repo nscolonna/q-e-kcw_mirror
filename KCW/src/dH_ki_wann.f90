@@ -9,7 +9,7 @@
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
 !-----------------------------------------------------------------------
-SUBROUTINE dH_ki_wann (dH_wann)
+SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
   !---------------------------------------------------------------------
   !
   USE io_global,             ONLY : stdout
@@ -17,7 +17,7 @@ SUBROUTINE dH_ki_wann (dH_wann)
   USE klist,                 ONLY : nkstot, xk
   USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : num_wann, nqstot, l_alpha_corr, &
-                                    alpha_final, num_wann_occ, on_site_only
+                                    alpha_final, num_wann_occ, on_site_only, h_proj
   USE constants,             ONLY : rytoev
   USE wavefunctions,         ONLY : evc
   USE buffers,               ONLY : get_buffer, save_buffer
@@ -34,6 +34,7 @@ SUBROUTINE dH_ki_wann (dH_wann)
   COMPLEX(DP) deltah_real (num_wann, num_wann)
   !
   COMPLEX(DP), INTENT (OUT) :: dH_wann(nkstot/nspin,num_wann,num_wann)
+  COMPLEX(DP), INTENT (OUT) :: dH_wann_proj(num_wann)
   !
   ! The correction to the diagonal term beyond second order
   REAL(DP) :: ddH(num_wann)
@@ -50,6 +51,10 @@ SUBROUTINE dH_ki_wann (dH_wann)
   deltah_scal=CMPLX(0.D0,0.D0,kind=DP)
   CALL ham_scalar (deltah_scal)
   WRITE(stdout, 900) get_clock('KCW')
+  !
+  DO iwann = 1, num_wann 
+    dH_wann_proj(iwann) = -2.D0*deltah_scal(iwann,iwann)
+  ENDDO
   ! 
 #ifdef DEBUG
   WRITE( stdout,'(/,5X," Scalar term Hamiltonian:")')
@@ -71,6 +76,11 @@ SUBROUTINE dH_ki_wann (dH_wann)
   ENDDO
   ! DEBUG
 #endif
+  !
+  ! Apply the screening coefficient
+  dH_wann_proj(1:num_wann) = dH_wann_proj(1:num_wann)*alpha_final(1:num_wann)
+  ! If formulation a-la DFT+U nothing else to do (only on-site term for now)
+  IF (h_proj) GOTO 999
   !
   DO ik = 1, nkstot/nspin
     !
@@ -122,6 +132,7 @@ SUBROUTINE dH_ki_wann (dH_wann)
   !
 900 FORMAT(/'     total cpu time spent up to now is ',F10.1,' secs' )
   !
+999 CONTINUE
   RETURN
   !
   CONTAINS 

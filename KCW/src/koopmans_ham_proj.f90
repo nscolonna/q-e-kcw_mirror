@@ -8,7 +8,7 @@
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
 !-----------------------------------------------------------------------
-SUBROUTINE koopmans_ham_proj ()
+SUBROUTINE koopmans_ham_proj (delta)
   !---------------------------------------------------------------------
   ! Here the KI hamiltonian is written in terms of projectors on Wannnier 
   ! functions:
@@ -40,8 +40,9 @@ SUBROUTINE koopmans_ham_proj ()
   ! The k point index 
   INTEGER :: ik, ibnd, ik_pw, k, eig_start, eig_win
   !
-  ! The on-site KI correction <W_0n^2|f_Hxc|W_0n^2>, and occupations numbers of WFs
+  ! The on-site KI correction \alpha_n*<W_0n^2|f_Hxc|W_0n^2> (computed in dH_ki_wann.f90)
   COMPLEX(DP) :: delta (num_wann)
+  ! and occupations numbers of WFs: P_n = \sum_kv f_kv <u_kv|w_kn><w_kn|u_kn> 
   REAL(DP) :: occ_mat(num_wann)
   !
   COMPLEX(DP) :: delta_k, overlap
@@ -67,25 +68,15 @@ SUBROUTINE koopmans_ham_proj ()
   !
   WRITE(stdout, '(/,5X, "INFO: KI Hamiltonian using Projectors")')
   !
-  ! The on-site correction 
-  ! \Delta_n=\alpha_n <W_n^2 | f_Hxc | W_n^2>
-  delta=CMPLX(0.D0,0.D0,kind=DP)
-  CALL ham_scalar (delta)
-  WRITE(stdout, 900) get_clock('KCW')
   ! The occupation matrix
   ! P_n = \sum_kv f_kv <u_kv|w_kn><w_kn|u_kn> 
   CALL occupations(occ_mat)
+  WRITE(stdout, 900) get_clock('KCW')
   ! 
 #ifdef DEBUG
-  WRITE(stdout,'(/,5X,"Bare on-site correction:")')
+  WRITE(stdout,'(/,5X,"Screened on-site correction:")')
   WRITE(stdout,'(5X,2(F10.6, 2x), F10.6)') (delta(iwann), occ_mat(iwann), iwann=1, num_wann)
 #endif
-  !
-  ! ... The correction beyond 2nd order 
-  IF (l_alpha_corr) CALL beyond_2nd (delta, ddH)
-  !
-  ! Apply alpha to get the screened on-site KI correction
-  delta(1:num_wann) = alpha_final(1:num_wann) * delta(1:num_wann)
   !
   IF (.NOT. l_diag) WRITE(stdout, '(/, 5x, "INFO: FULL KI")')
   IF (l_diag)       WRITE(stdout, '(/, 5x, "INFO: PERTURBATIVE KI")') 
@@ -335,168 +326,4 @@ SUBROUTINE koopmans_ham_proj ()
     !
   END SUBROUTINE occupations
 
-  !
-  !----------------------------------------------------------------
-  SUBROUTINE beyond_2nd (deltaH, ddH)
-    !----------------------------------------------------------------
-    !
-    USE kinds,                 ONLY : DP
-    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final_full, group_alpha, l_do_alpha
-    USE control_lr,            ONLY : lrpa
-    !
-    IMPLICIT NONE  
-    !
-    COMPLEX(DP), INTENT(INOUT) :: deltaH(num_wann)
-    REAL(DP), INTENT(OUT) :: ddH(num_wann)
-    !
-    REAL(DP) :: alpha_(num_wann), alpha_fd(num_wann)
-    ! weight of the q points, alpha from LR, alpha after the all-order correction. 
-    !
-    REAL(DP) second_der(num_wann), delta 
-    !
-    INTEGER :: iwann
-    !
-    ddH = 0.D0
-    !
-    WRITE( stdout, '(/,5X, "INFO: Correction beyond 2nd order ...",/)')
-    IF (lrpa) THEN 
-      !
-      WRITE(*, '(8X,"INFO: l_alpha_corr and lrpa are NOT consistent.At RPA")')
-      WRITE(*, '(8X,"      level there is no contribution beyond 2nd order.")')
-      WRITE(*, '(8X,"      Nothing to do here. RETURN")')
-      !
-      RETURN
-      !
-    ENDIF 
-    !
-    DO iwann = 1, num_wann
-      second_der(iwann) = -REAL(deltaH(iwann))
-    ENDDO
-    !
-    !DO iwann = 1, num_wann_occ
-    DO iwann = 1, num_wann
-      delta =0.D0 
-      alpha_(iwann) = alpha_final(iwann) 
-      !
-      IF (l_do_alpha (iwann)) THEN
-        !
-        !
-        ! ... Compute the difference between the parabolic extrapolation at N \pm 1 and the real 
-        ! ... value of the energy in the frozen orbital approximation ...
-        CALL alpha_corr (iwann, delta)
-        ddH(iwann) = delta
-        !deltaH(iwann,iwann) = deltaH(iwann,iwann)-ddH(iwann)
-        !
-        ! ... The new alpha that should be closer to the Finite-difference one ...
-        ! ... Remember DeltaH is nothing but the second derivative wrt the orbital occupation ...
-        alpha_fd (iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/ (second_der(iwann)+delta)
-        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_fd (iwann)
-        !
-        ! ... Since the ham in the frozen approximation is approximated to second
-        ! ... order only, this is the alpha we want to use. Only the
-        ! ... numerator matters.
-        alpha_(iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/second_der(iwann)
-      ELSE
-        !
-        alpha_fd(iwann) = alpha_fd(group_alpha(iwann))
-        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_final_full(group_alpha(iwann))
-        alpha_(iwann) = alpha_(group_alpha(iwann))
-        !
-      ENDIF
-      !
-      ! ... Write it just to compare with the FD one from CP ... 
-      IF (l_do_alpha (iwann)) THEN
-       WRITE(stdout,'(5X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd(iwann), alpha_(iwann)
-      ELSE
-       WRITE(stdout,'(5X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd(iwann), alpha_(iwann)
-      ENDIF
-      !
-      !WRITE(stdout,'("Nicola", i3, 6f12.8)') iwann, deltaH(iwann,iwann)
-      !
-      ! Re-define the corrected screening parameter. 
-      alpha_final(iwann) = alpha_(iwann) 
-      WRITE( stdout, '(5X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
-      WRITE(stdout, 900) get_clock('KCW')
-      !
-    ENDDO
-900 FORMAT('     total cpu time spent up to now is ',F10.1,' secs' )
-    !
-  END SUBROUTINE beyond_2nd
-  !
-  !----------------------------------------------------------------
-  SUBROUTINE ham_scalar (delta)
-    !----------------------------------------------------------------
-    !
-    USE kinds,                ONLY : DP
-    USE io_global,            ONLY : stdout
-    USE control_kcw,          ONLY : num_wann, nqstot, iurho_wann, &
-                                     spin_component
-    USE fft_base,             ONLY : dffts
-    USE cell_base,            ONLY : omega
-    USE gvecs,                ONLY : ngms
-    USE mp_bands,             ONLY : intra_bgrp_comm
-    USE mp,                   ONLY : mp_sum
-    USE buffers,              ONLY : get_buffer
-    !
-    IMPLICIT NONE
-    !
-    ! The scalar contribution to the hamiltonian 
-    COMPLEX(DP), INTENT(INOUT) :: delta (num_wann)
-    !
-    ! Couters for the q point, wannier index. record length for the wannier density
-    INTEGER :: iq, iwann, lrrho
-    !
-    ! The periodic part of the wannier orbital density
-    COMPLEX(DP) :: rhowann(dffts%nnr, num_wann), rhor(dffts%nnr), delta_vr(dffts%nnr,nspin), delta_vr_(dffts%nnr,nspin)
-    !
-    ! The self Hartree
-    COMPLEX(DP) :: sh(num_wann)
-    !
-    ! Auxiliary variables 
-    COMPLEX(DP), ALLOCATABLE  :: rhog(:), delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
-    !
-    ! The weight of each q point
-    REAL(DP) :: weight(nqstot)
-    !
-    WRITE( stdout, '(/,5X, "INFO: KC SCALAR TERM CALCULATION ... START")')
-    !
-    ALLOCATE ( rhog (ngms) , delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
-    !
-    DO iq = 1, nqstot
-      !
-      lrrho=num_wann*dffts%nnr
-      CALL get_buffer (rhowann, lrrho, iurho_wann, iq)
-      !! Retrive the rho_wann_q(r) from buffer in REAL space
-      !
-      weight(iq) = 1.D0/nqstot ! No SYMM 
-      !
-      DO iwann = 1, num_wann  ! for each band, that is actually the perturbation
-         !
-         rhog(:)         = CMPLX(0.D0,0.D0,kind=DP)
-         delta_vg(:,:)   = CMPLX(0.D0,0.D0,kind=DP)
-         vh_rhog(:)      = CMPLX(0.D0,0.D0,kind=DP)
-         rhor(:)         = CMPLX(0.D0,0.D0,kind=DP)
-         !
-         rhor(:) = rhowann(:,iwann)
-         !! The periodic part of the orbital desity in real space
-         !
-         CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
-         !! The periodic part of the perturbation DeltaV_q(G)
-         ! 
-         sh(iwann) = sh(iwann) + 0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:)                )*weight(iq)*omega
-         delta(iwann) = delta(iwann) + sum (CONJG(rhog (:)) * delta_vg(:,spin_component)) &
-                                     * weight(iq) * omega
-         !
-      ENDDO
-      ! 
-    ENDDO ! qpoints
-    WRITE( stdout, '(/,5X, "INFO: KC SCALAR TERM CALCULATION ... END")')
-    !
-    DEALLOCATE ( rhog , delta_vg, vh_rhog, delta_vg_ )
-    !
-    CALL mp_sum (delta, intra_bgrp_comm)
-    CALL mp_sum (sh, intra_bgrp_comm)
-   !
-  END SUBROUTINE ham_scalar
-  ! 
 END SUBROUTINE koopmans_ham_proj
