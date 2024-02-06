@@ -67,10 +67,13 @@ SUBROUTINE koopmans_ham_proj ()
   !
   WRITE(stdout, '(/,5X, "INFO: KI Hamiltonian using Projectors")')
   !
-  ! The scalar term R=0 i=j 
+  ! The on-site correction 
+  ! \Delta_n=\alpha_n <W_n^2 | f_Hxc | W_n^2>
   delta=CMPLX(0.D0,0.D0,kind=DP)
   CALL ham_scalar (delta)
   WRITE(stdout, 900) get_clock('KCW')
+  ! The occupation matrix
+  ! P_n = \sum_kv f_kv <u_kv|w_kn><w_kn|u_kn> 
   CALL occupations(occ_mat)
   ! 
 #ifdef DEBUG
@@ -109,7 +112,7 @@ SUBROUTINE koopmans_ham_proj ()
       ! KI contribution at k: deltah_ij = \sum_n [ (1/2-P_n)D_n <u_ki | w_kn><w_kn | u_kj>]
       !
       IF (.FALSE.) THEN
-        ! In the canonicla KS basis the KS hamiltonian is already diuagonal
+        ! In the canonicla KS basis the KS hamiltonian is already diagonal
         ! maening there is no need to re-build it. I keep this as is in case
         ! we want to use a diffferent basis
         current_k = ik_pw
@@ -136,6 +139,8 @@ SUBROUTINE koopmans_ham_proj ()
         !
       ENDIF
       !
+      ! \Delta_H_KI_ij = <psi_i | \Delta_H_KI | psi_j> with
+      ! \Delta_H_KI = \sum_n (1/2-P_n) * \Delta_n * |w_kn><w_kn|
       CALL dki_hamiltonian (evc, ik, nbnd, occ_mat, delta, deltah) 
       !
       ! Add to the KS Hamiltonian
@@ -336,7 +341,7 @@ SUBROUTINE koopmans_ham_proj ()
     !----------------------------------------------------------------
     !
     USE kinds,                 ONLY : DP
-    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final_full
+    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final_full, group_alpha, l_do_alpha
     USE control_lr,            ONLY : lrpa
     !
     IMPLICIT NONE  
@@ -344,7 +349,7 @@ SUBROUTINE koopmans_ham_proj ()
     COMPLEX(DP), INTENT(INOUT) :: deltaH(num_wann)
     REAL(DP), INTENT(OUT) :: ddH(num_wann)
     !
-    REAL(DP) :: alpha_(num_wann), alpha_fd
+    REAL(DP) :: alpha_(num_wann), alpha_fd(num_wann)
     ! weight of the q points, alpha from LR, alpha after the all-order correction. 
     !
     REAL(DP) second_der(num_wann), delta 
@@ -373,33 +378,48 @@ SUBROUTINE koopmans_ham_proj ()
       delta =0.D0 
       alpha_(iwann) = alpha_final(iwann) 
       !
+      IF (l_do_alpha (iwann)) THEN
+        !
+        !
+        ! ... Compute the difference between the parabolic extrapolation at N \pm 1 and the real 
+        ! ... value of the energy in the frozen orbital approximation ...
+        CALL alpha_corr (iwann, delta)
+        ddH(iwann) = delta
+        !deltaH(iwann,iwann) = deltaH(iwann,iwann)-ddH(iwann)
+        !
+        ! ... The new alpha that should be closer to the Finite-difference one ...
+        ! ... Remember DeltaH is nothing but the second derivative wrt the orbital occupation ...
+        alpha_fd (iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/ (second_der(iwann)+delta)
+        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_fd (iwann)
+        !
+        ! ... Since the ham in the frozen approximation is approximated to second
+        ! ... order only, this is the alpha we want to use. Only the
+        ! ... numerator matters.
+        alpha_(iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/second_der(iwann)
+      ELSE
+        !
+        alpha_fd(iwann) = alpha_fd(group_alpha(iwann))
+        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_final_full(group_alpha(iwann))
+        alpha_(iwann) = alpha_(group_alpha(iwann))
+        !
+      ENDIF
       !
-       ! ... Compute the difference between the parabolic extrapolation at N \pm 1 and the real 
-       ! ... value of the energy in the frozen orbital approximation ...
-       CALL alpha_corr (iwann, delta)
-       ddH(iwann) = delta
-       !deltaH(iwann,iwann) = deltaH(iwann,iwann)-ddH(iwann)
-       !
-       ! ... The new alpha that should be closer to the Finite-difference one ...
-       ! ... Remember DeltaH is nothing but the second derivative wrt the orbital occupation ...
-       alpha_fd = (alpha_final(iwann)*second_der(iwann) + delta)/ (second_der(iwann)+delta)
-       IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_fd
-       !
-       ! ... Since the ham in the frozen approximation is approximated to second
-       ! ... order only, this is the alpha we want to use. Only the
-       ! ... numerator matters.
-       alpha_(iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/second_der(iwann)
-       !
-       ! ... Write it just to compare with the FD one from CP ... 
-       WRITE(stdout,'(5X, "INFO: iwann, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd,  alpha_(iwann)
-       !
-       !WRITE(stdout,'("Nicola", i3, 6f12.8)') iwann, deltaH(iwann,iwann)
-       !
-       ! Re-define the corrected screening parameter. 
-       alpha_final(iwann) = alpha_(iwann) 
-       WRITE( stdout, '(5X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
+      ! ... Write it just to compare with the FD one from CP ... 
+      IF (l_do_alpha (iwann)) THEN
+       WRITE(stdout,'(5X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd(iwann), alpha_(iwann)
+      ELSE
+       WRITE(stdout,'(5X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd(iwann), alpha_(iwann)
+      ENDIF
+      !
+      !WRITE(stdout,'("Nicola", i3, 6f12.8)') iwann, deltaH(iwann,iwann)
+      !
+      ! Re-define the corrected screening parameter. 
+      alpha_final(iwann) = alpha_(iwann) 
+      WRITE( stdout, '(5X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
+      WRITE(stdout, 900) get_clock('KCW')
       !
     ENDDO
+900 FORMAT('     total cpu time spent up to now is ',F10.1,' secs' )
     !
   END SUBROUTINE beyond_2nd
   !
