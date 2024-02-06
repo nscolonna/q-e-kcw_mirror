@@ -755,7 +755,7 @@ MODULE io_kcw
    END SUBROUTINE read_rhowann_sgl
    !
    !
-   ! NsC: Adapted from pw_write_binaries inside PW/scr/pw_restart_new.f90
+   ! NsC: Adapted from write_collected_wfc inside PW/scr/pw_restart_new.f90
    SUBROUTINE write_mlwf( )
      !------------------------------------------------------------------------
      !
