@@ -61,7 +61,7 @@ SUBROUTINE kcw_readin()
   NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
-                        write_hr, l_alpha_corr, on_site_only, h_proj, l_diag
+                        write_hr, l_alpha_corr, on_site_only, h_proj, l_diag, check_spread
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
