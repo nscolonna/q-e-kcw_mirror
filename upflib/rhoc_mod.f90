@@ -54,7 +54,7 @@ CONTAINS
   !! MPI communicator, to split the workload
   INTEGER, INTENT(OUT) :: ierr
   !! return code: ierr = 0 if interpolation table (IT) was allocated
-  !!              ierr =-1 if IT had insufficent dimension and was re-allocated
+  !!              ierr =-1 if IT had insufficient dimension and was re-allocated
   !!              ierr =-2 if IT was already present and nothing is done
   REAL(dp), INTENT(IN) :: qmax_
   !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
@@ -85,7 +85,7 @@ CONTAINS
      RETURN
   END IF
   nqx = INT( qmax/dq + 4)
-  ALLOCATE ( tab_rhc(0:nqx,nsp) )
+  ALLOCATE ( tab_rhc(nqx,nsp) )
   !$acc enter data create(tab_rhc)
   !
   ndm = MAXVAL( msh(1:nsp) )

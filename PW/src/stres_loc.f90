@@ -49,7 +49,7 @@ SUBROUTINE stres_loc( sigmaloc )
   !$acc data create(rhog)
   CALL rho_r2g( dfftp, rho%of_r(:,1), rhog )
   !
-  !$acc data copyin(vloc,strf,gl,igtongl) create(dvloc)
+  !$acc data copyin(vloc,strf,gl) present(igtongl) create(dvloc)
   !
   modified_coulomb = do_cutoff_2D .OR. (do_comp_esm .and. ( esm_bc .ne. 'pbc' ))
   IF (gamma_only) THEN
@@ -76,7 +76,7 @@ SUBROUTINE stres_loc( sigmaloc )
   ENDDO
   !
   ! ... 2D: add contribution from cutoff long-range part of Vloc
-  IF (do_cutoff_2D)  CALL cutoff_stres_evloc( rhog(:,1), strf, evloc )
+  IF (do_cutoff_2D)  CALL cutoff_stres_evloc( gamma_only, rhog(:,1), strf, evloc )
   !
   !      WRITE( 6,*) ' evloc ', evloc, evloc*omega   ! DEBUG
   !
@@ -110,7 +110,7 @@ SUBROUTINE stres_loc( sigmaloc )
   ENDDO
   !
   ! ... 2D: re-add LR Vloc to sigma here
-  IF (do_cutoff_2D)  CALL cutoff_stres_sigmaloc( rhog(:,1), strf, sigmaloc )
+  IF (do_cutoff_2D)  CALL cutoff_stres_sigmaloc( gamma_only, rhog(:,1), strf, sigmaloc )
   !
   !$acc end data
   !$acc end data
