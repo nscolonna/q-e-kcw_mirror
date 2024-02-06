@@ -477,8 +477,8 @@ MODULE io_kcw
       !
 #if defined(__HDF5)
       IF ( ionode ) THEN 
-         CALL qeh5_set_space ( rhowann_dset, rho_plane(1), 2, [nr1*nr2, nr3], MODE = 'f')
-         CALL qeh5_set_space ( rhowann_dset, rho_plane(1), 1, [nr1*nr2], MODE = 'm')
+         CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), 2, [nr1*nr2, nr3], MODE = 'f')
+         CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), 1, [nr1*nr2], MODE = 'm')
          CALL qeh5_open_dataset (h5file, rhowann_dset, ACTION = 'write', NAME = 'rhowann' )
       END IF
 #endif 
