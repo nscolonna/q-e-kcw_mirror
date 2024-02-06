@@ -35,7 +35,7 @@ subroutine kcw_setup_ham
                                 read_unitary_matrix, Hamlt, alpha_corr_done, group_alpha, l_do_alpha, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, h_proj !, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq !, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, nks, ngk, igk_k
   USE cell_base,         ONLY : at !, bg

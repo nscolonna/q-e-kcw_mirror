@@ -61,7 +61,8 @@ SUBROUTINE kcw_readin()
   NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
-                        write_hr, l_alpha_corr, on_site_only, h_proj, l_diag, check_spread
+                        write_hr, l_alpha_corr, on_site_only, h_uniq, h_proj, &
+                        l_diag, check_spread
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -181,6 +182,7 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
+  h_uniq              = .FALSE.
   h_proj              = .FALSE.
   l_diag              = .FALSE.
   ! 
@@ -269,9 +271,14 @@ SUBROUTINE kcw_readin()
      l_vcut = .true.
   ENDIF
   !
-  IF (h_proj .AND. do_bands) THEN 
-     CALL infomsg('kcw_readin','WARNING: "do_bands" ignored. Bands interpolation not available when h_proj=.TRUE.')
-     CALL infomsg('kcw_readin','WARNING: "write_hr" ignored. H(R) not available when h_proj=.TRUE.')
+  IF (h_uniq .AND. h_proj) THEN 
+     CALL infomsg('kcw_readin','WARNING: h_proj and h_uniq are mutually exclusive: GOING TO SET h_proj = .FALSE.')
+     h_proj = .FALSE.
+  ENDIF
+  !
+  IF ((h_uniq .OR. h_proj) .AND. do_bands) THEN 
+     CALL infomsg('kcw_readin','WARNING: "do_bands" ignored. Bands interpolation not available when h_proj=.TRUE. OR h_uniq=.TRUE.')
+     CALL infomsg('kcw_readin','WARNING: "write_hr" ignored. H(R) not available when h_proj=.TRUE. OR h_uniq=.TRUE.')
      do_bands = .FALSE.
      write_hr = .FALSE.
   ENDIF
