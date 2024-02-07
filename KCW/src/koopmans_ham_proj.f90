@@ -41,7 +41,7 @@ SUBROUTINE koopmans_ham_proj (delta)
   INTEGER :: ik, ibnd, ik_pw, k, eig_start, eig_win
   !
   ! The on-site KI correction \alpha_n*<W_0n^2|f_Hxc|W_0n^2> (computed in dH_ki_wann.f90)
-  COMPLEX(DP) :: delta (num_wann)
+  COMPLEX(DP), INTENT(IN) :: delta (num_wann)
   ! and occupations numbers of WFs: P_n = \sum_kv f_kv <u_kv|w_kn><w_kn|u_kn> 
   REAL(DP) :: occ_mat(num_wann)
   !
@@ -52,9 +52,6 @@ SUBROUTINE koopmans_ham_proj (delta)
   REAL(DP) :: et_ki(nbnd,nkstot)
   REAL(DP), ALLOCATABLE :: eigvl_aux(:)
   COMPLEX(DP) , ALLOCATABLE :: eigvc_aux(:,:), ham_aux(:,:)
-  !
-  ! The correction to the diagonal term beyond second order
-  REAL(DP) :: ddH(num_wann)
   !
   ! The new eigenalues
   REAL(DP) :: eigvl(nbnd)
@@ -284,6 +281,7 @@ SUBROUTINE koopmans_ham_proj (delta)
     !
     !
   END SUBROUTINE dki_hamiltonian
+  !
   ! !----------------------------------------------------------------
   SUBROUTINE occupations (occ_mat)
     !----------------------------------------------------------------

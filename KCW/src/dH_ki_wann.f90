@@ -52,6 +52,7 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
   CALL ham_scalar (deltah_scal)
   WRITE(stdout, 900) get_clock('KCW')
   !
+  ! This is Just <w_n | f_Hxc | w_n> (needed for the the projection scheme a-la DFT+U)
   DO iwann = 1, num_wann 
     dH_wann_proj(iwann) = -2.D0*deltah_scal(iwann,iwann)
   ENDDO

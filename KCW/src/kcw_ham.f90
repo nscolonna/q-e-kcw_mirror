@@ -53,7 +53,8 @@ SUBROUTINE kcw_ham
         ! in the space of the KS orbital from the NSCF calculation
         CALL koopmans_ham_uniq ( dH_wann )
      ELSE 
-       ! Standard procedure using MLWFs
+       ! Standard procedure: build and diagonalize the Hamiltonian in the 
+       ! space spanned by the MLWFs
        CALL koopmans_ham ( dH_wann )
        !
        ! 3) If do_bands=TRUE interpolate H(k) and prints bands
