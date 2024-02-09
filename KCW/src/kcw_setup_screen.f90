@@ -32,7 +32,7 @@ subroutine kcw_setup_screen
   USE control_kcw,       ONLY : alpha_final, iurho_wann, kcw_iverbosity, &
                                 read_unitary_matrix, num_wann, num_wann_occ, i_orb, iorb_start, &
                                 iorb_end, nqstot, occ_mat, l_do_alpha, group_alpha, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq!, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_sp!, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : xk, nkstot
   USE cell_base,         ONLY : at !, bg
@@ -40,7 +40,7 @@ subroutine kcw_setup_screen
   !
   USE control_lr,        ONLY : nbnd_occ
   USE mp,                ONLY : mp_bcast
-  USE io_kcw,            ONLY : read_rhowann
+  USE io_kcw,            ONLY : read_rhowann, read_rhowann_sgl
   !
   USE coulomb,           ONLY : setup_coulomb
   !
@@ -180,7 +180,11 @@ subroutine kcw_setup_screen
     !
     DO i = 1, num_wann
       file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-      CALL read_rhowann( file_base, dffts, rhowann_aux )
+      IF (io_sp) THEN 
+       CALL read_rhowann_sgl( file_base, dffts, rhowann_aux )
+      ELSE
+       CALL read_rhowann( file_base, dffts, rhowann_aux )
+      ENDIF
       rhowann(:,i) = rhowann_aux(:)
     ENDDO
     !
