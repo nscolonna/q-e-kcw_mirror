@@ -46,7 +46,7 @@ SUBROUTINE force_hub( forceh )
    USE constants,            ONLY : eps16
    USE mp_pools,             ONLY : inter_pool_comm, intra_pool_comm, me_pool, &
                                     nproc_pool
-   USE mp,                   ONLY : mp_sum
+   USE mp,                   ONLY : mp_sum, mp_size
    USE mp_bands,             ONLY : intra_bgrp_comm
    !
    IMPLICIT NONE
@@ -64,7 +64,7 @@ SUBROUTINE force_hub( forceh )
    ! dns(ldim,ldim,nspin,nat) ! the derivative of the atomic occupations
    INTEGER :: npw, alpha, na, nt, is, is2, m1, m2, ipol, ldim, ik, ijkb0
    INTEGER :: na1, na2, equiv_na2, nt1, nt2, ldim1, ldim2, viz
-   INTEGER :: nb_s, nb_e, mykey, ldimb
+   INTEGER :: nb_s, nb_e, mykey, ldimb, ierr
    LOGICAL :: lhubb
    LOGICAL :: save_flag
    INTEGER, EXTERNAL :: find_viz
@@ -79,7 +79,6 @@ SUBROUTINE force_hub( forceh )
       CALL errore( "force_hub", &
                    " forces for this Hubbard_projectors type not implemented", 1 )
    !
-   ! IF (noncolin) CALL errore( "forceh","Noncollinear case is not supported", 1 )
    IF (ANY(Hubbard_J(:,:)>eps16)) CALL errore( "force_hub", &
                    " forces in the DFT+U+J scheme are not implemented", 1 )
    !
@@ -118,7 +117,12 @@ SUBROUTINE force_hub( forceh )
    ENDIF
    !
    IF (noncolin) THEN
-      ALLOCATE (proj%k (nwfcU, nbnd))
+      ALLOCATE (proj%k (nwfcU, nbnd), STAT=ierr)
+      IF( ierr /= 0 ) &
+          CALL errore( ' allocate_bec_type_acc ', ' cannot allocate proj%k ', ABS(ierr) )
+      proj%k(:,:)=(0.0D0,0.0D0)
+      !$acc enter data copyin(proj)
+      !$acc enter data copyin(proj%k)
    ELSE
       CALL allocate_bec_type_acc( nwfcU, nbnd, proj )
    ENDIF
@@ -144,11 +148,8 @@ SUBROUTINE force_hub( forceh )
       !$acc update device(evc) 
       !
       CALL init_us_2( npw, igk_k(1,ik), xk(1,ik), vkb, .TRUE. )
-      ! ... FIXME check if this update is actually needed and in case comment
-      ! ...       indicating why. 
-      !
+      ! ... FIXME this update is needed for ortho-atomic case
       !$acc update self(vkb)
-      !
       ! ... Compute spsi = S * psi
       CALL allocate_bec_type_acc( nkb, nbnd, becp )
       Call calbec(offload_type, npw, vkb, evc, becp ) 
@@ -164,9 +165,14 @@ SUBROUTINE force_hub( forceh )
       !
       ! ... proj=<wfcU|S|evc>
       IF (noncolin) THEN
-         CALL ZGEMM ('C', 'N', nwfcU, nbnd, npwx*npol, (1.0_DP, 0.0_DP), wfcU, &
+         !$acc host_data use_device(wfcU, spsi, proj%k)
+         CALL MYZGEMM ('C', 'N', nwfcU, nbnd, npwx*npol, (1.0_DP, 0.0_DP), wfcU, &
                     npwx*npol, spsi, npwx*npol, (0.0_DP, 0.0_DP),  proj%k, nwfcU)
+         !$acc end host_data
+         !Workaround: mp_sum does not like proj%k on device for obscure reasons
+         !$acc update self(proj%k)
          CALL mp_sum( proj%k( :, 1:nbnd ), intra_bgrp_comm )
+         !$acc update device(proj%k)
       ELSE
          CALL calbec( offload_type, npw, wfcU, spsi, proj )
       ENDIF
@@ -645,7 +651,6 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    CALL start_clock( 'dndtau' )
    !
-   ALLOCATE ( dproj(nwfcU,nb_s:nb_e) )
    !
    ! Compute the derivative of occupation matrices (the quantities dns_nc(m1,m2,i))
    ! of the atomic orbitals. They are complex quantities as well as dns_nc(m1,m2,i).
@@ -657,11 +662,14 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    IF ( mykey /= 0 ) GO TO 10
    !
+   ALLOCATE ( dproj(nwfcU,nb_s:nb_e) )
+   IF (okvan) ALLOCATE( dproj_us(nwfcU,nb_s:nb_e) )
+   !$acc data present_or_copyin(wfcU) create(dproj,dproj_us)
+   !
    ! Compute the USPP contribution to dproj:
    ! <\phi^{at}_{I,m1}|dS/du(alpha,ipol)|\psi_{k,v,s}>
    !
    IF (okvan) THEN
-      ALLOCATE ( dproj_us(nwfcU,nb_s:nb_e) )
       CALL matrix_element_of_dSdtau (alpha, ipol, ik, jkb0, &
                        nwfcU, wfcU, nbnd, evc, dproj_us, nb_s, nb_e, mykey, .false.)
    ENDIF
@@ -681,7 +689,12 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ! Compute the second contribution to dproj due to the derivative of 
          ! (ortho-)atomic orbitals
          CALL dprojdtau_k ( spsi, alpha, na, jkb0, ipol, ik, nb_s, nb_e, mykey, dproj )
-         IF (okvan) dproj = dproj + dproj_us
+         IF (okvan) THEN
+           !$acc kernels
+           dproj = dproj + dproj_us
+           !$acc end kernels
+         ENDIF
+         !$acc update self(dproj(:,nb_s:nb_e))
          !
          ldim1 = 2*Hubbard_l(nt)+1
          DO is1 = 1, npol
@@ -705,10 +718,12 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    ENDDO
 ! !omp end parallel do
    !
-10 DEALLOCATE( dproj )
+   !$acc end data
+   DEALLOCATE( dproj )
    IF (ALLOCATED(doverlap_inv)) DEALLOCATE( doverlap_inv )
    IF (okvan) DEALLOCATE (dproj_us)
    !
+   10 CONTINUE
    CALL mp_sum( dns_nc, intra_pool_comm )
    !
    ! Impose hermiticity of dns_nc{m1,m2,i}
@@ -997,7 +1012,7 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
       !
       !$acc kernels
       dproj2 = dproj1
-      !$acc end kernels      
+      !$acc end kernels
       !
    ELSEIF (Hubbard_projectors.EQ."ortho-atomic") THEN
       ! ... In the 'ortho-atomic' case calculate d[(O^{-1/2})^T]
@@ -1197,6 +1212,9 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    ALLOCATE ( dproj1(nwfcU,nb_s:nb_e) )
    ALLOCATE ( dproj2(nwfcU,nb_s:nb_e) )
+   IF (okvan) ALLOCATE ( dproj_us(nwfcU,nb_s:nb_e) )
+   !$acc data present_or_copyin(wfcU) create(dproj1,dproj2,dproj_us)
+   !
    !
    ! Compute the derivative of the generalized occupation matrices 
    ! (the quantities dnsg(m1,m2)) of the atomic orbitals. 
@@ -1212,16 +1230,23 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    ! <\phi^{at}_{I,m1}|dS/du(alpha,ipol)|\psi_{k,v,s}>
    !
    IF (okvan) THEN
-   ALLOCATE ( dproj_us(nwfcU,nb_s:nb_e) )
-   CALL matrix_element_of_dSdtau (alpha, ipol, ik, jkb0, &
+      CALL matrix_element_of_dSdtau (alpha, ipol, ik, jkb0, &
       nwfcU, wfcU, nbnd, evc, dproj_us, nb_s, nb_e, mykey, .false.)
    ENDIF
    !
    IF (Hubbard_projectors.EQ."atomic") THEN
       ! In the 'atomic' case the calculation must be performed only once (when na=alpha)
       CALL dprojdtau_k ( spsi, alpha, alpha, jkb0, ipol, ik, nb_s, nb_e, mykey, dproj1 )
-      IF (okvan) dproj1 = dproj1 + dproj_us
+      ! ... adds dproj_us to dproj.
+      IF ( okvan ) THEN
+         !$acc kernels
+         dproj1 = dproj1 + dproj_us
+         !$acc end kernels
+      ENDIF
+      !
+      !$acc kernels
       dproj2 = dproj1
+      !$acc end kernels
    ELSEIF (Hubbard_projectors.EQ."ortho-atomic") THEN
       ! In the 'ortho-atomic' case calculate d[(O^{-1/2})^T]
       ALLOCATE ( doverlap_inv(natomwfc,natomwfc) )
@@ -1239,8 +1264,13 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ! ortho-atomic orbitals
          IF (Hubbard_projectors.EQ."ortho-atomic") THEN
             CALL dprojdtau_k ( spsi, alpha, na1, jkb0, ipol, ik, nb_s, nb_e, mykey, dproj1 )
-            IF (okvan) dproj1 = dproj1 + dproj_us
+            IF ( okvan ) THEN
+               !$acc kernels
+               dproj1 = dproj1 + dproj_us
+               !$acc end kernels
+            ENDIF
          ENDIF
+         !$acc update self(dproj1)
          ldim1 = ldim_u(nt1)
          DO viz = 1, neighood(na1)%num_neigh
             na2 = neighood(na1)%neigh(viz)
@@ -1251,8 +1281,13 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
             ! ortho-atomic orbitals
             IF (Hubbard_projectors.EQ."ortho-atomic") THEN
                CALL dprojdtau_k ( spsi, alpha, eq_na2, jkb0, ipol, ik, nb_s, nb_e, mykey, dproj2 )
-               IF (okvan) dproj2 = dproj2 + dproj_us
+               IF ( okvan ) THEN
+                  !$acc kernels
+                  dproj2 = dproj2 + dproj_us
+                  !$acc end kernels
+               ENDIF
             ENDIF
+            !$acc update self(dproj2)
             IF (mykey==0) THEN
                IF (na1.GT.na2) THEN 
                   DO is1 = 1, npol
@@ -1293,10 +1328,11 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    ENDDO ! na1
    ! !omp end parallel do
    !
+   !$acc end data
+   IF (okvan) DEALLOCATE( dproj_us )
    DEALLOCATE ( dproj1 ) 
    DEALLOCATE ( dproj2 ) 
    IF (ALLOCATED(doverlap_inv)) DEALLOCATE( doverlap_inv )
-   IF (ALLOCATED(dproj_us))     DEALLOCATE( dproj_us )
    !
    CALL mp_sum(dnsg, intra_pool_comm)
    !
@@ -2089,8 +2125,9 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
       ! Abeta(:,1       : nh(nt))      = spin up
       ! Abeta(:,1+nh(nt): nh(nt)*npol) = spin down      
       !
-      Abeta=(0.0,0.0)
-      CALL ZGEMM ('C', 'N', lA, nh_nt*npol, npwx*npol, (1.0_DP, 0.0_DP), A, &
+      !$acc host_data use_device (A,B,aux,Abeta,betaB)
+      ! Abeta=(0.0,0.0)
+      CALL MYZGEMM ('C', 'N', lA, nh_nt*npol, npwx*npol, (1.0_DP, 0.0_DP), A, &
                  npwx*npol, aux, npwx*npol, (0.0_DP, 0.0_DP), Abeta, lA)
       CALL mp_sum( Abeta(:, 1:nh_nt*npol) , intra_bgrp_comm )
       !
@@ -2098,10 +2135,11 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
       ! betaB(:,1       : nh(nt))      = spin up
       ! betaB(:,1+nh(nt): nh(nt)*npol) = spin down
       !      
-      betaB=(0.0,0.0)
-      CALL ZGEMM ('C', 'N', nh_nt*npol, lB, npwx*npol, (1.0_DP, 0.0_DP), aux, &
+      ! betaB=(0.0,0.0)
+      CALL MYZGEMM ('C', 'N', nh_nt*npol, lB, npwx*npol, (1.0_DP,0.0_DP), aux, &
                  npwx*npol, B, npwx*npol, (0.0_DP, 0.0_DP), betaB, nh_nt*npol)
       CALL mp_sum( betaB(:, 1:lB) , intra_bgrp_comm )
+      !$acc end host_data 
    ELSE 
       ! ... Calculate Abeta = <A|beta>
       CALL calbec( offload_type, npw, A, aux, Abeta )
@@ -2112,7 +2150,7 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
    ! ... Calculate the derivative of the beta function
 ! !omp parallel do default(shared) private(ig,ih)
    !
-   !$acc parallel loop
+   !$acc parallel loop collapse(2)
    DO ih = 1, nh_nt
       DO ig = 1, npw
          gvec = g(ipol,igk_k(ig,ik)) * tpiba
@@ -2127,18 +2165,20 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
       ! Calculate Adbeta = <A|dbeta>      
       ! (same as Abeta)
       !
-      Adbeta=(0.0,0.0)
-      CALL ZGEMM ('C', 'N', lA, nh(nt)*npol, npwx*npol, (1.0_DP, 0.0_DP), A, &
+      !Adbeta=(0.0,0.0)
+      !$acc host_data use_device (A,B,aux,Adbeta,dbetaB)
+      CALL MYZGEMM ('C', 'N', lA, nh(nt)*npol, npwx*npol, (1.0_DP, 0.0_DP), A, &
                npwx*npol, aux, npwx*npol, (0.0_DP, 0.0_DP), Adbeta, lA)
       CALL mp_sum( Adbeta(:, 1:nh(nt)*npol) , intra_bgrp_comm )
       !
       ! Calculate dbetaB = <dbeta|B>
       ! (same as betaB)
       !
-      dbetaB=(0.0,0.0)
-      CALL ZGEMM ('C', 'N', nh(nt)*npol, lB, npwx*npol, (1.0_DP, 0.0_DP), aux, &
+      !dbetaB=(0.0,0.0)
+      CALL MYZGEMM ('C', 'N', nh(nt)*npol, lB, npwx*npol, (1.0_DP,0.0_DP), aux,&
                npwx*npol, B, npwx*npol, (0.0_DP, 0.0_DP), dbetaB, nh(nt)*npol)
       CALL mp_sum( dbetaB(:, 1:lB) , intra_bgrp_comm )
+      !$acc end host_data 
    ELSE
       ! ... Calculate Abeta = <A|beta>
       CALL calbec( offload_type, npw, A, aux, Adbeta )
@@ -2152,20 +2192,22 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
    !$acc data create(aux)
    !
    IF (noncolin) THEN    
-      aux(:,:) = (0.0,0.0)
+      !aux(:,:) = (0.0,0.0)
       ! aux(:, 1:nh(nt))             = \sum_jh qq(1,jh)*dbetaB(1,jh) + qq(2,jh)*dbetaB(2,jh)     
       ! aux(:, 1+nh(nt):nh(nt)*npol) = \sum_jh qq(3,jh)*dbetaB(1,jh) + qq(4,jh)*dbetaB(2,jh)
       !
+      !$acc host_data use_device(qq,dbetaB,aux)
       ! spin up
-      CALL ZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
+      CALL MYZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
                  qq(1, 1), nh(nt)*npol, &
                  dbetaB(1, lB_s), nh(nt)*npol, (0.0d0,0.0d0), &
                  aux(1, lB_s), nh(nt)*npol)
       ! spin down   
-      CALL ZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
+      CALL MYZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
                  qq(1+nh(nt), 1), nh(nt)*npol, &
                  dbetaB(1, lB_s), nh(nt)*npol, (0.0d0,0.0d0), &
                  aux(1+nh(nt), lB_s), nh(nt)*npol)
+      !$acc end host_data
    ELSE
       ! ... Calculate \sum_jh qq_at(ih,jh) * dbetaB(jh)
       !$acc host_data use_device(qq,dbetaB,aux)
@@ -2180,19 +2222,21 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
    !$acc end kernels
    !
    IF (noncolin) THEN
-      aux(:,:) = (0.0,0.0)
+      !aux(:,:) = (0.0,0.0)
       ! (same as dbetaB)     
       !
       ! spin up 
-      CALL ZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
+      !$acc host_data use_device(qq,betaB,aux)
+      CALL MYZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
                  qq(1, 1), nh(nt)*npol, &
                  betaB(1, lB_s), nh(nt)*npol, (0.0d0,0.0d0), &
                  aux(1, lB_s), nh(nt)*npol)
       ! spin down   
-      CALL ZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
+      CALL MYZGEMM('N', 'N', nh(nt), lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
                  qq(1+nh(nt), 1), nh(nt)*npol, &
                  betaB(1, lB_s), nh(nt)*npol, (0.0d0,0.0d0), &
                  aux(1+nh(nt), lB_s), nh(nt)*npol)
+      !$acc end host_data
    ELSE 
       ! ... Calculate \sum_jh qq_at(ih,jh) * betaB(jh)
       !$acc host_data use_device(qq,betaB,aux)
@@ -2224,32 +2268,36 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
                   mD = mU + ldim 
                   !
                   ! spin up
-                  CALL ZGEMM('N', 'N', ldim, lB_e-lB_s+1, nh(nt), (1.0d0,0.0d0), &
+         !$acc host_data use_device(Adbeta,betaB,Abeta,dbetaB,A_dS_B)
+                  CALL MYZGEMM('N', 'N', ldim, lB_e-lB_s+1, nh(nt),(1.0d0,0.0d0), &
                            Adbeta(mU,1), lA, &
                            betaB(1, lB_s), nh(nt)*npol, (0.0d0,0.0d0), &
                            A_dS_B(mU, lB_s), lA)
-                  CALL ZGEMM('N', 'N', ldim, lB_e-lB_s+1, nh(nt), (1.0d0,0.0d0), &
+                  CALL MYZGEMM('N', 'N', ldim, lB_e-lB_s+1, nh(nt),(1.0d0,0.0d0), &
                            Abeta(mU,1), lA, &
                            dbetaB(1, lB_s), nh(nt)*npol, (1.0d0,0.0d0), &
                            A_dS_B(mU, lB_s), lA)        
                   ! spin down
-                  CALL ZGEMM('N', 'N', ldim, lB_e-lB_s+1, nh(nt), (1.0d0,0.0d0), &
+                  CALL MYZGEMM('N', 'N', ldim, lB_e-lB_s+1, nh(nt), (1.0d0,0.0d0), &
                               Adbeta(mD, nt1), lA, &
                               betaB(nt1, lB_s), nh(nt)*npol, (0.0d0,0.0d0), &
                               A_dS_B(mD,lB_s), lA)
-                  CALL ZGEMM('N', 'N', ldim, lB_e-lB_s+1, nh(nt), (1.0d0,0.0d0), &
+                  CALL MYZGEMM('N', 'N', ldim, lB_e-lB_s+1, nh(nt), (1.0d0,0.0d0), &
                               Abeta(mD, nt1), lA, &
                               dbetaB(nt1, lB_s), nh(nt)*npol, (1.0d0,0.0d0), &
                               A_dS_B(mD,lB_s), lA)   
+         !$acc end host_data
                ENDIF    
             ENDDO 
          ELSEIF ( flag ) THEN
-            CALL ZGEMM('N', 'N', lA, lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
+         !$acc host_data use_device(Adbeta,betaB,Abeta,dbetaB,A_dS_B)
+            CALL MYZGEMM('N', 'N', lA, lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0),&
                         Adbeta, lA, betaB(1,lB_s), nh(nt)*npol, (0.0d0,0.0d0), &
                         A_dS_B(1,lB_s), lA)
-            CALL ZGEMM('N', 'N', lA, lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0), &
+            CALL MYZGEMM('N', 'N', lA, lB_e-lB_s+1, nh(nt)*npol, (1.0d0,0.0d0),&
                         Abeta, lA, dbetaB(1,lB_s), nh(nt)*npol, (1.0d0,0.0d0), &
                         A_dS_B(1,lB_s), lA)
+         !$acc end host_data
          ENDIF        
       ELSE
          !$acc host_data use_device(Adbeta,betaB,Abeta,dbetaB,A_dS_B)
