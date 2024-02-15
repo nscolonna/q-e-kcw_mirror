@@ -69,7 +69,6 @@ target_link_libraries(
             qe_mpi_fortran
             qe_upflib
             qe_fftx
-            qe_elpa
             qe_xclib)
 
 ###########################################################

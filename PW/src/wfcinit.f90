@@ -227,7 +227,7 @@ SUBROUTINE init_wfc ( ik )
   USE noncollin_module,     ONLY : npol
   USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
-  USE random_numbers_gpum,  ONLY : randy_vect_gpu ! => randy_vect_debug_gpu
+  USE random_numbers_gpum,  ONLY : randy_vect_gpu => randy_vect_debug_gpu
                                                   ! use '=>randy_vect_debug_gpu'
                                                   ! to adopt the same (slower) PRNG
                                                   ! used on the CPU.
@@ -293,7 +293,13 @@ SUBROUTINE init_wfc ( ik )
   IF ( n_starting_atomic_wfc > 0 ) THEN
      !
      CALL start_clock( 'wfcinit:atomic' ); !write(*,*) 'start wfcinit:atomic' ; FLUSH(6)
-     CALL atomic_wfc( ik, wfcatom )
+     IF(use_gpu) THEN
+       !$acc host_data use_device(wfcatom)
+       CALL atomic_wfc_gpu( ik, wfcatom )
+       !$acc end host_data
+     ELSE
+       CALL atomic_wfc( ik, wfcatom )
+     END IF
      CALL stop_clock( 'wfcinit:atomic' ); !write(*,*) 'stop wfcinit:atomic' ; FLUSH(6)
      !
      IF ( starting_wfc == 'atomic+random' .AND. &

@@ -53,7 +53,7 @@ SUBROUTINE kcw_readin()
   !
   NAMELIST / CONTROL /  outdir, prefix, read_unitary_matrix, kcw_at_ks, &
                         spread_thr, homo_only, kcw_iverbosity, calculation, &
-                        l_vcut, assume_isolated, spin_component, mp1, mp2, mp3, lrpa, io_sp
+                        l_vcut, assume_isolated, spin_component, mp1, mp2, mp3, lrpa
   !
   NAMELIST / WANNIER /  num_wann_occ, num_wann_emp, have_empty, has_disentangle, &
                         seedname, check_ks, l_unique_manifold

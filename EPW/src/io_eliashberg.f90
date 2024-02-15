@@ -2026,7 +2026,7 @@
     USE modes,      ONLY : nmodes
     USE epwcom,     ONLY : nbndsub, fsthick, ngaussw, degaussw, shortrange, &
                            nkf1, nkf2, nkf3, nqf1, nqf2, nqf3, efermi_read, &
-                           fermi_energy, mp_mesh_k
+                           fermi_energy
     USE pwcom,      ONLY : ef
     USE elph2,      ONLY : etf, ibndmin, ibndmax, nkqf, epf17, wkf, nkf, &
                            nqtotf, wf, xqf, nkqtotf, efnew, nbndfst, nktotf, &
@@ -2329,16 +2329,7 @@
         !  nkq - index of k+sign*q on the full fine k-mesh.
         !
         CALL kpmq_map(xk, xq, +1, nkq)
-        !
-        IF (mp_mesh_k) THEN
-          !
-          ikqfs = ixkf(bztoibz(nkq))
-          !
-        ELSE
-          ! full k-point grid
-          ikqfs = ixkf(nkq)
-          !
-        ENDIF
+        ikqfs = ixkf(bztoibz(nkq))
         !
         IF (ikqfs > 0) THEN
           DO imode = 1, nmodes ! phonon modes

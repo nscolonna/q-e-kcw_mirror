@@ -36,10 +36,8 @@ subroutine ld1_writeout
   logical :: oldformat
   character (len=20) :: dft_name
   
-  if (file_pseudopw == ' ') then
-     ios = close_input_file ( )
-     return
-  end if
+  if (file_pseudopw == ' ') return
+
   if (iswitch/=4.and.nconf > 1) &
        call errore('ld1_writeout','more than one test configuration',1)
 
