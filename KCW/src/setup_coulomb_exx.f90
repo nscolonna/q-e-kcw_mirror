@@ -19,7 +19,6 @@ subroutine setup_coulomb_exx ( )
   !!  one can also use assume_isolated (see kcw_readin) 
   !
   !
-  USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   USE exx_base,             ONLY : exx_grid_init, exx_div_check, &
                                    exxdiv_treatment, x_gamma_extrapolation, &

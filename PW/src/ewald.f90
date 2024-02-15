@@ -106,7 +106,7 @@ FUNCTION ewald( alat, nat, ntyp, ityp, zv, at, bg, tau, omega, g, &
   ! Determine if this processor contains G=0 and set the constant term
   !
   IF ( do_cutoff_2D ) THEN ! cutoff ewald sums
-     ewaldg = cutoff_ewald( gamma_only, alpha, omega )
+     CALL cutoff_ewald( alpha, ewaldg, omega )
   ELSE
      IF ( gstart==2 ) THEN
         ewaldg = - charge**2 / alpha / 4.0d0

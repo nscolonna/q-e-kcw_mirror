@@ -96,7 +96,13 @@ SUBROUTINE orthoUwfc(save_wfcatom)
        CALL atomic_wfc_nc_updown (ik, wfcatom)
        !$acc update device(wfcatom)
      ELSE
-       CALL atomic_wfc (ik, wfcatom)
+       IF(use_gpu) THEN
+         !$acc host_data use_device(wfcatom)
+         CALL atomic_wfc_gpu( ik, wfcatom )
+         !$acc end host_data
+       ELSE
+         CALL atomic_wfc (ik, wfcatom)
+       END IF
      ENDIF
      npw = ngk (ik)
      CALL init_us_2 (npw, igk_k(1,ik), xk (1, ik), vkb, use_gpu)
@@ -291,7 +297,13 @@ SUBROUTINE orthoatwfc (orthogonalize_wfc)
        CALL atomic_wfc_nc_updown (ik, wfcatom)
        !$acc update device(wfcatom)
      ELSE
-       CALL atomic_wfc (ik, wfcatom)
+       IF(use_gpu) THEN 
+         !$acc host_data use_device(wfcatom)
+         CALL atomic_wfc_gpu( ik, wfcatom )
+         !$acc end host_data
+       ELSE
+         CALL atomic_wfc (ik, wfcatom)
+       END IF
      ENDIF
      npw = ngk (ik)
      !

@@ -96,5 +96,9 @@ MODULE control_kcw
   LOGICAL, ALLOCATABLE :: lgamma_iq(:)
   !! if TRUE this q is gamma.
   !
+  LOGICAL :: h_uniq
+  LOGICAL :: h_proj
+  LOGICAL :: l_diag
+  !
 END MODULE control_kcw
 

@@ -29,7 +29,8 @@ MODULE uspp
   PUBLIC :: nlx, lpx, lpl, ap, aainit, indv, nhtol, nhtolm, ofsbeta, &
             nkb, nkbus, vkb, dvan, deeq, qq_at, qq_nt, nhtoj, ijtoh, beta, &
             becsum, ebecsum
-  PUBLIC :: indv_d, nhtol_d, dvan_d, qq_nt_d, nhtoj_d, ijtoh_d, becsum_d, ebecsum_d
+  PUBLIC :: indv_d, nhtol_d, ofsbeta_d, &
+            dvan_d, qq_nt_d, nhtoj_d, ijtoh_d, becsum_d, ebecsum_d
   PUBLIC :: okvan, nlcc_any
   PUBLIC :: qq_so,   dvan_so,   deeq_nc,   fcoef 
   PUBLIC :: dvan_so_d
@@ -64,8 +65,9 @@ MODULE uspp
   INTEGER, ALLOCATABLE :: indv_d(:,:)
   INTEGER, ALLOCATABLE :: nhtol_d(:,:)
   INTEGER, ALLOCATABLE :: ijtoh_d(:,:,:)
+  INTEGER, ALLOCATABLE :: ofsbeta_d(:)
 #if defined (__CUDA)
-  attributes(DEVICE) :: indv_d, nhtol_d, ijtoh_d
+  attributes(DEVICE) :: indv_d, nhtol_d, ijtoh_d, ofsbeta_d
 #endif
 
   LOGICAL :: &
@@ -377,6 +379,7 @@ CONTAINS
         endif
         !
       endif
+      allocate( ofsbeta_d(nat) )
       !
     endif
     !
@@ -429,6 +432,7 @@ CONTAINS
     IF( ALLOCATED( indv_d ) )     DEALLOCATE( indv_d )
     IF( ALLOCATED( nhtol_d ) )    DEALLOCATE( nhtol_d )
     IF( ALLOCATED( ijtoh_d ) )    DEALLOCATE( ijtoh_d )
+    IF( ALLOCATED( ofsbeta_d)) DEALLOCATE( ofsbeta_d )
     IF( ALLOCATED( becsum_d ) )   DEALLOCATE( becsum_d )
     IF( ALLOCATED( ebecsum_d ) )  DEALLOCATE( ebecsum_d )
     IF( ALLOCATED( dvan_d ) )     DEALLOCATE( dvan_d )

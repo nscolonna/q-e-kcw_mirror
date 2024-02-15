@@ -14,7 +14,7 @@ PP_OBJS=bcast_kcw_pp_input.o \
 input_pp_summary.o \
 kcw_pp_readin.o \
 read_hr.o \
-kcw_bands.o 
+kcw_bands.o\
 
 SH_OBJS= sh_setup.o 
 
@@ -29,6 +29,10 @@ QEMODS = ../../Modules/libqemod.a ../../KS_Solvers/libks_solvers.a ../../upflib/
 TLDEPS= kcw-lib  #Dependency. To be compiled first
 
 all : tldeps kcwpp_sh.x kcwpp_interp.x clean_partial
+
+merge_wann.x: merge_wann.o
+	$(LD) $(LDFLAGS) -o $@ merge_wann.o 
+	- ( cd ../../bin ; ln -fs ../KCW/PP/$@ . )
 
 kcwpp_interp.x: interp_r_to_k.o $(PP_OBJS) $(LRMODS) $(PWOBJS) $(QEMODS) 
 	$(LD) $(LDFLAGS) -o $@ interp_r_to_k.o \

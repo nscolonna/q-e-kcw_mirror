@@ -47,7 +47,10 @@ interpolation.o\
 convert_kpts_names.o\
 write_hr_to_file.o\
 alpha_corr.o \
+dH_ki_wann.o \
 koopmans_ham.o \
+koopmans_ham_uniq.o \
+koopmans_ham_proj.o \
 full_ham.o \
 self_hartree.o\
 group_orbitals.o\

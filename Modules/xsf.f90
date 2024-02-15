@@ -17,7 +17,7 @@ SUBROUTINE xsf_struct (alat, at, nat, tau, atm, ityp, ounit)
   USE constants, ONLY : BOHR_RADIUS_ANGS
   IMPLICIT NONE
   INTEGER          :: nat, ityp (nat), ounit
-  CHARACTER(len=*) :: atm(*)
+  CHARACTER(len=3) :: atm(*)
   real(DP)    :: alat, tau (3, nat), at (3, 3)
   ! --
   INTEGER          :: i, j, n

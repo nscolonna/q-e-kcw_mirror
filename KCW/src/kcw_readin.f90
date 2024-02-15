@@ -61,7 +61,8 @@ SUBROUTINE kcw_readin()
   NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
-                        write_hr, l_alpha_corr, on_site_only
+                        write_hr, l_alpha_corr, on_site_only, h_uniq, h_proj, &
+                        l_diag, check_spread
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -108,6 +109,9 @@ SUBROUTINE kcw_readin()
   !! kipz_corr       : Compute the pKIPZ hamiltonian (only for finite systems: Gamma-only calculation in SC) 
   !! l_alpha_corr    : If true a correction is applied to the screening coefficient to mimick effect beyond the 
   !!                   second order
+  !! h_porj          : if true an alterantive definition of the KI Hamitlonian is built and diagonalized
+  !!                   using projectors (see koopmans_ham_proj.f90)
+  !! l_diag          : if true the projectors-KI hamiltonian is applied perturbatively on KS states
   ! 
   IF (ionode) THEN
     !
@@ -178,6 +182,9 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
+  h_uniq              = .FALSE.
+  h_proj              = .FALSE.
+  l_diag              = .FALSE.
   ! 
   ! ...  reading the namelists (if needed)
   !
@@ -264,6 +271,19 @@ SUBROUTINE kcw_readin()
      l_vcut = .true.
   ENDIF
   !
+  IF (h_uniq .AND. h_proj) THEN 
+     CALL infomsg('kcw_readin','WARNING: h_proj and h_uniq are mutually exclusive: GOING TO SET h_proj = .FALSE.')
+     h_proj = .FALSE.
+  ENDIF
+  !
+  IF ((h_uniq .OR. h_proj) .AND. do_bands) THEN 
+     CALL infomsg('kcw_readin','WARNING: "do_bands" ignored. Bands interpolation not available when h_proj=.TRUE. OR h_uniq=.TRUE.')
+     CALL infomsg('kcw_readin','WARNING: "write_hr" ignored. H(R) not available when h_proj=.TRUE. OR h_uniq=.TRUE.')
+     do_bands = .FALSE.
+     write_hr = .FALSE.
+  ENDIF
+
+  !
   ! read data produced by pwscf
   !
   WRITE( stdout, '(5X,"INFO: Reading pwscf data")')
@@ -272,7 +292,7 @@ SUBROUTINE kcw_readin()
   IF ( lgauss .OR. ltetra ) CALL errore( 'kcw_readin', &
       'KC corrections only for insulators!', 1 )
   !
-  IF (calculation /= 'wann2kcw' .AND. (mp1*mp2*mp3 /= nkstot/nspin) ) &
+  IF ( mp1*mp2*mp3 /= nkstot/nspin ) &
      CALL errore('kcw_readin', ' WRONG number of k points from input, check mp1, mp2, mp3', 1)
   !
   IF (gamma_only) CALL errore('kcw_readin',&

@@ -107,7 +107,7 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
     IF (qg2 .lt. 1e-8) vh_rhog_g0eq0(ig) = (0.D0, 0.D0)
     ! ... set to zero the q+g=0 component
     !
-    vh_rhog(ig) =  rhog(ig) * cmplx(fac(ig), 0.d0)
+    vh_rhog(ig) =  rhog(ig) * cmplx(fac(ig), 0.d0, kind=DP)
     ! ... the hartree potential possibly with the special treatment of the q+g=0 component  
     !
   ENDDO

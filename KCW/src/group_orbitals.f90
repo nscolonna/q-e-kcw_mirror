@@ -11,7 +11,8 @@ SUBROUTINE group_orbitals ( )
   !
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
-  USE control_kcw,          ONLY : num_wann, l_do_alpha, group_alpha, check_spread, tmp_dir_kcw
+  USE control_kcw,          ONLY : num_wann, l_do_alpha, group_alpha, check_spread, tmp_dir_kcw,&
+                                   calculation
   USE control_lr,           ONLY : lrpa
   !
   IMPLICIT NONE
@@ -27,7 +28,7 @@ SUBROUTINE group_orbitals ( )
   l_do_alpha = .TRUE. 
   ! ... if .TRUE. the LR calculation for the orbital needs to be done 
   ! 
-  IF (.NOT. check_spread) RETURN 
+  IF (.NOT. check_spread ) RETURN 
   ! If no check has to be performed, nothing else to do. RETURN
   !
   WRITE( stdout,'(/,5X,"INFO: Group the orbitals according to the SH ... ",/)')
@@ -99,7 +100,7 @@ SUBROUTINE group_orbitals ( )
  DO i = 1, num_wann  
    !
    IF (l_do_alpha(i) ) THEN
-     WRITE(stdout,'(8X, "iwann=", i5, 3X, "DO_LR =", L)') i, l_do_alpha (i)
+     WRITE(stdout,'(8X, "iwann=", i5, 3X, "DO_LR =", L )') i, l_do_alpha (i)
    ELSE
      WRITE(stdout,'(8X, "iwann=", i5, 3X, "DO_LR =", L, 3x, "--> " i5)') i, l_do_alpha(i), group_alpha(i)
    ENDIF

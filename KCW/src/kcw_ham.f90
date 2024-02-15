@@ -11,12 +11,13 @@ SUBROUTINE kcw_ham
   !-----------------------------------------------------------------
   !
   !!  This is one the main subroutines of the KCW code to build up the 
-  !!  KC hamiltonian in Real Space. It reads the output of 
+  !!  KC hamiltonian in Reciprocal Space. It reads the output of 
   !!  a PWscf calculation and the U matrices from W90
   !!   
   !!  Code written by Nicola Colonna and Riccardo de Gennaro (EPFL April 2019) 
   !
-  USE control_kcw,               ONLY : do_bands, write_hr
+  USE kinds,                 ONLY : DP
+  USE control_kcw,           ONLY : do_bands, write_hr, h_uniq, num_wann, h_proj
   USE interpolation,         ONLY : interpolate_ham, dealloc_interpolation
   !
   USE io_rho_xml,            ONLY : write_scf
@@ -24,31 +25,58 @@ SUBROUTINE kcw_ham
   USE scf,                   ONLY : rho
   USE lsda_mod,              ONLY : nspin
   USE units_lr,              ONLY : iuwfc
+  USE klist,                 ONLY : nkstot
   !
   !
   IMPLICIT NONE
   !
+  COMPLEX(DP), ALLOCATABLE :: dH_wann(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dH_wann_proj(:)
+  !
   ! 1) Set up for the KC calculation. 
-  CALL kcw_setup_ham( )
+  CALL kcw_setup_ham ( )
   !
-  ! 2) Build up the Hamiltonian
-  ! 2a) Diagonal term only to 2nd order
-  !     OBSOLETE: inside koopmans_ham this is triggered by "on_site_only": FIXME
-  !CALL ham_R0_2nd ( )
-  ! 2b) Full Hamiltonian to 2nd order 
-  CALL koopmans_ham ( )
+  ALLOCATE ( dH_wann(nkstot/nspin,num_wann,num_wann) )
+  ALLOCATE ( dH_wann_proj(num_wann) )
   !
-  ! 3) If do_bands=TRUE interpolate H(k) and prints bands
-  IF ( do_bands ) CALL interpolate_ham( )
+  ! 2) compute the KI correction on the Wannier basis
+  CALL dH_ki_wann ( dH_wann, dH_wann_proj )
   !
-  ! 4) If write_hr=TRUE write H(R) to file
-  IF ( write_hr ) CALL write_hr_to_file( )
+  IF (h_proj) THEN 
+     ! This is an alternative formulation based on a DFT+U like hamiltonian 
+     ! see koopmans_ham_proj.f90 for details
+     CALL koopmans_ham_proj ( dH_wann_proj )
+  ELSE 
+     !
+     IF ( h_uniq ) THEN 
+        ! Use Projectors to build a unique Hamiltonian and diagonalize it 
+        ! in the space of the KS orbital from the NSCF calculation
+        CALL koopmans_ham_uniq ( dH_wann )
+     ELSE 
+       ! Standard procedure: build and diagonalize the Hamiltonian in the 
+       ! space spanned by the MLWFs
+       CALL koopmans_ham ( dH_wann )
+       !
+       ! 3) If do_bands=TRUE interpolate H(k) and prints bands
+       IF ( do_bands ) CALL interpolate_ham( )
+        !
+       ! 4) If write_hr=TRUE write H(R) to file
+       IF ( write_hr ) CALL write_hr_to_file( )
+       !
+       IF (do_bands) CALL dealloc_interpolation( )
+       !
+    ENDIF
+    !
+    DEALLOCATE (dH_wann, dH_wann_proj) 
+    !
+  ENDIF 
   !
-  IF (do_bands) CALL dealloc_interpolation( )
-  ! 
   ! WRITE data file
   iunwfc = iuwfc
   prefix = TRIM(prefix)//"_kcw"
+  ! Append an extra postfix to save the temporary files of different Hamiltonian schemes on an different dirs
+  IF ( h_uniq ) prefix = TRIM(prefix)//"_uniq-H"
+  IF ( h_proj ) prefix = TRIM(prefix)//"_proj-H"
   CALL write_scf(rho, nspin)
   !CALL punch('config-only')
   CALL punch ('all')

@@ -16,7 +16,7 @@ MODULE uspp_data
   PRIVATE
   !
   PUBLIC :: nqxq, nqx, dq
-  PUBLIC :: tab_at
+  PUBLIC :: tab_beta, tab_at
   !
   PUBLIC :: allocate_uspp_data
   PUBLIC :: deallocate_uspp_data
@@ -27,7 +27,9 @@ MODULE uspp_data
   INTEGER :: nqx
   !! number of interpolation points
   REAL(DP), PARAMETER:: dq = 0.01D0
-  !! space between interpolation points 
+  !! space between points in the pseudopotential tab_beta.
+  REAL(DP), ALLOCATABLE :: tab_beta(:,:,:)
+  !! interpolation table for PP projectorss
   REAL(DP), ALLOCATABLE :: tab_at(:,:,:)
   !! interpolation table for atomic wfc
   !
@@ -41,6 +43,8 @@ contains
      if (nqxq_/=nqxq) call upf_error("allocate_uspp_data","invalid nqxq_",1)
      if (nqx_/=nqx)   call upf_error("allocate_uspp_data","invalid nqx_",1)
      !
+     allocate(tab_beta(nqx_,nbetam,nsp))
+     !$acc enter data create(tab_beta)
      allocate(tab_at(nqx_,nwfcm,nsp))
      !$acc enter data create(tab_at)
      !
@@ -48,6 +52,8 @@ contains
   !
   subroutine deallocate_uspp_data()
      implicit none
+     !$acc exit data delete(tab_beta)
+     if( allocated( tab_beta ) )  deallocate( tab_beta )
      !$acc exit data delete(tab_at)
      if( allocated( tab_at ) )    deallocate( tab_at )
      !
@@ -58,8 +64,9 @@ contains
      implicit none
      real(DP), intent(in) :: vol_ratio_m1
      !
+     tab_beta(:,:,:) = tab_beta(:,:,:) * SQRT(vol_ratio_m1)
      tab_at(:,:,:)   = tab_at(:,:,:) * SQRT(vol_ratio_m1)
-!$acc update device (tab_at)
+!$acc update device (tab_at, tab_beta)
   end subroutine scale_uspp_data
   !
 END MODULE uspp_data

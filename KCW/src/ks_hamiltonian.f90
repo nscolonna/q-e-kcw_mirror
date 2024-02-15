@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
+SUBROUTINE ks_hamiltonian (evc, ik, h_dim, print_eig)
   !---------------------------------------------------------------------
   !
   !! This routine compute and diagonalize the KS Hamiltonian 
@@ -37,6 +37,8 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
   !
   INTEGER :: iband, jband, ig, ik_eff
   !
+  LOGICAL :: print_eig
+  !
   IF (check_ks ) WRITE(stdout,'(/,8x, "KS Hamiltonian calculation at k=", 3f12.4, 2x, " ... ")', advance="no" )  xk(:,ik)
   !
   CALL allocate_bec_type ( nkb, h_dim, becp, intra_bgrp_comm )
@@ -65,7 +67,7 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
         ham(iband,jband) = hij
         ham(jband,iband) = CONJG(ham(iband,jband))
         !
-        !IF (iband==jband) WRITE(*,*) iband,jband, REAL(hij)*rytoev
+        !IF (iband==jband) WRITE(*,*) iband,jband, REAL(hij)*rytoev, et(iband,ik)*rytoev
      ENDDO
      !
   ENDDO
@@ -89,7 +91,7 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
     check = check + (eigvl(iband)-et(iband,ik))/h_dim
   ENDDO 
   !
-  IF ( check_ks ) THEN 
+  IF ( check_ks .AND. print_eig ) THEN 
      !WRITE(stdout,'(/,8x, "WARNING: Eig DIFFERS! k=", 3f12.4, 3x)' )  xk(:,ik)
      WRITE( stdout, '(8X, "WANN  ",8F11.4)' ) (eigvl(iband)*rytoev, iband=1,h_dim)
      WRITE( stdout, '(8X, "PWSCF ",8F11.4)' ) (et(iband,ik)*rytoev, iband=1,h_dim)

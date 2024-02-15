@@ -32,7 +32,7 @@ subroutine kcw_setup_ham
   USE io_files,          ONLY : prefix
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer
   USE control_kcw,       ONLY : alpha_final, evc0, iuwfc_wann, iurho_wann, kcw_iverbosity, &
-                                read_unitary_matrix, hamlt, alpha_corr_done, &
+                                read_unitary_matrix, Hamlt, alpha_corr_done, group_alpha, l_do_alpha, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
                                 tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq !, wq
@@ -148,6 +148,7 @@ subroutine kcw_setup_ham
     num_wann_occ = nbnd_occ(1)
     num_wann_emp = num_wann-num_wann_occ
   ENDIF
+  !
   ! 
   ! Open a file to store the KS states in the WANNIER gauge
   !
@@ -168,12 +169,12 @@ subroutine kcw_setup_ham
   !
   ALLOCATE ( rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
   ALLOCATE ( evc0(npwx, num_wann) )
-  ALLOCATE ( hamlt(nkstot, num_wann, num_wann) )
+  ALLOCATE ( Hamlt(nkstot, num_wann, num_wann) )
   ALLOCATE ( alpha_corr_done (num_wann) ) 
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   occ_mat = 0.D0
   alpha_corr_done = .FALSE.
-  hamlt(:,:,:) = ZERO
+  Hamlt(:,:,:) = ZERO
   !
   mlwf_from_u = .FALSE. ! Set this to true to revert to the previous behaviour (March 2021)
   IF (mlwf_from_u) THEN 
@@ -196,7 +197,7 @@ subroutine kcw_setup_ham
         CALL read_mlwf ( dirname, ik, evc0 )
         ik_eff = ik-(spin_component-1)*nkstot/nspin
         CALL save_buffer ( evc0, lrwfc, iuwfc_wann, ik_eff )
-        CALL ks_hamiltonian(evc0, ik, num_wann) 
+        CALL ks_hamiltonian(evc0, ik, num_wann, .true.) 
     END DO
   ENDIF
   !
@@ -270,6 +271,11 @@ subroutine kcw_setup_ham
     !
   ENDIF
   !
+  ALLOCATE (l_do_alpha(num_wann), group_alpha(num_wann) ) 
+  l_do_alpha = .TRUE.
+  DO i = 1, num_wann; group_alpha(i)=i; ENDDO
+  CALL group_orbitals ( )
+
   WRITE( stdout, '(5X,"INFO: PREPARING THE KCW CALCULATION ... DONE")')
   WRITE(stdout,'(/)')
   ! 

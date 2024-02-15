@@ -114,7 +114,7 @@ SUBROUTINE rotate_ks ()
      ! ... Check that the rotation did not spoil the KS eigenvalues
      ! ... and store it for later Hamiltonian diagonalization
      !
-     CALL ks_hamiltonian(evc0, ik, n_orb) 
+     CALL ks_hamiltonian(evc0, ik, n_orb, .true.) 
      !
   ENDDO k_loop
   !
