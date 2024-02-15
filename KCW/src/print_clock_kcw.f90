@@ -17,7 +17,7 @@ subroutine print_clock_kcw
   implicit none
   !
   WRITE( stdout, * )
-  !call print_clock ('KCW')
+  call print_clock ('KCW')
   WRITE( stdout,  * ) '    INITIALIZATION: '
   call print_clock ('phq_setup')
   call print_clock ('phq_init')
