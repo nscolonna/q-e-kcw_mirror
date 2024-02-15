@@ -14,7 +14,7 @@ display: public
 graph: true
 source: false
 
-#### NOTABENE To generate the automatic FORD documentation: "ford -I ../LAXlib kcw.md"
+#### NOTABENE  To generate the automatic FORD documentation: "ford -I ../LAXlib kcw.md"
 
 KCW stands for "Koopmans-compliant functionals in a Wannier representation". KCW is an open-source F90/MPI 
 code which calculates quasiparticle energies of finite and extended systems using
