@@ -195,6 +195,7 @@ SUBROUTINE force_hub( forceh )
             !
             DO ipol = 1, 3  ! forces are calculated for coordinate ipol ...
                !
+! !omp parallel do default(shared) private(na,nt,m1,m2,is)
                IF (noncolin) THEN  
                   CALL dndtau_k_nc ( ldim, proj%k, spsi, alpha, ijkb0, ipol, ik, &
                                       nb_s, nb_e, mykey, 1, dns_nc )                  
@@ -237,6 +238,9 @@ SUBROUTINE force_hub( forceh )
                   ENDDO                              
                ENDIF
                !
+! !omp parallel do default(shared) private(na,nt,m1,m2,is)               
+! !omp end parallel do
+               !
                IF (lhubb) THEN
                   IF ( gamma_only ) THEN
                      CALL dndtau_gamma( ldimb, proj%r, spsi, alpha, ijkb0, ipol, ik, &
@@ -246,6 +250,7 @@ SUBROUTINE force_hub( forceh )
                                     nb_s, nb_e, mykey, 2, dnsb )
                   ENDIF
                   !
+! !omp parallel do default(shared) private(na,nt,m1,m2,is)
                   DO na = 1,nat              
                      nt = ityp(na)
                      IF ( is_hubbard_back(nt) ) THEN
@@ -259,6 +264,7 @@ SUBROUTINE force_hub( forceh )
                         ENDDO
                      ENDIF
                   ENDDO
+! !omp end parallel do
                ENDIF
             ENDDO ! ipol
             !
@@ -474,6 +480,7 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    ! ... Band parallelization. If each band appears more than once
    ! ... compute its contribution only once (i.e. when mykey=0)
    !
+! !omp parallel do default(shared) private(na,nt,m1,m2,ibnd)
    DO na = 1, nat
       nt = ityp(na)
       IF (is_hubbard(nt) .AND. lpuk==1) THEN
@@ -547,6 +554,7 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDIF
       ENDIF
    ENDDO
+! !omp end parallel do
    !
    !$acc end data
    DEALLOCATE( dproj )
@@ -562,6 +570,7 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    ! ... Impose hermiticity of dns_{m1,m2}
    !
+! !omp parallel do default(shared) private(na,is,m1,m2)
    DO na = 1, nat
       DO is = 1, nspin
          DO m1 = 1, ldim
@@ -571,6 +580,7 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO
       ENDDO
    ENDDO
+! !omp end parallel do
    !
    CALL stop_clock( 'dndtau' )
    !
@@ -671,6 +681,7 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
       CALL calc_doverlap_inv (alpha, ipol, ik, jkb0)
    ENDIF
    !
+! !omp parallel do default(shared) private(na,nt,m1,m2,ibnd)
    DO na = 1, nat
       nt = ityp(na)
       IF ( is_hubbard(nt) ) THEN
@@ -705,6 +716,7 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO
       ENDIF
    ENDDO
+! !omp end parallel do
    !
    !$acc end data
    DEALLOCATE( dproj )
@@ -716,6 +728,7 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    ! Impose hermiticity of dns_nc{m1,m2,i}
    !
+! !omp parallel do default(shared) private(na,is,m1,m2)
    DO na = 1, nat
       nt = ityp (na)
       IF ( is_hubbard(nt) ) THEN
@@ -741,6 +754,7 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO
       ENDIF
    ENDDO
+! !omp end parallel do
    !
    CALL stop_clock( 'dndtau' )
    !
@@ -821,6 +835,7 @@ SUBROUTINE dndtau_gamma( ldim, rproj, spsi, alpha, jkb0, ipol, ik, &
    !
    IF ( mykey /= 0 ) GO TO 10
    !
+! !omp parallel do default(shared) private(na,nt,m1,m2,is)
    DO na = 1, nat
       nt = ityp(na)
       IF (is_hubbard(nt) .AND. lpuk==1) THEN
@@ -863,6 +878,7 @@ SUBROUTINE dndtau_gamma( ldim, rproj, spsi, alpha, jkb0, ipol, ik, &
          ENDDO
       ENDIF
    ENDDO
+! !omp end parallel do
    !
 10 CONTINUE
    !
@@ -878,6 +894,7 @@ SUBROUTINE dndtau_gamma( ldim, rproj, spsi, alpha, jkb0, ipol, ik, &
    !
    ! ... Impose hermiticity of dns_{m1,m2}
    !
+! !omp parallel do default(shared) private(na,is,m1,m2)
    DO na = 1, nat
       DO is = 1, nspin
          DO m1 = 1, ldim
@@ -887,6 +904,7 @@ SUBROUTINE dndtau_gamma( ldim, rproj, spsi, alpha, jkb0, ipol, ik, &
          ENDDO
       ENDDO
    ENDDO
+! !omp end parallel do
    !
    CALL stop_clock( 'dndtau' )
    !
@@ -1005,6 +1023,7 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    ! ... Band parallelization. If each band appears more than once
    ! ... compute its contribution only once (i.e. when mykey=0)
    !
+! !omp parallel do default(shared) private(na1,viz,m1,m2,ibnd)
    DO na1 = 1, nat
       nt1 = ityp(na1)
       IF ( is_hubbard(nt1) ) THEN
@@ -1080,6 +1099,7 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO ! viz          
       ENDIF
    ENDDO ! na1
+! !omp end parallel do
    !
    !$acc end data
    DEALLOCATE( dproj1 )
@@ -1096,6 +1116,7 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    ! ... Impose hermiticity of dnsg_{m1,m2}
    !
+! !omp parallel do default(shared) private(na1,viz,m1,m2)
    DO na1 = 1, nat
       nt1 = ityp (na1)
       IF ( is_hubbard(nt1) ) THEN
@@ -1119,6 +1140,7 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO
       ENDIF
    ENDDO
+! !omp end parallel do
    !
    CALL stop_clock('dngdtau')
    !
@@ -1234,6 +1256,7 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    ! Band parallelization. If each band appears more than once
    ! compute its contribution only once (i.e. when mykey=0)
    !
+   ! !omp parallel do default(shared) private(na1,viz,m1,m2,ibnd)
    DO na1 = 1, nat
       nt1 = ityp(na1)
       IF ( is_hubbard(nt1) ) THEN
@@ -1303,6 +1326,7 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO ! viz          
       ENDIF
    ENDDO ! na1
+   ! !omp end parallel do
    !
    !$acc end data
    IF (okvan) DEALLOCATE( dproj_us )
@@ -1314,6 +1338,7 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    ! Impose hermiticity of dnsg_{m1,m2}
    !
+   ! !omp parallel do default(shared) private(na1,viz,m1,m2)
    DO na1 = 1, nat
       nt1 = ityp (na1)
       IF ( is_hubbard(nt1) ) THEN
@@ -1343,6 +1368,7 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO
       ENDIF
    ENDDO
+   ! !omp end parallel do
    !
    CALL stop_clock('dngdtau')
    !
@@ -1428,6 +1454,7 @@ SUBROUTINE dngdtau_gamma( ldim, rproj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    CALL phase_factor( ik )
    !
+! !omp parallel do default(shared) private(na1,viz,m1,m2,ibnd)
    DO na1 = 1, nat
       nt1 = ityp(na1)
       IF ( is_hubbard(nt1) ) THEN
@@ -1472,6 +1499,7 @@ SUBROUTINE dngdtau_gamma( ldim, rproj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO ! viz          
       ENDIF 
    ENDDO ! na1
+! !omp end parallel do
    !
 10 CONTINUE
    !
@@ -1487,6 +1515,7 @@ SUBROUTINE dngdtau_gamma( ldim, rproj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !
    ! ... Impose hermiticity of dnsg_{m1,m2}
    !
+! !omp parallel do default(shared) private(na1,viz,m1,m2)
    DO na1 = 1, nat
       nt1 = ityp(na1)
       IF ( is_hubbard(nt1) ) THEN
@@ -1510,6 +1539,7 @@ SUBROUTINE dngdtau_gamma( ldim, rproj, spsi, alpha, jkb0, ipol, ik, nb_s, &
          ENDDO
       ENDIF
    ENDDO
+! !omp end parallel do
    !
    CALL stop_clock_gpu( 'dngdtau' )
    !
@@ -1643,6 +1673,7 @@ SUBROUTINE dprojdtau_k( spsi, alpha, na, ijkb0, ipol, ik, nb_s, nb_e, mykey, dpr
          ENDDO
          !
       ENDDO
+! !omp end parallel do
       !
       ALLOCATE ( dproj0(ldim*npol,nbnd) )      
       !$acc data create(dproj0)
@@ -2079,6 +2110,7 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
    ENDDO
    !
    ! ... Beta function
+! !omp parallel do default(shared) private(ig,ih)
    !$acc parallel loop collapse(2) present(vkb(:,:))
    DO ih = 1, nh_nt
       DO ig = 1, npw
@@ -2086,6 +2118,7 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
          IF (noncolin) aux(ig+npwx,ih+nh_nt) = vkb(ig,ijkb0+ih)
       ENDDO
    ENDDO
+! !omp end parallel do
    !
    IF (noncolin) THEN
       ! Calculate Abeta = <A|beta>
@@ -2115,6 +2148,7 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
    ENDIF
    !
    ! ... Calculate the derivative of the beta function
+! !omp parallel do default(shared) private(ig,ih)
    !
    !$acc parallel loop collapse(2)
    DO ih = 1, nh_nt
@@ -2125,6 +2159,7 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
                     (0.d0,-1.d0) * aux(ig+npwx,ih+nh(nt)) * gvec
       ENDDO
    ENDDO
+! !omp end parallel do
    !
    IF (noncolin) THEN
       ! Calculate Adbeta = <A|dbeta>      
@@ -2410,6 +2445,7 @@ SUBROUTINE dprojdtau_gamma( spsi, alpha, ijkb0, ipol, ik, nb_s, nb_e, &
         ENDDO
         !
       ENDDO
+! !omp end parallel do
       !
       ! ... there is no G=0 term
       !$acc host_data use_device(spsi,dwfc,dproj0)
@@ -2473,6 +2509,7 @@ SUBROUTINE dprojdtau_gamma( spsi, alpha, ijkb0, ipol, ik, nb_s, nb_e, &
       ENDDO
    ENDDO
    !
+! !omp end parallel do
    !
    CALL calbec( offload_type, npw, dbeta, evc, dbetapsi ) 
    CALL calbec( offload_type, npw, wfcU, dbeta, wfatdbeta )
@@ -2486,6 +2523,7 @@ SUBROUTINE dprojdtau_gamma( spsi, alpha, ijkb0, ipol, ik, nb_s, nb_e, &
    ! ... betapsi is used here as work space 
    !
    ! ... here starts band parallelization
+! !omp parallel do default(shared) private(ih,ibnd,jh)
    !$acc parallel loop collapse(2) present(qq_at)
    DO ih = 1, nh_nt
       DO ibnd = nb_s, nb_e
@@ -2496,6 +2534,7 @@ SUBROUTINE dprojdtau_gamma( spsi, alpha, ijkb0, ipol, ik, nb_s, nb_e, &
          betapsi(ih,ibnd) = bpsi_ii
       ENDDO
    ENDDO
+! !omp end parallel do
    !
    !$acc kernels
    dbetapsi(:,nb_s:nb_e) = betapsi(:,nb_s:nb_e)
@@ -2503,6 +2542,7 @@ SUBROUTINE dprojdtau_gamma( spsi, alpha, ijkb0, ipol, ik, nb_s, nb_e, &
    !
    ! ... calculate \sum_j qq(i,j)*betapsi(j)
    !
+! !omp parallel do default(shared) private(ih,ibnd,jh)
    !$acc parallel loop collapse(2) present(qq_at)
    DO ih = 1, nh_nt
       DO ibnd = nb_s, nb_e
@@ -2513,6 +2553,7 @@ SUBROUTINE dprojdtau_gamma( spsi, alpha, ijkb0, ipol, ik, nb_s, nb_e, &
          betapsi(ih,ibnd) = bpsi_ii
       ENDDO
    ENDDO
+! !omp end parallel do
    !
    ! ... dproj(iwf,ibnd) = \sum_ih wfatdbeta(iwf,ih)*betapsi(ih,ibnd) +
    ! ...                           wfatbeta(iwf,ih)*dbetapsi(ih,ibnd) 

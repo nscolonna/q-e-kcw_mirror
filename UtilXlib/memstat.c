@@ -10,10 +10,18 @@
   This function returns the number of kilobytes
   allocated by the calling process. 
   Author: Carlo Cavazzoni.
-  Obsolete cases and F77-C binding removed by P. Giannozzi (2017)
+  Obsolete AIX case and F77-C binding removed by P. Giannozzi (2017)
 */
 
-#if defined(HAVE_MALLINFO)
+#if !defined(QE_NO_CONFIG_H)
+#include "qe_cdefs.h"
+#endif
+
+#if defined (__SVR4) && defined (__sun)
+#define SUN_MALLINFO
+#endif
+
+#if defined(HAVE_MALLINFO) && !defined(__QK_USER__) && !defined(SUN__MALLINFO) 
 
 #include <malloc.h>
 int c_memstat( )

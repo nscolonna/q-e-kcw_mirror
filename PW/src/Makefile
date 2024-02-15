@@ -291,6 +291,7 @@ PWLIBS += \
   hs_psi_gpu.o \
   s_1psi_gpu.o \
   utils_gpu.o \
+  atomic_wfc_gpu.o \
   oscdft_functions_gpu.o
 
 
