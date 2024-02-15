@@ -212,9 +212,11 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
       !
       ! ... Write it just to compare with the FD one from CP ... 
       IF (l_do_alpha (iwann)) THEN
-       WRITE(stdout,'(5X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
+       WRITE(stdout,'(5X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
+               iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
       ELSE
-       WRITE(stdout,'(5X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
+       WRITE(stdout,'(5X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
+               iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
       ENDIF
       !
       !WRITE(stdout,'("Nicola", i3, 6f12.8)') iwann, dH_wann(iwann,iwann)
