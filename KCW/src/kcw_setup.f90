@@ -31,6 +31,7 @@ subroutine kcw_setup
   USE scf,               ONLY : v, vrs, vltot,  kedtau
   USE fft_base,          ONLY : dfftp, dffts
   USE gvecs,             ONLY : doublegrid, ngms
+  USE gvect,             ONLY : ig_l2g, mill
   USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux!, nspin_mag, npol
   USE wvfct,             ONLY : nbnd
   !USE funct,             ONLY : dft_is_gradient
@@ -38,7 +39,7 @@ subroutine kcw_setup
   !
   USE units_lr,          ONLY : iuwfc
   USE wvfct,             ONLY : npwx
-  USE control_flags,     ONLY : io_level
+  USE control_flags,     ONLY : io_level, gamma_only
   USE io_files,          ONLY : prefix
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer, get_buffer
   USE control_kcw,       ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, kcw_iverbosity, lgamma_iq, &
@@ -46,7 +47,7 @@ subroutine kcw_setup
                                 num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq!, wq, nqstot
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk
-  USE cell_base,         ONLY : at, omega!, bg
+  USE cell_base,         ONLY : at, omega, bg, tpiba
   USE fft_base,          ONLY : dffts
   !
   USE control_lr,       ONLY : nbnd_occ, lgamma
@@ -57,12 +58,19 @@ subroutine kcw_setup
   USE io_files,         ONLY : create_directory
   USE io_rho_xml,       ONLY : write_scf
   !
-  USE mp_bands,         ONLY : inter_bgrp_comm, intra_bgrp_comm
-  USE io_kcw,        ONLY : write_rhowann
+  USE io_kcw,           ONLY : write_rhowann, write_rhowann_sgl
+  USE io_kcw,           ONLY : write_rhowann_g
   !
   USE mp,               ONLY : mp_sum
   USE control_lr,       ONLY : lrpa
   USE coulomb,           ONLY : setup_coulomb
+  !
+  USE mp_pools,         ONLY : my_pool_id
+  USE mp_bands,         ONLY : my_bgrp_id, root_bgrp_id, &
+                               root_bgrp, intra_bgrp_comm, &
+                               inter_bgrp_comm
+
+
   !
   implicit none
 
@@ -84,6 +92,7 @@ subroutine kcw_setup
   ! Auxiliary variables for SH calculation
   COMPLEX(DP), ALLOCATABLE  :: rhog(:), delta_vg(:,:), vh_rhog(:), delta_vg_(:,:), sh(:)
   ! The periodic part of the wannier orbital density
+  COMPLEX(DP), ALLOCATABLE  :: rhowann_g(:,:)
   COMPLEX(DP) :: rhor(dffts%nnr), delta_vr(dffts%nnr,nspin), delta_vr_(dffts%nnr,nspin)
   !
   ! The weight of each q point
@@ -149,6 +158,7 @@ subroutine kcw_setup
   !  ... Allocate relevant quantities ...
   !
   ALLOCATE (rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
+  ALLOCATE ( rhowann_g (ngms, num_wann) )
   ALLOCATE ( evc0(npwx, num_wann) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   ALLOCATE ( sh(num_wann) )
@@ -264,6 +274,7 @@ subroutine kcw_setup
       !! The periodic part of the orbital desity in real space
       !
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
+      rhowann_g(:,i) = rhog
       !! The periodic part of the perturbation DeltaV_q(G)
       ! 
       sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:) )*weight(iq)*omega
@@ -286,7 +297,16 @@ subroutine kcw_setup
     CALL write_scf( rho, nspin )
     ! write the periodic part of the wannier orbital density on file
     DO i = 1, num_wann
-      rhowann_aux (:) = rhowann(:,i) 
+      !
+      rhog = rhowann_g(:,i)
+      file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(i))
+      IF ( my_pool_id == 0 .AND. my_bgrp_id == root_bgrp_id ) &
+           CALL write_rhowann_g( file_base, &
+           root_bgrp, intra_bgrp_comm, &
+           bg(:,1)*tpiba, bg(:,2)*tpiba, bg(:,3)*tpiba, &
+           gamma_only, mill, ig_l2g, rhog(:) )
+      !
+      rhowann_aux (:) = rhowann(:,i)
       file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
       CALL write_rhowann( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
     ENDDO
