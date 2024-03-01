@@ -24,6 +24,7 @@ MODULE io_kcw
   !
   PUBLIC :: rho_binary
   PUBLIC :: write_rhowann, read_rhowann, write_mlwf, read_mlwf, write_rhowann_sgl, read_rhowann_sgl
+  PUBLIC :: write_rhowann_g, read_rhowann_g
   CHARACTER(LEN=6), EXTERNAL :: int_to_char
   !
   CONTAINS
@@ -1135,7 +1136,7 @@ MODULE io_kcw
       !! on this processor, G(ig) maps to G(ig_l2g(ig)) in global ordering
       LOGICAL,          INTENT(IN) :: gamma_only
       !! if true, only the upper half of G-vectors (z >=0) is present
-      COMPLEX(dp),      INTENT(IN) :: rho(:,:)
+      COMPLEX(dp),      INTENT(IN) :: rho(:)
       !! rho(G) on this processor
       !
       COMPLEX(dp), ALLOCATABLE :: rhoaux(:)
@@ -1158,10 +1159,10 @@ MODULE io_kcw
       me_in_group     = mp_rank( intra_group_comm )
       nproc_in_group  = mp_size( intra_group_comm )
       ionode_in_group = ( me_in_group == root_in_group )
-      ngm  = SIZE (rho, 1)
+      ngm  = SIZE (rho)
       IF (ngm /= SIZE (mill, 2) .OR. ngm /= SIZE (ig_l2g, 1) ) &
          CALL errore('write_rhog', 'inconsistent input dimensions', 1)
-      nspin= SIZE (rho, 2)
+      nspin= 1
 #if defined(__HDF5)
       IF ( nspin <=2) THEN
          datasets(1:2) = ["rhotot_g  ", "rhodiff_g "]
@@ -1260,7 +1261,7 @@ MODULE io_kcw
       DO ns = 1, nspin
          !
          DO ig = 1, ngm
-               rhoaux(ig) = rho(ig,ns)
+               rhoaux(ig) = rho(ig)
          END DO
          !
          rho_g = 0
@@ -1326,7 +1327,7 @@ MODULE io_kcw
       !! on this processor, G(ig) maps to G(ig_l2g(ig)) in global ordering
       INTEGER,          INTENT(IN) :: nspin
       !! read up to nspin components
-      COMPLEX(dp),  INTENT(INOUT) :: rho(:,:)
+      COMPLEX(dp),  INTENT(INOUT) :: rho(:)
       !! temporary check while waiting for more definitive solutions
       LOGICAL, OPTIONAL, INTENT(IN) :: gamma_only
       !! if present, don't stop in case of open error, return a nonzero value
@@ -1348,7 +1349,7 @@ MODULE io_kcw
       CHARACTER(LEN=10)       :: tempchar, datasets(4)
 #endif
       !
-      ngm  = SIZE (rho, 1)
+      ngm  = SIZE (rho)
       IF (ngm /= SIZE (ig_l2g, 1) ) &
            CALL errore('read_rhog', 'inconsistent input dimensions', 1)
       !
@@ -1414,26 +1415,11 @@ MODULE io_kcw
       ! ... if required and if there is a mismatch between input gamma tricks
       ! ... and gamma tricks read from file: allocate and read Miller indices
       !
-      readmill = PRESENT(gamma_only)
-      IF ( readmill ) readmill = ( gamma_only .NEQV. gamma_only_ )
-      !
-      IF (readmill .AND. ionode_in_group) THEN
-         ALLOCATE (mill_g(3,ngm_g_))
-#if defined (__HDF5)
-         CALL qeh5_open_dataset( h5file, h5dset_mill, &
-              NAME = "MillerIndices", ACTION = 'read', ERROR = ierr)
-         IF (readmill)  CALL qeh5_read_dataset ( mill_g , h5dset_mill )
-         CALL qeh5_close ( h5dset_mill )
-#else
-         READ (iun, iostat=ierr) mill_g(1:3,1:ngm_g_)
-#endif
-      ELSE
-         ALLOCATE (mill_g(1,1))
+      ALLOCATE (mill_g(1,1))
 #if !defined(__HDF5)
-         ! .. skip record containing G-vector indices
-         IF ( ionode_in_group) READ (iun, iostat=ierr) mill_g(1,1)
+      ! .. skip record containing G-vector indices
+      IF ( ionode_in_group) READ (iun, iostat=ierr) mill_g(1,1)
 #endif
-      END IF
       !
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
       IF ( ierr > 0 ) CALL errore ( 'read_rhog','error reading file ' &
@@ -1472,15 +1458,10 @@ MODULE io_kcw
          IF ( ierr > 0 ) CALL errore ( 'read_rhog','error reading file ' &
               & // TRIM( filename ), 2+ns )
          !
-         ! ... Convert charge from full G-vector to half G-vector format
-         !
-         IF ( readmill ) CALL charge_k_to_g (ngm_g_, rho_g, mill_g, &
-              root_in_group,intra_group_comm, gamma_only)
-         !
          CALL splitwf( rhoaux, rho_g, ngm, ig_l2g, me_in_group, &
               nproc_in_group, root_in_group, intra_group_comm )
          DO ig = 1, ngm
-            rho(ig,ns) = rhoaux(ig)
+            rho(ig) = rhoaux(ig)
          END DO
          !
       END DO
