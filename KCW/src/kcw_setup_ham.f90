@@ -18,7 +18,9 @@ subroutine kcw_setup_ham
   USE io_files,          ONLY : tmp_dir
   USE scf,               ONLY : v, vrs, vltot,  kedtau
   USE fft_base,          ONLY : dfftp, dffts
-  USE gvecs,             ONLY : doublegrid
+  USE fft_interfaces,    ONLY : invfft
+  USE gvecs,             ONLY : doublegrid, ngms
+  USE gvect,             ONLY : ig_l2g
   USE uspp_init,         ONLY : init_us_2
   USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux!, nspin_mag, npol
   USE wvfct,             ONLY : nbnd
@@ -28,27 +30,30 @@ subroutine kcw_setup_ham
   !
   USE units_lr,          ONLY : iuwfc
   USE wvfct,             ONLY : npwx, current_k, npw
-  USE control_flags,     ONLY : io_level
+  USE control_flags,     ONLY : io_level, gamma_only
   USE io_files,          ONLY : prefix
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer
   USE control_kcw,       ONLY : alpha_final, evc0, iuwfc_wann, iurho_wann, kcw_iverbosity, &
                                 read_unitary_matrix, Hamlt, alpha_corr_done, group_alpha, l_do_alpha, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq !, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_real_space!, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, nks, ngk, igk_k
-  USE cell_base,         ONLY : at !, bg
+  USE cell_base,         ONLY : at, omega !, bg
   USE fft_base,          ONLY : dffts
   !
   USE control_lr,        ONLY : nbnd_occ
   USE mp,                ONLY : mp_bcast
   USE eqv,               ONLY : dmuxc
   !
-  USE io_kcw,            ONLY : read_rhowann, read_mlwf
+  USE io_kcw,            ONLY : read_rhowann, read_mlwf, read_rhowann_sgl, &
+                                read_rhowann_g
   USE lsda_mod,          ONLY : lsda, isk, nspin, current_spin, starting_magnetization
   !
   USE coulomb,           ONLY : setup_coulomb
+  !
+  USE mp_bands,          ONLY : root_bgrp, intra_bgrp_comm
   !
   !
   !USE symm_base,       ONLY : s, t_rev, irt, nrot, nsym, invsym, nosym, &
@@ -66,6 +71,7 @@ subroutine kcw_setup_ham
   INTEGER :: iq, nqs
   REAL(DP) :: xq(3)
   COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
+  COMPLEX(DP), ALLOCATABLE :: rhog(:)
   CHARACTER (LEN=256) :: file_base
   CHARACTER (LEN=6), EXTERNAL :: int_to_char
   !
@@ -168,6 +174,7 @@ subroutine kcw_setup_ham
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WF rho, OPENED")')
   !
   ALLOCATE ( rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
+  ALLOCATE ( rhog (ngms) )
   ALLOCATE ( evc0(npwx, num_wann) )
   ALLOCATE ( Hamlt(nkstot, num_wann, num_wann) )
   ALLOCATE ( alpha_corr_done (num_wann) ) 
@@ -237,9 +244,29 @@ subroutine kcw_setup_ham
                 & // TRIM(int_to_char(iq))//'/'
     !
     DO i = 1, num_wann
-      file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-      CALL read_rhowann( file_base, dffts, rhowann_aux )
-      rhowann(:,i) = rhowann_aux(:)
+      !
+      IF ( .NOT. io_real_space) THEN
+        !
+        file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(i))
+        CALL read_rhowann_g( file_base, &
+             root_bgrp, intra_bgrp_comm, &
+             ig_l2g, 1, rhog(:), gamma_only )
+        rhowann_aux=(0.d0,0.d0)
+        rhowann_aux(dffts%nl(:)) = rhog(:)
+        CALL invfft ('Rho', rhowann_aux, dffts)
+        rhowann(:,i) = rhowann_aux(:)*omega
+        !
+      ELSE 
+        !      
+        file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
+        IF (io_sp) THEN
+         CALL read_rhowann_sgl( file_base, dffts, rhowann_aux )
+        ELSE
+         CALL read_rhowann( file_base, dffts, rhowann_aux )
+        ENDIF
+        rhowann(:,i) = rhowann_aux(:)
+        !
+      ENDIF
     ENDDO
     !
     ! ... Save the rho_q on file
@@ -301,6 +328,7 @@ subroutine kcw_setup_ham
   CALL stop_clock ('kcw_setup')
   !
   DEALLOCATE (rhowann, rhowann_aux)
+  DEALLOCATE (rhog)
   !
   RETURN
   !

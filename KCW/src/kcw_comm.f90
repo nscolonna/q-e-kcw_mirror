@@ -99,6 +99,7 @@ MODULE control_kcw
   LOGICAL :: h_uniq
   LOGICAL :: h_proj
   LOGICAL :: l_diag
+  LOGICAL :: io_sp, io_real_space
   !
 END MODULE control_kcw
 

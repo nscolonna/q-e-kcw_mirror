@@ -44,7 +44,8 @@ subroutine kcw_setup
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer, get_buffer
   USE control_kcw,       ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, kcw_iverbosity, lgamma_iq, &
                                 spin_component, isq, read_unitary_matrix, x_q, tmp_dir_save, & 
-                                num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq!, wq, nqstot
+                                num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, &
+                                io_sp, io_real_space !, wq, nqstot
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk
   USE cell_base,         ONLY : at, omega, bg, tpiba
@@ -298,17 +299,27 @@ subroutine kcw_setup
     ! write the periodic part of the wannier orbital density on file
     DO i = 1, num_wann
       !
-      rhog = rhowann_g(:,i)
-      file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(i))
-      IF ( my_pool_id == 0 .AND. my_bgrp_id == root_bgrp_id ) &
-           CALL write_rhowann_g( file_base, &
-           root_bgrp, intra_bgrp_comm, &
-           bg(:,1)*tpiba, bg(:,2)*tpiba, bg(:,3)*tpiba, &
-           gamma_only, mill, ig_l2g, rhog(:) )
-      !
-      rhowann_aux (:) = rhowann(:,i)
-      file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-      CALL write_rhowann( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
+      IF ( .NOT. io_real_space) THEN 
+        !
+        rhog = rhowann_g(:,i)
+        file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(i))
+        IF ( my_pool_id == 0 .AND. my_bgrp_id == root_bgrp_id ) &
+             CALL write_rhowann_g( file_base, &
+             root_bgrp, intra_bgrp_comm, &
+             bg(:,1)*tpiba, bg(:,2)*tpiba, bg(:,3)*tpiba, &
+             gamma_only, mill, ig_l2g, rhog(:) )
+        !
+      ELSE  
+        !
+        rhowann_aux (:) = rhowann(:,i)
+        file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
+        IF (io_sp) THEN 
+          CALL write_rhowann_sgl( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
+        ELSE
+          CALL write_rhowann( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
+        ENDIF
+        !
+      ENDIF
     ENDDO
     tmp_dir=tmp_dir_save
     !
