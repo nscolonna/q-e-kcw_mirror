@@ -454,7 +454,7 @@ MODULE io_kcw
 #else
          IF (rho_binary) OPEN (rhounit, FILE=rho_file, IOSTAT=ierr, FORM='unformatted')
          IF (.NOT. rho_binary) OPEN (rhounit, FILE=rho_file, IOSTAT=ierr, FORM='formatted')
-         CALL errore( 'write_rhowann', 'cannot open ' // TRIM( rho_file ) // ' file for writing', ierr )
+         CALL errore( 'write_rhowann_sgl', 'cannot open ' // TRIM( rho_file ) // ' file for writing', ierr )
 #endif
       END IF 
       !
@@ -630,7 +630,7 @@ MODULE io_kcw
 #if defined(__HDF5)
      rho_file_hdf5 = TRIM( rho_file_base ) // '.hdf5'
      exst = check_file_exist(TRIM(rho_file_hdf5))
-     IF ( .NOT. exst ) CALL errore ('read_rhowann', 'searching for '// TRIM(rho_file_hdf5),10)
+     IF ( .NOT. exst ) CALL errore ('read_rhowann_sgl', 'searching for '// TRIM(rho_file_hdf5),10)
 #else 
      rho_extension = '.dat'
      IF ( .NOT. rho_binary ) rho_extension = '.xml'
@@ -638,7 +638,7 @@ MODULE io_kcw
      rho_file = TRIM( rho_file_base ) // TRIM( rho_extension )
      exst = check_file_exist( TRIM(rho_file) ) 
      !
-     IF ( .NOT. exst ) CALL errore('read_rhowann', 'searching for '//TRIM(rho_file), 10)
+     IF ( .NOT. exst ) CALL errore('read_rhowann_sgl', 'searching for '//TRIM(rho_file), 10)
 #endif
      !
      IF ( ionode ) THEN
@@ -650,7 +650,7 @@ MODULE io_kcw
         !CALL read_attributes_hdf5(h5desc, nr3_,"nr3")
         !nr = [nr1_,nr2_,nr3_]
         CALL qeh5_openfile( h5file, TRIM(rho_file_hdf5), ACTION = 'read', ERROR = ierr)
-        CALL errore( 'read_rhowann', 'cannot open ' // TRIM( rho_file_hdf5 ) // ' file for reading', ierr )
+        CALL errore( 'read_rhowann_sgl', 'cannot open ' // TRIM( rho_file_hdf5 ) // ' file for reading', ierr )
         CALL qeh5_read_attribute (h5file%id, "nr1", nr1_)
         CALL qeh5_read_attribute (h5file%id, "nr2", nr2_)
         CALL qeh5_read_attribute (h5file%id, "nr3", nr3_)
@@ -658,7 +658,7 @@ MODULE io_kcw
 #else
         IF (rho_binary) OPEN (rhounit, FILE=rho_file, IOSTAT=ierr, FORM='unformatted', STATUS='old')
         IF (.NOT. rho_binary) OPEN (rhounit, FILE=rho_file, IOSTAT=ierr, FORM='formatted', STATUS='old')
-        CALL errore( 'read_rhowann', 'cannot open ' // TRIM( rho_file ) // ' file for reading', ierr )
+        CALL errore( 'read_rhowann_sgl', 'cannot open ' // TRIM( rho_file ) // ' file for reading', ierr )
         IF (rho_binary) READ(rhounit) nr(1), nr(2), nr(3)
         IF (.NOT. rho_binary) READ(rhounit,*) string,nr(1), nr(2), nr(3)
 #endif
@@ -668,7 +668,7 @@ MODULE io_kcw
      CALL mp_bcast( nr, ionode_id, intra_image_comm )
      !
      IF ( nr1 /= nr(1) .OR. nr2 /= nr(2) .OR. nr3 /= nr(3) ) &
-        CALL errore( 'read_rhowann', 'dimensions do not match', 1 )
+        CALL errore( 'read_rhowann_sgl', 'dimensions do not match', 1 )
      !
      !
      ALLOCATE( rho_plane( nr1*nr2 ) )
@@ -1161,7 +1161,7 @@ MODULE io_kcw
       ionode_in_group = ( me_in_group == root_in_group )
       ngm  = SIZE (rho)
       IF (ngm /= SIZE (mill, 2) .OR. ngm /= SIZE (ig_l2g, 1) ) &
-         CALL errore('write_rhog', 'inconsistent input dimensions', 1)
+         CALL errore('write_rhowann_g', 'inconsistent input dimensions', 1)
       nspin= 1
 #if defined(__HDF5)
       IF ( nspin <=2) THEN
@@ -1189,7 +1189,7 @@ MODULE io_kcw
                 FORM = 'unformatted', STATUS = 'unknown', iostat = ierr )
 #endif
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
-      IF ( ierr > 0 ) CALL errore ( 'write_rhog','error opening file ' &
+      IF ( ierr > 0 ) CALL errore ( 'write_rhowann_g','error opening file ' &
            & // TRIM( filename ), 1 )
       IF ( ionode_in_group ) THEN
 #if defined(__HDF5)
@@ -1203,7 +1203,7 @@ MODULE io_kcw
 #endif
       END IF
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
-      IF ( ierr > 0 ) CALL errore ( 'write_rhog','error writing file ' &
+      IF ( ierr > 0 ) CALL errore ( 'write_rhowann_g','error writing file ' &
            & // TRIM( filename ), 1 )
       !
       ! ... collect all G-vectors across processors within the band group
@@ -1241,7 +1241,7 @@ MODULE io_kcw
 #endif
       END IF
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
-      IF ( ierr > 0 ) CALL errore ( 'write_rhog','error writing file ' &
+      IF ( ierr > 0 ) CALL errore ( 'write_rhowann_g','error writing file ' &
            & // TRIM( filename ), 2 )
       !
       ! ... deallocate to save memory
@@ -1280,7 +1280,7 @@ MODULE io_kcw
 #endif
          END IF
          CALL mp_bcast( ierr, root_in_group, intra_group_comm )
-         IF ( ierr > 0 ) CALL errore ( 'write_rhog','error writing file ' &
+         IF ( ierr > 0 ) CALL errore ( 'write_rhowann_g','error writing file ' &
               & // TRIM( filename ), 2+ns )
          !
       END DO
@@ -1351,7 +1351,7 @@ MODULE io_kcw
       !
       ngm  = SIZE (rho)
       IF (ngm /= SIZE (ig_l2g, 1) ) &
-           CALL errore('read_rhog', 'inconsistent input dimensions', 1)
+           CALL errore('read_rhowann_g', 'inconsistent input dimensions', 1)
       !
       iun  = 4
       ierr = 0
@@ -1401,16 +1401,16 @@ MODULE io_kcw
       END IF
       !
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
-      IF ( ierr > 0 ) CALL errore ( 'read_rhog','error reading file ' &
+      IF ( ierr > 0 ) CALL errore ( 'read_rhowann_g','error reading file ' &
            & // TRIM( filename ), ierr )
       CALL mp_bcast( ngm_g_, root_in_group, intra_group_comm )
       CALL mp_bcast( nspin_, root_in_group, intra_group_comm )
       CALL mp_bcast( gamma_only_, root_in_group, intra_group_comm )
       !
       IF ( nspin > nspin_ ) &
-         CALL infomsg('read_rhog', 'some spin components not found')
+         CALL infomsg('read_rhowann_g', 'some spin components not found')
       IF ( ngm_g < MAXVAL (ig_l2g(:)) ) &
-           CALL infomsg('read_rhog', 'some G-vectors are missing, zero-padding' )
+           CALL infomsg('read_rhowann_g', 'some G-vectors are missing, zero-padding' )
       !
       ! ... if required and if there is a mismatch between input gamma tricks
       ! ... and gamma tricks read from file: allocate and read Miller indices
@@ -1422,7 +1422,7 @@ MODULE io_kcw
 #endif
       !
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
-      IF ( ierr > 0 ) CALL errore ( 'read_rhog','error reading file ' &
+      IF ( ierr > 0 ) CALL errore ( 'read_rhowann_g','error reading file ' &
            & // TRIM( filename ), 2 )
       !
       ! ... now read, broadcast and re-order G-vector components
@@ -1455,7 +1455,7 @@ MODULE io_kcw
            IF ( ngm_g > ngm_g_) rho_g(ngm_g_+1:ngm_g) = cmplx(0.d0,0.d0, KIND = DP)
          END IF
          CALL mp_bcast( ierr, root_in_group, intra_group_comm )
-         IF ( ierr > 0 ) CALL errore ( 'read_rhog','error reading file ' &
+         IF ( ierr > 0 ) CALL errore ( 'read_rhowann_g','error reading file ' &
               & // TRIM( filename ), 2+ns )
          !
          CALL splitwf( rhoaux, rho_g, ngm, ig_l2g, me_in_group, &

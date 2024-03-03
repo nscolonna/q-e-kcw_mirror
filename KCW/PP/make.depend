@@ -63,12 +63,15 @@ read_hr.o : ../../PW/src/pwcom.o
 read_hr.o : ../../UtilXlib/mp.o
 read_hr.o : ../src/interpolation.o
 read_hr.o : ../src/kcw_comm.o
+sh_setup.o : ../../FFTXlib/src/fft_interfaces.o
 sh_setup.o : ../../LR_Modules/lrcom.o
 sh_setup.o : ../../Modules/cell_base.o
 sh_setup.o : ../../Modules/control_flags.o
 sh_setup.o : ../../Modules/fft_base.o
 sh_setup.o : ../../Modules/io_global.o
 sh_setup.o : ../../Modules/kind.o
+sh_setup.o : ../../Modules/mp_bands.o
+sh_setup.o : ../../Modules/recvec.o
 sh_setup.o : ../../PW/src/buffers.o
 sh_setup.o : ../../PW/src/pwcom.o
 sh_setup.o : ../../UtilXlib/mp.o

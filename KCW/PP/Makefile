@@ -28,7 +28,7 @@ QEMODS = ../../Modules/libqemod.a ../../KS_Solvers/libks_solvers.a ../../upflib/
 
 TLDEPS= kcw-lib  #Dependency. To be compiled first
 
-all : tldeps kcwpp_sh.x kcwpp_interp.x clean_partial
+all : tldeps kcwpp_sh.x kcwpp_interp.x clean_partial merge_wann.x
 
 merge_wann.x: merge_wann.o
 	$(LD) $(LDFLAGS) -o $@ merge_wann.o 
