@@ -47,8 +47,7 @@ subroutine kcw_setup_ham
   USE mp,                ONLY : mp_bcast
   USE eqv,               ONLY : dmuxc
   !
-  USE io_kcw,            ONLY : read_rhowann, read_mlwf, read_rhowann_sgl, &
-                                read_rhowann_g
+  USE io_kcw,            ONLY : read_rhowann, read_mlwf, read_rhowann_g
   USE lsda_mod,          ONLY : lsda, isk, nspin, current_spin, starting_magnetization
   !
   USE coulomb,           ONLY : setup_coulomb
@@ -249,7 +248,7 @@ subroutine kcw_setup_ham
         file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(i))
         CALL read_rhowann_g( file_base, &
              root_bgrp, intra_bgrp_comm, &
-             ig_l2g, 1, rhog(:), gamma_only )
+             ig_l2g, 1, rhog(:), .FALSE., gamma_only )
         rhowann_aux=(0.d0,0.d0)
         rhowann_aux(dffts%nl(:)) = rhog(:)
         CALL invfft ('Rho', rhowann_aux, dffts)
@@ -258,11 +257,11 @@ subroutine kcw_setup_ham
       ELSE 
         !      
         file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-        IF (io_sp) THEN
-         CALL read_rhowann_sgl( file_base, dffts, rhowann_aux )
-        ELSE
+        !IF (io_sp) THEN
+        ! CALL read_rhowann_sgl( file_base, dffts, rhowann_aux )
+        !ELSE
          CALL read_rhowann( file_base, dffts, rhowann_aux )
-        ENDIF
+        !ENDIF
         rhowann(:,i) = rhowann_aux(:)
         !
       ENDIF
