@@ -60,7 +60,7 @@ SUBROUTINE kcw_pp_readin()
   ! nogg         : if .true. lgamma_gamma tricks are not used
   !
   NAMELIST / KCW_PP /    outdir, prefix, mp1, mp2, mp3, num_wann, seedname, use_ws_distance, &
-                         num_wann_occ, num_wann_emp
+                         num_wann_occ, num_wann_emp, io_sp, io_real_space
   !
   ! prefix       : the prefix of files produced by pwscf
   ! outdir       : directory where input, output, temporary files reside
@@ -107,6 +107,8 @@ SUBROUTINE kcw_pp_readin()
   mp2                 = -1
   mp3                 = -1
   use_ws_distance     = .TRUE.
+  io_sp               = .FALSE.
+  io_real_space       = .FALSE.
   ! 
   ! ...  reading the namelist inputki
   !

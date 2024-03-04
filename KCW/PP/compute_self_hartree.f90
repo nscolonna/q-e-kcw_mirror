@@ -40,7 +40,7 @@ PROGRAM compute_self_hartree
   LOGICAL, EXTERNAL  :: imatches
   ! 
   NAMELIST / KCW_PP /    outdir, prefix, mp1, mp2, mp3, num_wann, seedname, kcw_iverbosity, &
-                        l_vcut, assume_isolated
+                        l_vcut, assume_isolated, io_sp, io_real_space
   !
   ! prefix       : the prefix of files produced by pwscf
   ! outdir       : directory where input, output, temporary files reside
@@ -82,12 +82,16 @@ PROGRAM compute_self_hartree
   kcw_iverbosity       = 0
   l_vcut              = .false.
   assume_isolated     = "none" 
+  io_sp               = .FALSE.
+  io_real_space       = .FALSE.
   ! 
   ! ...  reading the namelist inputki
   !
   IF (ionode) READ( 5, KCW_PP, IOSTAT = ios )
   CALL mp_bcast(ios, ionode_id, intra_image_comm)
   CALL errore( 'compute_self_hartree', 'reading KC_PP namelist', ABS( ios ) )
+  !
+  CALL input_pp_summary ()
   !
   CALL mp_bcast(outdir, ionode_id, intra_image_comm)
   CALL mp_bcast(prefix, ionode_id, intra_image_comm)
@@ -99,6 +103,8 @@ PROGRAM compute_self_hartree
   CALL mp_bcast(kcw_iverbosity, ionode_id, intra_image_comm)
   CALL mp_bcast(l_vcut, ionode_id, intra_image_comm)
   CALL mp_bcast(assume_isolated, ionode_id, intra_image_comm)
+  CALL mp_bcast(io_sp, ionode_id, intra_image_comm)
+  CALL mp_bcast(io_real_space, ionode_id, intra_image_comm)
   !
   !
   !
