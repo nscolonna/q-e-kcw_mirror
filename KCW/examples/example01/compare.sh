@@ -124,7 +124,7 @@ for i in `seq 1 8`; do
   fi
  done
 done
-if (( $check )); then echo -e "  ${GREEN}KC_HAM_PROJ OK!${NC}"; fi
+if (( $check )); then echo -e "  ${GREEN}KC_HAM_UNIQ OK!${NC}"; fi
 rm pp
 echo
 
