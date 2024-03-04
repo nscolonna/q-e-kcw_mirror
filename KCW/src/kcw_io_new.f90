@@ -1338,7 +1338,7 @@ MODULE io_kcw
          IF ( ionode_in_group ) THEN
            IF (io_sp) THEN
 #if defined(__HDF5)
-             CALL qeh5_set_space ( h5dset_rho_g_sgl, rho_g(1), RANK = 1 , DIMENSIONS = [ngm_g] )
+             CALL qeh5_set_space ( h5dset_rho_g, rho_g(1), RANK = 1 , DIMENSIONS = [ngm_g] )
              CALL qeh5_open_dataset( h5file, h5dset_rho_g, NAME = TRIM(datasets(ns)) , ACTION = 'write', ERROR = ierr )
              if (ierr /= 0 ) CALL infomsg('write_rho:', 'error while opening h5 dataset in charge_density.hdf5')
              CALL qeh5_write_dataset(rho_g_sgl, h5dset_rho_g)
