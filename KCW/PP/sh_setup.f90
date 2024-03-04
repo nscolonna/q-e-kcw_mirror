@@ -30,7 +30,7 @@ subroutine sh_setup
   USE fft_interfaces,    ONLY : invfft
   !
   USE mp,                ONLY : mp_bcast
-  USE io_kcw,            ONLY : read_rhowann, read_rhowann_g, read_rhowann_sgl
+  USE io_kcw,            ONLY : read_rhowann, read_rhowann_g
   !
   USE coulomb,           ONLY : setup_coulomb
   !
@@ -127,11 +127,7 @@ subroutine sh_setup
       ELSE 
         !
         file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-        IF (io_sp) THEN
-         CALL read_rhowann_sgl( file_base, dffts, rhowann_aux )
-        ELSE
-         CALL read_rhowann( file_base, dffts, rhowann_aux )
-        ENDIF
+        CALL read_rhowann( file_base, dffts, rhowann_aux )
         rhowann(:,i) = rhowann_aux(:)
         !
       ENDIF

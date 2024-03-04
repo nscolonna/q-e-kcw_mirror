@@ -16,7 +16,8 @@ kcw_pp_readin.o \
 read_hr.o \
 kcw_bands.o\
 
-SH_OBJS= sh_setup.o 
+SH_OBJS= sh_setup.o\
+input_pp_summary.o 
 
 KC_OBJS = ../src/libkcw.a
 
