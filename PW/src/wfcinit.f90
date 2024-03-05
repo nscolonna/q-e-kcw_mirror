@@ -26,7 +26,7 @@ SUBROUTINE wfcinit()
   USE buffers,              ONLY : open_buffer, close_buffer, get_buffer, save_buffer
   USE uspp,                 ONLY : nkb, vkb
   USE wavefunctions,        ONLY : evc
-  USE wvfct,                ONLY : nbnd, current_k
+  USE wvfct,                ONLY : nbnd, current_k, et
   USE wannier_new,          ONLY : use_wannier
   USE pw_restart_new,       ONLY : read_collected_wfc
   USE mp,                   ONLY : mp_bcast, mp_sum
@@ -202,6 +202,7 @@ SUBROUTINE wfcinit()
      !
   END DO
   !
+  !$acc update self(et)
   CALL stop_clock( 'wfcinit' )
   RETURN
   !
@@ -240,7 +241,6 @@ SUBROUTINE init_wfc ( ik )
   USE xc_lib,               ONLY : xclib_dft_is, stop_exx
   !
   USE wavefunctions_gpum,   ONLY : using_evc, using_evc_d, evc_d
-  USE wvfct_gpum,           ONLY : using_et, using_et_d, et_d
   USE control_flags,        ONLY : lscf, use_gpu
   !
   IMPLICIT NONE
@@ -256,7 +256,8 @@ SUBROUTINE init_wfc ( ik )
   !$acc declare device_resident(etatom)
   !
   COMPLEX(DP), ALLOCATABLE :: wfcatom(:,:,:) ! atomic wfcs for initialization
-  !$acc declare device_resident(wfcatom)
+  ! should be declared "device_resident(wfcatom)" but gives problems inside
+  ! "atomic_wfc" for spin-orbit case and openmp compilation - not sure why
   !
 #if defined(__CUDA)
   REAL(DP),    ALLOCATABLE :: randy_vec(:) ! data for random
@@ -286,6 +287,7 @@ SUBROUTINE init_wfc ( ik )
   xk_1 = xk(1,ik); xk_2 = xk(2,ik); xk_3 = xk(3,ik)
   !
   ALLOCATE( wfcatom( npwx, npol, n_starting_wfc ) )
+  !$acc data create(wfcatom)
 #if defined(__CUDA)
   ALLOCATE(randy_vec(2 * n_starting_wfc * npol * ngk_ik))
 #endif
@@ -431,21 +433,14 @@ SUBROUTINE init_wfc ( ik )
   ! ... copy the first nbnd eigenvalues
   ! ... eigenvectors are already copied inside routine rotate_wfc
   !
-  if(use_gpu) then 
-    CALL using_et_d(2)
-    !$acc kernels  
-    DO ibnd=1,nbnd
-       et_d(ibnd,ik) = etatom(ibnd)
-    END DO
-    !$acc end kernels
-  else
-    CALL using_et(1)
-    et(1:nbnd,ik) = etatom(1:nbnd)
-  end if 
+  !$acc kernels  
+  et(1:nbnd,ik) = etatom(1:nbnd)
+  !$acc end kernels
   !
   CALL deallocate_bec_type_acc ( becp )
   !
   DEALLOCATE( etatom )
+  !$acc end data
   DEALLOCATE( wfcatom )
   !
   RETURN

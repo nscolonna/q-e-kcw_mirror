@@ -278,7 +278,6 @@ PWLIBS += \
   h_psi_gpu.o \
   vhpsi_gpu.o \
   vloc_psi_gpu.o \
-  pwcom_gpu.o \
   scf_mod_gpu.o \
   usnldiag_gpu.o \
   add_vuspsi_gpu.o \
@@ -291,7 +290,6 @@ PWLIBS += \
   hs_psi_gpu.o \
   s_1psi_gpu.o \
   utils_gpu.o \
-  atomic_wfc_gpu.o \
   oscdft_functions_gpu.o
 
 
