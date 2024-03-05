@@ -40,15 +40,13 @@ SUBROUTINE kcw_deallocate_q()
   if (allocated(ikqs))      deallocate (ikqs)
   if (allocated(m_loc))     deallocate (m_loc)
   !
-  IF (okvan) THEN 
-     if (allocated(eigqts)) deallocate (eigqts)
-     if (allocated(becp1))  then
-        do ik=1,size(becp1)
-           call deallocate_bec_type ( becp1(ik) )
-        enddo
-        deallocate(becp1)
-     endif
-  ENDIF
+  if (allocated(eigqts)) deallocate (eigqts)
+  if (allocated(becp1))  then
+     do ik=1,size(becp1)
+        call deallocate_bec_type ( becp1(ik) )
+     enddo
+     deallocate(becp1)
+  endif
   !
   CALL deallocate_bec_type ( becp )
   !
