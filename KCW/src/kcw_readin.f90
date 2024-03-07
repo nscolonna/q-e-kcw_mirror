@@ -50,6 +50,7 @@ SUBROUTINE kcw_readin()
   LOGICAL, EXTERNAL   :: imatches
   LOGICAL, EXTERNAL   :: has_xml
   LOGICAL             :: exst, parallelfs
+  LOGICAL             :: do_comp_mt_kcw
   !
   NAMELIST / CONTROL /  outdir, prefix, read_unitary_matrix, kcw_at_ks, &
                         spread_thr, homo_only, kcw_iverbosity, calculation, &
@@ -262,17 +263,17 @@ SUBROUTINE kcw_readin()
      CALL errore('kcw_readin', 'pools not implemented for "ham" calculation', npool)
   !
   IF (trim( assume_isolated ) == 'mt' .OR. trim( assume_isolated ) == 'm-t' .OR. trim(assume_isolated) == 'martyna-tuckerman' ) THEN 
-    do_comp_mt =.true. 
+    do_comp_mt_kcw =.true. 
   ELSE IF ( trim(assume_isolated) == 'none' ) THEN
-    do_comp_mt = .false.
+    do_comp_mt_kcw = .false.
   ELSE 
     CALL errore('kcw_readin', ' "assume isolated" not recognized', 1)
   ENDIF
   ! 
-  IF (do_comp_mt .AND. mp1*mp2*mp3 /= 1) THEN 
+  IF (do_comp_mt_kcw .AND. mp1*mp2*mp3 /= 1) THEN 
      CALL infomsg('kcw_readin','WARNING: "do_comp_mt" set to FALSE. "l_vcut" set to TRUE instead')
      WRITE(stdout,'()') 
-     do_comp_mt =.false.
+     do_comp_mt_kcw =.false.
      l_vcut = .true.
   ENDIF
   !
@@ -293,6 +294,15 @@ SUBROUTINE kcw_readin()
   !
   WRITE( stdout, '(5X,"INFO: Reading pwscf data")')
   CALL read_file ( )
+  !
+  ! Overwrite do_compt_mt from file. do_comp_mt (actually assume_isolated) is read from file since 
+  ! Feb 18 2024. See: https://gitlab.com/QEF/q-e/-/commit/509f059b74461865705b0de9620f42913990058a
+  ! I prefer to keep assume_isolated as input of KCW for more flexibility
+  IF (do_comp_mt .neqv. do_comp_mt_kcw) THEN 
+     WRITE(stdout, '(/, 5X, "WARNING: assume_isolated from input differs from value read from file")')
+     WRITE(stdout, '(   5X, "WARNING: Going to overwrite value from file")') 
+     do_comp_mt = do_comp_mt_kcw
+  ENDIF
   !
   IF ( lgauss .OR. ltetra ) CALL errore( 'kcw_readin', &
       'KC corrections only for insulators!', 1 )

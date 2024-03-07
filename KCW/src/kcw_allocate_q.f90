@@ -41,13 +41,11 @@ subroutine kcw_allocate_q
   ALLOCATE (dmuxc(dfftp%nnr,nspin_mag,nspin_mag))
   !
   CALL allocate_bec_type ( nkb, nbnd, becp )
-  IF (okvan) THEN
-     ALLOCATE (eigqts(nat))
-     ALLOCATE (becp1(nksq))
-     DO ik = 1,nksq
-        CALL allocate_bec_type ( nkb, nbnd, becp1(ik) )
-     ENDDO
-  ENDIF
+  ALLOCATE (eigqts(nat))
+  ALLOCATE (becp1(nksq))
+  DO ik = 1,nksq
+     CALL allocate_bec_type ( nkb, nbnd, becp1(ik) )
+  ENDDO
   !
   RETURN
   !

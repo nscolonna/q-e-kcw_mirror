@@ -59,12 +59,18 @@ subroutine kcw_setup
   USE io_files,         ONLY : create_directory
   USE io_rho_xml,       ONLY : write_scf
   !
-  USE io_kcw,           ONLY : write_rhowann, write_rhowann_sgl
-  USE io_kcw,           ONLY : write_rhowann_g
+  USE io_kcw,           ONLY : write_rhowann, write_rhowann_g
   !
   USE mp,               ONLY : mp_sum
   USE control_lr,       ONLY : lrpa
-  USE coulomb,           ONLY : setup_coulomb
+  USE coulomb,          ONLY : setup_coulomb
+  !
+  USE mp_pools,         ONLY : my_pool_id
+  USE mp_bands,         ONLY : my_bgrp_id, root_bgrp_id, &
+                               root_bgrp, intra_bgrp_comm, &
+                               inter_bgrp_comm
+
+
   !
   USE mp_pools,         ONLY : my_pool_id
   USE mp_bands,         ONLY : my_bgrp_id, root_bgrp_id, &
@@ -307,17 +313,13 @@ subroutine kcw_setup
              CALL write_rhowann_g( file_base, &
              root_bgrp, intra_bgrp_comm, &
              bg(:,1)*tpiba, bg(:,2)*tpiba, bg(:,3)*tpiba, &
-             gamma_only, mill, ig_l2g, rhog(:) )
+             gamma_only, mill, ig_l2g, rhog(:), .FALSE. )
         !
       ELSE  
         !
         rhowann_aux (:) = rhowann(:,i)
         file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-        IF (io_sp) THEN 
-          CALL write_rhowann_sgl( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
-        ELSE
-          CALL write_rhowann( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
-        ENDIF
+        CALL write_rhowann( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
         !
       ENDIF
     ENDDO

@@ -31,10 +31,10 @@ subroutine kcw_setup_screen
   USE control_flags,     ONLY : io_level, gamma_only
   USE io_files,          ONLY : prefix
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer
-  USE control_kcw,       ONLY : alpha_final, iurho_wann, kcw_iverbosity, io_sp, io_real_space, &
+  USE control_kcw,       ONLY : alpha_final, iurho_wann, kcw_iverbosity, io_real_space, &
                                 read_unitary_matrix, num_wann, num_wann_occ, i_orb, iorb_start, &
                                 iorb_end, nqstot, occ_mat, l_do_alpha, group_alpha, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq!, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_sp!, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : xk, nkstot
   USE cell_base,         ONLY : at, omega !, bg
@@ -42,7 +42,7 @@ subroutine kcw_setup_screen
   !
   USE control_lr,        ONLY : nbnd_occ
   USE mp,                ONLY : mp_bcast
-  USE io_kcw,            ONLY : read_rhowann, read_rhowann_sgl, read_rhowann_g
+  USE io_kcw,            ONLY : read_rhowann, read_rhowann_g
   !
   USE coulomb,           ONLY : setup_coulomb
   !
@@ -191,7 +191,7 @@ subroutine kcw_setup_screen
         file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(i))
         CALL read_rhowann_g( file_base, &
              root_bgrp, intra_bgrp_comm, &
-             ig_l2g, 1, rhog(:), gamma_only )
+             ig_l2g, 1, rhog(:), .FALSE., gamma_only )
         rhowann_aux=(0.d0,0.d0)
         rhowann_aux(dffts%nl(:)) = rhog(:)
         CALL invfft ('Rho', rhowann_aux, dffts)
@@ -200,11 +200,7 @@ subroutine kcw_setup_screen
       ELSE 
         !
         file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-        IF (io_sp) THEN 
-         CALL read_rhowann_sgl( file_base, dffts, rhowann_aux )
-        ELSE
-         CALL read_rhowann( file_base, dffts, rhowann_aux )
-        ENDIF
+        CALL read_rhowann( file_base, dffts, rhowann_aux )
         rhowann(:,i) = rhowann_aux(:)
         !
       ENDIF

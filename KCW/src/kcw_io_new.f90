@@ -12,10 +12,11 @@ MODULE io_kcw
   !! this module contains some common subroutines used to read and write
   !! the data produced by KCW. 
   !
-  USE kinds,     ONLY : DP, sgl
-  USE io_files,  ONLY : tmp_dir, prefix, iunpun
-  USE io_global, ONLY : ionode, ionode_id, stdout
-  USE mp,        ONLY : mp_bcast
+  USE kinds,       ONLY : DP, sgl
+  USE io_files,    ONLY : tmp_dir, prefix, iunpun
+  USE io_global,   ONLY : ionode, ionode_id, stdout
+  USE mp,          ONLY : mp_bcast
+  USE control_kcw, ONLY : io_sp
   !
   IMPLICIT NONE
   PRIVATE
@@ -60,6 +61,7 @@ MODULE io_kcw
       !CHARACTER(LEN=256)    :: rho_file_hdf5
       CHARACTER(LEN=10)     :: rho_extension
       COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
+      COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
       INTEGER,  ALLOCATABLE :: kowner(:)
       INTEGER               :: my_group_id, me_group, me_group2, me_group3, &
                                             nproc_group, nproc_group2, nproc_group3, &
@@ -112,14 +114,22 @@ MODULE io_kcw
 #endif
       !
       ALLOCATE( rho_plane( nr1*nr2 ) )
+      IF (io_sp) ALLOCATE( rho_plane_sgl( nr1*nr2 ) )
       rho_plane = (0.D0, 0.D0)
+      IF (io_sp) rho_plane_sgl = (0.D0, 0.D0)
       ALLOCATE( kowner( nr3 ) )
       !
 #if defined(__HDF5)
       IF ( ionode ) THEN 
-         CALL qeh5_set_space ( rhowann_dset, rho_plane(1), 2, [nr1*nr2, nr3], MODE = 'f')
-         CALL qeh5_set_space ( rhowann_dset, rho_plane(1), 1, [nr1*nr2], MODE = 'm')
-         CALL qeh5_open_dataset (h5file, rhowann_dset, ACTION = 'write', NAME = 'rhowann' )
+         IF (.NOT. io_sp) THEN 
+           CALL qeh5_set_space ( rhowann_dset, rho_plane(1), 2, [nr1*nr2, nr3], MODE = 'f')
+           CALL qeh5_set_space ( rhowann_dset, rho_plane(1), 1, [nr1*nr2], MODE = 'm')
+           CALL qeh5_open_dataset (h5file, rhowann_dset, ACTION = 'write', NAME = 'rhowann' )
+         ELSE
+           CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), 2, [nr1*nr2, nr3], MODE = 'f')
+           CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), 1, [nr1*nr2], MODE = 'm')
+           CALL qeh5_open_dataset (h5file, rhowann_dset, ACTION = 'write', NAME = 'rhowann' )
+         ENDIF 
       END IF
 #endif 
       !
@@ -178,21 +188,40 @@ MODULE io_kcw
             IF ( kowner(k) /= io_group3 .and. me_group2==io_group2) & 
                CALL mp_get( rho_plane, rho_plane, me_group3, io_group3, kowner(k), k, fft_desc%comm3 )
             !
+            ! NsC: write in Single-precision
+            IF (io_sp) rho_plane_sgl = CMPLX(rho_plane, kind = sgl)
             IF ( ionode ) THEN
+              IF ( .NOT. io_sp) THEN 
 #if defined(__HDF5)
-              CALL qeh5_set_file_hyperslab ( rhowann_dset,  OFFSET = [0,k-1], COUNT = [2*nr1*nr2,1] ) 
-              CALL qeh5_write_dataset ( rho_plane, rhowann_dset)   
+                CALL qeh5_set_file_hyperslab ( rhowann_dset,  OFFSET = [0,k-1], COUNT = [2*nr1*nr2,1] ) 
+                CALL qeh5_write_dataset ( rho_plane, rhowann_dset)   
 #else
-              !
-              IF (rho_binary) THEN 
-                 WRITE(rhounit) k
-                 WRITE(rhounit) rho_plane
-              ELSE
-                 WRITE(rhounit, '("z= ", i5)') k
-                 WRITE(rhounit, '(E23.16)') rho_plane
-              ENDIF
-              !
+                !
+                IF (rho_binary) THEN 
+                   WRITE(rhounit) k
+                   WRITE(rhounit) rho_plane
+                ELSE
+                   WRITE(rhounit, '("z= ", i5)') k
+                   WRITE(rhounit, '(E23.16)') rho_plane
+                ENDIF
 #endif
+                !
+              ELSE
+#if defined(__HDF5)
+                CALL qeh5_set_file_hyperslab ( rhowann_dset,  OFFSET = [0,k-1], COUNT = [2*nr1*nr2,1] ) 
+                CALL qeh5_write_dataset ( rho_plane_sgl, rhowann_dset)   
+#else
+                !
+                IF (rho_binary) THEN 
+                   WRITE(rhounit) k
+                   WRITE(rhounit) rho_plane_sgl
+                ELSE
+                   WRITE(rhounit, '("z= ", i5)') k
+                   WRITE(rhounit, '(E23.16)') rho_plane_sgl
+                ENDIF
+#endif
+                !
+              ENDIF  
             ENDIF
             !
          END DO
@@ -200,6 +229,7 @@ MODULE io_kcw
       END IF
       !
       DEALLOCATE( rho_plane )
+      IF (io_sp) DEALLOCATE( rho_plane_sgl )
       DEALLOCATE( kowner )
       !
       IF ( ionode ) THEN
@@ -245,6 +275,7 @@ MODULE io_kcw
      CHARACTER(LEN=256)    :: rho_file
      !CHARACTER(LEN=256)    :: rho_file_hdf5
      COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
+     COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
      INTEGER,  ALLOCATABLE :: kowner(:)
      LOGICAL               :: exst
      INTEGER,  EXTERNAL    :: find_free_unit
@@ -307,12 +338,17 @@ MODULE io_kcw
      !
      !
      ALLOCATE( rho_plane( nr1*nr2 ) )
+     IF (io_sp) ALLOCATE( rho_plane_sgl( nr1*nr2 ) )
      ALLOCATE( kowner( nr3 ) )
      !
 #if defined(__HDF5) 
      IF (ionode ) THEN
        CALL qeh5_open_dataset( h5file, rhowann_dset, ACTION = 'read', NAME = 'rhowann')
-       CALL qeh5_set_space ( rhowann_dset, rho_plane(1), RANK = 1, DIMENSIONS = [nr1*nr2], MODE = 'm') 
+       IF (.NOT. io_sp) THEN 
+         CALL qeh5_set_space ( rhowann_dset, rho_plane(1), RANK = 1, DIMENSIONS = [nr1*nr2], MODE = 'm') 
+       ELSE
+         CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), RANK = 1, DIMENSIONS = [nr1*nr2], MODE = 'm') 
+       ENDIF
      ENDIF
 #endif
      !
@@ -337,19 +373,34 @@ MODULE io_kcw
 #if defined(__HDF5)
            !CALL  read_rho_hdf5(h5desc , k,rho_plane)
            CALL qeh5_set_file_hyperslab (rhowann_dset, OFFSET = [0,k-1], COUNT = [2*nr1*nr2,1] )
-           CALL qeh5_read_dataset (rho_plane, rhowann_dset )
+           IF (.NOT. io_sp) THEN 
+             CALL qeh5_read_dataset (rho_plane, rhowann_dset )
+           ELSE
+             CALL qeh5_read_dataset (rho_plane_sgl, rhowann_dset )
+           ENDIF
 #else
            IF (rho_binary) THEN 
               READ(rhounit) k_
-              READ(rhounit) rho_plane
+              IF (.NOT. io_sp) THEN 
+                READ(rhounit) rho_plane
+              ELSE
+                READ(rhounit) rho_plane_sgl
+              ENDIF 
            ELSE
               READ(rhounit,*) string, k_
-              READ(rhounit, '(E23.16)') rho_plane
+              IF (.NOT. io_sp) THEN 
+                READ(rhounit, '(E23.16)') rho_plane
+              ELSE
+                READ(rhounit, '(E23.16)') rho_plane_sgl
+              ENDIF
            ENDIF
 #endif
         ENDIF
         !
         ! ... planes are sent to the destination processor (all processors in this image)
+        !
+        ! NsC >> convert to DP
+        IF (io_sp) rho_plane = CMPLX(rho_plane_sgl, kind = DP)
         !
         CALL mp_bcast( rho_plane, ionode_id, intra_image_comm )
         !
@@ -368,6 +419,7 @@ MODULE io_kcw
      END DO
      !
      DEALLOCATE( rho_plane )
+     IF (io_sp) DEALLOCATE( rho_plane_sgl )
      DEALLOCATE( kowner )
      !
      IF ( ionode ) THEN
@@ -756,7 +808,380 @@ MODULE io_kcw
    END SUBROUTINE read_rhowann_sgl
    !
    !
-   ! NsC: Adapted from pw_write_binaries inside PW/scr/pw_restart_new.f90
+   ! NsC: OBOSOLETE, incorporated into write_rhowann. Kept for reference/backup
+   !------------------------------------------------------------------------
+   SUBROUTINE write_rhowann_sgl( file_base, rho, fft_desc, ionode, inter_group_comm )
+     !------------------------------------------------------------------------
+     !
+     ! ... Writes charge density rho in real-space, one plane at a time.
+     ! ... If ipp and npp are specified, planes are collected one by one from
+     ! ... all processors, avoiding an overall collect of the charge density
+     ! ... on a single proc.
+     !
+     USE mp,        ONLY : mp_get, mp_sum, mp_rank, mp_size
+#if defined(__HDF5)
+     USE qeh5_base_module,  ONLY  : qeh5_file, qeh5_dataset, qeh5_openfile, qeh5_open_dataset, &
+                            qeh5_add_attribute, qeh5_write_dataset, qeh5_close, qeh5_set_space, &
+                            qeh5_set_file_hyperslab              
+#endif
+     USE fft_types
+     !
+     IMPLICIT NONE
+     !
+     CHARACTER(LEN=*),  INTENT(IN) :: file_base
+     COMPLEX(DP),       INTENT(IN) :: rho(:)
+     TYPE(fft_type_descriptor),INTENT(IN) :: fft_desc
+     INTEGER,           INTENT(IN) :: inter_group_comm
+     LOGICAL,           INTENT(IN) :: ionode
+     !
+     INTEGER               :: nr1,nr2,nr3, nr1x, nr2x,nr3x
+     INTEGER               :: rhounit, ierr, i, j, jj, k, kk, ldr, ip
+     CHARACTER(LEN=256)    :: rho_file
+     CHARACTER(LEN=256)    :: rho_file_hdf5
+     CHARACTER(LEN=10)     :: rho_extension
+     COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
+     COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
+     INTEGER,  ALLOCATABLE :: kowner(:)
+     INTEGER               :: my_group_id, me_group, me_group2, me_group3, &
+                                           nproc_group, nproc_group2, nproc_group3, &
+                                           io_group_id, io_group2, io_group3
+     INTEGER,  EXTERNAL    :: find_free_unit
+     !
+#if defined(__HDF5) 
+     TYPE (qeh5_file)         :: h5file
+     TYPE (qeh5_dataset)      :: rhowann_dset
+     !  
+#endif 
+     !
+     my_group_id = mp_rank( inter_group_comm )
+
+     me_group = fft_desc%mype ; me_group2 = fft_desc%mype2 ; me_group3 = fft_desc%mype3
+     nproc_group = fft_desc%nproc ; nproc_group2 = fft_desc%nproc2 ; nproc_group3 = fft_desc%nproc3
+     !
+     nr1  = fft_desc%nr1  ; nr2  = fft_desc%nr2  ; nr3  = fft_desc%nr3
+     nr1x = fft_desc%nr1x ; nr2x = fft_desc%nr2x ; nr3x = fft_desc%nr3x
+     !
+     rho_extension = '.dat'
+     IF ( .NOT. rho_binary ) rho_extension = '.xml'
+     !
+     rho_file = TRIM( file_base ) // TRIM( rho_extension )
+     rhounit = find_free_unit ()
+     !
+     IF ( ionode ) THEN 
+#if defined(__HDF5)
+        CALL qeh5_openfile(h5file, TRIM(file_base)//'.hdf5',action = 'write') 
+        CALL qeh5_add_attribute( h5file%id, "nr1", nr1 )
+        CALL qeh5_add_attribute( h5file%id, "nr2", nr2 )
+        CALL qeh5_add_attribute( h5file%id, "nr3", nr3 )
+#else
+        IF (rho_binary) OPEN (rhounit, FILE=rho_file, IOSTAT=ierr, FORM='unformatted')
+        IF (.NOT. rho_binary) OPEN (rhounit, FILE=rho_file, IOSTAT=ierr, FORM='formatted')
+        CALL errore( 'write_rhowann_sgl', 'cannot open ' // TRIM( rho_file ) // ' file for writing', ierr )
+#endif
+     END IF 
+     !
+#if !defined(__HDF5)
+     IF ( ionode ) THEN
+        !
+        IF (rho_binary) THEN 
+          WRITE(rhounit) nr1, nr2, nr3
+        ELSE
+          WRITE(rhounit, '("mesh ", 3i10)') nr1, nr2, nr3
+        ENDIF
+        !
+     END IF
+#endif
+     !
+     ALLOCATE( rho_plane( nr1*nr2 ) )
+     ALLOCATE( rho_plane_sgl( nr1*nr2 ) )
+     rho_plane = (0.D0, 0.D0)
+     rho_plane_sgl = (0.D0, 0.D0)
+     ALLOCATE( kowner( nr3 ) )
+     !
+#if defined(__HDF5)
+     IF ( ionode ) THEN 
+        CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), 2, [nr1*nr2, nr3], MODE = 'f')
+        CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), 1, [nr1*nr2], MODE = 'm')
+        CALL qeh5_open_dataset (h5file, rhowann_dset, ACTION = 'write', NAME = 'rhowann' )
+     END IF
+#endif 
+     !
+     ! ... find the index of the group (pool) that will write rho
+     !
+     io_group_id = 0
+     !
+     IF ( ionode ) io_group_id = my_group_id
+     !
+     CALL mp_sum( io_group_id, fft_desc%comm )
+     CALL mp_sum( io_group_id, inter_group_comm ) ! io_group_id is the (pool) group that contains the ionode
+     !
+     ! ... find the index of the ionode within Y and Z  groups
+     !
+     io_group2 = 0 ; IF ( ionode ) io_group2 = me_group2
+     CALL mp_sum( io_group2, fft_desc%comm )  ! io_group2 is the group index of the ionode in the Y group (nproc2)
+     io_group3 = 0 ; IF ( ionode ) io_group3 = me_group3
+     CALL mp_sum( io_group3, fft_desc%comm )  ! io_group3 is the group index of the ionode in the Z group (nproc3)
+     !
+     ! ... find out the owner of each "z" plane
+     !
+     DO ip = 1, nproc_group3
+        !
+        kowner( (fft_desc%i0r3p(ip)+1):(fft_desc%i0r3p(ip)+fft_desc%nr3p(ip)) ) = ip - 1
+        !
+     END DO
+     !
+     ldr = nr1x*fft_desc%my_nr2p
+     !
+     IF ( ( my_group_id == io_group_id ) ) THEN ! only the group of ionode collects and writes the data
+        !
+        DO k = 1, nr3
+           !
+           !  Only one subgroup write the charge density
+           ! 
+           rho_plane = (0.D0, 0.D0)
+           IF( ( kowner(k) == me_group3 ) ) THEN
+              !
+              kk = k - fft_desc%my_i0r3p
+              ! 
+              DO jj = 1, fft_desc%my_nr2p
+                 !
+                 j = jj + fft_desc%my_i0r2p
+                 DO i = 1, nr1
+                    !
+                    rho_plane(i+(j-1)*nr1) = rho(i+(jj-1)*nr1x+(kk-1)*ldr)
+                    !
+                 END DO
+                 !
+              END DO
+              call mp_sum(rho_plane, fft_desc%comm2 ) ! collect the data over the Y group (nproc2)
+              !
+           END IF
+           !
+           ! if this processor is in the same comm3 group as ionode (me_group2==io_group2) 
+           IF ( kowner(k) /= io_group3 .and. me_group2==io_group2) & 
+              CALL mp_get( rho_plane, rho_plane, me_group3, io_group3, kowner(k), k, fft_desc%comm3 )
+           !
+           ! NsC: write in Single-precision
+           rho_plane_sgl = CMPLX(rho_plane, kind = sgl)
+           !
+           IF ( ionode ) THEN
+#if defined(__HDF5)
+             CALL qeh5_set_file_hyperslab ( rhowann_dset,  OFFSET = [0,k-1], COUNT = [2*nr1*nr2,1] ) 
+             CALL qeh5_write_dataset ( rho_plane_sgl, rhowann_dset)   
+#else
+             !
+             IF (rho_binary) THEN 
+                WRITE(rhounit) k
+                WRITE(rhounit) rho_plane_sgl
+             ELSE
+                WRITE(rhounit, '("z= ", i5)') k
+                WRITE(rhounit, '(E23.16)') rho_plane_sgl
+             ENDIF
+             !
+#endif
+           ENDIF
+           !
+        END DO
+        !
+     END IF
+     !
+     DEALLOCATE( rho_plane )
+     DEALLOCATE( rho_plane_sgl )
+     DEALLOCATE( kowner )
+     !
+     IF ( ionode ) THEN
+#if defined(__HDF5)
+        CALL qeh5_close (rhowann_dset) 
+        CALL qeh5_close (h5file)   
+#else
+        CLOSE (rhounit, STATUS='keep')
+#endif       
+        !
+     END IF
+     !
+     RETURN
+     !
+   END SUBROUTINE write_rhowann_sgl
+   !
+   ! NsC: OBOSOLETE, incorporated into write_rhowann. Kept for reference/backup
+   !------------------------------------------------------------------------
+   SUBROUTINE read_rhowann_sgl( rho_file_base, fft_desc, rho )
+     !------------------------------------------------------------------------
+     !
+     ! ... Reads charge density rho, one plane at a time, to avoid 
+     ! ... collecting the entire charge density on a single processor
+     !
+     USE io_global, ONLY : ionode, ionode_id
+     USE mp_images, ONLY : intra_image_comm
+     USE mp,        ONLY : mp_put, mp_sum, mp_rank, mp_size
+#if defined(__HDF5)
+      USE  qeh5_base_module
+#endif
+     USE fft_types
+     USE io_files,  ONLY : check_file_exist
+     !
+     IMPLICIT NONE
+     !
+     CHARACTER(LEN=*),  INTENT(IN)  :: rho_file_base
+     TYPE(fft_type_descriptor),INTENT(IN) :: fft_desc
+     COMPLEX(DP),          INTENT(OUT) :: rho(:)
+     !
+     INTEGER               :: rhounit, ierr, i, j, jj, k, kk, ldr, ip, k_
+     INTEGER               :: nr( 3 ), nr1, nr2, nr3, nr1x, nr2x, nr3x
+     INTEGER               :: me_group, me_group2, me_group3, &
+                              nproc_group, nproc_group2, nproc_group3
+     CHARACTER(LEN=256)    :: rho_file
+     CHARACTER(LEN=256)    :: rho_file_hdf5
+     COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
+     COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
+     INTEGER,  ALLOCATABLE :: kowner(:)
+     LOGICAL               :: exst
+     INTEGER,  EXTERNAL    :: find_free_unit
+     CHARACTER(LEN=256) :: string
+     CHARACTER(LEN=10)     :: rho_extension
+#if defined(__HDF5)
+     INTEGER             ::   nr1_, nr2_, nr3_
+     TYPE (qeh5_file)    ::   h5file
+     TYPE (qeh5_dataset) ::   rhowann_dset
+#endif  
+     !
+     me_group = fft_desc%mype ; me_group2 = fft_desc%mype2 ; me_group3 = fft_desc%mype3
+     nproc_group = fft_desc%nproc ; nproc_group2 = fft_desc%nproc2 ; nproc_group3 = fft_desc%nproc3
+     !
+     nr1  = fft_desc%nr1  ; nr2  = fft_desc%nr2  ; nr3  = fft_desc%nr3
+     nr1x = fft_desc%nr1x ; nr2x = fft_desc%nr2x ; nr3x = fft_desc%nr3x
+     !
+#if defined(__HDF5)
+     rho_file_hdf5 = TRIM( rho_file_base ) // '.hdf5'
+     exst = check_file_exist(TRIM(rho_file_hdf5))
+     IF ( .NOT. exst ) CALL errore ('read_rhowann_sgl', 'searching for '// TRIM(rho_file_hdf5),10)
+#else 
+     rho_extension = '.dat'
+     IF ( .NOT. rho_binary ) rho_extension = '.xml'
+     rhounit = find_free_unit ( )
+     rho_file = TRIM( rho_file_base ) // TRIM( rho_extension )
+     exst = check_file_exist( TRIM(rho_file) ) 
+     !
+     IF ( .NOT. exst ) CALL errore('read_rhowann_sgl', 'searching for '//TRIM(rho_file), 10)
+#endif
+     !
+     IF ( ionode ) THEN
+#if defined(__HDF5)
+        !ALLOCATE ( h5desc)
+        !CALL prepare_for_reading_final(h5desc, 0 ,rho_file_hdf5)
+        !CALL read_attributes_hdf5(h5desc, nr1_,"nr1")
+        !CALL read_attributes_hdf5(h5desc, nr2_,"nr2")
+        !CALL read_attributes_hdf5(h5desc, nr3_,"nr3")
+        !nr = [nr1_,nr2_,nr3_]
+        CALL qeh5_openfile( h5file, TRIM(rho_file_hdf5), ACTION = 'read', ERROR = ierr)
+        CALL errore( 'read_rhowann_sgl', 'cannot open ' // TRIM( rho_file_hdf5 ) // ' file for reading', ierr )
+        CALL qeh5_read_attribute (h5file%id, "nr1", nr1_)
+        CALL qeh5_read_attribute (h5file%id, "nr2", nr2_)
+        CALL qeh5_read_attribute (h5file%id, "nr3", nr3_)
+        nr = [nr1_,nr2_,nr3_]
+#else
+        IF (rho_binary) OPEN (rhounit, FILE=rho_file, IOSTAT=ierr, FORM='unformatted', STATUS='old')
+        IF (.NOT. rho_binary) OPEN (rhounit, FILE=rho_file, IOSTAT=ierr, FORM='formatted', STATUS='old')
+        CALL errore( 'read_rhowann_sgl', 'cannot open ' // TRIM( rho_file ) // ' file for reading', ierr )
+        IF (rho_binary) READ(rhounit) nr(1), nr(2), nr(3)
+        IF (.NOT. rho_binary) READ(rhounit,*) string,nr(1), nr(2), nr(3)
+#endif
+     !
+     END IF
+     !
+     CALL mp_bcast( nr, ionode_id, intra_image_comm )
+     !
+     IF ( nr1 /= nr(1) .OR. nr2 /= nr(2) .OR. nr3 /= nr(3) ) &
+        CALL errore( 'read_rhowann_sgl', 'dimensions do not match', 1 )
+     !
+     !
+     ALLOCATE( rho_plane( nr1*nr2 ) )
+     ALLOCATE( rho_plane_sgl( nr1*nr2 ) )
+     ALLOCATE( kowner( nr3 ) )
+     !
+#if defined(__HDF5) 
+     IF (ionode ) THEN
+       CALL qeh5_open_dataset( h5file, rhowann_dset, ACTION = 'read', NAME = 'rhowann')
+       CALL qeh5_set_space ( rhowann_dset, rho_plane_sgl(1), RANK = 1, DIMENSIONS = [nr1*nr2], MODE = 'm') 
+     ENDIF
+#endif
+     !
+     DO ip = 1, nproc_group3
+        !
+        kowner( (fft_desc%i0r3p(ip)+1):(fft_desc%i0r3p(ip)+fft_desc%nr3p(ip)) ) = ip - 1
+        !
+     END DO
+     !
+     ldr = nr1x*fft_desc%my_nr2p
+     !
+     ! ... explicit initialization to zero is needed because the physical
+     ! ... dimensions of rho may exceed the true size of the FFT grid 
+     !
+     rho(:) = (0.0_DP, 0.0_DP)
+     !
+     DO k = 1, nr3
+        !
+        ! ... only ionode reads the charge planes
+        !
+        IF ( ionode ) THEN
+#if defined(__HDF5)
+           !CALL  read_rho_hdf5(h5desc , k,rho_plane)
+           CALL qeh5_set_file_hyperslab (rhowann_dset, OFFSET = [0,k-1], COUNT = [2*nr1*nr2,1] )
+           CALL qeh5_read_dataset (rho_plane_sgl, rhowann_dset )
+#else
+           IF (rho_binary) THEN 
+              READ(rhounit) k_
+              READ(rhounit) rho_plane_sgl
+           ELSE
+              READ(rhounit,*) string, k_
+              READ(rhounit, '(E23.16)') rho_plane_sgl
+           ENDIF
+#endif
+        ENDIF
+        !
+        ! ... planes are sent to the destination processor (all processors in this image)
+        !
+        ! NsC >> convert to DP
+        rho_plane = CMPLX(rho_plane_sgl, kind = DP)
+        !
+        CALL mp_bcast( rho_plane, ionode_id, intra_image_comm )
+        !
+        IF( kowner(k) == me_group3 ) THEN
+           !
+           kk = k - fft_desc%my_i0r3p
+           DO jj = 1, fft_desc%my_nr2p
+              j = jj + fft_desc%my_i0r2p
+              DO i = 1, nr1
+                 rho(i+(jj-1)*nr1x+(kk-1)*ldr) = rho_plane(i+(j-1)*nr1)
+              END DO
+           END DO
+           !
+        END IF
+        !
+     END DO
+     !
+     DEALLOCATE( rho_plane )
+     DEALLOCATE( rho_plane_sgl )
+     DEALLOCATE( kowner )
+     !
+     IF ( ionode ) THEN
+        !
+#if defined(__HDF5)
+        CALL qeh5_close(rhowann_dset) 
+        CALL qeh5_close(h5file)
+        !CALL h5fclose_f(h5desc%file_id,ierr)
+        !DEALLOCATE ( h5desc)
+#else
+        CLOSE (rhounit)
+#endif    
+     END IF
+     !
+     RETURN
+     !
+   END SUBROUTINE read_rhowann_sgl
+   !
+   !
+   ! NsC: Adapted from write_collected_wfc inside PW/scr/pw_restart_new.f90
    SUBROUTINE write_mlwf( )
      !------------------------------------------------------------------------
      !
@@ -1103,9 +1528,11 @@ MODULE io_kcw
      !
    END SUBROUTINE read_mlwf
    !
+   !NsC: read and write in g-space. Adapted from read_rhog/write_rhog in Modules/io_base.f90
+   !     write/read Miller indeces NOT exploited here! (check diff with read_rhog in Modules/io_base.f90)
    !------------------------------------------------------------------------
     SUBROUTINE write_rhowann_g ( filename, root_in_group, intra_group_comm, &
-         b1, b2, b3, gamma_only, mill, ig_l2g, rho )
+         b1, b2, b3, gamma_only, mill, ig_l2g, rho, write_gvec )
       !------------------------------------------------------------------------
       !! Collects rho(G), distributed on "intra_group_comm", writes it
       !! together with related information to file "filename".*
@@ -1136,12 +1563,16 @@ MODULE io_kcw
       !! on this processor, G(ig) maps to G(ig_l2g(ig)) in global ordering
       LOGICAL,          INTENT(IN) :: gamma_only
       !! if true, only the upper half of G-vectors (z >=0) is present
+      LOGICAL,          INTENT(IN) :: write_gvec
+      !! if true, write on file miller indeces
       COMPLEX(dp),      INTENT(IN) :: rho(:)
       !! rho(G) on this processor
       !
       COMPLEX(dp), ALLOCATABLE :: rhoaux(:)
       !! Local rho(G), with LSDA workaround
       COMPLEX(dp), ALLOCATABLE :: rho_g(:)
+      !! Global rho(G) collected on root proc
+      COMPLEX(sgl), ALLOCATABLE :: rho_g_sgl(:)
       !! Global rho(G) collected on root proc
       INTEGER, ALLOCATABLE     :: mill_g(:,:)
       !! Global Miller indices collected on root proc
@@ -1224,7 +1655,7 @@ MODULE io_kcw
       !
       ! ... write G-vectors
       !
-      IF ( ionode_in_group ) THEN
+      IF ( ionode_in_group .AND. write_gvec ) THEN
 #if defined(__HDF5)
          CALL qeh5_set_space ( h5dset_mill, mill_g(1,1), RANK = 2, DIMENSIONS = [3,ngm_g] )
          CALL qeh5_open_dataset ( h5file, h5dset_mill, NAME = "MillerIndices" , ACTION = 'write')
@@ -1253,8 +1684,10 @@ MODULE io_kcw
       !
       IF ( ionode_in_group ) THEN
          ALLOCATE( rho_g( ngm_g ) )
+         IF (io_sp) ALLOCATE( rho_g_sgl( ngm_g ) )
       ELSE
          ALLOCATE( rho_g( 1 ) )
+         IF (io_sp) ALLOCATE( rho_g_sgl( 1 ) )
       END IF
       ALLOCATE (rhoaux(ngm))
       !
@@ -1268,16 +1701,31 @@ MODULE io_kcw
          CALL mergewf( rhoaux, rho_g, ngm, ig_l2g, me_in_group, &
               nproc_in_group, root_in_group, intra_group_comm )
          !
+         ! NsC: Write in single precision
+         IF (io_sp) rho_g_sgl = CMPLX(rho_g, kind = sgl)
+         !
          IF ( ionode_in_group ) THEN
+           IF (io_sp) THEN
 #if defined(__HDF5)
-         CALL qeh5_set_space ( h5dset_rho_g, rho_g(1), RANK = 1 , DIMENSIONS = [ngm_g] )
-         CALL qeh5_open_dataset( h5file, h5dset_rho_g, NAME = TRIM(datasets(ns)) , ACTION = 'write', ERROR = ierr )
-         if (ierr /= 0 ) CALL infomsg('write_rho:', 'error while opening h5 dataset in charge_density.hdf5')
-         CALL qeh5_write_dataset(rho_g, h5dset_rho_g)
-         CALL qeh5_close( h5dset_rho_g)
+             CALL qeh5_set_space ( h5dset_rho_g, rho_g(1), RANK = 1 , DIMENSIONS = [ngm_g] )
+             CALL qeh5_open_dataset( h5file, h5dset_rho_g, NAME = TRIM(datasets(ns)) , ACTION = 'write', ERROR = ierr )
+             if (ierr /= 0 ) CALL infomsg('write_rho:', 'error while opening h5 dataset in charge_density.hdf5')
+             CALL qeh5_write_dataset(rho_g_sgl, h5dset_rho_g)
+             CALL qeh5_close( h5dset_rho_g)
 #else
-            WRITE (iun, iostat=ierr) rho_g(1:ngm_g)
+             WRITE (iun, iostat=ierr) rho_g_sgl(1:ngm_g)
 #endif
+           ELSE
+#if defined(__HDF5)
+             CALL qeh5_set_space ( h5dset_rho_g, rho_g(1), RANK = 1 , DIMENSIONS = [ngm_g] )
+             CALL qeh5_open_dataset( h5file, h5dset_rho_g, NAME = TRIM(datasets(ns)) , ACTION = 'write', ERROR = ierr )
+             if (ierr /= 0 ) CALL infomsg('write_rho:', 'error while opening h5 dataset in charge_density.hdf5')
+             CALL qeh5_write_dataset(rho_g, h5dset_rho_g)
+             CALL qeh5_close( h5dset_rho_g)
+#else
+             WRITE (iun, iostat=ierr) rho_g(1:ngm_g)
+#endif
+           ENDIF
          END IF
          CALL mp_bcast( ierr, root_in_group, intra_group_comm )
          IF ( ierr > 0 ) CALL errore ( 'write_rhowann_g','error writing file ' &
@@ -1293,6 +1741,7 @@ MODULE io_kcw
       !
       DEALLOCATE( rhoaux )
       DEALLOCATE( rho_g )
+      IF (io_sp) DEALLOCATE( rho_g_sgl )
       !
       RETURN
       !
@@ -1300,7 +1749,7 @@ MODULE io_kcw
     !
     !------------------------------------------------------------------------
     SUBROUTINE read_rhowann_g ( filename, root_in_group, intra_group_comm, &
-         ig_l2g, nspin, rho, gamma_only, ier_ )
+         ig_l2g, nspin, rho, read_gvec, gamma_only, ier_)
       !------------------------------------------------------------------------
       !! Read and distribute rho(G) from file  "filename".*
       !! (* = dat if fortran binary, * = hdf5 if HDF5)
@@ -1331,9 +1780,12 @@ MODULE io_kcw
       !! temporary check while waiting for more definitive solutions
       LOGICAL, OPTIONAL, INTENT(IN) :: gamma_only
       !! if present, don't stop in case of open error, return a nonzero value
+      LOGICAL, INTENT(IN) :: read_gvec
+      !! 
       INTEGER, OPTIONAL, INTENT(OUT):: ier_
       !
       COMPLEX(dp), ALLOCATABLE :: rho_g(:)
+      COMPLEX(sgl), ALLOCATABLE :: rho_g_sgl(:)
       COMPLEX(dp), ALLOCATABLE :: rhoaux(:)
       REAL(dp)                 :: b1(3), b2(3), b3(3)
       INTEGER                  :: ngm, nspin_, isup, isdw
@@ -1418,7 +1870,7 @@ MODULE io_kcw
       ALLOCATE (mill_g(1,1))
 #if !defined(__HDF5)
       ! .. skip record containing G-vector indices
-      IF ( ionode_in_group) READ (iun, iostat=ierr) mill_g(1,1)
+      IF ( ionode_in_group .AND. read_gvec) READ (iun, iostat=ierr) mill_g(1,1)
 #endif
       !
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
@@ -1430,8 +1882,10 @@ MODULE io_kcw
       !
       IF ( ionode_in_group ) THEN
          ALLOCATE( rho_g(MAX(ngm_g_,ngm_g)) )
+         IF (io_sp) ALLOCATE( rho_g_sgl(MAX(ngm_g_,ngm_g)) )
       ELSE
          ALLOCATE( rho_g( 1 ) )
+         IF (io_sp) ALLOCATE( rho_g_sgl( 1 ) )
       END IF
       ALLOCATE (rhoaux(ngm))
 #if defined(__HDF5)
@@ -1445,19 +1899,34 @@ MODULE io_kcw
       DO ns = 1, nspin_
          !
          IF ( ionode_in_group ) THEN
+           IF (.NOT. io_sp) THEN 
 #if defined(__HDF5)
-           CALL qeh5_open_dataset( h5file, h5dset_rho_g, NAME = TRIM(datasets(ns)), ACTION = 'read', ERROR = ierr)
-           CALL qeh5_read_dataset ( rho_g , h5dset_rho_g )
-           CALL qeh5_close ( h5dset_rho_g )
+             CALL qeh5_open_dataset( h5file, h5dset_rho_g, NAME = TRIM(datasets(ns)), ACTION = 'read', ERROR = ierr)
+             CALL qeh5_read_dataset ( rho_g , h5dset_rho_g )
+             CALL qeh5_close ( h5dset_rho_g )
 #else
-           READ (iun, iostat=ierr) rho_g(1:ngm_g_)
+             READ (iun, iostat=ierr) rho_g(1:ngm_g_)
 #endif
-           IF ( ngm_g > ngm_g_) rho_g(ngm_g_+1:ngm_g) = cmplx(0.d0,0.d0, KIND = DP)
+             IF ( ngm_g > ngm_g_) rho_g(ngm_g_+1:ngm_g) = cmplx(0.d0,0.d0, KIND = DP)
+           ELSE
+#if defined(__HDF5)
+             CALL qeh5_open_dataset( h5file, h5dset_rho_g, NAME = TRIM(datasets(ns)), ACTION = 'read', ERROR = ierr)
+             CALL qeh5_read_dataset ( rho_g_sgl , h5dset_rho_g )
+             CALL qeh5_close ( h5dset_rho_g )
+#else
+             READ (iun, iostat=ierr) rho_g_sgl(1:ngm_g_)
+#endif
+             IF ( ngm_g > ngm_g_) rho_g_sgl(ngm_g_+1:ngm_g) = cmplx(0.d0,0.d0, KIND = sgl)
+           ENDIF
+         !
          END IF
+         !
          CALL mp_bcast( ierr, root_in_group, intra_group_comm )
          IF ( ierr > 0 ) CALL errore ( 'read_rhowann_g','error reading file ' &
               & // TRIM( filename ), 2+ns )
          !
+         ! NsC: convert to DP
+         IF (io_sp) rho_g = CMPLX(rho_g_sgl, kind = DP)
          CALL splitwf( rhoaux, rho_g, ngm, ig_l2g, me_in_group, &
               nproc_in_group, root_in_group, intra_group_comm )
          DO ig = 1, ngm

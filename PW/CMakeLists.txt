@@ -245,7 +245,6 @@ set(src_pw
    src/wannier_occ.f90
    src/d3hess_mod.f90
    # GPU
-   src/pwcom_gpu.f90
    src/scf_mod_gpu.f90
    src/g_psi_mod_gpu.f90
    src/newd_gpu.f90
@@ -256,7 +255,6 @@ set(src_pw
    src/add_vuspsi_gpu.f90
    src/hs_1psi_gpu.f90
    src/g_psi_gpu.f90
-   src/atomic_wfc_gpu.f90
    src/add_vhub_to_deeq_gpu.f90
    src/s_1psi_gpu.f90
    src/h_psi_gpu.f90
