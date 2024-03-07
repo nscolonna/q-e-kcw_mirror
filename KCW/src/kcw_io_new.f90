@@ -12,7 +12,7 @@ MODULE io_kcw
   !! this module contains some common subroutines used to read and write
   !! the data produced by KCW. 
   !
-  USE kinds,     ONLY : DP
+  USE kinds,     ONLY : DP, sgl
   USE io_files,  ONLY : tmp_dir, prefix, iunpun
   USE io_global, ONLY : ionode, ionode_id, stdout
   USE mp,        ONLY : mp_bcast
