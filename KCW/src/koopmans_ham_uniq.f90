@@ -72,7 +72,7 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   elumo_ks=+1D+6
   !
   WRITE( stdout, '(/,5X, "INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN")')
-  WRITE( stdout, '(  5X, "INFO: Projection scheme")')
+  WRITE( stdout, '(  5X, "INFO: Unique Hamiltonian scheme using projectors")')
   !
   ALLOCATE ( dH_wann_aux(num_wann, num_wann) )
   !

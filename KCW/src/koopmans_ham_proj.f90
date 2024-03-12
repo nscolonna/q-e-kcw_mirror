@@ -63,7 +63,8 @@ SUBROUTINE koopmans_ham_proj (delta)
   INTEGER  :: lrwannfc
   REAL(DP), EXTERNAL :: get_clock
   !
-  WRITE(stdout, '(/,5X, "INFO: KI Hamiltonian using Projectors")')
+  WRITE( stdout, '(/,5X, "INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN")')
+  WRITE( stdout, '(  5X, "INFO: Projectors scheme")')
   !
   ! The occupation matrix
   ! P_n = \sum_kv f_kv <u_kv|w_kn><w_kn|u_kn> 
