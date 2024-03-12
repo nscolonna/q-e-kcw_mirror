@@ -114,9 +114,10 @@ SUBROUTINE koopmans_ham (dH_wann)
   END IF
   ! 
   ! For an isolated molecule the full Hamiltonian is also available
-  ik=1
-  IF (nkstot/nspin == 1) CALL full_ham ( ik )
-  ! ... formats
+  ! OBSOLETE: moved to dH_KI_wann_supercell.f90 
+  !ik=1
+  !IF (nkstot/nspin == 1) CALL full_ham ( ik )
+  !! ... formats
   !
 9043 FORMAT(/,8x,'KS       highest occupied level (ev): ',F10.4 )
 9042 FORMAT(/,8x, 'KS       highest occupied, lowest unoccupied level (ev): ',2F10.4 )

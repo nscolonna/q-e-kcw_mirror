@@ -75,8 +75,8 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
   !
   COMPLEX(DP) :: delta_vr(dffts%nnr,nspin), delta_vr_(dffts%nnr,nspin)
   COMPLEX(DP), ALLOCATABLE  :: delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
-  COMPLEX(DP) :: deltah_scal (num_wann, num_wann)
-  REAL(DP) :: ddH(num_wann)
+  COMPLEX(DP) :: deltah_scal
+  REAL(DP) :: ddH
   !
   !
   ALLOCATE (psic_1( dfftp%nnr), vpsi_r(dffts%nnr), vpsi(npwx), v_ki(npwx,nbnd))
@@ -158,18 +158,19 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
 #endif
      !
      ! ... orbital density in reciprocal space ...
+     !
+     CALL bare_pot ( CMPLX(n_r*omega, 0.0, kind=DP), n_g, vh_rhog, delta_vr, delta_vg, 1, delta_vr_, delta_vg_ )
+     !! The periodic part of the perturbation DeltaV_q(G)
+     !
+     deltah_scal = - 0.5D0 * sum (CONJG(n_g (:)) * delta_vg(:,spin_component)) * omega
+     !sh = 0.5D0 * sum (CONJG(n_g (:)) * vh_rhog(:)                )*omega
+     !WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, sh
+     IF (l_alpha_corr) CALL beyond_2nd (deltah_scal, ddH, ibnd)
+     !
      psic(:) = (0.D0, 0.D0)
      psic(:) =  CMPLX(n_r(:),0.D0,kind=dp)
      CALL fwfft ('Rho', psic, dfftp)
      n_g(:) = psic(dfftp%nl(:))
-     !
-!    CALL bare_pot ( n_r, n_g, vh_rhog, delta_vr, delta_vg, 1, delta_vr_, delta_vg_ )
-!    !! The periodic part of the perturbation DeltaV_q(G)
-!    !
-!    sh = 0.5D0 * sum (CONJG(n_g (:)) * vh_rhog(:)                )*omega
-!    deltah_scal(ibnd, ibnd) = - 0.5D0 * sum (CONJG(n_g (:)) * delta_vg(:,spin_component)) * omega
-!    WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, sh
-!    IF (l_alpha_corr) CALL beyond_2nd (deltah_scal, ddH)
      !
      ! ... Compute Int[e^2/|r-r'|*n_i(r')] ...
      !
@@ -181,7 +182,7 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
      sh = ehart
      !
 !     WRITE(stdout,'("v_hatree", 2i5, 3F15.8)') ibnd, current_spin ,REAL(v(1:3,1))
-     WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, -sh
+     !WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, sh
      !
 #ifdef DEBUG
      WRITE(stdout,'(8x, "orbital=", i3, 2x, "Self-Hartree", F15.10, 3x, "Ry",/)') ibnd, sh
@@ -551,7 +552,7 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
   CONTAINS
   !
   !----------------------------------------------------------------
-  SUBROUTINE beyond_2nd (dH_wann, ddH)
+  SUBROUTINE beyond_2nd (dH_wann, ddH, iwann)
     !----------------------------------------------------------------
     !
     USE kinds,                 ONLY : DP
@@ -560,21 +561,22 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
     !
     IMPLICIT NONE
     !
-    COMPLEX(DP), INTENT(INOUT) :: dH_wann(num_wann,num_wann)
-    REAL(DP), INTENT(OUT) :: ddH(num_wann)
+    COMPLEX(DP), INTENT(INOUT) :: dH_wann
+    REAL(DP), INTENT(OUT) :: ddH
     !
     REAL(DP) :: alpha_(num_wann), alpha_fd(num_wann)
     ! weight of the q points, alpha from LR, alpha after the all-order correction.
     !
-    REAL(DP) second_der(num_wann), delta
+    REAL(DP) second_der, delta
     !
-    INTEGER :: iwann
     !
     REAL(DP), EXTERNAL :: get_clock
     !
+    INTEGER, INTENT(IN) :: iwann
+    !
     ddH = 0.D0
     !
-    WRITE( stdout, '(/,5X, "INFO: Correction beyond 2nd order ...",/)')
+    WRITE( stdout, '(/,8X, "INFO: Correction beyond 2nd order ...",/)')
     IF (lrpa) THEN
       !
       WRITE(*, '(8X,"INFO: l_alpha_corr and lrpa are NOT consistent.At RPA")')
@@ -585,15 +587,12 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
       !
     ENDIF
     !
-    DO iwann = 1, num_wann
-      second_der(iwann) = -REAL(dH_wann(iwann,iwann))
-    ENDDO
+    second_der = -REAL(dH_wann)
     !
-    !DO iwann = 1, num_wann_occ
-    DO iwann = 1, num_wann
+    !DO iwann = 1, num_wann
       !
       delta =0.D0
-      alpha_(iwann) = alpha_final(iwann)
+      alpha_ = alpha_final(iwann)
       !
       ! Only if this is one of the unique orbitals
       IF ( l_do_alpha (iwann)) THEN
@@ -602,44 +601,33 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
         ! ... Compute the difference between the parabolic extrapolation at N \pm 1 and the real
         ! ... value of the energy in the frozen orbital approximation ...
         CALL alpha_corr (iwann, delta)
-        ddH(iwann) = delta
+        ddH = delta
         !dH_wann(iwann,iwann) = dH_wann(iwann,iwann)-ddH(iwann)
         !
         ! ... The new alpha that should be closer to the Finite-difference one ...
         ! ... Remember DeltaH is nothing but the second derivative wrt the orbital occupation ...
-        alpha_fd (iwann)= (alpha_final(iwann)*second_der(iwann) + delta)/ (second_der(iwann)+delta)
-        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_fd(iwann)
+        alpha_final_full(iwann) = (alpha_final(iwann)*second_der + delta)/ (second_der + delta)
         !
-        ! ... Since the ham in the frozen approximation is approximated to second
-        ! ... order only, this is the alpha we want to use. Only the
-        ! ... numerator matters.
-        alpha_(iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/second_der(iwann)
       ELSE
         !
-        alpha_fd(iwann) = alpha_fd(group_alpha(iwann))
-        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_final_full(group_alpha(iwann))
-        alpha_(iwann) = alpha_(group_alpha(iwann))
+        alpha_final_full(iwann) = alpha_final_full(group_alpha(iwann))
         !
       ENDIF
       !
       ! ... Write it just to compare with the FD one from CP ...
       IF (l_do_alpha (iwann)) THEN
-       WRITE(stdout,'(5X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
-               iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
+       WRITE(stdout,'(8X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
+               iwann, alpha_final(iwann),alpha_final_full(iwann),  alpha_(iwann)
       ELSE
-       WRITE(stdout,'(5X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
-               iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
+       WRITE(stdout,'(8X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
+               iwann, alpha_final(iwann),alpha_final_full(iwann),  alpha_(iwann)
       ENDIF
       !
-      !WRITE(stdout,'("Nicola", i3, 6f12.8)') iwann, dH_wann(iwann,iwann)
-      !
-      ! Re-define the corrected screening parameter.
-      alpha_final(iwann) = alpha_(iwann)
-      WRITE( stdout, '(5X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
+      WRITE( stdout, '(8X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final_full(iwann)
       WRITE(stdout, 900) get_clock('KCW')
       !
-    ENDDO
-900 FORMAT('     total cpu time spent up to now is ',F10.1,' secs' )
+    !ENDDO
+900 FORMAT('        total cpu time spent up to now is ',F10.1,' secs', / )
     !
   END SUBROUTINE beyond_2nd
   !

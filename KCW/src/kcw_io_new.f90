@@ -273,7 +273,7 @@ MODULE io_kcw
      INTEGER               :: me_group, me_group2, me_group3, &
                               nproc_group, nproc_group2, nproc_group3
      CHARACTER(LEN=256)    :: rho_file
-     !CHARACTER(LEN=256)    :: rho_file_hdf5
+     CHARACTER(LEN=256)    :: rho_file_hdf5
      COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
      COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
      INTEGER,  ALLOCATABLE :: kowner(:)

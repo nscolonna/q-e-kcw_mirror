@@ -111,7 +111,7 @@ SUBROUTINE kcw_readin()
   !! kipz_corr       : Compute the pKIPZ hamiltonian (only for finite systems: Gamma-only calculation in SC) 
   !! l_alpha_corr    : If true a correction is applied to the screening coefficient to mimick effect beyond the 
   !!                   second order
-  !! h_porj          : if true an alterantive definition of the KI Hamitlonian is built and diagonalized
+  !! h_proj          : if true an alterantive definition of the KI Hamitlonian is built and diagonalized
   !!                   using projectors (see koopmans_ham_proj.f90)
   !! l_diag          : if true the projectors-KI hamiltonian is applied perturbatively on KS states
   !! io_sp           : write/read wannier orbital densities in single precision to save disk space
@@ -341,7 +341,7 @@ SUBROUTINE kcw_readin()
   ENDIF
   !
   IF (h_proj .AND. corr_sc) THEN
-     CALL infomsg('kcw_readin','WARNING: corr_sc and h_porj are not compatible: GOING TO SWITCH to h_uniq = .FALSE.')
+     CALL infomsg('kcw_readin','WARNING: corr_sc and h_proj are not compatible: GOING TO SWITCH to h_uniq = .FALSE.')
      h_proj = .FALSE.
      h_uniq = .TRUE.
   ENDIF
