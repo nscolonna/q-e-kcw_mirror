@@ -97,6 +97,9 @@ MODULE control_kcw
   !! if TRUE this q is gamma.
   !
   CHARACTER(256) :: h_diag_scheme
+  CHARACTER(256) :: h_corr_scheme
+  LOGICAL :: corr_pc
+  LOGICAL :: corr_sc
   LOGICAL :: h_uniq
   LOGICAL :: h_proj
   LOGICAL :: l_diag

@@ -64,7 +64,7 @@ SUBROUTINE kcw_readin()
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
                         write_hr, l_alpha_corr, on_site_only, h_diag_scheme, &
-                        l_diag, check_spread
+                        l_diag, check_spread, h_corr_scheme
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -187,6 +187,7 @@ SUBROUTINE kcw_readin()
   on_site_only        = .FALSE.
   calculation         = " " 
   h_diag_scheme       = "wann"
+  h_corr_scheme       = "pc"
   l_diag              = .FALSE.
   io_sp               = .FALSE.
   io_real_space       = .FALSE.
@@ -239,6 +240,25 @@ SUBROUTINE kcw_readin()
                   & ' not supported!  Valid options: "wann" || "uniq" || "proj" ',1 )
        !
     END SELECT
+    !
+    SELECT CASE( trim( h_corr_scheme ) )
+    CASE( 'pc' )
+       !
+       corr_pc  = .true.
+       corr_sc  = .false.
+       !
+    CASE( 'sc' )
+       !
+       corr_pc  = .false.
+       corr_sc  = .true.
+       !
+       CASE DEFAULT
+       !
+       CALL errore( 'kcw_readin', 'h_ocrr_scheme=' // trim(h_corr_scheme) // &
+                  & ' not supported!  Valid options: "pc" || "sc"',1 )
+       !
+    END SELECT
+
   ENDIF
   !
   ! ... broadcasting all input variables to other nodes
@@ -293,7 +313,7 @@ SUBROUTINE kcw_readin()
   ELSE 
     CALL errore('kcw_readin', ' "assume isolated" not recognized', 1)
   ENDIF
-  ! 
+  !
   IF (do_comp_mt_kcw .AND. mp1*mp2*mp3 /= 1) THEN 
      CALL infomsg('kcw_readin','WARNING: "do_comp_mt" set to FALSE. "l_vcut" set to TRUE instead')
      WRITE(stdout,'()') 
@@ -304,6 +324,7 @@ SUBROUTINE kcw_readin()
   IF (h_uniq .AND. h_proj) THEN 
      CALL infomsg('kcw_readin','WARNING: h_proj and h_uniq are mutually exclusive: GOING TO SET h_proj = .FALSE.')
      h_proj = .FALSE.
+     h_uniq = .TRUE.
   ENDIF
   !
   IF ((h_uniq .OR. h_proj) .AND. do_bands) THEN 
@@ -312,7 +333,18 @@ SUBROUTINE kcw_readin()
      do_bands = .FALSE.
      write_hr = .FALSE.
   ENDIF
-
+  !
+  IF (corr_pc .AND. corr_sc) THEN
+     CALL infomsg('kcw_readin','WARNING: corr_pc and corr_sc are mutually exclusive: GOING TO SET corr_sc = .FALSE.')
+     corr_sc = .FALSE.
+     corr_pc = .TRUE.
+  ENDIF
+  !
+  IF (h_proj .AND. corr_sc) THEN
+     CALL infomsg('kcw_readin','WARNING: corr_sc and h_porj are not compatible: GOING TO SWITCH to h_uniq = .FALSE.')
+     h_proj = .FALSE.
+     h_uniq = .TRUE.
+  ENDIF
   !
   ! read data produced by pwscf
   !
@@ -353,6 +385,9 @@ SUBROUTINE kcw_readin()
      l_vcut = .false.
   ENDIF
   !
+  IF (corr_sc .AND. nkstot/nspin /= 1) &
+     CALL errore('kcw_readin', 'Is this a SC calculation?', 1)
+  ! 
   IF (lgamma) THEN
      nksq = nks
   ELSE

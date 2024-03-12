@@ -17,7 +17,7 @@ SUBROUTINE kcw_ham
   !!  Code written by Nicola Colonna and Riccardo de Gennaro (EPFL April 2019) 
   !
   USE kinds,                 ONLY : DP
-  USE control_kcw,           ONLY : do_bands, write_hr, h_uniq, num_wann, h_proj
+  USE control_kcw,           ONLY : do_bands, write_hr, h_uniq, num_wann, h_proj, corr_pc, corr_sc
   USE interpolation,         ONLY : interpolate_ham, dealloc_interpolation
   !
   USE io_rho_xml,            ONLY : write_scf
@@ -40,8 +40,13 @@ SUBROUTINE kcw_ham
   ALLOCATE ( dH_wann_proj(num_wann) )
   !
   ! 2) compute the KI correction on the Wannier basis
-  CALL dH_ki_wann ( dH_wann, dH_wann_proj )
+  IF (corr_pc ) THEN 
+    CALL dH_ki_wann ( dH_wann, dH_wann_proj )
+  ELSEIF( corr_sc) THEN 
+    CALL dH_ki_wann_supercell ( 1, dH_wann)
+  ENDIF 
   !
+  ! 3) Build UP the Koopmans Hamiltonian (depending on the scheme) 
   IF (h_proj) THEN 
     ! This is an alternative formulation based on a DFT+U like hamiltonian 
     ! see koopmans_ham_proj.f90 for details

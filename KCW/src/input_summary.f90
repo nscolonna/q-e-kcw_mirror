@@ -79,6 +79,7 @@ subroutine input_summary ( )
       WRITE(stdout, 43)  "# l_alpha_corr        =", l_alpha_corr
       WRITE(stdout, 43)  "# on_site_only        =", on_site_only
       WRITE(stdout, 42)  "# h_diag_scheme       =", TRIM(h_diag_scheme)
+      WRITE(stdout, 42)  "# h_corr_scheme       =", TRIM(h_corr_scheme)
       WRITE(stdout, 43)  "# l_diag              =", l_diag
     ENDIF
     !
