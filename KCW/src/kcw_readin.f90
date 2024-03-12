@@ -63,7 +63,7 @@ SUBROUTINE kcw_readin()
   NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
-                        write_hr, l_alpha_corr, on_site_only, h_uniq, h_proj, &
+                        write_hr, l_alpha_corr, on_site_only, h_diag_scheme, &
                         l_diag, check_spread
   !
   !### COTROL
@@ -186,8 +186,7 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
-  h_uniq              = .FALSE.
-  h_proj              = .FALSE.
+  h_diag_scheme       = "wann"
   l_diag              = .FALSE.
   io_sp               = .FALSE.
   io_real_space       = .FALSE.
@@ -216,6 +215,31 @@ SUBROUTINE kcw_readin()
   !
   IF (kcw_at_ks) seedname = prefix
   IF (ionode) tmp_dir = trimcheck (outdir)
+  !
+  IF (ionode) THEN 
+    SELECT CASE( trim( h_diag_scheme ) )
+    CASE( 'wann' )
+       !
+       h_uniq  = .false.
+       h_proj  = .false.
+       !
+    CASE( 'uniq' )
+       !
+       h_uniq  = .true.
+       h_proj  = .false.
+       !
+    CASE( 'proj' )
+       !
+       h_uniq  = .false.
+       h_proj  = .true.
+       !
+    CASE DEFAULT
+       !
+       CALL errore( 'kcw_readin', 'h_diag_scheme=' // trim(h_diag_scheme) // &
+                  & ' not supported!  Valid options: "wann" || "uniq" || "proj" ',1 )
+       !
+    END SELECT
+  ENDIF
   !
   ! ... broadcasting all input variables to other nodes
   !

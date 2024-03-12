@@ -43,33 +43,31 @@ SUBROUTINE kcw_ham
   CALL dH_ki_wann ( dH_wann, dH_wann_proj )
   !
   IF (h_proj) THEN 
-     ! This is an alternative formulation based on a DFT+U like hamiltonian 
-     ! see koopmans_ham_proj.f90 for details
-     CALL koopmans_ham_proj ( dH_wann_proj )
+    ! This is an alternative formulation based on a DFT+U like hamiltonian 
+    ! see koopmans_ham_proj.f90 for details
+    CALL koopmans_ham_proj ( dH_wann_proj )
+    !
+  ELSEIF ( h_uniq ) THEN 
+    ! Use Projectors to build a unique Hamiltonian and diagonalize it 
+    ! in the space of the KS orbital from the NSCF calculation
+    CALL koopmans_ham_uniq ( dH_wann )
+    !
   ELSE 
+    ! Standard procedure: build and diagonalize the Hamiltonian in the 
+    ! space spanned by the MLWFs
+    CALL koopmans_ham ( dH_wann )
+    !
+    ! 3) If do_bands=TRUE interpolate H(k) and prints bands
+    IF ( do_bands ) CALL interpolate_ham( )
      !
-     IF ( h_uniq ) THEN 
-        ! Use Projectors to build a unique Hamiltonian and diagonalize it 
-        ! in the space of the KS orbital from the NSCF calculation
-        CALL koopmans_ham_uniq ( dH_wann )
-     ELSE 
-       ! Standard procedure: build and diagonalize the Hamiltonian in the 
-       ! space spanned by the MLWFs
-       CALL koopmans_ham ( dH_wann )
-       !
-       ! 3) If do_bands=TRUE interpolate H(k) and prints bands
-       IF ( do_bands ) CALL interpolate_ham( )
-        !
-       ! 4) If write_hr=TRUE write H(R) to file
-       IF ( write_hr ) CALL write_hr_to_file( )
-       !
-       IF (do_bands) CALL dealloc_interpolation( )
-       !
-    ENDIF
+    ! 4) If write_hr=TRUE write H(R) to file
+    IF ( write_hr ) CALL write_hr_to_file( )
     !
-    DEALLOCATE (dH_wann, dH_wann_proj) 
+    IF (do_bands) CALL dealloc_interpolation( )
     !
-  ENDIF 
+  ENDIF
+  !
+  DEALLOCATE (dH_wann, dH_wann_proj) 
   !
   ! WRITE data file
   iunwfc = iuwfc

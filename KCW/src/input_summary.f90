@@ -27,7 +27,7 @@ subroutine input_summary ( )
     WRITE(stdout,'(5X,  44("="))')
 !!!! CONTOL NAMELIST
     WRITE( stdout, '(/, 6X, "CONTROL ")') 
-    WRITE(stdout, 41)  "# title               =", TRIM(title)
+    WRITE(stdout, 42)  "# title               =", TRIM(title)
     WRITE(stdout, 41)  "# out_dir             =", TRIM(tmp_dir)
     WRITE(stdout, 42)  "# prefix              =", TRIM(prefix)
     WRITE(stdout, 42)  "# calculation         =", TRIM(calculation)
@@ -78,8 +78,7 @@ subroutine input_summary ( )
       WRITE(stdout, 43)  "# write_hr            =", write_hr
       WRITE(stdout, 43)  "# l_alpha_corr        =", l_alpha_corr
       WRITE(stdout, 43)  "# on_site_only        =", on_site_only
-      WRITE(stdout, 43)  "# h_uniq              =", h_uniq
-      WRITE(stdout, 43)  "# h_proj              =", h_proj
+      WRITE(stdout, 42)  "# h_diag_scheme       =", TRIM(h_diag_scheme)
       WRITE(stdout, 43)  "# l_diag              =", l_diag
     ENDIF
     !
@@ -87,7 +86,7 @@ subroutine input_summary ( )
     !
   ENDIF
   !
-41  FORMAT(7X, A23, A18)
+41  FORMAT(7X, A23, A40)
 42  FORMAT(7X, A23, A18)
 43  FORMAT(7X, A23, L18)
 44  FORMAT(7X, A23, F12.8, 3x, " [Ry]")
