@@ -46,7 +46,11 @@ set(src_kcw
     kcw_allocate_q.f90
     kcw_deallocate_q.f90
     setup_coulomb_exx.f90
-    coulomb.f90)
+    coulomb.f90
+    dH_ki_wann.f90
+    dH_ki_wann_supercell.f90
+    koopmans_ham_proj.f90
+    koopmans_ham_uniq.f90)
 
 qe_add_library(qe_kcw ${src_kcw})
 target_link_libraries(
