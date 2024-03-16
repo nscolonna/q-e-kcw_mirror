@@ -413,6 +413,7 @@ KI H2O
   use_ws_distance = .true.
   write_hr = .true.
   on_site_only = .true.
+  h_diag_scheme = "wann"
 /
 K_POINTS crystal_b
 8
@@ -458,7 +459,7 @@ KI H2O
   use_ws_distance = .true.
   write_hr = .true.
   on_site_only = .true.
-  h_uniq = .true.
+  h_diag_scheme = "uniq"
 /
 K_POINTS crystal_b
 8
@@ -472,6 +473,6 @@ K_POINTS crystal_b
 0.500     0.000     0.500 1  ! U
 EOF
 
-$ECHO "  Running the perturbative KI hamiltonian calculation for $PREFIX...\c"
+$ECHO "  Running the unique KI hamiltonian calculation for $PREFIX...\c"
 $KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_uniq.in > $PREFIX.kcw-ham_uniq.out
 $ECHO " done"
