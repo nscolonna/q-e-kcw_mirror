@@ -44,6 +44,9 @@ SUBROUTINE kcw_ham
     CALL dH_ki_wann ( dH_wann, dH_wann_proj )
   ELSEIF( corr_sc) THEN 
     CALL dH_ki_wann_supercell ( 1, dH_wann)
+  ELSE
+    ! This should never happen (see check in kcw_readin). Just for extra safety
+    CALL errore( 'kcw_ham', 'Something wrong with h_corr_scheme',1 )
   ENDIF 
   !
   ! 3) Build UP the Koopmans Hamiltonian (depending on the scheme) 
