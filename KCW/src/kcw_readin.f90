@@ -186,8 +186,8 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
+  h_corr_scheme       = "second_order"
   h_diag_scheme       = "wann"
-  h_corr_scheme       = "pc"
   l_diag              = .FALSE.
   io_sp               = .FALSE.
   io_real_space       = .FALSE.
@@ -242,20 +242,20 @@ SUBROUTINE kcw_readin()
     END SELECT
     !
     SELECT CASE( trim( h_corr_scheme ) )
-    CASE( 'pc' )
+    CASE( 'second_order' )
        !
        corr_pc  = .true.
        corr_sc  = .false.
        !
-    CASE( 'sc' )
+    CASE( 'full' )
        !
        corr_pc  = .false.
        corr_sc  = .true.
        !
        CASE DEFAULT
        !
-       CALL errore( 'kcw_readin', 'h_ocrr_scheme=' // trim(h_corr_scheme) // &
-                  & ' not supported!  Valid options: "pc" || "sc"',1 )
+       CALL errore( 'kcw_readin', 'h_corr_scheme=' // trim(h_corr_scheme) // &
+                  & ' not supported!  Valid options: "second_order" || "full"',1 )
        !
     END SELECT
 
