@@ -616,11 +616,11 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
       !
       ! ... Write it just to compare with the FD one from CP ...
       IF (l_do_alpha (iwann)) THEN
-       WRITE(stdout,'(8X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
-               iwann, alpha_final(iwann),alpha_final_full(iwann),  alpha_(iwann)
+       WRITE(stdout,'(8X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 2f12.8)') &
+               iwann, alpha_final(iwann),alpha_final_full(iwann)
       ELSE
-       WRITE(stdout,'(8X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
-               iwann, alpha_final(iwann),alpha_final_full(iwann),  alpha_(iwann)
+       WRITE(stdout,'(8X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 2f12.8)') &
+               iwann, alpha_final(iwann),alpha_final_full(iwann)
       ENDIF
       !
       WRITE( stdout, '(8X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final_full(iwann)
