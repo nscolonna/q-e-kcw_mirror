@@ -407,9 +407,9 @@ SUBROUTINE atomic_wfc_cp(omega, nat, nsp, ityp, tau, nupdwn, iupdwn, nspin, &
          USE kinds,        ONLY : DP
          USE uspp_param,   ONLY : nwfcm
          USE mp_global,    ONLY : intra_bgrp_comm
-         USE uspp_data,    ONLY : nqx, tab_at, dq
          USE gvecw,        ONLY : ecutwfc
          USE upf_ions,     ONLY : n_atom_wfc
+         USE atwfc_mod,    ONLY : init_tab_atwfc, deallocate_tab_atwfc
 
          IMPLICIT NONE
          !
@@ -427,27 +427,26 @@ SUBROUTINE atomic_wfc_cp(omega, nat, nsp, ityp, tau, nupdwn, iupdwn, nspin, &
          ! The layout of the wfc is different:
          ! in cp it is the equivalent of (npw, nbnd, nspin ), 
          ! while in pw is (npwx, nspin, nbnd)
-         real(dp) :: xk(3), angle1, angle2
-         integer  :: i, ipol, sh(2)
+         real(dp) :: xk(3), angle1(nsp), angle2(nsp), qmax
+         integer  :: i, ipol, sh(2), ierr
          integer, allocatable :: igk(:)
    
          ! gamma point only
          xk=0.d0
-         nqx = INT( (SQRT(ecutwfc) / dq + 4) * 1.d0 )
-         allocate(tab_at(nqx,nwfcm,nsp))
+         qmax = SQRT(ecutwfc)
+         call init_tab_atwfc(qmax, omega, intra_bgrp_comm, ierr)
          natomwfc = n_atom_wfc ( nat, ityp )
          allocate ( wfcatom(npw, 1, natomwfc) )
          allocate (igk (npw) )
-         !$acc data create(tab_at, wfcatom, igk)
+         !$acc data create(wfcatom, igk)
          !
-         call init_tab_atwfc(omega, intra_bgrp_comm)
          !$acc parallel loop
          do i=1,npw
             igk(i)=i
          end do
          
          call atomic_wfc_acc( xk, npw, igk, nat, nsp, ityp, tau, &
-              .false., .false.,  angle1, angle2, .false., &
+              .false., .false., .false.,  angle1, angle2, .false., &
               npw, 1, natomwfc, wfcatom )
          !$acc update host (wfcatom)
    
@@ -462,6 +461,6 @@ SUBROUTINE atomic_wfc_cp(omega, nat, nsp, ityp, tau, nupdwn, iupdwn, nspin, &
          !$acc end data
          deallocate (igk)
          deallocate (wfcatom)
-         deallocate (tab_at)
+         call deallocate_tab_atwfc()
          
       end subroutine atomic_wfc_cp

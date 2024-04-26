@@ -22,6 +22,7 @@ SUBROUTINE hinit0()
   USE klist,            ONLY : qnorm
   USE gvecw,            ONLY : ecutwfc
   USE vlocal,           ONLY : strf
+  USE atwfc_mod,        ONLY : init_tab_atwfc
   USE beta_mod,         ONLY : init_tab_beta
   USE realus,           ONLY : generate_qpointlist, betapointlist, &
                                init_realspace_vars, real_space
@@ -77,7 +78,7 @@ SUBROUTINE hinit0()
   CALL init_tab_beta ( qmax, omega, intra_bgrp_comm, ierr )
   !
   IF ( lda_plus_U .AND. ( Hubbard_projectors == 'pseudo' ) ) CALL init_q_aeps()
-  CALL init_tab_atwfc (omega, intra_bgrp_comm)
+  CALL init_tab_atwfc ( qmax, omega, intra_bgrp_comm, ierr)
   !
   IF ( restart .AND. startingconfig == 'file' ) THEN
      !
