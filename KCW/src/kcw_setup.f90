@@ -181,10 +181,13 @@ subroutine kcw_setup
   sh(:) = CMPLX(0.D0,0.D0,kind=DP)
   occ_mat = 0.D0
   !
+  WRITE(*,*) "NICOLA irr_bz", irr_bz
   IF (irr_bz) THEN 
+     WRITE (*,*) "NICOLA irr_bz dentro"
      t_rev_eff=0
      skip_equivalence=.false.
      nrot = nsym_w(1)
+     WRITE (*,*) "NICOLA nrot", nrot, mp1, mp2, mp3
      s(:,:,1:nsym_w(1)) = s_w(:,:,1:nsym_w(1),1)
      CALL kcw_kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
                       bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot_ibz, xk_ibz, wk_ibz)
@@ -261,6 +264,8 @@ subroutine kcw_setup
   WRITE( stdout, '(/, 5X,"INFO: Compute Wannier-orbital Densities ...")')
   !
   IF (irr_bz) nqs = nkstot_ibz/nspin
+  WRITE(*,*) "NICOLA nkstot, nqs" ,nkstot, nqs
+  WRITE(*,*) "NICOLA nkstot, nqs" ,nkstot_ibz, nqs
   DO iq = 1, nqs
     !! For each q in the mesh 
     !
