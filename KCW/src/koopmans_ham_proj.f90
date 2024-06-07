@@ -51,7 +51,7 @@ SUBROUTINE koopmans_ham_proj (delta)
   ! The new eigenalues 
   REAL(DP) :: et_ki(nbnd,nkstot)
   REAL(DP), ALLOCATABLE :: eigvl_aux(:)
-  COMPLEX(DP) , ALLOCATABLE :: eigvc_aux(:,:), ham_aux(:,:)
+  COMPLEX(DP) , ALLOCATABLE :: eigvc_aux(:,:), ham_aux(:,:), evc_aux(:,:)
   !
   ! The new eigenalues
   REAL(DP) :: eigvl(nbnd)
@@ -62,6 +62,8 @@ SUBROUTINE koopmans_ham_proj (delta)
   REAL(DP) :: ehomo_ks, elumo_ks
   INTEGER  :: lrwannfc
   REAL(DP), EXTERNAL :: get_clock
+  !
+  ALLOCATE (evc_aux(npwx,nbnd))
   !
   WRITE( stdout, '(/,5X, "INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN")')
   WRITE( stdout, '(  5X, "INFO: Projectors scheme")')
@@ -219,9 +221,10 @@ SUBROUTINE koopmans_ham_proj (delta)
     CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     ! Retrive the ks function at k (in the Wannier Gauge)
     eigvc(:,:) = eigvc_all(:,:,ik)
-    CALL ZGEMM( 'N','N', npw, nbnd, nbnd, ONE, evc, npwx, eigvc, nbnd, &
-                 ZERO, evc, npwx )
+    CALL ZGEMM( 'N','N', npwx, nbnd, nbnd, ONE, evc, npwx, eigvc, nbnd, &
+                 ZERO, evc_aux, npwx )
     !write (*,'("NICOLA lrwfc", i20)') lrwfc, iuwfc, nbnd, SIZE(evc)
+    evc(:,:) = evc_aux(:,:)
     CALL save_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     !
   ENDDO
@@ -234,6 +237,8 @@ SUBROUTINE koopmans_ham_proj (delta)
 9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
 900 FORMAT(/'     total cpu time spent up to now is ',F10.1,' secs' )
 901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
+  !
+  DEALLOCATE (evc_aux)
   !
   RETURN
   !
