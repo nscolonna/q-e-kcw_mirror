@@ -22,13 +22,13 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   ! < \phi_i | \Delta H_KI | phi_j > = \sum_nm <phi_i|w_n> \Delta H_nm <w_m|phi_j> 
   !
   ! NB: In principle one can use any other basis or iterative digonalization technique.  
-
+  
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : nkstot, xk, ngk
   USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : num_wann, evc0, spin_component, &
-                                    num_wann_occ, iuwfc_wann
+  num_wann_occ, iuwfc_wann
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
   USE units_lr,              ONLY : iuwfc
@@ -47,6 +47,7 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   ! the KI hamiltonian on the Wannier basis <w_i|dh_j|w_j> 
   COMPLEX(DP), INTENT (IN) :: dH_wann(nkstot/nspin,num_wann,num_wann)
   COMPLEX(DP), ALLOCATABLE :: dH_wann_aux(:,:)
+  COMPLEX(DP), ALLOCATABLE :: evc_aux(:,:)
   ! 
   ! the KI operator on the KS basis of the NSCF calculation
   COMPLEX(DP) :: deltah(nbnd,nbnd)
@@ -75,6 +76,7 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   WRITE( stdout, '(  5X, "INFO: Unique Hamiltonian scheme using projectors")')
   !
   ALLOCATE ( dH_wann_aux(num_wann, num_wann) )
+  ALLOCATE ( evc_aux(npwx, nbnd) )
   !
   DO ik = 1, nkstot/nspin
     !
@@ -120,11 +122,11 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   ENDDO
   !
   IF ( elumo < 1d+6) THEN
-     WRITE( stdout, 9042 ) ehomo_ks*rytoev, elumo_ks*rytoev
-     WRITE( stdout, 9044 ) ehomo*rytoev, elumo*rytoev
+    WRITE( stdout, 9042 ) ehomo_ks*rytoev, elumo_ks*rytoev
+    WRITE( stdout, 9044 ) ehomo*rytoev, elumo*rytoev
   ELSE
-     WRITE( stdout, 9043 ) ehomo_ks*rytoev
-     WRITE( stdout, 9045 ) ehomo*rytoev
+    WRITE( stdout, 9043 ) ehomo_ks*rytoev
+    WRITE( stdout, 9045 ) ehomo*rytoev
   END IF
   !
   !Overwrite et and evc
@@ -136,24 +138,30 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     ! Retrive the ks function at k (in the Wannier Gauge)
     eigvc(:,:) = eigvc_all(:,:,ik)
-    CALL ZGEMM( 'N','N', npw, nbnd, nbnd, ONE, evc, npwx, eigvc, nbnd, &
-                 ZERO, evc, npwx )
+    ! MB
+    ! This is different wrt koopmans_ham.f90: 
+    ! (1) the first dimension (row of A/evc) = npwx, not npw;
+    ! (2) cannot use the same input matrix as output; need evc_aux
+    CALL ZGEMM( 'N','N', npwx, nbnd, nbnd, ONE, evc, npwx, eigvc, nbnd, &
+    ZERO, evc_aux, npwx )
     !write (*,'("NICOLA lrwfc", i20)') lrwfc, iuwfc, nbnd, SIZE(evc)
+    evc(:,:) = evc_aux(:,:)
     CALL save_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     !
   ENDDO
   !
   DEALLOCATE (dH_wann_aux)
+  DEALLOCATE (evc_aux)
   !
-9043 FORMAT(/,8x, 'KS       highest occupied level (ev): ',F10.4 )
-9042 FORMAT(/,8x, 'KS       highest occupied, lowest unoccupied level (ev): ',2F10.4 )
-9045 FORMAT(  8x, 'KI[2nd]  highest occupied level (ev): ',F10.4 )
-9044 FORMAT(  8x, 'KI[2nd]  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
-9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
-901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
+  9043 FORMAT(/,8x, 'KS       highest occupied level (ev): ',F10.4 )
+  9042 FORMAT(/,8x, 'KS       highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+  9045 FORMAT(  8x, 'KI[2nd]  highest occupied level (ev): ',F10.4 )
+  9044 FORMAT(  8x, 'KI[2nd]  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+  9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
+  901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
   !
   RETURN
-    CONTAINS
+  CONTAINS
   !
   ! !----------------------------------------------------------------
   SUBROUTINE dki_hamiltonian (evc, ik, h_dim, delta, deltah)
@@ -184,25 +192,25 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     deltah = CMPLX(0.D0, 0.D0, kind=DP)
     !
     CALL ZGEMM( 'C','N', nbnd, num_wann, npwx, ONE, evc, npwx, evc0, npwx, &
-                 ZERO, overlap_mat, nbnd) 
+    ZERO, overlap_mat, nbnd) 
     CALL mp_sum (overlap_mat, intra_bgrp_comm)
     !     
     DO ib = 1, nbnd
       DO jb = ib, nbnd
         !
         DO nwann = 1, num_wann
-         DO mwann = 1, num_wann
-          ! OLD 
-          !overlap_in = SUM(CONJG(evc(1:npw,ib))*(evc0(1:npw,nwann)))
-          !overlap_mj = SUM(CONJG(evc0(1:npw,mwann))*(evc(1:npw,jb)))
-          !CALL mp_sum (overlap_in, intra_bgrp_comm)
-          !CALL mp_sum (overlap_mj, intra_bgrp_comm)
-          !overlap = overlap_in*overlap_mj
-          ! 
-          overlap = (overlap_mat(ib,nwann )) * CONJG(overlap_mat(jb,mwann))
-          deltah(ib,jb) = deltah(ib,jb) + delta(nwann,mwann) * overlap
-          !WRITE(*,'(3X, 2I5, 2F20.12, F20.12, 2F20.12)') ibnd, iwann, delta(iwann), occ_mat(iwann), overlap
-         ENDDO
+          DO mwann = 1, num_wann
+            ! OLD 
+            !overlap_in = SUM(CONJG(evc(1:npw,ib))*(evc0(1:npw,nwann)))
+            !overlap_mj = SUM(CONJG(evc0(1:npw,mwann))*(evc(1:npw,jb)))
+            !CALL mp_sum (overlap_in, intra_bgrp_comm)
+            !CALL mp_sum (overlap_mj, intra_bgrp_comm)
+            !overlap = overlap_in*overlap_mj
+            ! 
+            overlap = (overlap_mat(ib,nwann )) * CONJG(overlap_mat(jb,mwann))
+            deltah(ib,jb) = deltah(ib,jb) + delta(nwann,mwann) * overlap
+            !WRITE(*,'(3X, 2I5, 2F20.12, F20.12, 2F20.12)') ibnd, iwann, delta(iwann), occ_mat(iwann), overlap
+          ENDDO
         ENDDO
         IF (ib /= jb) deltah(jb,ib) = CONJG(deltah(ib,jb))
         !
