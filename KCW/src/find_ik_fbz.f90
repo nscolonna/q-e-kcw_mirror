@@ -11,10 +11,10 @@
 #define ONE  ( 1.D0, 0.D0 )
 !
 !-----------------------------------------------------------------------
-SUBROUTINE find_ik_fbz (ik, ik_fbz)
+SUBROUTINE find_ik_fbz (ik_ibz, ik_fbz)
   !-----------------------------------------------------------------------
   !
-  !! Given the index of the kpoint in the IBZ (ik), this routine 
+  !! Given the index of the kpoint in the IBZ (ik_ibz), this routine 
   !! finds the corresponding index of the kpoint in the full BZ
   !! Needed to "select" the correct U matrix read from W90
   !! 
@@ -26,8 +26,8 @@ SUBROUTINE find_ik_fbz (ik, ik_fbz)
   !
   IMPLICIT NONE
   !
-  INTEGER, INTENT(IN)  :: ik
-  INTEGER, INTENT(OUT) :: ik_fbz
+  INTEGER, INTENT(IN)  :: ik_ibz  !index in IBZ
+  INTEGER, INTENT(OUT) :: ik_fbz  !index in FBZ
   INTEGER :: nkstot_fbz
   REAL(DP) :: dk(3) 
   LOGICAL :: found 
@@ -39,7 +39,7 @@ SUBROUTINE find_ik_fbz (ik, ik_fbz)
   !WRITE(*,'("NICOLA", i5, 3F12.4)') ik, xk(:,ik)
   DO ik_fbz = 1, nkstot_fbz 
      !WRITE(*,'("NICOLA FBZ", i5, 3F12.4)') ik_fbz, xk_fbz(:,ik_fbz)
-     dk(:)=xk(:,ik)-xk_fbz(:,ik_fbz)
+     dk(:)=xk(:,ik_ibz)-xk_fbz(:,ik_fbz)
      IF ( all( abs( dk ) < 1d-5 ) ) THEN 
         !WRITE(stdout,'("Match found", 2I5, 3x, 6F7.4 )') ik, ik_fbz, xk(:,ik),xk_fbz(:,ik_fbz)
         found = .TRUE. 

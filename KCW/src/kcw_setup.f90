@@ -181,20 +181,36 @@ subroutine kcw_setup
   sh(:) = CMPLX(0.D0,0.D0,kind=DP)
   occ_mat = 0.D0
   !
-  IF (irr_bz) THEN 
-     t_rev_eff=0
-     skip_equivalence=.false.
-     nrot = nsym_w(1)
-     s(:,:,1:nsym_w(1)) = s_w(:,:,1:nsym_w(1),1)
-     CALL kcw_kpoint_grid ( nrot, time_reversal, skip_equivalence, s, t_rev_eff, &
-                      bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot_ibz, xk_ibz, wk_ibz)
-     IF (lsda) CALL set_kup_and_kdw( xk_ibz, wk_ibz, isk_ibz, nkstot_ibz, npk )
-     ALLOCATE (ik_ibz2ik (nkstot_ibz) )
-     CALL map_ikibz2ik (xk_ibz, nkstot_ibz, ik_ibz2ik, isk_ibz)
-     ! FIXME: This is to make sure kcw_kpoint_grid does find irreducible k-points
-     ! that are in the original set of k-points (full BZ from Wannier).
-     ! In principle it should not be needed or can be incorporate in kcw_point_grid
-  ENDIF
+  !IF (irr_bz) THEN 
+  !  t_rev_eff=0
+  !  skip_equivalence=.false.
+  !  !
+  !  !Loop over wannier functions: each of them respects different symmetries
+  !  !
+  !  DO iwann = 1, 1
+  !    !
+  !    !symmetries respected by wannier function iwann
+  !    !
+  !    s(:,:,1:nsym_w(iwann)) = s_w(:,:,1:nsym_w(iwann),iwann)
+  !    !
+  !    !create irreducible grid respecting only symmetries s 
+  !    !
+  !    CALL kcw_kpoint_grid ( nsym_w(iwann), time_reversal, skip_equivalence, s, t_rev_eff, &
+  !                           bg, mp1*mp2*mp3, 0, 0, 0, mp1, mp2, mp3, nkstot_ibz, xk_ibz, wk_ibz)
+  !    !
+  !    !duplicate k points for spin
+  !    !
+  !    IF (lsda) CALL set_kup_and_kdw( xk_ibz, wk_ibz, isk_ibz, nkstot_ibz, npk )
+  !    !
+  !    ! ik_ibz2ik(ikibz) is the index of ikibz of the IBZ to the FBZ 
+  !    !
+  !    ALLOCATE (ik_ibz2ik (nkstot_ibz) )
+  !    CALL map_ikibz2ik (xk_ibz, nkstot_ibz, ik_ibz2ik, isk_ibz)
+  !    ! FIXME: This is to make sure kcw_kpoint_grid does find irreducible k-points
+  !    ! that are in the original set of k-points (full BZ from Wannier).
+  !    ! In principle it should not be needed or can be incorporate in kcw_point_grid
+  !  END DO
+  !ENDIF
   !
   ! ... Open a new buffer to store the KS states in the WANNIER gauge
   !
@@ -223,6 +239,12 @@ subroutine kcw_setup
   !
   CALL bcast_wfc ( igk_k_all, ngk_all )
   !
+  !GioCis Check symmetries respected by each wannier function
+  !
+  WRITE(stdout, *) "Entering the define_wannier_symmetry"
+  CALL define_wannier_symmetries()
+  !
+  !
   !DEALLOCATE ( nbnd_occ )  ! otherwise allocate_ph complains: FIXME
   !
   ! 8)
@@ -243,8 +265,8 @@ subroutine kcw_setup
   ALLOCATE (weight(nqs) )
   iq=1
   IF (ionode) THEN 
-     WRITE(iun_qlist,'(i5)') nqs
-     DO ik = 1, nkstot
+     WRITE(iun_qlist,'(i5)') nqs!GIOVANNI
+     DO ik = 1, nkstot!GIOVANNI
        IF (lsda .AND. isk(ik) /= spin_component) CYCLE
        WRITE(iun_qlist, '(3f12.8)') xk(:,ik)
        x_q(:,iq) = xk(:,ik)  
@@ -260,7 +282,7 @@ subroutine kcw_setup
   !
   WRITE( stdout, '(/, 5X,"INFO: Compute Wannier-orbital Densities ...")')
   !
-  IF (irr_bz) nqs = nkstot_ibz/nspin
+  IF (irr_bz) nqs = nkstot_ibz/nspin!GIOVANNI -> forse prima di scrivere qlist.txt
   DO iq = 1, nqs
     !! For each q in the mesh 
     !
@@ -296,7 +318,7 @@ subroutine kcw_setup
     rhowann(:,:)=ZERO
     !! Initialize the periodic part of the wannier orbtal density at this q
     !
-    CALL rho_of_q (rhowann, ngk_all, igk_k_all, iq_eff, rhowann_k)
+    CALL rho_of_q (rhowann, ngk_all, igk_k_all, iq_eff, rhowann_k) !GIOVANNI -> COSA FARE QUI PER RIDURRE I PUNTI K? 
     ! Compute the peridic part rho_q(r) of the wannier density rho(r)
     ! rho(r)   = \sum_q exp[iqr]rho_q(r)
     !
@@ -330,7 +352,7 @@ subroutine kcw_setup
       WRITE(*,'(" iq = ", i5, " iwann = ", i5, " SH =", F12.8)') iq, i, &
                0.5D0 * REAL(sum (CONJG(rhog (:)) * vh_rhog(:))*weight(iq)*omega)
       ! 
-      sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:) )*weight(iq)*omega
+      sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:) )*weight(iq)*omega ! GIOVANNI non c'e' D, e' giusto?
       !
     ENDDO
     lrpa=lrpa_save

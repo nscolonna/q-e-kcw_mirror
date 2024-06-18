@@ -123,9 +123,10 @@ SUBROUTINE kcw_kpoint_grid( nrot, time_reversal, skip_equivalence, s, t_rev, &
               IF (n>nk .and. equiv(n)==n) THEN
                  equiv(n) = nk
                  wkk(nk)=wkk(nk)+1.0d0
-                 !WRITE(*,'(a,3i5, 1F8.4)') "NICOLA", n, equiv(n), nk, wkk(nk)
+                 WRITE(*,'(a,3i5, 1F8.4)') "NICOLA", n, equiv(n), nk, wkk(nk)
               ELSE
-                 IF (equiv(n)/=nk .or. n<nk ) CALL errore('kcw_kpoint_grid', &
+               WRITE(*,'(a,3i5, 1F8.4)') "NICOLA", n, equiv(n), nk, wkk(nk)
+               IF (equiv(n)/=nk .or. n<nk ) CALL errore('kcw_kpoint_grid', &
                     'something wrong in the checking algorithm',1)
               ENDIF
            ENDIF

@@ -36,7 +36,7 @@ subroutine read_wannier ()
    !
    ! ... Separate wannierization (No occ-emp mixing)
    CALL read_wannier_two_manifold ( )
-   CALL read_wannier_symmetry ()
+   !CALL read_wannier_symmetry ()
    !
   ENDIF
   !
@@ -569,6 +569,9 @@ END subroutine read_wannier_two_manifold
 !
 !-----------------------------------------------------------------------
 SUBROUTINE read_wannier_symmetry ()
+  !
+  !this subroutine reads files stored by pw2wannier90 when we use SAWF
+  !for each wannier function, we read the symmetries that it respects
   !
   USE symm_base,            ONLY : s, sr, ft
   USE cell_base,            ONLY : bg

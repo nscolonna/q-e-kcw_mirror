@@ -1,4 +1,4 @@
-SUBROUTINE rotate_evc(isym, phase, psi_r)
+SUBROUTINE rotate_evc(isym, gvector, psi_r)
    !-----------------------------------------------------------------------
    ! g psi_k = e^{ik1.rS} u_k(rS) = e^{iSk1.r} u_k(rS)
    !         = e^{ik2.r} [ e^{-iGr} u_k(rS) ]
@@ -18,37 +18,46 @@ SUBROUTINE rotate_evc(isym, phase, psi_r)
    USE mp_pools,        ONLY : intra_pool_comm
    USE fft_interfaces,  ONLY : invfft
    USE scatter_mod,     ONLY : gather_grid, scatter_grid
-   USE control_kcw,     ONLY : rir
+   USE control_kcw,     ONLY : rir, rvect
    IMPLICIT NONE
+   !input -> wf on regular grid
+   !output -> wf rotated 
    !
-   INTEGER, INTENT(IN):: isym
+   INTEGER, INTENT(IN)       :: isym
+   REAL(DP), INTENT(IN)      :: gvector(3)
    COMPLEX(DP), INTENT(INOUT):: psi_r(dffts%nnr)
-   COMPLEX(DP), INTENT(IN)   :: phase(dffts%nnr)
    !
-   !INTEGER:: ig, igk_local, igk_global, npw1, npw2, n, nxxs, ipol, istart, isym0
-   INTEGER:: nxxs
-   REAL(DP)                 :: g_vect_cart(3), srt(3,3)
+   INTEGER                   :: ir
+   COMPLEX(DP)               :: imag = (0.D0,1.D0)
+   INTEGER                   :: nxxs ! number of points in r grid
    COMPLEX(DP), ALLOCATABLE :: psic_all(:), temppsic_all(:)
+   COMPLEX(DP), ALLOCATABLE :: phase(:)
    !
    nxxs = dffts%nr1x *dffts%nr2x *dffts%nr3x
-   ALLOCATE( psic_all(nxxs), temppsic_all(nxxs))
+   WRITE(*,*) dffts%nnr
+   ALLOCATE( phase(dffts%nnr))
+   !
    !
    IF (isym > 1) THEN
 #if defined(__MPI)
+     ALLOCATE( psic_all(nxxs), temppsic_all(nxxs))
      ! gather among all the CPUs
      CALL gather_grid(dffts, psi_r, temppsic_all)
      ! apply rotation
      psic_all(1:nxxs) = temppsic_all(rir(1:nxxs,isym))
      ! scatter back a piece to each CPU
      CALL scatter_grid(dffts, psic_all, psi_r)
+     DEALLOCATE( psic_all, temppsic_all)
 #else
      psi_r(1:nxxs) = psi_r(rir(1:nxxs,isym))
 #endif
    ENDIF
    !
    ! Apply phase factor exp[-iG.r]
-   psi_r = psi_r * phase 
+   CALL calculate_phase (gvector, phase)
+   psi_r(:) = psi_r(:) * phase(:)
+
+   DEALLOCATE ( phase )
    !
-   DEALLOCATE( psic_all, temppsic_all)
    !   
 END SUBROUTINE rotate_evc
