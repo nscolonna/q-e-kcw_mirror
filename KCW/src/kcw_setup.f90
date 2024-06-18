@@ -282,7 +282,9 @@ subroutine kcw_setup
   !
   WRITE( stdout, '(/, 5X,"INFO: Compute Wannier-orbital Densities ...")')
   !
-  IF (irr_bz) nqs = nkstot_ibz/nspin!GIOVANNI -> forse prima di scrivere qlist.txt
+  IF (irr_bz) nqs = nkstot_ibz/nspin
+  WRITE(*,*) "NICOLA nkstot, nqs" ,nkstot, nqs
+  WRITE(*,*) "NICOLA nkstot, nqs" ,nkstot_ibz, nqs
   DO iq = 1, nqs
     !! For each q in the mesh 
     !

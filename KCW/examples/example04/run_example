@@ -108,7 +108,7 @@ cat > $PREFIX.scf.in << EOF
 &SYSTEM
   ibrav=2,
   celldm(1)=10.263101844
-  nat= 2, ntyp= 1,
+  nat= 2, ntyp= 2,
   ecutwfc = 20.0,
   nbnd=20
   nspin = 2
@@ -121,11 +121,12 @@ cat > $PREFIX.scf.in << EOF
   conv_thr =  0.5d-12
 /
 ATOMIC_SPECIES
-Si 28.085 Si_ONCV_PBE-1.0.upf
+Si1 28.085 Si_ONCV_PBE-1.0.upf
+Si2 28.085 Si_ONCV_PBE-1.0.upf
 
 ATOMIC_POSITIONS crystal
-Si 0.00 0.00 0.00
-Si 0.25 0.25 0.25
+Si1 0.00 0.00 0.00
+Si2 0.25 0.25 0.25
 
 K_POINTS automatic
 2 2 2 0 0 0
@@ -158,11 +159,12 @@ num_wann          =   4
 exclude_bands     = 5-20
 spin              = up
 use_ws_distance   = .true.
+site_symmetry     = .true.
 
 write_hr = .true.
 conv_window = 5
 conv_tol = 1D-10
-conv_noise_amp = 10000
+conv_noise_amp = 10
 conv_noise_num = 5
 
 write_xyz = .true.
@@ -183,12 +185,12 @@ num_iter          = 100
 num_print_cycles  = 10
 
 Begin Atoms_Frac
- Si 0.00 0.00 0.00
- Si 0.25 0.25 0.25
+ Si1 0.00 0.00 0.00
+ Si2 0.25 0.25 0.25
 End Atoms_Frac
 
 Begin Projections
-f = 0.0, 0.0, 0.0 : sp3
+Si2 : sp3
 End Projections
 
 begin unit_cell_cart
@@ -215,6 +217,7 @@ cat > $PREFIX.pw2wann.in << EOF
   seedname = '$SEEDNAME'
   wan_mode   =  'standalone'
   spin_component = 'up'
+  write_dmn = .true. 
 /
 EOF
 $ECHO "  Running PW2W90 for $PREFIX...\c"
@@ -242,7 +245,7 @@ dis_win_max       = 20
 
 conv_window = 5
 conv_tol = 1D-10
-conv_noise_amp = 10000
+conv_noise_amp = 10
 conv_noise_num = 5
 
 write_hr = .true.
@@ -264,12 +267,12 @@ num_iter          = 1000
 num_print_cycles  = 10
 
 Begin Atoms_Frac
- Si 0.00 0.00 0.00
- Si 0.25 0.25 0.25
+ Si1 0.00 0.00 0.00
+ Si2 0.25 0.25 0.25
 End Atoms_Frac
 
 Begin Projections
-f = 0.250, 0.250, 0.250 : sp3
+Si1 : sp3
 End Projections
 
 begin unit_cell_cart
@@ -323,7 +326,7 @@ ln -s wann_emp/${SEEDNAME}_emp_centres.xyz .
 cat > $PREFIX.kcw-wann2kcw.in << EOF
 W2K Silicon
 &control
-  prefix='$PREFIX'
+  prefix='${PREFIX}_open'
   outdir='$TMP_DIR/'
   kcw_iverbosity = 2
   kcw_at_ks=.false.
@@ -352,7 +355,7 @@ $ECHO " done"
 cat > $PREFIX.kcw-screen.in << EOF
 KCW Silicon screen
 &control
-  prefix='$PREFIX'
+  prefix='${PREFIX}_open'
   outdir='$TMP_DIR/'
   kcw_iverbosity = 2
   kcw_at_ks=.false.
