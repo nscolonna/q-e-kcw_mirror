@@ -21,6 +21,7 @@ SUBROUTINE kcw_openfilq()
   USE noncollin_module,ONLY : npol
   USE buffers,         ONLY : open_buffer
   USE input_parameters,ONLY : nk1, nk2, nk3
+  USE control_kcw,     ONLY : irr_bz
 
   USE control_lr,      ONLY : lgamma
   !
@@ -41,6 +42,7 @@ SUBROUTINE kcw_openfilq()
   tmp_dir=tmp_dir_kcwq
   !
   IF (lgamma.AND.nk1.eq.0.AND.nk2.eq.0.AND.nk3.eq.0) tmp_dir=tmp_dir_save
+  IF( irr_bz )   tmp_dir=tmp_dir_kcwq
   !
   iuwfc = 30
   lrwfc = nbnd * npwx * npol

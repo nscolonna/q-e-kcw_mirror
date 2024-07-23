@@ -31,6 +31,7 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   USE wvfct,                ONLY : nbnd
   USE klist,                ONLY : nelup, neldw, nelec, lgauss, ltetra
   USE start_k,              ONLY : reset_grid
+  USE control_kcw,            ONLY : irr_bz
   !
   IMPLICIT NONE
   !
@@ -52,7 +53,7 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   !
   ! ... each q /= gamma is saved on a different directory
   !
-  IF (.NOT.lgamma) &
+  !IF (.NOT.lgamma) &
      tmp_dir_kcwq= TRIM (tmp_dir_kcw) // 'q' &
                    & // TRIM(int_to_char(iq))//'/'
   !
@@ -91,7 +92,8 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
     !
   ENDIF
   !
-  do_band=.TRUE.
+  IF(irr_bz) setup_pw = .TRUE.
+  IF(irr_bz) do_band=.TRUE.
   !
   xq_ = x_q(:,iq)
   CALL cryst_to_cart(1, xq_, at, -1)
