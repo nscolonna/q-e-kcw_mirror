@@ -53,7 +53,7 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   !
   ! ... each q /= gamma is saved on a different directory
   !
-  !IF (.NOT.lgamma) &
+  IF (.NOT.lgamma .or. irr_bz) &
      tmp_dir_kcwq= TRIM (tmp_dir_kcw) // 'q' &
                    & // TRIM(int_to_char(iq))//'/'
   !
@@ -93,7 +93,7 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   ENDIF
   !
   IF(irr_bz) setup_pw = .TRUE.
-  IF(irr_bz) do_band=.TRUE.
+  do_band=.TRUE.
   !
   xq_ = x_q(:,iq)
   CALL cryst_to_cart(1, xq_, at, -1)
