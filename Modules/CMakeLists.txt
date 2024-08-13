@@ -212,7 +212,7 @@ set(src_modules_c
     customize_signals.c
     qmmm_aux.c
     sockets.c)
-qe_add_library(qe_modules_c ${src_modules_c})
+add_library(qe_modules_c ${src_modules_c})
 
 if(TARGET gitrev)
    add_dependencies(qe_modules gitrev)

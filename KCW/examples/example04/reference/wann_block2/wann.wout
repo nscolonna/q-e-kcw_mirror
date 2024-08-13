@@ -70,7 +70,7 @@
              | 675 Mass Ave, Cambridge, MA 02139, USA.           |
              |                                                   |
              +---------------------------------------------------+
-             |    Execution started on 11Oct2023 at 12:05:47     |
+             |    Execution started on 25Jul2024 at 12:38:59     |
              +---------------------------------------------------+
  
  ******************************************************************************
@@ -240,9 +240,9 @@
  Starting a new Wannier90 calculation ...
 
 
- Reading overlaps from wann.mmn    :  Created on 11Oct2023 at 12: 5:47
+ Reading overlaps from wann.mmn    :  Created on 25Jul2024 at 12:38:59
 
- Reading projections from wann.amn :  Created on 11Oct2023 at 12: 5:46
+ Reading projections from wann.amn :  Created on 25Jul2024 at 12:38:58
 
  Time to read overlaps          0.002 (sec)
 
@@ -256,28 +256,28 @@
  
  ------------------------------------------------------------------------------
  Initial State
-  WF centre and spread    1  ( -0.000000, -0.000000,  0.000000 )     0.30595698
-  WF centre and spread    2  (  0.000000, -0.000000,  0.000000 )     0.34321650
-  WF centre and spread    3  ( -0.000000, -0.000000,  0.000000 )     0.34321650
-  WF centre and spread    4  (  0.000000, -0.000000,  0.000000 )     0.30595698
-  WF centre and spread    5  ( -0.000000,  0.000000,  0.000000 )     0.34321650
-  Sum of centres and spreads ( -0.000000, -0.000000,  0.000000 )     1.64156346
+  WF centre and spread    1  ( -0.000000, -0.000000,  0.000000 )     0.30674596
+  WF centre and spread    2  (  0.000000, -0.000000,  0.000000 )     0.34321580
+  WF centre and spread    3  ( -0.000000,  0.000000,  0.000000 )     0.34321580
+  WF centre and spread    4  ( -0.000000, -0.000000, -0.000000 )     0.30674596
+  WF centre and spread    5  (  0.000000,  0.000000,  0.000000 )     0.34321580
+  Sum of centres and spreads ( -0.000000, -0.000000,  0.000000 )     1.64313932
  
-      0     0.164E+01     0.0000000000        1.6415634630       0.00  <-- CONV
-        O_D=      0.0003181 O_OD=      0.0128639 O_TOT=      1.6415635 <-- SPRD
+      0     0.164E+01     0.0000000000        1.6431393225       0.00  <-- CONV
+        O_D=      0.0003072 O_OD=      0.0128202 O_TOT=      1.6431393 <-- SPRD
  ------------------------------------------------------------------------------
  Final State
-  WF centre and spread    1  ( -0.000000, -0.000000,  0.000000 )     0.30595698
-  WF centre and spread    2  (  0.000000, -0.000000,  0.000000 )     0.34321650
-  WF centre and spread    3  ( -0.000000, -0.000000,  0.000000 )     0.34321650
-  WF centre and spread    4  (  0.000000, -0.000000,  0.000000 )     0.30595698
-  WF centre and spread    5  ( -0.000000,  0.000000,  0.000000 )     0.34321650
-  Sum of centres and spreads ( -0.000000, -0.000000,  0.000000 )     1.64156346
+  WF centre and spread    1  ( -0.000000, -0.000000,  0.000000 )     0.30674596
+  WF centre and spread    2  (  0.000000, -0.000000,  0.000000 )     0.34321580
+  WF centre and spread    3  ( -0.000000,  0.000000,  0.000000 )     0.34321580
+  WF centre and spread    4  ( -0.000000, -0.000000, -0.000000 )     0.30674596
+  WF centre and spread    5  (  0.000000,  0.000000,  0.000000 )     0.34321580
+  Sum of centres and spreads ( -0.000000, -0.000000,  0.000000 )     1.64313932
  
-         Spreads (Ang^2)       Omega I      =     1.628381465
-        ================       Omega D      =     0.000318145
-                               Omega OD     =     0.012863853
-    Final Spread (Ang^2)       Omega Total  =     1.641563463
+         Spreads (Ang^2)       Omega I      =     1.630011992
+        ================       Omega D      =     0.000307162
+                               Omega OD     =     0.012820169
+    Final Spread (Ang^2)       Omega Total  =     1.643139322
  ------------------------------------------------------------------------------
 
  Wannier centres written to file wann_centres.xyz
@@ -292,10 +292,10 @@
  
  Calculating interpolated band-structure
  
- Time to calculate interpolated band structure       0.024 (sec)
+ Time to calculate interpolated band structure       0.023 (sec)
  
- Time for plotting              0.026 (sec)
- Total Execution Time           0.038 (sec)
+ Time for plotting              0.025 (sec)
+ Total Execution Time           0.037 (sec)
 
  *===========================================================================*
  |                             TIMING INFORMATION                            |
@@ -306,7 +306,7 @@
  |overlap: allocate                                 :         1         0.000|
  |overlap: read                                     :         1         0.002|
  |wann: main                                        :         1         0.000|
- |plot: main                                        :         1         0.026|
+ |plot: main                                        :         1         0.025|
  *---------------------------------------------------------------------------*
  
  All done: wannier90 exiting

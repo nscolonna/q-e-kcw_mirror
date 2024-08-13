@@ -13,7 +13,7 @@ SUBROUTINE hinit0()
   !
   USE kinds,            ONLY : DP
   USE ions_base,        ONLY : nat, nsp, ityp, tau
-  USE basis,            ONLY : startingconfig
+  USE starting_scf,     ONLY : startingconfig
   USE cell_base,        ONLY : alat, at, bg, omega, tpiba
   USE cellmd,           ONLY : omega_old, at_old, lmovecell, calc, cell_factor
   USE dynamics_module,  ONLY : verlet_read_tau_from_conf
@@ -66,7 +66,7 @@ SUBROUTINE hinit0()
   !
   ! qmax is the maximum |q+G|, for all G needed by the charge density,
   ! increased by a factor (20% or so) to avoid too frequent reallocations 
-  ! in variable-cell calculations ( norm is an estimate of max|q|, that
+  ! in variable-cell calculations ( qnorm is an estimate of max|q|, that
   ! may be needed for hybrid EXX or phonon calculations)
   !
   CALL init_us_1(nat, ityp, omega, qmax, intra_bgrp_comm)

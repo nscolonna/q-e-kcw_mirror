@@ -22,11 +22,6 @@ $ECHO "to merge separate wannierizations "
 BIN_LIST="pw.x kcw.x wannier90.x pw2wannier90.x merge_wann.x"
 PSEUDO_LIST="Ga.upf As.upf"
 
-#Overwrite PSEUDO_DIR
-cd pseudo
-PSEUDO_DIR=`pwd`
-cd -
-
 $ECHO
 $ECHO "  executables directory: $BIN_DIR"
 $ECHO "  pseudo directory:      $PSEUDO_DIR"
@@ -68,25 +63,25 @@ if test ! -x $FILE ; then
     fi
 $ECHO " done"
 
-##Overwrite NETWORK_PSEUDO
-#NETWORK_PSEUDO=http://www.quantum-simulation.org/potentials/sg15_oncv/upf/
-#
-## check for pseudopotentials
-#$ECHO "  checking that pseudopotentials files exist      ...\c"
-#for FILE in $PSEUDO_LIST ; do
-#    if test ! -r $PSEUDO_DIR/$FILE ; then
-#       $ECHO
-#       $ECHO "Downloading $FILE to $PSEUDO_DIR...\c"
-#            $WGET $PSEUDO_DIR/$FILE $NETWORK_PSEUDO/$FILE 2> /dev/null
-#    fi
-#    if test $? != 0; then
-#        $ECHO
-#        $ECHO "ERROR: $PSEUDO_DIR/$FILE not existent or not readable"
-#        $ECHO "Aborting"
-#        exit 1
-#    fi
-#done
-#$ECHO " done"
+#Overwrite NETWORK_PSEUDO
+NETWORK_PSEUDO="https://raw.githubusercontent.com/epfl-theos/koopmans/master/src/koopmans/pseudopotentials/pseudo_dojo_standard_v0.4.1/lda"
+
+# check for pseudopotentials
+$ECHO "  checking that pseudopotentials files exist      ...\c"
+for FILE in $PSEUDO_LIST ; do
+    if test ! -r $PSEUDO_DIR/$FILE ; then
+       $ECHO
+       $ECHO "Downloading $FILE to $PSEUDO_DIR...\c"
+            $WGET $PSEUDO_DIR/$FILE $NETWORK_PSEUDO/$FILE 2> /dev/null
+    fi
+    if test $? != 0; then
+        $ECHO
+        $ECHO "ERROR: $PSEUDO_DIR/$FILE not existent or not readable"
+        $ECHO "Aborting"
+        exit 1
+    fi
+done
+$ECHO " done"
 
 # how to run executables
 PW_COMMAND="$PARA_PREFIX $BIN_DIR/pw.x $PARA_POSTFIX"
@@ -324,3 +319,44 @@ EOF
 $ECHO "  Running kcw.x interface for $PREFIX...\c"
 $KCW_COMMAND -in kc.w2ki > kc.w2ko
 $ECHO "DONE" 
+cat > kc.khi << EOF
+&CONTROL
+   prefix           = '$PREFIX'
+   outdir           = '$TMP_DIR'
+   kcw_iverbosity   = 1
+   kcw_at_ks        = .false.
+   calculation      = 'ham'
+   mp1              = $nk
+   mp2              = $nk
+   mp3              = $nk
+   read_unitary_matrix = .true.
+   l_vcut           = .true.
+   kcw_iverbosity    = 2
+/
+&WANNIER
+   seedname         = 'wann'
+   check_ks         = .true.
+   num_wann_occ     = 14
+   num_wann_emp     = 0
+   have_empty       = .false.
+   has_disentangle  = .false.
+/
+&HAM
+   do_bands         = .true.
+   use_ws_distance  = .true.
+   write_hr         = .true.
+   on_site_only     = .true.
+   l_alpha_corr     = .false.
+/
+K_POINTS crystal_b
+5
+ 0.50000   0.50000   0.50000 15 ! L
+ 0.00000   0.00000   0.00000 15 ! G
+ 0.50000   0.00000   0.50000 15 ! X
+ 0.37500   0.37500   0.75000 15 ! K
+ 0.00000   0.00000   0.00000  1 !G
+EOF
+
+$ECHO "  Running kcw.x ham for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in kc.khi > kc.kho
+$ECHO "DONE"

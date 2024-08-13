@@ -10,8 +10,7 @@
 SUBROUTINE allocate_wfc()
   !----------------------------------------------------------------------------
   !! Dynamical allocation of arrays: wavefunctions.  
-  !! Requires dimensions: \(\text{npwx}\), \(\text{nbnd}\), \(\text{npol}\), 
-  !! \(\text{natomwfc}\), \(\text{nwfcU}\).
+  !! Requires dimensions: \(\text{npwx}\), \(\text{nbnd}\), \(\text{npol}\)
   !
 #if defined (__CUDA)
   use, intrinsic :: iso_c_binding
@@ -19,16 +18,12 @@ SUBROUTINE allocate_wfc()
 #endif
   USE io_global,           ONLY : stdout
   USE wvfct,               ONLY : npwx, nbnd
-  USE basis,               ONLY : natomwfc, swfcatom
-  USE fixed_occ,           ONLY : one_atom_occupations
-  USE ldaU,                ONLY : wfcU, nwfcU, lda_plus_u, Hubbard_projectors
   USE noncollin_module,    ONLY : npol
   USE wavefunctions,       ONLY : evc
-  USE wannier_new,         ONLY : use_wannier
   USE control_flags,       ONLY : use_gpu
   !
   IMPLICIT NONE
-    INTEGER :: istat
+  INTEGER :: istat
   !
   !
   ALLOCATE( evc(npwx*npol,nbnd) )
@@ -37,11 +32,6 @@ SUBROUTINE allocate_wfc()
   IF(use_gpu) istat = cudaHostRegister(C_LOC(evc(1,1)), sizeof(evc), cudaHostRegisterMapped)
   !$acc enter data create(evc)
 #endif
-  !
-  IF ( one_atom_occupations .OR. use_wannier ) &
-     ALLOCATE( swfcatom(npwx*npol,natomwfc) )
-  IF ( lda_plus_u .AND. (Hubbard_projectors.NE.'pseudo') ) &
-       ALLOCATE( wfcU(npwx*npol,nwfcU) )
   !
   RETURN
   !
@@ -121,14 +111,13 @@ SUBROUTINE allocate_wfc_k()
   !   beta functions
   !
   ALLOCATE( vkb(npwx,nkb) )
+  !$acc enter data create(vkb) 
   !
   !   g2kin contains the kinetic energy \hbar^2(k+G)^2/2m
   !
   ALLOCATE( g2kin(npwx) )
+  !$acc enter data create(g2kin) 
   !
-#if defined __CUDA
-!$acc enter data create(vkb(1:npwx,1:nkb), g2kin(1:npwx) ) 
-#endif
   !
   RETURN
   !

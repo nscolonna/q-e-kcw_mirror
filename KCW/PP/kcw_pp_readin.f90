@@ -152,9 +152,6 @@ SUBROUTINE kcw_pp_readin()
   !
   IF (okpaw.or.okvan) CALL errore('kcw_pp_readin',&
      'The kcw code with US or PAW is not available yet',1)
-
-  IF (noncolin) CALL errore('kcw_pp_readin',&
-   'The kcw code with non colliner spin is not available yet',1)
   !
   RETURN
   !

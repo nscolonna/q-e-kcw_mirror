@@ -1,5 +1,5 @@
 
-     Program PWSCF v.7.2 starts on 12Oct2023 at 10:29: 3 
+     Program PWSCF v.7.3.1 starts on 25Jul2024 at 12:41:21 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -13,8 +13,8 @@
      Parallel version (MPI), running on     1 processors
 
      MPI processes distributed on     1 nodes
-     1143 MiB available memory on the printing compute node when the environment starts
-
+     193380 MiB available memory on the printing compute node when the environment starts
+ 
      Waiting for input...
      Reading input from standard input
 
@@ -24,22 +24,22 @@
      Max angular momentum in pseudopotentials (lmaxx) =  4
 
      Atomic positions and unit cell read from directory:
-     /home/nicola/CODES/q-e-kcw/tempdir/GaAs.save/
-
+     /home/colonna_n/CODES/q-e-kcw-soc/tempdir/GaAs.save/
+ 
      Message from routine setup:
      using ibrav=0 with symmetry is DISCOURAGED, use correct ibrav instead
-
+ 
      Subspace diagonalization in iterative solution of the eigenvalue problem:
      a serial algorithm will be used
 
-
+ 
      G-vector sticks info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
      Sum         955     955    271                19195    19195    2975
-
+ 
      Using Slab Decomposition
-
+ 
 
 
      bravais-lattice index     =            0
@@ -51,8 +51,8 @@
      number of Kohn-Sham states=           16
      kinetic-energy cutoff     =      60.0000  Ry
      charge density cutoff     =     240.0000  Ry
-     Exchange-correlation= PBE
-                           (   1   4   3   4   0   0   0)
+     Exchange-correlation= SLA  PW   NOGX NOGC
+                           (   1   4   0   0   0   0   0)
 
      celldm(1)=   7.552418  celldm(2)=   0.000000  celldm(3)=   0.000000
      celldm(4)=   0.000000  celldm(5)=   0.000000  celldm(6)=   0.000000
@@ -69,11 +69,11 @@
 
 
      PseudoPot. # 1 for As read from file:
-     /home/nicola/CODES/q-e-kcw/KCW/examples/example04/pseudo/As.upf
-     MD5 check sum: bfe1a874457ce592347346129958e7cf
+     /home/colonna_n/CODES/q-e-kcw-soc/pseudo/As.upf
+     MD5 check sum: 33c531620a5edaf59d417d4ab58437b1
      Pseudo is Norm-conserving + core correction, Zval = 15.0
      Generated using ONCVPSP code by D. R. Hamann
-     Using radial grid of 1358 points,  6 beta functions with: 
+     Using radial grid of 1326 points,  6 beta functions with: 
                 l(1) =   0
                 l(2) =   0
                 l(3) =   1
@@ -82,11 +82,11 @@
                 l(6) =   2
 
      PseudoPot. # 2 for Ga read from file:
-     /home/nicola/CODES/q-e-kcw/KCW/examples/example04/pseudo/Ga.upf
-     MD5 check sum: 2bb81bf6f0a8d9832cf3329850435ecf
+     /home/colonna_n/CODES/q-e-kcw-soc/pseudo/Ga.upf
+     MD5 check sum: 1297264db1911d3fa8c63c42f023f390
      Pseudo is Norm-conserving + core correction, Zval = 13.0
      Generated using ONCVPSP code by D. R. Hamann
-     Using radial grid of 1902 points,  6 beta functions with: 
+     Using radial grid of 1858 points,  6 beta functions with: 
                 l(1) =   0
                 l(2) =   0
                 l(3) =   1
@@ -426,14 +426,14 @@
 
      Dynamical RAM for                hpsi:       1.17 MB
 
-     Dynamical RAM for      wfcinit/wfcrot:       1.32 MB
+     Dynamical RAM for      wfcinit/wfcrot:       1.17 MB
 
      Estimated static dynamical RAM per process >      11.88 MB
 
      Estimated max dynamical RAM per process >      14.27 MB
 
      The potential is recalculated from file :
-     /home/nicola/CODES/q-e-kcw/tempdir/GaAs.save/charge-density
+     /home/colonna_n/CODES/q-e-kcw-soc/tempdir/GaAs.save/charge-density
 
      Starting wfcs are   18 randomized atomic wfcs
 
@@ -441,39 +441,39 @@
      Davidson diagonalization with overlap
 
      Computing kpt #:     1  of     8
-     total cpu time spent up to now is        0.7 secs
+     total cpu time spent up to now is        0.5 secs
 
      Computing kpt #:     2  of     8
-     total cpu time spent up to now is        1.0 secs
+     total cpu time spent up to now is        0.7 secs
 
      Computing kpt #:     3  of     8
-     total cpu time spent up to now is        1.3 secs
+     total cpu time spent up to now is        0.9 secs
 
      Computing kpt #:     4  of     8
-     total cpu time spent up to now is        1.6 secs
+     total cpu time spent up to now is        1.1 secs
 
      Computing kpt #:     5  of     8
-     total cpu time spent up to now is        1.9 secs
+     total cpu time spent up to now is        1.4 secs
 
      Computing kpt #:     6  of     8
-     total cpu time spent up to now is        2.2 secs
+     total cpu time spent up to now is        1.6 secs
 
      Computing kpt #:     7  of     8
-     total cpu time spent up to now is        2.4 secs
+     total cpu time spent up to now is        1.8 secs
 
      Computing kpt #:     8  of     8
-     total cpu time spent up to now is        2.7 secs
+     total cpu time spent up to now is        2.0 secs
 
-     ethr =  1.43E-12,  avg # of iterations = 24.8
+     ethr =  1.43E-12,  avg # of iterations = 24.6
 
-     total cpu time spent up to now is        2.7 secs
+     total cpu time spent up to now is        2.0 secs
 
      End of band structure calculation
 
           k = 0.0000 0.0000 0.0000 (  2421 PWs)   bands (ev):
 
-   -26.5489 -26.5489 -26.5489 -26.5273 -26.5273  -6.0701  -6.0701  -6.0701
-    -5.9906  -5.9906  -3.8793   8.8616   8.8616   8.8616   9.3575  12.5948
+   -26.9687 -26.9687 -26.9687 -26.9464 -26.9464  -6.4792  -6.4792  -6.4792
+    -6.3988  -6.3988  -4.2505   8.5515   8.5515   8.5515   8.8051  12.2253
 
      occupation numbers 
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
@@ -481,8 +481,8 @@
 
           k = 0.3536 0.3536-0.3536 (  2392 PWs)   bands (ev):
 
-   -26.5320 -26.5320 -26.5241 -26.5222 -26.5222  -6.1379  -6.0450  -6.0450
-    -5.9852  -5.9852  -2.1154   2.2056   7.7151   7.7151   9.8531  13.5104
+   -26.9519 -26.9519 -26.9441 -26.9414 -26.9414  -6.5462  -6.4541  -6.4541
+    -6.3937  -6.3937  -2.4889   1.8290   7.3998   7.3998   9.3749  13.1444
 
      occupation numbers 
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
@@ -490,8 +490,8 @@
 
           k = 0.3536-0.3536 0.3536 (  2392 PWs)   bands (ev):
 
-   -26.5320 -26.5320 -26.5241 -26.5222 -26.5222  -6.1379  -6.0450  -6.0450
-    -5.9852  -5.9852  -2.1154   2.2056   7.7151   7.7151   9.8531  13.5104
+   -26.9519 -26.9519 -26.9441 -26.9414 -26.9414  -6.5462  -6.4541  -6.4541
+    -6.3937  -6.3937  -2.4889   1.8290   7.3998   7.3998   9.3749  13.1444
 
      occupation numbers 
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
@@ -499,8 +499,8 @@
 
           k = 0.7071 0.0000 0.0000 (  2402 PWs)   bands (ev):
 
-   -26.5396 -26.5382 -26.5382 -26.5282 -26.5188  -6.1738  -6.0181  -6.0181
-    -6.0160  -5.9760  -1.3737   2.0230   6.1746   6.1746  10.3206  10.5235
+   -26.9595 -26.9581 -26.9581 -26.9474 -26.9380  -6.5819  -6.4277  -6.4277
+    -6.4242  -6.3843  -1.7490   1.6418   5.8520   5.8520   9.8747  10.0941
 
      occupation numbers 
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
@@ -508,8 +508,8 @@
 
           k =-0.3536 0.3536 0.3536 (  2392 PWs)   bands (ev):
 
-   -26.5320 -26.5320 -26.5241 -26.5222 -26.5222  -6.1379  -6.0450  -6.0450
-    -5.9852  -5.9852  -2.1154   2.2056   7.7151   7.7151   9.8531  13.5104
+   -26.9519 -26.9519 -26.9441 -26.9414 -26.9414  -6.5462  -6.4541  -6.4541
+    -6.3937  -6.3937  -2.4889   1.8290   7.3998   7.3998   9.3749  13.1444
 
      occupation numbers 
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
@@ -517,8 +517,8 @@
 
           k = 0.0000 0.7071 0.0000 (  2402 PWs)   bands (ev):
 
-   -26.5396 -26.5382 -26.5382 -26.5282 -26.5188  -6.1738  -6.0181  -6.0181
-    -6.0160  -5.9760  -1.3737   2.0230   6.1746   6.1746  10.3206  10.5235
+   -26.9595 -26.9581 -26.9581 -26.9474 -26.9380  -6.5819  -6.4277  -6.4277
+    -6.4242  -6.3843  -1.7490   1.6418   5.8520   5.8520   9.8747  10.0941
 
      occupation numbers 
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
@@ -526,8 +526,8 @@
 
           k = 0.0000 0.0000 0.7071 (  2402 PWs)   bands (ev):
 
-   -26.5396 -26.5382 -26.5382 -26.5282 -26.5188  -6.1738  -6.0181  -6.0181
-    -6.0160  -5.9760  -1.3737   2.0230   6.1746   6.1746  10.3206  10.5235
+   -26.9595 -26.9581 -26.9581 -26.9474 -26.9380  -6.5819  -6.4277  -6.4277
+    -6.4242  -6.3843  -1.7490   1.6418   5.8520   5.8520   9.8747  10.0941
 
      occupation numbers 
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
@@ -535,65 +535,65 @@
 
           k = 0.3536 0.3536 0.3536 (  2392 PWs)   bands (ev):
 
-   -26.5320 -26.5320 -26.5241 -26.5222 -26.5222  -6.1379  -6.0450  -6.0450
-    -5.9852  -5.9852  -2.1154   2.2056   7.7151   7.7151   9.8531  13.5104
+   -26.9519 -26.9519 -26.9441 -26.9414 -26.9414  -6.5462  -6.4541  -6.4541
+    -6.3937  -6.3937  -2.4889   1.8290   7.3998   7.3998   9.3749  13.1444
 
      occupation numbers 
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
      1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   0.0000   0.0000
 
-     highest occupied, lowest unoccupied level (ev):     8.8616    9.3575
+     highest occupied, lowest unoccupied level (ev):     8.5515    8.8051
 
-     Writing all to output data dir /home/nicola/CODES/q-e-kcw/tempdir/GaAs.save/
-
-     init_run     :      0.29s CPU      0.29s WALL (       1 calls)
-     electrons    :      2.39s CPU      2.41s WALL (       1 calls)
+     Writing all to output data dir /home/colonna_n/CODES/q-e-kcw-soc/tempdir/GaAs.save/ :
+     XML data file, pseudopotentials, collected wavefunctions
+ 
+     init_run     :      0.13s CPU      0.14s WALL (       1 calls)
+     electrons    :      1.82s CPU      1.84s WALL (       1 calls)
 
      Called by init_run:
      wfcinit      :      0.00s CPU      0.00s WALL (       1 calls)
      wfcinit:atom :      0.00s CPU      0.00s WALL (       8 calls)
-     wfcinit:wfcr :      0.24s CPU      0.24s WALL (       8 calls)
-     potinit      :      0.01s CPU      0.01s WALL (       1 calls)
-     hinit0       :      0.27s CPU      0.27s WALL (       1 calls)
+     wfcinit:wfcr :      0.09s CPU      0.09s WALL (       8 calls)
+     potinit      :      0.00s CPU      0.00s WALL (       1 calls)
+     hinit0       :      0.12s CPU      0.12s WALL (       1 calls)
 
      Called by electrons:
-     c_bands      :      2.39s CPU      2.41s WALL (       1 calls)
-     v_of_rho     :      0.01s CPU      0.01s WALL (       1 calls)
+     c_bands      :      1.82s CPU      1.84s WALL (       1 calls)
+     v_of_rho     :      0.00s CPU      0.00s WALL (       1 calls)
      v_h          :      0.00s CPU      0.00s WALL (       1 calls)
-     v_xc         :      0.01s CPU      0.01s WALL (       1 calls)
+     v_xc         :      0.00s CPU      0.00s WALL (       1 calls)
 
      Called by c_bands:
-     init_us_2    :      0.00s CPU      0.00s WALL (       8 calls)
-     init_us_2:cp :      0.00s CPU      0.00s WALL (       8 calls)
-     cegterg      :      2.12s CPU      2.13s WALL (      16 calls)
+     init_us_2    :      0.00s CPU      0.01s WALL (       8 calls)
+     cegterg      :      1.68s CPU      1.70s WALL (      16 calls)
 
      Called by sum_band:
 
      Called by *egterg:
-     cdiaghg      :      0.03s CPU      0.03s WALL (     206 calls)
-     cegterg:over :      0.23s CPU      0.23s WALL (     198 calls)
-     cegterg:upda :      0.14s CPU      0.14s WALL (     198 calls)
-     cegterg:last :      0.26s CPU      0.26s WALL (     148 calls)
-     h_psi        :      1.65s CPU      1.66s WALL (     222 calls)
-     g_psi        :      0.01s CPU      0.01s WALL (     198 calls)
+     cdiaghg      :      0.05s CPU      0.05s WALL (     205 calls)
+     cegterg:over :      0.06s CPU      0.06s WALL (     197 calls)
+     cegterg:upda :      0.03s CPU      0.03s WALL (     197 calls)
+     cegterg:last :      0.05s CPU      0.05s WALL (     149 calls)
+     h_psi        :      1.54s CPU      1.56s WALL (     221 calls)
+     g_psi        :      0.01s CPU      0.01s WALL (     197 calls)
 
      Called by h_psi:
-     h_psi:calbec :      0.16s CPU      0.16s WALL (     222 calls)
-     vloc_psi     :      1.32s CPU      1.32s WALL (     222 calls)
-     add_vuspsi   :      0.17s CPU      0.17s WALL (     222 calls)
+     h_psi:calbec :      0.04s CPU      0.04s WALL (     221 calls)
+     vloc_psi     :      1.45s CPU      1.47s WALL (     221 calls)
+     add_vuspsi   :      0.04s CPU      0.04s WALL (     221 calls)
 
      General routines
-     calbec       :      0.16s CPU      0.16s WALL (     222 calls)
-     fft          :      0.17s CPU      0.18s WALL (      11 calls)
-     fftw         :      1.15s CPU      1.16s WALL (    5196 calls)
+     calbec       :      0.04s CPU      0.04s WALL (     221 calls)
+     fft          :      0.00s CPU      0.00s WALL (       4 calls)
+     fftw         :      1.20s CPU      1.21s WALL (    5220 calls)
      davcio       :      0.00s CPU      0.00s WALL (      16 calls)
-
+ 
      Parallel routines
+ 
+     PWSCF        :      2.01s CPU      2.05s WALL
 
-     PWSCF        :      2.72s CPU      2.74s WALL
-
-
-   This run was terminated on:  10:29: 6  12Oct2023            
+ 
+   This run was terminated on:  12:41:23  25Jul2024            
 
 =------------------------------------------------------------------------------=
    JOB DONE.

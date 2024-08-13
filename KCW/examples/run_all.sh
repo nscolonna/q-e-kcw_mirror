@@ -27,3 +27,18 @@ cd example04/
 ./compare.sh
 echo "DONE"
 cd $home 
+
+echo "Running example05"
+cd example05/
+./run_example
+./compare.sh
+echo "DONE"
+cd $home
+
+echo "Running example06"
+cd example06/
+./run_example
+./compare.sh
+echo "DONE"
+cd $home
+

@@ -1,5 +1,5 @@
 
-     Program PW2WANNIER v.7.2 starts on 11Oct2023 at 12: 5:44 
+     Program PW2WANNIER v.7.3.1 starts on 25Jul2024 at 12:38:56 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -13,18 +13,18 @@
      Parallel version (MPI), running on     1 processors
 
      MPI processes distributed on     1 nodes
-     24100 MiB available memory on the printing compute node when the environment starts
+     193395 MiB available memory on the printing compute node when the environment starts
  
  
      Reading nscf_save data
 
      Reading xml data from directory:
 
-     /home/colonna_n/CODES/q-e-kcw/tempdir/GaAs.save/
+     /home/colonna_n/CODES/q-e-kcw-soc/tempdir/GaAs.save/
 
      IMPORTANT: XC functional enforced from input :
-     Exchange-correlation= PBE
-                           (   1   4   3   4   0   0   0)
+     Exchange-correlation= PW
+                           (   1   4   0   0   0   0   0)
      Any further DFT definition will be discarded
      Please, verify this is what you really want
 
@@ -54,7 +54,7 @@
   - Number of wannier functions is ok (  5)
   - All guiding functions are given 
  
- Projections:
+  Projections:
     0.353553    1.060660    1.060660  2  1  1    1.000000
     0.353553    1.060660    1.060660  2  2  1    1.000000
     0.353553    1.060660    1.060660  2  3  1    1.000000
@@ -72,18 +72,16 @@
   *** Compute  A projections
   --------------------------
  
-  AMN: iknum =        8
+  Number of local k points =        8
        1       2       3       4       5       6       7       8
-
   AMN calculated
  
   ---------------
   *** Compute  M 
   ---------------
  
-  MMN: iknum =        8
+  Number of local k points =        8
        1       2       3       4       5       6       7       8
-
   MMN calculated
  
   -----------------------------------
@@ -112,14 +110,17 @@
   ------------
  
  
-     init_pw2wan  :      0.18s CPU      0.18s WALL (       1 calls)
-     compute_amn  :      0.85s CPU      0.86s WALL (       1 calls)
-     compute_mmn  :      0.13s CPU      0.13s WALL (       1 calls)
+     init_pw2wan  :      0.14s CPU      0.15s WALL (       1 calls)
+     compute_amn  :      0.90s CPU      0.91s WALL (       1 calls)
+     compute_mmn  :      0.13s CPU      0.14s WALL (       1 calls)
+
+     Internal routines:
+     compute_u_kb :      0.13s CPU      0.13s WALL (      64 calls)
  
-     PW2WANNIER   :      1.16s CPU      1.17s WALL
+     PW2WANNIER   :      1.16s CPU      1.20s WALL
 
  
-   This run was terminated on:  12: 5:45  11Oct2023            
+   This run was terminated on:  12:38:57  25Jul2024            
 
 =------------------------------------------------------------------------------=
    JOB DONE.

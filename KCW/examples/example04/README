@@ -22,7 +22,7 @@ not want the Wannierization to mix KS states too far in energy.
 
 The band structure is in GaAs.kcw_bands.dat.
 
-NB: this is a meaningless calculation as 
+NB: this is a miningless calculation as 
  i)  we use nspin = 1  
  ii) the screening coefficients are set to 1
 

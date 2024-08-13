@@ -831,8 +831,10 @@ MODULE io_kcw
                                       root_bgrp_id, my_bgrp_id
      USE clib_wrappers,        ONLY : f_mkdir_safe
      !
-     USE control_kcw,          ONLY : tmp_dir_kcw
-     USE control_kcw,          ONLY : num_wann, spin_component, evc0, iuwfc_wann
+     USE control_kcw,          ONLY : tmp_dir_kcw, nrho
+     USE control_kcw,          ONLY : num_wann, spin_component, evc0, iuwfc_wann, nkstot_eff
+     USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+
      !
      IMPLICIT NONE
      !
@@ -845,7 +847,6 @@ MODULE io_kcw
      CHARACTER(LEN=320)    :: filename
      CHARACTER(LEN=2), DIMENSION(2) :: updw = (/ 'up', 'dw' /)
      !
-     INTEGER :: ik_eff
      INTEGER :: lrwfc 
      !
      dirname = TRIM (tmp_dir_kcw) 
@@ -917,11 +918,10 @@ MODULE io_kcw
         !
         ! ... read wavefunctions - do not read if already in memory (nsk==1)
         !
-        lrwfc = num_wann * npwx 
-        ik_eff = ik-(spin_component-1)*nkstot/nspin
-        CALL get_buffer ( evc0, lrwfc, iuwfc_wann, ik_eff )
+        lrwfc = num_wann * npwx * npol
+        CALL get_buffer ( evc0, lrwfc, iuwfc_wann, ik)
         !
-        IF ( nspin == 2 ) THEN
+        IF ( nspin_mag == 2 ) THEN
            !
            ! ... LSDA: spin mapped to k-points, isk(ik) tracks up and down spin
            !
@@ -1060,6 +1060,7 @@ MODULE io_kcw
      USE io_base,              ONLY : read_wfc
      USE lsda_mod,             ONLY : nspin, isk, nspin
      USE control_kcw,          ONLY : num_wann
+     USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
      !
      IMPLICIT NONE
      !
@@ -1118,7 +1119,7 @@ MODULE io_kcw
           igk_l2g_kdip )
      DEALLOCATE ( igk_l2g )
      !
-     IF ( nspin == 2 ) THEN
+     IF ( nspin_mag == 2 ) THEN
         !
         ! ... LSDA: spin mapped to k-points, isk(ik) tracks up and down spin
         !
@@ -1172,6 +1173,7 @@ MODULE io_kcw
       !
       USE mp,                   ONLY : mp_sum, mp_bcast, mp_size, mp_rank
       USE mp_wave,              ONLY : mergewf, mergekg
+      USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
 #if defined (__HDF5)
       USE qeh5_base_module
 #endif
@@ -1224,9 +1226,9 @@ MODULE io_kcw
       ngm  = SIZE (rho)
       IF (ngm /= SIZE (mill, 2) .OR. ngm /= SIZE (ig_l2g, 1) ) &
          CALL errore('write_rhowann_g', 'inconsistent input dimensions', 1)
-      nspin= 1
+      nspin= 1 !We use it to write one component at the time
 #if defined(__HDF5)
-      IF ( nspin <=2) THEN
+      IF ( nspin_mag<=2) THEN
          datasets(1:2) = ["rhotot_g  ", "rhodiff_g "]
       ELSE
          datasets(1) =      "rhotot_g"
@@ -1390,6 +1392,10 @@ MODULE io_kcw
       USE mp,         ONLY : mp_size, mp_rank, mp_bcast
       USE mp_wave,    ONLY : splitwf
       USE gvect,      ONLY : ngm_g
+<<<<<<< HEAD
+=======
+      USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+>>>>>>> qef/develop
       !
 #if defined (__HDF5)
       USE qeh5_base_module

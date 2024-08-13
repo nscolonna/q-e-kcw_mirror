@@ -70,7 +70,7 @@
              | 675 Mass Ave, Cambridge, MA 02139, USA.           |
              |                                                   |
              +---------------------------------------------------+
-             |    Execution started on 11Oct2023 at 12:05:48     |
+             |    Execution started on 25Jul2024 at 12:39:01     |
              +---------------------------------------------------+
  
  ******************************************************************************
@@ -151,7 +151,7 @@
  |    From: L       0.500  0.500  0.500     To: W       0.500  0.250  0.750   |
  |    From: W       0.500  0.250  0.750     To: X       0.500  0.000  0.500   |
  *----------------------------------------------------------------------------*
- Time to read parameters        0.007 (sec)
+ Time to read parameters        0.003 (sec)
 
  *---------------------------------- K-MESH ----------------------------------*
  +----------------------------------------------------------------------------+
@@ -228,7 +228,7 @@
  |             4         0.555837    0.555837    0.555837                     |
  +----------------------------------------------------------------------------+
   
- Time to get kmesh              0.011 (sec)
+ Time to get kmesh              0.007 (sec)
  *============================================================================*
  |                              MEMORY ESTIMATE                               |
  |         Maximum RAM allocated during each phase of the calculation         |
@@ -240,9 +240,9 @@
  Starting a new Wannier90 calculation ...
 
 
- Reading overlaps from wann.mmn    :  Created on 11Oct2023 at 12: 5:48
+ Reading overlaps from wann.mmn    :  Created on 25Jul2024 at 12:39: 1
 
- Reading projections from wann.amn :  Created on 11Oct2023 at 12: 5:48
+ Reading projections from wann.amn :  Created on 25Jul2024 at 12:39: 0
 
  Time to read overlaps          0.001 (sec)
 
@@ -256,26 +256,26 @@
  
  ------------------------------------------------------------------------------
  Initial State
-  WF centre and spread    1  (  1.663464, -1.162536, -1.162536 )     1.58408471
-  WF centre and spread    2  (  1.663464, -1.663464, -1.663464 )     1.58408472
-  WF centre and spread    3  (  1.162536, -1.162536, -1.663464 )     1.58408473
-  WF centre and spread    4  (  1.162536, -1.663464, -1.162536 )     1.58408472
-  Sum of centres and spreads (  5.652000, -5.652000, -5.652000 )     6.33633889
+  WF centre and spread    1  (  1.661339, -1.164661, -1.164661 )     1.58955372
+  WF centre and spread    2  (  1.661339, -1.661339, -1.661339 )     1.58955372
+  WF centre and spread    3  (  1.164661, -1.164661, -1.661339 )     1.58955372
+  WF centre and spread    4  (  1.164661, -1.661339, -1.164661 )     1.58955371
+  Sum of centres and spreads (  5.652000, -5.652000, -5.652000 )     6.35821487
  
-      0     0.634E+01     0.0000000000        6.3363388866       0.00  <-- CONV
-        O_D=      0.0649605 O_OD=      2.1285265 O_TOT=      6.3363389 <-- SPRD
+      0     0.636E+01     0.0000000000        6.3582148704       0.00  <-- CONV
+        O_D=      0.0664723 O_OD=      2.1356263 O_TOT=      6.3582149 <-- SPRD
  ------------------------------------------------------------------------------
  Final State
-  WF centre and spread    1  (  1.663464, -1.162536, -1.162536 )     1.58408471
-  WF centre and spread    2  (  1.663464, -1.663464, -1.663464 )     1.58408472
-  WF centre and spread    3  (  1.162536, -1.162536, -1.663464 )     1.58408473
-  WF centre and spread    4  (  1.162536, -1.663464, -1.162536 )     1.58408472
-  Sum of centres and spreads (  5.652000, -5.652000, -5.652000 )     6.33633889
+  WF centre and spread    1  (  1.661339, -1.164661, -1.164661 )     1.58955372
+  WF centre and spread    2  (  1.661339, -1.661339, -1.661339 )     1.58955372
+  WF centre and spread    3  (  1.164661, -1.164661, -1.661339 )     1.58955372
+  WF centre and spread    4  (  1.164661, -1.661339, -1.164661 )     1.58955371
+  Sum of centres and spreads (  5.652000, -5.652000, -5.652000 )     6.35821487
  
-         Spreads (Ang^2)       Omega I      =     4.142851932
-        ================       Omega D      =     0.064960501
-                               Omega OD     =     2.128526453
-    Final Spread (Ang^2)       Omega Total  =     6.336338887
+         Spreads (Ang^2)       Omega I      =     4.156116332
+        ================       Omega D      =     0.066472253
+                               Omega OD     =     2.135626285
+    Final Spread (Ang^2)       Omega Total  =     6.358214870
  ------------------------------------------------------------------------------
 
  Wannier centres written to file wann_centres.xyz
@@ -290,21 +290,21 @@
  
  Calculating interpolated band-structure
  
- Time to calculate interpolated band structure       0.027 (sec)
+ Time to calculate interpolated band structure       0.013 (sec)
  
- Time for plotting              0.030 (sec)
- Total Execution Time           0.050 (sec)
+ Time for plotting              0.015 (sec)
+ Total Execution Time           0.026 (sec)
 
  *===========================================================================*
  |                             TIMING INFORMATION                            |
  *===========================================================================*
  |    Tag                                                Ncalls      Time (s)|
  |---------------------------------------------------------------------------|
- |kmesh: get                                        :         1         0.011|
+ |kmesh: get                                        :         1         0.007|
  |overlap: allocate                                 :         1         0.000|
  |overlap: read                                     :         1         0.001|
  |wann: main                                        :         1         0.000|
- |plot: main                                        :         1         0.030|
+ |plot: main                                        :         1         0.015|
  *---------------------------------------------------------------------------*
  
  All done: wannier90 exiting

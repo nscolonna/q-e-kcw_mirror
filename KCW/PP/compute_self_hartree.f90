@@ -35,7 +35,7 @@ PROGRAM compute_self_hartree
   COMPLEX(DP) :: sh_i
   INTEGER :: i
   CHARACTER(LEN=256), EXTERNAL :: trimcheck
-  INTEGER :: ios
+  INTEGER :: ios, nkstot_
   CHARACTER (LEN=256) :: outdir
   LOGICAL, EXTERNAL  :: imatches
   ! 
@@ -115,7 +115,15 @@ PROGRAM compute_self_hartree
   WRITE( stdout, '(5X,"INFO: Reading pwscf data")')
   CALL read_file ( )
   !
-  IF ( mp1*mp2*mp3 /= nkstot/nspin ) &
+  IF (nspin == 4) THEN
+    nkstot_ = nkstot
+    nrho = 4
+  ELSE
+    nkstot_ = nkstot/nspin
+    nrho = 1
+  ENDIF
+  !
+  IF ( mp1*mp2*mp3 /= nkstot_ ) &
      CALL errore('compute_self_hartree', ' WRONG number of k points from input, check mp1, mp2, mp3', 1)
   !
   CALL sh_setup () 

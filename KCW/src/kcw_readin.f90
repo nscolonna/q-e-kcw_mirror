@@ -25,7 +25,7 @@ SUBROUTINE kcw_readin()
   USE control_lr,         ONLY : lgamma, lrpa
   USE qpoint,             ONLY : nksq
   USE io_files,           ONLY : tmp_dir, prefix, check_tempdir
-  USE noncollin_module,   ONLY : noncolin
+  USE noncollin_module,   ONLY : noncolin,domag
   USE read_cards_module,  ONLY : read_cards
   USE io_global,          ONLY : ionode
   USE mp_global,          ONLY : intra_image_comm 
@@ -38,6 +38,7 @@ SUBROUTINE kcw_readin()
   USE martyna_tuckerman,  ONLY : do_comp_mt
   USE exx_base,           ONLY : x_gamma_extrapolation
   USE mp_pools,           ONLY : npool
+  USE xc_lib,             ONLY : xclib_dft_is
   !
   IMPLICIT NONE
   !
@@ -60,7 +61,7 @@ SUBROUTINE kcw_readin()
   NAMELIST / WANNIER /  num_wann_occ, num_wann_emp, have_empty, has_disentangle, &
                         seedname, check_ks, l_unique_manifold
   !
-  NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread
+  NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread, alpha_mix
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
                         write_hr, l_alpha_corr, on_site_only
@@ -225,11 +226,13 @@ SUBROUTINE kcw_readin()
   CALL check_tempdir ( tmp_dir_kcw, exst, parallelfs )
   tmp_dir_kcwq=tmp_dir_kcw
   !
+  !
   ! ... Check all namelist variables
   !
   IF (kcw_iverbosity .gt. 1) iverbosity = 1
   !
   IF (spin_component /= 1 .AND. spin_component /= 2) & 
+     ! TO CHANGE
      CALL errore ('kcw_readin', ' spin_component either 1 (UP) or 2 (DOWN) ', 1)
   !
   IF (kcw_at_ks .AND. read_unitary_matrix) THEN 
@@ -287,7 +290,14 @@ SUBROUTINE kcw_readin()
   IF ( lgauss .OR. ltetra ) CALL errore( 'kcw_readin', &
       'KC corrections only for insulators!', 1 )
   !
-  IF ( mp1*mp2*mp3 /= nkstot/nspin ) &
+      IF (nspin == 4) THEN
+         nkstot_eff = nkstot
+         nrho = 4
+      ELSE
+         nkstot_eff = nkstot/nspin
+         nrho = 1
+      ENDIF 
+  IF ( mp1*mp2*mp3 /= nkstot_eff ) &
      CALL errore('kcw_readin', ' WRONG number of k points from input, check mp1, mp2, mp3', 1)
   !
   IF (gamma_only) CALL errore('kcw_readin',&
@@ -296,12 +306,21 @@ SUBROUTINE kcw_readin()
   IF (okpaw.or.okvan) CALL errore('kcw_readin',&
      'The KCW code with US or PAW is not available yet',1)
   !
-  IF (noncolin) CALL errore('kcw_readin',&
-   'The KCW code with non colliner spin is not available yet',1)
+  IF (noncolin) THEN 
+   CALL infomsg('kcw_readin','Non-collinear KCW calculation.') 
+   IF (xclib_dft_is('gradient')) &
+       call errore('kcw_readin', 'Non-collinear KCW calculation &
+                    does not support GGA', 1 )
+   IF (xclib_dft_is('meta')) &
+       call errore('kcw_readin', 'Non-collinear KCW calculation &
+                    does not support MGGA', 1 )
+  END IF 
   !
-  IF ( nspin == 1 ) THEN
-     WRITE(stdout, '(/, 5X, "WARNING: nspin=1. A meaningfull KC requires nspin=2 ALWAYS (even for spin-unpolarized systems)")')
-     WRITE(stdout, '(   5X, "WARNING: use nspin=1 only if you know what you are doing")') 
+  IF ( nspin == 1 .OR. (nspin==4 .AND. .NOT. domag) ) THEN   !This should be equivalent to nspin_mag==1
+     WRITE(stdout, '(/, 5X, "WARNING: !!! NON-MAGNETIC setup !!!")')
+     WRITE(stdout, '(   5X, "WARNING: A meaningfull KC requires to ALWAYS account for the spin")')
+     WRITE(stdout, '(   5X, "WARNING: degrees of freedom (even for non-magnetic systems")')
+     WRITE(stdout, '(   5X, "WARNING: use a non-magnetic setup only if you know what you are doing")') 
   ENDIF
   !
   IF (l_vcut .AND. do_comp_mt ) THEN

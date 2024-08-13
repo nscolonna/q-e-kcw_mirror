@@ -21,8 +21,8 @@ subroutine sh_setup
   USE gvecs,             ONLY : ngms
   USE control_flags,     ONLY : io_level, gamma_only
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer
-  USE control_kcw,       ONLY : iurho_wann, kcw_iverbosity, x_q, lgamma_iq, io_sp, io_real_space, &
-                                num_wann, nqstot, occ_mat, tmp_dir_kcw, tmp_dir_kcwq
+  USE control_kcw,       ONLY : iurho_wann, kcw_iverbosity, x_q, lgamma_iq, nrho, &
+                                num_wann, nqstot, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, io_sp, io_real_space
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : xk, nkstot
   USE cell_base,         ONLY : at, omega !, bg
@@ -38,7 +38,7 @@ subroutine sh_setup
   !
   implicit none
   !
-  integer :: i
+  integer :: i, ip
   ! counters
   !
   INTEGER   :: lrrho, iun_qlist
@@ -53,7 +53,7 @@ subroutine sh_setup
   REAL(DP) :: xq(3)
   ! the q-point coordinatew
   !
-  COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
+  COMPLEX(DP), ALLOCATABLE :: rhowann(:,:,:), rhowann_aux(:)
   COMPLEX(DP), ALLOCATABLE :: rhog(:)
   ! the periodic part of the wannier orbital density
   !
@@ -65,11 +65,11 @@ subroutine sh_setup
   !
   iurho_wann = 22
   io_level = 1
-  lrrho=num_wann*dffts%nnr
+  lrrho=num_wann*dffts%nnr*nrho
   CALL open_buffer ( iurho_wann, 'rho_wann', lrrho, io_level, exst )
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WF rho, OPENED")')
   !
-  ALLOCATE (rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
+  ALLOCATE (rhowann ( dffts%nnr, num_wann, nrho), rhowann_aux(dffts%nnr) )
   ALLOCATE (rhog ( ngms) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   !
@@ -114,28 +114,33 @@ subroutine sh_setup
     DO i = 1, num_wann
       !
       IF ( .NOT. io_real_space) THEN
-        !        
-        file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(i))
-        CALL read_rhowann_g( file_base, &
-             root_bgrp, intra_bgrp_comm, &
-             ig_l2g, 1, rhog(:), gamma_only )
-        rhowann_aux=(0.d0,0.d0)
-        rhowann_aux(dffts%nl(:)) = rhog(:)
-        CALL invfft ('Rho', rhowann_aux, dffts)
-        rhowann(:,i) = rhowann_aux(:)*omega
+        !
+        DO ip = 1, nrho        
+          file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char((i-1)*nrho+ip))
+          CALL read_rhowann_g( file_base, &
+               root_bgrp, intra_bgrp_comm, &
+               ig_l2g, 1, rhog(:), gamma_only )
+          rhowann_aux=(0.d0,0.d0)
+          rhowann_aux(dffts%nl(:)) = rhog(:)
+          CALL invfft ('Rho', rhowann_aux, dffts)
+          rhowann(:,i,ip) = rhowann_aux(:)*omega
+        ENDDO
         !
       ELSE 
         !
-        file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-        CALL read_rhowann( file_base, dffts, rhowann_aux )
-        rhowann(:,i) = rhowann_aux(:)
+        DO ip=1,nrho
+          file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char((i-1)*nrho+ip))
+          CALL read_rhowann( file_base, dffts, rhowann_aux )
+          rhowann(:,i,ip) = rhowann_aux(:)
+        ENDDO  
         !
       ENDIF
+      !
     ENDDO
     !
     ! ... Save the rho_q on a direct access file
     !
-    lrrho=num_wann*dffts%nnr
+    lrrho=num_wann * dffts%nnr * nrho
     CALL save_buffer (rhowann, lrrho, iurho_wann, iq)
     !
   ENDDO
