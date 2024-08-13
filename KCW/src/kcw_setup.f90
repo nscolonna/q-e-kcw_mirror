@@ -325,8 +325,7 @@ subroutine kcw_setup
   !
   ! Print on output the self-Hatree
   CALL mp_sum (sh, intra_bgrp_comm)
-
-
+  !
   OPEN (128, file = TRIM(tmp_dir_kcw)//'sh.txt')
   WRITE(stdout,'(5X, "INFO: Orbital Self-Hartree (SH)")') 
   DO i = 1, num_wann
@@ -401,6 +400,9 @@ subroutine kcw_setup
         sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:) )*wq_ibz(iq_ibz, i)*omega
       END DO!iwann
     END DO!iq
+
+    ! Print on output the self-Hatree
+    CALL mp_sum (sh, intra_bgrp_comm)
     !
     WRITE(stdout,'(5X, "INFO: Orbital Self-Hartree (SH)")') 
     DO i = 1, num_wann
