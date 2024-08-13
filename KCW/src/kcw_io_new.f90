@@ -1392,10 +1392,7 @@ MODULE io_kcw
       USE mp,         ONLY : mp_size, mp_rank, mp_bcast
       USE mp_wave,    ONLY : splitwf
       USE gvect,      ONLY : ngm_g
-<<<<<<< HEAD
-=======
       USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
->>>>>>> qef/develop
       !
 #if defined (__HDF5)
       USE qeh5_base_module
