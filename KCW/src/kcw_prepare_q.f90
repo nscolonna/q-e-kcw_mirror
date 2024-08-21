@@ -65,6 +65,7 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   !IF (nrot .gt. 1) newgrid = reset_grid ( 2, 2, 2, 0, 0, 0  )
   !modenum = 0
   setup_pw = (.NOT.lgamma)
+  IF(irr_bz) setup_pw = .TRUE.
   !
   ! Only the occupied bands neeed to be computed. 
   ! In general we might have run PWSCF with a huge number of Empty states 
@@ -92,7 +93,6 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
     !
   ENDIF
   !
-  IF(irr_bz) setup_pw = .TRUE.
   do_band=.TRUE.
   !
   xq_ = x_q(:,iq)
