@@ -115,7 +115,6 @@ SUBROUTINE screen_coeff ()
   nsym_old = nsym
   !
   !IF(irr_bz) CALL read_qlist_ibz()
-
   DO iq = iq_start, nqs
       !! For each q in the mesh 
     !
@@ -280,7 +279,6 @@ SUBROUTINE screen_coeff ()
     !
   ENDDO ! qpoints
   !
-  CALL kcw_deallocate_symmetry_arrays()
   !
   WRITE(stdout,'(/)')
   WRITE( stdout, '(5X,"INFO: LR CALCULATION ... DONE")')
@@ -326,6 +324,7 @@ SUBROUTINE screen_coeff ()
   !! This is TEMPORARY to check the rho_q(r) are correctly computed 
   rho_c = ZERO
   wann_c = ZERO
+  !
   DO iq = 1, nqs 
     !
     tmp_dir = tmp_dir_save  ! the periodic part are written on the original outdir 
@@ -342,11 +341,18 @@ SUBROUTINE screen_coeff ()
     IF (kcw_iverbosity .gt. 1) WRITE(stdout,'(8X, "INFO: iq = ", i5, 3x, "Structure Factor S(q) [Re, Im] = ", 2f12.8,/)') & 
                                                                 iq, struct_fact
     !
-     DO iwann=iorb_start, iorb_end
-       !
-       wann_c(:,iwann) = wann_c(:,iwann) + phase(:)*rhowann(:,iwann)*weight(iq)
-       rho_c(:,iwann)  = rho_c(:,iwann)  + phase(:)*rhowann(:,iwann)*struct_fact*weight(iq)
-       !
+    DO iwann=iorb_start, iorb_end
+      !
+      IF(irr_bz) THEN
+        IF( fbz2ibz(iq, iwann) .eq. -1 ) CYCLE
+        weight(iq) = wq_ibz(fbz2ibz(iq, iwann), iwann)
+      ELSE 
+         weight(iq) = 1.D0/nqs  !*nspin ! No SYMM  ! CHECK nspin??? 
+      END IF
+      !
+      wann_c(:,iwann) = wann_c(:,iwann) + phase(:)*rhowann(:,iwann)*weight(iq)
+      rho_c(:,iwann)  = rho_c(:,iwann)  + phase(:)*rhowann(:,iwann)*struct_fact*weight(iq)
+      !
     ENDDO
     !
   ENDDO ! qpoints
@@ -365,8 +371,8 @@ SUBROUTINE screen_coeff ()
     ENDDO
   ENDIF
   !
-
-
+  CALL kcw_deallocate_symmetry_arrays()
+  !
 9010 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, & 
                "rPi_q_RS =", 2f15.8, 3x, "uPi_q =", 2f15.8, 3x, "Self Hartree =", 2f15.8)
 9011 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, "uPi_q =", & 
