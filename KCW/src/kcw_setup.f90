@@ -84,7 +84,7 @@ subroutine kcw_setup
   LOGICAL   :: exst, exst_mem
   INTEGER :: iq, nqs
   REAL(DP) :: xq(3)
-  COMPLEX(DP), ALLOCATABLE :: rhowann(:,:), rhowann_aux(:)
+  COMPLEX(DP), ALLOCATABLE :: rhowann(:,:,:), rhowann_aux(:)
   CHARACTER (LEN=256) :: filename, file_base
   CHARACTER (LEN=6), EXTERNAL :: int_to_char
   !
@@ -160,7 +160,7 @@ subroutine kcw_setup
   ! 
   !  ... Allocate relevant quantities ...
   !
-  ALLOCATE (rhowann ( dffts%nnr, num_wann), rhowann_aux(dffts%nnr) )
+  ALLOCATE (rhowann ( dffts%nnr, nkstot/nspin, num_wann), rhowann_aux(dffts%nnr) )
   ALLOCATE ( rhowann_g (ngms, num_wann) )
   ALLOCATE ( evc0(npwx, num_wann) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
@@ -233,6 +233,10 @@ subroutine kcw_setup
   WRITE( stdout, '(/, 5X,"INFO: Compute Wannier-orbital Densities ...")')
   !
   call setup_coulomb()
+  !
+  rhowann(:,:,:)=ZERO
+  !! Initialize the periodic part of the wannier orbtal density at this q
+  !
   DO iq = 1, nqs
     !! For each q in the mesh 
     !
@@ -253,10 +257,8 @@ subroutine kcw_setup
     ! The results are stored in the global variable map_ikq and shift_1bz (used inside rho_of_q) 
     ! can (should) be moved inside rho_of_q ( )
     !
-    rhowann(:,:)=ZERO
-    !! Initialize the periodic part of the wannier orbtal density at this q
     !
-    CALL rho_of_q (rhowann, ngk_all, igk_k_all)
+    CALL rho_of_q (rhowann(:,iq,:), ngk_all, igk_k_all)
     ! Compute the peridic part rho_q(r) of the wannier density rho(r)
     ! rho(r)   = \sum_q exp[iqr]rho_q(r)
     !
@@ -273,7 +275,7 @@ subroutine kcw_setup
       vh_rhog(:)      = CMPLX(0.D0,0.D0,kind=DP)
       rhor(:)         = CMPLX(0.D0,0.D0,kind=DP)
       !
-      rhor(:) = rhowann(:,i) 
+      rhor(:) = rhowann(:,iq,i) 
       !! The periodic part of the orbital desity in real space
       !
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
@@ -314,7 +316,7 @@ subroutine kcw_setup
         !
       ELSE  
         !
-        rhowann_aux (:) = rhowann(:,i)
+        rhowann_aux (:) = rhowann(:,iq, i)
         file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
         CALL write_rhowann( file_base, rhowann_aux, dffts, ionode, inter_bgrp_comm )
         !
@@ -342,7 +344,7 @@ subroutine kcw_setup
   !
   IF(irr_bz) THEN
     !
-    CALL symmetries_of_wannier_function()
+    CALL symmetries_of_wannier_function(rhowann)
     !
     ! Define IBZ for every wannier function
     !
@@ -358,30 +360,6 @@ subroutine kcw_setup
         !
         IF( fbz2ibz(iq, i) .eq. -1 ) CYCLE
         iq_ibz = fbz2ibz(iq, i)
-        !
-        ! read orbital density in r space for current q point
-        !
-        tmp_dir_kcwq= TRIM (tmp_dir_kcw) //'q' &
-        & // TRIM(int_to_char(iq))//'/'
-        !
-        IF ( .NOT. io_real_space ) THEN 
-          !
-          file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(i))
-          CALL read_rhowann_g( file_base, &
-               root_bgrp, intra_bgrp_comm, &
-               ig_l2g, 1, rhog(:), .FALSE., gamma_only )
-          rhowann_aux=(0.d0,0.d0)
-          rhowann_aux(dffts%nl(:)) = rhog(:)
-          CALL invfft ('Rho', rhowann_aux, dffts)
-          rhowann(:, i) = rhowann_aux(:)*omega
-        ELSE 
-          file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(i))
-          CALL read_rhowann( file_base, dffts, rhowann_aux )
-          rhowann(:, i) = rhowann_aux(:)
-        ENDIF
-        !
-        ! end of read orbital density
-        !
         ! 
         lrpa_save=lrpa
         lrpa = .true.
@@ -391,7 +369,7 @@ subroutine kcw_setup
         vh_rhog(:)      = CMPLX(0.D0,0.D0,kind=DP)
         rhor(:)         = CMPLX(0.D0,0.D0,kind=DP)
         !
-        rhor(:) = rhowann(:,i) 
+        rhor(:) = rhowann(:,iq, i) 
         !! The periodic part of the orbital desity in real space
         !
         CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )

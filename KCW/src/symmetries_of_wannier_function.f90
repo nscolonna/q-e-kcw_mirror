@@ -1,7 +1,7 @@
 !
 !Giovanni Cistaro
 !
-SUBROUTINE symmetries_of_wannier_function()
+SUBROUTINE symmetries_of_wannier_function(rhowann)
 ! For all symmetry operations, we check if the following equation
 ! is satisfied:
 !        \rho^{0n}_{Rq}(r) = \rho^{0n}_{q}(R^{-1}.r-f) e^{-iqf}
@@ -36,7 +36,7 @@ SUBROUTINE symmetries_of_wannier_function()
   COMPLEX(DP)              ::IMAG
   INTEGER                  :: iq, iwann, isym, ir, iq_, ig
   INTEGER                  :: iRq
-  COMPLEX(DP), ALLOCATABLE :: rhowann(:,:,:)
+  COMPLEX(DP), INTENT(INOUT)  :: rhowann(dffts%nnr, nkstot/nspin, num_wann)
   COMPLEX(DP), ALLOCATABLE :: rhowann_aux(:)
   COMPLEX(DP), ALLOCATABLE :: rho_rotated(:)
   COMPLEX(DP), ALLOCATABLE :: rhog(:)
@@ -56,7 +56,6 @@ SUBROUTINE symmetries_of_wannier_function()
   !
   IMAG = CMPLX(0.D0, 1.D0, kind=DP)
   ALLOCATE ( rhog (ngms) )
-  ALLOCATE (rhowann ( dffts%nnr, nkstot/nspin, num_wann) )
   ALLOCATE ( rhowann_aux(dffts%nnr) )
   ALLOCATE ( rho_rotated(dffts%nnr) )
   ALLOCATE( phase (dffts%nnr) )
@@ -99,44 +98,6 @@ SUBROUTINE symmetries_of_wannier_function()
   CALL kcw_set_symm( dffts%nr1,  dffts%nr2,  dffts%nr3, &
   dffts%nr1x, dffts%nr2x, dffts%nr3x )  
   nsym_w = 0
-  !
-  ! read all the wannier densities for all the q. store it in rhowann
-  DO iq = 1, nqstot
-    !IF ( lsda .AND. isk(iq_) /= spin_component) CYCLE
-    !iq = iq_-(spin_component-1)*nkstot/nspin
-    !
-    !name of the folder with q point iq
-    !
-    tmp_dir_kcwq= TRIM (tmp_dir_kcw) // 'q' &
-        & // TRIM(int_to_char(iq))//'/'
-    !
-    DO iwann=1, num_wann
-      !
-      !read density rhowann from file, store it in rho_iwann
-      !
-      IF ( .NOT. io_real_space ) THEN 
-        !
-        file_base=TRIM(tmp_dir_kcwq)//'rhowann_g_iwann_'//TRIM(int_to_char(iwann))
-        CALL read_rhowann_g( file_base, &
-             root_bgrp, intra_bgrp_comm, &
-             ig_l2g, 1, rhog(:), .FALSE., gamma_only )
-        rhowann_aux=(0.d0,0.d0)
-        rhowann_aux(dffts%nl(:)) = rhog(:)
-        CALL invfft ('Rho', rhowann_aux, dffts)
-        rhowann(:,iq, iwann) = rhowann_aux(:)*omega
-        !
-      ELSE 
-        !
-        file_base=TRIM(tmp_dir_kcwq)//'rhowann_iwann_'//TRIM(int_to_char(iwann))
-        CALL read_rhowann( file_base, dffts, rhowann_aux )
-        rhowann(:,iq, iwann) = rhowann_aux(:)
-        !
-      ENDIF
-      !
-      !end of storing rhowann
-      !
-    END DO!iwann
-  END DO !iq
   !
   ! check which symmetries are satisfied by rhowann(:,:, iwann)
   !
@@ -192,6 +153,7 @@ SUBROUTINE symmetries_of_wannier_function()
       END DO!isym
     END DO!iq
     WRITE(stdout,'(/, 13X, "TOTAL NUMBER OF RESPECTED SYMMETRIES = ", I5)') nsym_w(iwann)
+    !
   END DO !iwann 
   !
   CALL stop_clock ( 'check_symm' )
