@@ -129,7 +129,6 @@ SUBROUTINE screen_coeff ()
     ! ... Retrive the rho_wann_q(r) from buffer in REAL space
     !
     IF (kcw_iverbosity .gt. -1 ) WRITE(stdout,'(8X, "INFO: rhowan_q(r) RETRIEVED"/)') 
-    ALLOCATE ( rhog (ngms) , delta_vg(ngms,nspin), vh_rhog(ngms), drhog_scf (ngms, nspin), delta_vg_(ngms,nspin) )
     !
     ! The NSCF can be run only once for each qpoint if we are not using symmeties
     ! If using symmetry this nneds to be done inside the wannier loop as each wannier 
@@ -144,8 +143,9 @@ SUBROUTINE screen_coeff ()
        IF (kcw_iverbosity .gt. -1 ) WRITE(stdout,'(8X, "INFO: kcw_q initialization DONE",/)')
     ENDIF
     !
-    IF ( lgamma .AND. .NOT. l_unique_manifold) CALL check_density (rhowann) 
+    ALLOCATE ( rhog (ngms) , delta_vg(ngms,nspin), vh_rhog(ngms), drhog_scf (ngms, nspin), delta_vg_(ngms,nspin) )
     !
+    IF ( lgamma .AND. .NOT. l_unique_manifold) CALL check_density (rhowann) 
     !
     DO iwann = iorb_start, iorb_end  ! for each wannier, that is actually the perturbation
       !
