@@ -124,7 +124,6 @@ SUBROUTINE symmetries_of_wannier_function(rhowann)
         !
         !apply shift
         !
-        WRITE(*,*) "iq = ", iq, "x_q_cryst", x_q_cryst, tpi
         DO ig = 1, ngms
           x_qG_cryst(:) = g(:,ig)
           CALL cryst_to_cart(1, x_qG_cryst, at, -1)
