@@ -200,7 +200,6 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
    ! NB: If nlcc=.true. we need to add here its contribution.
    ! grho contains already the core charge
    !
-   WRITE(stdout,*) "NICOLA DeltaV before CG", delta_vr(1:3,1)
    IF (nlcc_any) rho%of_r(:, 1) = rho%of_r(:, 1) + rho_core (:)
    IF ( xclib_dft_is('gradient') ) THEN
       IF (nspin_mag == 4) THEN 
@@ -212,10 +211,6 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
          rhor_ = CMPLX(0.D0,0.D0,kind=DP)
          rhor_(:,spin_component) = rhor(:,1)/omega
       ENDIF 
-      !WRITE(*,*) "NICOLA rhor_(1:3,1)", rhor_(1:3,1)
-      !WRITE(*,*) "NICOLA rhor_(1:3,2)", rhor_(1:3,2)
-      !WRITE(*,*) "NICOLA nspin_mag =", nspin_mag
-      !WRITE(*,*) "NICOLA nspin_gga =", nspin_gga
       IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8x, "INFO: ADDING GC to DeltaV_bare",/)')
       CALL dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, &
                      dvxc_sr, dvxc_ss, dvxc_s, xq, rhor_, &
@@ -225,7 +220,6 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
                      nspin_mag, nspin_gga, g, delta_vr_)
       DEALLOCATE (rhor_)
    ENDIF
-   WRITE(*,*) "NICOLA DeltaV AFTER CG", delta_vr(1:3,1)
    !
   ENDIF
 
