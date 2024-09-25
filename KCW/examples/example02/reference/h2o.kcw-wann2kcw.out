@@ -19,11 +19,11 @@
         A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
      =--------------------------------------------------------------------------------=
 
-     Program KCW v.7.3.1 starts on 25Sep2024 at 15:17:15 
-        Git branch: develop
-        Last git commit: bdd82480539e9b5a8a2317b314f3e3ce005b4fba-dirty
-        Last git commit date: Sat Sep 21 21:24:12 2024 +0000
-        Last git commit subject: Merge branch 'XClib_some_updates' into 'develop'
+     Program KCW v.7.3.1 starts on 25Sep2024 at 16:46:45 
+        Git branch: GGA_fix
+        Last git commit: 1aac49f32ae53a8498fd9ab9a081fc1fc651790f-dirty
+        Last git commit date: Wed Sep 25 16:37:37 2024 +0200
+        Last git commit subject: Merge branch 'develop' of gitlab.com:QEF/q-e into 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -34,11 +34,11 @@
      in publications or presentations arising from this work. More details at
      http://www.quantum-espresso.org/quote
 
-     Parallel version (MPI), running on     4 processors
+     Parallel version (MPI), running on     8 processors
 
      MPI processes distributed on     1 nodes
-     R & G space division:  proc/nbgrp/npool/nimage =       4
-     204202 MiB available memory on the printing compute node when the environment starts
+     R & G space division:  proc/nbgrp/npool/nimage =       8
+     202987 MiB available memory on the printing compute node when the environment starts
  
 
      KCW INPUT SUMMARY 
@@ -78,8 +78,8 @@
      Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
-     Min         975     975    244                44983    44983    5620
-     Max         977     977    245                44984    44984    5623
+     Min         487     487    122                22491    22491    2810
+     Max         489     489    123                22492    22492    2813
      Sum        3905    3905    979               179933   179933   22489
  
      Using Slab Decomposition
@@ -149,49 +149,49 @@
      INFO: Orbital Self-Hartree (SH)
      orb     1     SH   0.600281
      orb     2     SH   0.499881
-     orb     3     SH   0.550455
+     orb     3     SH   0.550454
      orb     4     SH   0.549344
-     orb     5     SH   0.014044
-     orb     6     SH   0.015115
-     orb     7     SH   0.012834
-     orb     8     SH   0.011445
+     orb     5     SH   0.014039
+     orb     6     SH   0.015119
+     orb     7     SH   0.012770
+     orb     8     SH   0.011442
 
      INFO: PREPARING THE KCW CALCULATION ... DONE
 
 
  
-     KCW          :      0.67s CPU      0.79s WALL
+     KCW          :      0.42s CPU      0.50s WALL
 
      INITIALIZATION: 
      map          :      0.00s CPU      0.00s WALL (       1 calls)
-     rho_of_q     :      0.04s CPU      0.04s WALL (       1 calls)
+     rho_of_q     :      0.02s CPU      0.02s WALL (       1 calls)
  
-     init_vloc    :      0.04s CPU      0.05s WALL (       1 calls)
+     init_vloc    :      0.02s CPU      0.03s WALL (       1 calls)
      init_us_1    :      0.00s CPU      0.00s WALL (       1 calls)
  
  
  
  
  
-     h_psi        :      0.01s CPU      0.02s WALL (       1 calls)
+     h_psi        :      0.01s CPU      0.01s WALL (       1 calls)
  
-     h_psi        :      0.01s CPU      0.02s WALL (       1 calls)
+     h_psi        :      0.01s CPU      0.01s WALL (       1 calls)
      add_vuspsi   :      0.00s CPU      0.00s WALL (       1 calls)
  
  
  
       General routines
      calbec       :      0.00s CPU      0.00s WALL (       1 calls)
-     fft          :      0.05s CPU      0.06s WALL (      20 calls)
-     ffts         :      0.07s CPU      0.07s WALL (      56 calls)
-     fftw         :      0.02s CPU      0.02s WALL (      32 calls)
+     fft          :      0.02s CPU      0.04s WALL (      20 calls)
+     ffts         :      0.03s CPU      0.03s WALL (      56 calls)
+     fftw         :      0.01s CPU      0.01s WALL (      32 calls)
      davcio       :      0.00s CPU      0.00s WALL (       9 calls)
  
  
-     KCW          :      0.68s CPU      0.79s WALL
+     KCW          :      0.42s CPU      0.51s WALL
 
  
-   This run was terminated on:  15:17:16  25Sep2024            
+   This run was terminated on:  16:46:45  25Sep2024            
 
 =------------------------------------------------------------------------------=
    JOB DONE.

@@ -19,11 +19,11 @@
         A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
      =--------------------------------------------------------------------------------=
 
-     Program KCW v.7.3.1 starts on 25Sep2024 at 15:18: 1 
-        Git branch: develop
-        Last git commit: bdd82480539e9b5a8a2317b314f3e3ce005b4fba-dirty
-        Last git commit date: Sat Sep 21 21:24:12 2024 +0000
-        Last git commit subject: Merge branch 'XClib_some_updates' into 'develop'
+     Program KCW v.7.3.1 starts on 25Sep2024 at 16:47:12 
+        Git branch: GGA_fix
+        Last git commit: 1aac49f32ae53a8498fd9ab9a081fc1fc651790f-dirty
+        Last git commit date: Wed Sep 25 16:37:37 2024 +0200
+        Last git commit subject: Merge branch 'develop' of gitlab.com:QEF/q-e into 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -34,11 +34,11 @@
      in publications or presentations arising from this work. More details at
      http://www.quantum-espresso.org/quote
 
-     Parallel version (MPI), running on     4 processors
+     Parallel version (MPI), running on     8 processors
 
      MPI processes distributed on     1 nodes
-     R & G space division:  proc/nbgrp/npool/nimage =       4
-     204153 MiB available memory on the printing compute node when the environment starts
+     R & G space division:  proc/nbgrp/npool/nimage =       8
+     202923 MiB available memory on the printing compute node when the environment starts
  
 
      KCW INPUT SUMMARY 
@@ -88,8 +88,8 @@
      Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
-     Min         975     975    244                44983    44983    5620
-     Max         977     977    245                44984    44984    5623
+     Min         487     487    122                22491    22491    2810
+     Max         489     489    123                22492    22492    2813
      Sum        3905    3905    979               179933   179933   22489
  
      Using Slab Decomposition
@@ -103,14 +103,14 @@
      READING SCREENING PARAMETERS
 
      INFO: alphas read from:/home/colonna_n/CODES/q-e-kcw/tempdir/kcw/h2o.alpha.dat                                                                                                                                                                                                         
-     iwann =     1   alpha =      0.63400996
-     iwann =     2   alpha =      0.70835215
-     iwann =     3   alpha =      0.64209712
-     iwann =     4   alpha =      0.62990810
-     iwann =     5   alpha =      0.94815287
-     iwann =     6   alpha =      0.87730651
-     iwann =     7   alpha =      0.89675591
-     iwann =     8   alpha =      1.01529358
+     iwann =     1   alpha =      0.63413367
+     iwann =     2   alpha =      0.70437776
+     iwann =     3   alpha =      0.63737334
+     iwann =     4   alpha =      0.62424679
+     iwann =     5   alpha =      0.69207797
+     iwann =     6   alpha =      1.07048005
+     iwann =     7   alpha =      1.07317292
+     iwann =     8   alpha =      1.00577236
 
      INFO: MLWF read from file: Reading collected, re-writing distributed wavefunctions
 
@@ -135,30 +135,62 @@
 
      INFO: Correction beyond 2nd order ...
 
-     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    1     -9.775855582900     -1.502476844605     -0.124470559065     -8.344099933366     -0.008485915538
-     INFO: iwann, LR-alpha, FD-alpha, alpha  1  0.63400996  0.62957101  0.62202669
-     INFO: alpha RE-DEFINED ...    1  0.62202669
-     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    2     -9.775855582900     -1.333826428406     -0.150638830571     -8.540782393755     -0.023433823976
-     INFO: iwann, LR-alpha, FD-alpha, alpha  2  0.70835215  0.69637593  0.66890791
-     INFO: alpha RE-DEFINED ...    2  0.66890791
-     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    3     -9.775855582900     -1.360590510371     -0.168830998833     -8.531861695279     -0.032181123334
-     INFO: iwann, LR-alpha, FD-alpha, alpha  3  0.64209712  0.62299678  0.59143351
-     INFO: alpha RE-DEFINED ...    3  0.59143351
-     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    4     -9.775855582900     -1.372495240064     -0.167125822666     -8.517752597334     -0.030829343165
-     INFO: iwann, LR-alpha, FD-alpha, alpha  4  0.62990810  0.61101040  0.58132659
-     INFO: alpha RE-DEFINED ...    4  0.58132659
-     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    5     -9.775855582900     -0.218261203743     -0.157123219941    -10.047542603009      0.025135793604
-     INFO: iwann, LR-alpha, FD-alpha, alpha  5  0.94815287  0.96021215  1.25124258
-     INFO: alpha RE-DEFINED ...    5  1.25124258
-     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    6     -9.775855582900     -0.233906088001     -0.257757803692    -10.071460559217      0.067180013530
-     INFO: iwann, LR-alpha, FD-alpha, alpha  6  0.87730651  0.96024151  2.96327627
-     INFO: alpha RE-DEFINED ...    6  2.96327627
-     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    7     -9.775855582900     -0.194707795647     -0.253965686440    -10.037460775956      0.060085445811
-     INFO: iwann, LR-alpha, FD-alpha, alpha  7  0.89675591  0.96408951  2.77179535
-     INFO: alpha RE-DEFINED ...    7  2.77179535
-     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    8     -9.775855582900     -0.141313875667     -0.394739301637     -9.994409011862      0.120130097524
-     INFO: iwann, LR-alpha, FD-alpha, alpha  8  1.01529358  0.99234493 -1.98254324
-     INFO: alpha RE-DEFINED ...    8 -1.98254324
+
+     negative rho (up, down):  4.521E-01 4.521E-01
+
+     negative rho (up, down):  4.537E-01 4.521E-01
+     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    1    -27.029648525161     -1.647292403596     -0.124470556949    -26.185619559160     -0.741028159121
+     INFO: iwann, LR-alpha, FD-alpha, alpha  1  0.63413367  8.37536865 -0.41547284
+     INFO: alpha RE-DEFINED ...    1 -0.41547284
+
+     negative rho (up, down):  4.521E-01 4.521E-01
+
+     negative rho (up, down):  4.633E-01 4.521E-01
+     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    2    -27.029648525161     -1.420097136864     -0.150638826041    -26.430125786152     -0.745254984835
+     INFO: iwann, LR-alpha, FD-alpha, alpha  2  0.70437776  2.08628941 -0.56776172
+     INFO: alpha RE-DEFINED ...    2 -0.56776172
+
+     negative rho (up, down):  4.521E-01 4.521E-01
+
+     negative rho (up, down):  4.708E-01 4.521E-01
+     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    3    -27.029648525161     -1.474241881350     -0.168830988604    -26.389869836667     -0.750047698554
+     INFO: iwann, LR-alpha, FD-alpha, alpha  3  0.63737334  2.82310790 -0.56153242
+     INFO: alpha RE-DEFINED ...    3 -0.56153242
+
+     negative rho (up, down):  4.521E-01 4.521E-01
+
+     negative rho (up, down):  4.745E-01 4.521E-01
+     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    4    -27.029648525161     -1.489799978872     -0.167125818799    -26.374488935596     -0.751077479908
+     INFO: iwann, LR-alpha, FD-alpha, alpha  4  0.62424679  2.84217553 -0.57972574
+     INFO: alpha RE-DEFINED ...    4 -0.57972574
+
+     negative rho (up, down):  4.521E-01 4.521E-01
+
+     negative rho (up, down):  1.663E-01 4.521E-01
+     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    5    -27.029648525161     -0.294149094200     -0.157102976851    -28.073503490522     -0.671154382736
+     INFO: iwann, LR-alpha, FD-alpha, alpha  5  0.69207797  1.00975133-31.88536845
+     INFO: alpha RE-DEFINED ...    5-31.88536845
+
+     negative rho (up, down):  4.521E-01 4.521E-01
+
+     negative rho (up, down):  2.450E-01 4.521E-01
+     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    6    -27.029648525161     -0.308476662336     -0.257862674646    -28.098914521163     -0.631857996343
+     INFO: iwann, LR-alpha, FD-alpha, alpha  6  1.07048005  1.00713207  9.95261572
+     INFO: alpha RE-DEFINED ...    6  9.95261572
+
+     negative rho (up, down):  4.521E-01 4.521E-01
+
+     negative rho (up, down):  2.016E-01 4.521E-01
+     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    7    -27.029648525161     -0.275824042853     -0.253626414577    -28.063379855864     -0.631094080561
+     INFO: iwann, LR-alpha, FD-alpha, alpha  7  1.07317292  1.00825874  8.93323401
+     INFO: alpha RE-DEFINED ...    7  8.93323401
+
+     negative rho (up, down):  4.521E-01 4.521E-01
+
+     negative rho (up, down):  2.293E-01 4.521E-01
+     INFO: iwann , e(N), de/df, d2e/df2, e(N-1), delta    8    -27.029648525161     -0.222911757846     -0.394484568314    -28.020081958257     -0.570279391093
+     INFO: iwann, LR-alpha, FD-alpha, alpha  8  1.00577236  1.00153804  3.75884136
+     INFO: alpha RE-DEFINED ...    8  3.75884136
 
      INFO: debug_nc =  T Note: the k-q formula will be used.
 
@@ -172,97 +204,137 @@
 
           k = 0.0000 0.0000 0.0000     band energies (ev):
 
-          KS     -25.4350   -13.3175    -9.3847    -7.3011    -1.6849    -0.0231     0.0143     0.5274
-          KI     -31.4281   -18.7244   -14.4960   -12.3203    -2.2257     0.8274     1.3761     3.8555
+          KS     -25.4350   -13.3175    -9.3847    -7.3011    -1.6849    -0.0232     0.0143     0.5274
+          KI     -27.0109   -21.4441   -11.3186    -9.5486    -8.7921    -4.6050    -2.3806     7.7888
 
         KS       highest occupied, lowest unoccupied level (ev):    -7.3011   -1.6849
-        KI[2nd]  highest occupied, lowest unoccupied level (ev):   -12.3203   -2.2257
+        KI[2nd]  highest occupied, lowest unoccupied level (ev):    -9.5486   -8.7921
 
      INFO: KI calcualtion: Full Hamiltonian ... 
 
         INFO: Map k+q -> p in 1BZ DONE  
 
-        self_hatree    1    1    -0.77038229
-        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.77038229   -9.77585558   -8.34409993   -1.50247684
-        orbital  1   spin  1     uKI_diag    -0.69966110 Ry   rKI_diag    -0.44048634 Ry   alpha=     0.62957101
+        self_hatree    1    1    -0.77038230
 
-        self_hatree    2    1    -0.66941945
-        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.66941945   -9.77585558   -8.54078239   -1.33382643
-        orbital  2   spin  1     uKI_diag    -0.57066621 Ry   rKI_diag    -0.39739821 Ry   alpha=     0.69637593
+     negative rho (up, down):  1.082E+00 1.082E+00
 
-        self_hatree    3    1    -0.71960753
-        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71960753   -9.77585558   -8.53186170   -1.36059051
-        orbital  3   spin  1     uKI_diag    -0.60301091 Ry   rKI_diag    -0.37567385 Ry   alpha=     0.62299678
+     negative rho (up, down):  1.088E+00 1.082E+00
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.77038230  -56.58347775  -54.90154807   -1.74358346
+WARNING: alpha for orbital    1  1  bigger than 1.02.     8.37536865Set it to 1.00
 
-        self_hatree    4    1    -0.71815299
-        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71815299   -9.77585558   -8.51775260   -1.37249524
-        orbital  4   spin  1     uKI_diag    -0.60376073 Ry   rKI_diag    -0.36890409 Ry   alpha=     0.61101040
+        orbital  1   spin  1     uKI_diag    -0.70872851 Ry   rKI_diag    -0.70872851 Ry   alpha=     1.00000000
 
-        self_hatree    5    1    -0.16149347
-        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.16149347   -9.77585558  -10.04754260   -0.21826120
-        orbital  5   spin  1     uKI_diag     0.10806765 Ry   rKI_diag     0.10376787 Ry   alpha=     0.96021215
+        self_hatree    2    1    -0.66941940
 
-        self_hatree    6    1    -0.16108455
-        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.16108455   -9.77585558  -10.07146056   -0.23390609
-        orbital  6   spin  1     uKI_diag     0.09938566 Ry   rKI_diag     0.09543424 Ry   alpha=     0.96024151
+     negative rho (up, down):  1.082E+00 1.082E+00
 
-        self_hatree    7    1    -0.15902774
-        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.15902774   -9.77585558  -10.03746078   -0.19470780
-        orbital  7   spin  1     uKI_diag     0.09213034 Ry   rKI_diag     0.08882190 Ry   alpha=     0.96408951
+     negative rho (up, down):  1.108E+00 1.082E+00
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.66941940  -56.58347775  -55.19089354   -1.47948856
+WARNING: alpha for orbital    2  1  bigger than 1.02.     2.08628941Set it to 1.00
 
-        self_hatree    8    1    -0.15729739
-        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.15729739   -9.77585558   -9.99440901   -0.14131388
-        orbital  8   spin  1     uKI_diag     0.08005784 Ry   rKI_diag     0.07944499 Ry   alpha=     0.99234493
+        orbital  2   spin  1     uKI_diag    -0.58251505 Ry   rKI_diag    -0.58251505 Ry   alpha=     1.00000000
+
+        self_hatree    3    1    -0.71960749
+
+     negative rho (up, down):  1.082E+00 1.082E+00
+
+     negative rho (up, down):  1.121E+00 1.082E+00
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71960749  -56.58347775  -55.12483342   -1.55358773
+WARNING: alpha for orbital    3  1  bigger than 1.02.     2.82310790Set it to 1.00
+
+        orbital  3   spin  1     uKI_diag    -0.62466410 Ry   rKI_diag    -0.62466410 Ry   alpha=     1.00000000
+
+        self_hatree    4    1    -0.71815297
+
+     negative rho (up, down):  1.082E+00 1.082E+00
+
+     negative rho (up, down):  1.126E+00 1.082E+00
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71815297  -56.58347775  -55.10348103   -1.57313041
+WARNING: alpha for orbital    4  1  bigger than 1.02.     2.84217553Set it to 1.00
+
+        orbital  4   spin  1     uKI_diag    -0.62501929 Ry   rKI_diag    -0.62501929 Ry   alpha=     1.00000000
+
+        self_hatree    5    1    -0.16148719
+
+     negative rho (up, down):  1.082E+00 1.082E+00
+
+     negative rho (up, down):  7.004E-01 1.082E+00
+        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.16148719  -56.58347775  -56.92995410   -0.34311341
+        orbital  5   spin  1     uKI_diag     0.15812425 Ry   rKI_diag     0.15966617 Ry   alpha=     1.00975133
+
+        self_hatree    6    1    -0.16108813
+
+     negative rho (up, down):  1.082E+00 1.082E+00
+
+     negative rho (up, down):  7.623E-01 1.082E+00
+        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.16108813  -56.58347775  -56.94540076   -0.35524668
+        orbital  6   spin  1     uKI_diag     0.15441180 Ry   rKI_diag     0.15551308 Ry   alpha=     1.00713207
+
+        self_hatree    7    1    -0.15895168
+
+     negative rho (up, down):  1.082E+00 1.082E+00
+
+     negative rho (up, down):  7.190E-01 1.082E+00
+        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.15895168  -56.58347775  -56.91306543   -0.32457071
+        orbital  7   spin  1     uKI_diag     0.15393471 Ry   rKI_diag     0.15520601 Ry   alpha=     1.00825874
+
+        self_hatree    8    1    -0.15729454
+
+     negative rho (up, down):  1.082E+00 1.082E+00
+
+     negative rho (up, down):  7.443E-01 1.082E+00
+        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.15729454  -56.58347775  -56.85721755   -0.26666363
+        orbital  8   spin  1     uKI_diag     0.15021838 Ry   rKI_diag     0.15044942 Ry   alpha=     1.00153804
 
      INFO: KI calcualtion: Full Hamiltonian ... DONE
 
         DATA: Empty states spectrum as a function of the # of orbitals
-          1   -0.2731
-          2   -0.3628    1.3650
-          3   -0.3628    1.2228    1.3651
-          4   -0.3630    1.2228    1.3170    1.6565
+          1    0.4875
+          2    0.4592    2.1210
+          3    0.4592    2.1206    2.1263
+          4    0.4585    2.1204    2.1263    2.5753
 
-          KI[Full]    -31.4281   -18.7244   -14.4960   -12.3203    -0.3630     1.2228     1.3170     1.6565
+          KI[Full]    -35.0777   -21.2430   -17.8837   -15.8049     0.4585     2.1204     2.1263     2.5753
 
-          KI[Pert]    -31.4281   -18.7244   -14.4960   -12.3203    -0.2731     1.2753     1.2228     1.6083
+          KI[Pert]    -35.0777   -21.2430   -17.8837   -15.8049     0.4875     2.0927     2.1260     2.5744
 
-        KI[pert] highest occupied, lowest unoccupied level (ev):   -12.3203   -0.2731
-        KI[full] highest occupied, lowest unoccupied level (ev):   -12.3203   -0.3630
+        KI[pert] highest occupied, lowest unoccupied level (ev):   -15.8049    0.4875
+        KI[full] highest occupied, lowest unoccupied level (ev):   -15.8049    0.4585
 
      Writing all to output data dir /home/colonna_n/CODES/q-e-kcw/tempdir/h2o_kcw.save/ :
      XML data file, pseudopotentials, collected wavefunctions
  
-     KCW          :      4.54s CPU      5.03s WALL
+     KCW          :      5.74s CPU      6.26s WALL
 
      INITIALIZATION: 
      map          :      0.00s CPU      0.00s WALL (       2 calls)
  
-     init_vloc    :      0.05s CPU      0.05s WALL (       1 calls)
+     init_vloc    :      0.03s CPU      0.03s WALL (       1 calls)
      init_us_1    :      0.00s CPU      0.00s WALL (       1 calls)
  
  
  
  
  
-     h_psi        :      0.03s CPU      0.03s WALL (       2 calls)
+     h_psi        :      0.02s CPU      0.02s WALL (       2 calls)
  
-     h_psi        :      0.03s CPU      0.03s WALL (       2 calls)
+     h_psi        :      0.02s CPU      0.02s WALL (       2 calls)
      add_vuspsi   :      0.00s CPU      0.00s WALL (       2 calls)
  
  
  
       General routines
      calbec       :      0.00s CPU      0.00s WALL (       2 calls)
-     fft          :      0.75s CPU      0.83s WALL (     500 calls)
-     ffts         :      0.20s CPU      0.22s WALL (     168 calls)
-     fftw         :      0.04s CPU      0.04s WALL (      70 calls)
-     davcio       :      0.02s CPU      0.07s WALL (      37 calls)
+     fft          :      0.72s CPU      0.80s WALL (    1082 calls)
+     ffts         :      0.10s CPU      0.11s WALL (     168 calls)
+     fftw         :      0.02s CPU      0.02s WALL (      70 calls)
+     davcio       :      0.02s CPU      0.06s WALL (      37 calls)
  
  
-     KCW          :      4.54s CPU      5.03s WALL
+     KCW          :      5.74s CPU      6.26s WALL
 
  
-   This run was terminated on:  15:18: 6  25Sep2024            
+   This run was terminated on:  16:47:18  25Sep2024            
 
 =------------------------------------------------------------------------------=
    JOB DONE.
