@@ -223,8 +223,8 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
       CALL dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, &
                      dvxc_sr, dvxc_ss, dvxc_s, xq, rhor_, &
                      nspin_mag, nspin_gga, g, delta_vr_)
+      DEALLOCATE (rhor_)
    ENDIF
-   DEALLOCATE (rhor_)
    WRITE(*,*) "NICOLA DeltaV AFTER CG", delta_vr(1:3,1)
    !
   ENDIF
