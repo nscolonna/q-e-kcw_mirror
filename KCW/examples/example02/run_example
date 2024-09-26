@@ -103,7 +103,6 @@ cat > $PREFIX.scf.in << EOF
 &SYSTEM
   ecutwfc =   45.0
   ibrav = 0
-  input_dft = 'PBE'
   nat = 3
   nspin = 2
   ntyp = 2
@@ -205,7 +204,6 @@ KCW H2O KI hamiltonian
   do_bands = .false.
   use_ws_distance = .false.
   write_hr = .true.
-  l_alpha_corr = .true.
 /
 EOF
 

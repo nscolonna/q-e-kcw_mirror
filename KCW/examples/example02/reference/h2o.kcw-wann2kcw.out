@@ -19,11 +19,11 @@
         A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
      =--------------------------------------------------------------------------------=
 
-     Program KCW v.7.3.1 starts on 25Sep2024 at 16:46:45 
-        Git branch: GGA_fix
-        Last git commit: 1aac49f32ae53a8498fd9ab9a081fc1fc651790f-dirty
-        Last git commit date: Wed Sep 25 16:37:37 2024 +0200
-        Last git commit subject: Merge branch 'develop' of gitlab.com:QEF/q-e into 
+     Program KCW v.7.3.1 starts on 26Sep2024 at 13:25:18 
+        Git branch: Bugfix_KCW_GGA
+        Last git commit: 75ec5c1ab7190a1d47d8f63bd021011583b45e86-dirty
+        Last git commit date: Wed Sep 25 16:48:17 2024 +0200
+        Last git commit subject: Update exmaple02. Use LDA pseudos and functional. 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -34,19 +34,19 @@
      in publications or presentations arising from this work. More details at
      http://www.quantum-espresso.org/quote
 
-     Parallel version (MPI), running on     8 processors
+     Parallel version (MPI), running on     4 processors
 
      MPI processes distributed on     1 nodes
-     R & G space division:  proc/nbgrp/npool/nimage =       8
-     202987 MiB available memory on the printing compute node when the environment starts
- 
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     3230 MiB available memory on the printing compute node when the environment starts
+
 
      KCW INPUT SUMMARY 
      ============================================
 
       CONTROL 
        # title               =           W2K h2o
-       # out_dir             =/home/colonna_n/CO
+       # out_dir             =/home/nicola/CODES
        # prefix              =               h2o
        # calculation         =          wann2kcw
        # kcw_iverbosity      =                 2
@@ -66,24 +66,24 @@
 
      Reading xml data from directory:
 
-     /home/colonna_n/CODES/q-e-kcw/tempdir/h2o.save/
+     /home/nicola/CODES/q-e-kcw/tempdir/h2o.save/
 
      IMPORTANT: XC functional enforced from input :
-     Exchange-correlation= PBE
-                           (   1   4   3   4   0   0   0)
+     Exchange-correlation= PW
+                           (   1   4   0   0   0   0   0)
      Any further DFT definition will be discarded
      Please, verify this is what you really want
 
- 
+
      Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
-     Min         487     487    122                22491    22491    2810
-     Max         489     489    123                22492    22492    2813
+     Min         975     975    244                44983    44983    5620
+     Max         977     977    245                44984    44984    5623
      Sum        3905    3905    979               179933   179933   22489
- 
+
      Using Slab Decomposition
- 
+
 
      Check: negative core charge=   -0.000035
      Reading collected, re-writing distributed wavefunctions
@@ -112,7 +112,7 @@
      INFO: Coulomb q+G=0 treatment:
      INFO: Divergence            none    
      INFO: q-grid dimension         1   1   1
-     INFO: cell volume              4410.164682088451
+     INFO: cell volume              4410.164682088450
      INFO: Gamma Extrapolation       F
      INFO: extrapolation q->0 term not estimated
      INFO: Bare Coulomb q+G=0            0.00000E+00
@@ -147,51 +147,51 @@
      iwann=   8   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
 
      INFO: Orbital Self-Hartree (SH)
-     orb     1     SH   0.600281
-     orb     2     SH   0.499881
-     orb     3     SH   0.550454
-     orb     4     SH   0.549344
-     orb     5     SH   0.014039
-     orb     6     SH   0.015119
-     orb     7     SH   0.012770
-     orb     8     SH   0.011442
+     orb     1     SH   0.598989
+     orb     2     SH   0.498708
+     orb     3     SH   0.547179
+     orb     4     SH   0.544166
+     orb     5     SH   0.016095
+     orb     6     SH   0.015944
+     orb     7     SH   0.013230
+     orb     8     SH   0.011510
 
      INFO: PREPARING THE KCW CALCULATION ... DONE
 
 
- 
-     KCW          :      0.42s CPU      0.50s WALL
+
+     KCW          :      0.74s CPU      0.80s WALL
 
      INITIALIZATION: 
      map          :      0.00s CPU      0.00s WALL (       1 calls)
      rho_of_q     :      0.02s CPU      0.02s WALL (       1 calls)
- 
-     init_vloc    :      0.02s CPU      0.03s WALL (       1 calls)
+
+     init_vloc    :      0.02s CPU      0.02s WALL (       1 calls)
      init_us_1    :      0.00s CPU      0.00s WALL (       1 calls)
- 
- 
- 
- 
- 
-     h_psi        :      0.01s CPU      0.01s WALL (       1 calls)
- 
-     h_psi        :      0.01s CPU      0.01s WALL (       1 calls)
+
+
+
+
+
+     h_psi        :      0.02s CPU      0.02s WALL (       1 calls)
+
+     h_psi        :      0.02s CPU      0.02s WALL (       1 calls)
      add_vuspsi   :      0.00s CPU      0.00s WALL (       1 calls)
- 
- 
- 
+
+
+
       General routines
      calbec       :      0.00s CPU      0.00s WALL (       1 calls)
-     fft          :      0.02s CPU      0.04s WALL (      20 calls)
-     ffts         :      0.03s CPU      0.03s WALL (      56 calls)
-     fftw         :      0.01s CPU      0.01s WALL (      32 calls)
+     fft          :      0.38s CPU      0.39s WALL (       6 calls)
+     ffts         :      0.07s CPU      0.08s WALL (      56 calls)
+     fftw         :      0.02s CPU      0.02s WALL (      32 calls)
      davcio       :      0.00s CPU      0.00s WALL (       9 calls)
- 
- 
-     KCW          :      0.42s CPU      0.51s WALL
 
- 
-   This run was terminated on:  16:46:45  25Sep2024            
+
+     KCW          :      0.74s CPU      0.85s WALL
+
+
+   This run was terminated on:  13:25:19  26Sep2024            
 
 =------------------------------------------------------------------------------=
    JOB DONE.
