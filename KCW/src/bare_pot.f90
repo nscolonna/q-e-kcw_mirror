@@ -36,6 +36,7 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   USE scf,               ONLY : rho, rho_core
   USE uspp,              ONLY : nlcc_any
   USE gc_lr,             ONLY : grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s
+  USE dv_of_drho_lr,     ONLY : dv_of_drho_xc
 
 
   !
@@ -90,17 +91,32 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   !
   COMPLEX(DP), ALLOCATABLE :: rhor_(:,:)
   !
+  !! The periodic part of the orbital density in g space  
   DO ip=1,nrho !<---CONSIDER TO SUBSTITUTE WITH nspin_mag
       aux(:) = rhor(:,ip)/omega
-      CALL fwfft ('Rho', aux, dffts)  ! NsC: Dense or smooth grid?? I think smooth is the right one. 
+      CALL fwfft ('Rho', aux, dffts)  
       rhog(:,ip) = aux(dffts%nl(:))
   END DO
-  !WRITE(*,*),'dffts%nl(:)',dffts%nl(:)
-  !! The periodic part of the orbital density in g space  
   !
   delta_vr = ZERO
   delta_vr_ = ZERO
   aux      = ZERO
+  !
+  ! .. First the xc contribution
+  !
+  IF (.NOT. lrpa) THEN 
+    ALLOCATE ( rhor_(dffts%nnr,nspin_mag) )
+    rhor_ = CMPLX(0.D0,0.D0,kind=DP)
+    IF (nspin_mag == 4) THEN
+      rhor_=rhor/omega
+    ELSE
+      rhor_(:,spin_component) = rhor(:,1)/omega
+    ENDIF
+    CALL dv_of_drho_xc(delta_vr, rhor_)
+    DEALLOCATE (rhor_)
+  ENDIF 
+  !
+  delta_vr_ = delta_vr 
   !
   xk(:) = 0.D0
   xkq(:) = -x_q(:,iq)
@@ -145,114 +161,36 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   !
   aux=(0.d0,0.d0)
   aux_=(0.d0,0.d0)
-  aux(dffts%nl(:)) = vh_rhog(:)                    ! G-space components of the Hartree potential
+  aux(dffts%nl(:))  = vh_rhog(:)                    ! G-space components of the Hartree potential
   aux_(dffts%nl(:)) = vh_rhog_g0eq0(:)
   CALL invfft ('Rho', aux, dffts)
   CALL invfft ('Rho', aux_, dffts)
   !
   IF (nspin_mag==4 .and. domag) THEN    ! Perturbing potential due to Hartree
-    delta_vr(:,1) = aux(:)
-    delta_vr(:,2:4) = 0 
-    delta_vr_(:,1) = aux_(:)
-    delta_vr_(:,2:4) = 0 
+    delta_vr(:,1) = delta_vr(:,1)   + aux(:)
+    delta_vr_(:,1) = delta_vr_(:,1) + aux_(:)
   ELSEIF (nspin_mag==4 .and. .NOT. domag) THEN
-   delta_vr(:,1) = aux(:)
-   delta_vr_(:,1) = aux_(:)
+    delta_vr(:,1) = delta_vr(:,1) + aux(:)
+    delta_vr_(:,1) = delta_vr_(:,1) + aux_(:)
   ELSE
-      DO is = 1, nspin_mag
-     !
-      delta_vr(:,is) = aux(:)
-      delta_vr_(:,is) = aux_(:)
-     !
-      END DO
+    DO is = 1, nspin_mag
+      delta_vr(:,is)  = delta_vr(:,is)   + aux(:)
+      delta_vr_(:,is) = delta_vr_(:,is) + aux_(:)
+    END DO
   END IF
   !
-  ! .. Add the xc contribution
-  !
-  IF (.NOT. lrpa) THEN
-     !
-   IF (( nspin_mag == 4) ) THEN
-      DO is = 1, nspin_mag 
-          DO ir = 1, dffts%nnr
-            DO iss = 1, nspin_mag
-             delta_vr(ir,is) = delta_vr(ir,is) + dmuxc(ir,is,iss) * rhor(ir,iss)/omega
-             delta_vr_(ir,is) = delta_vr_(ir,is) + dmuxc(ir,is,iss) * rhor(ir,iss)/omega
-             !
-          ENDDO
-          !
-         END DO
-       ENDDO
-   ELSE
-     DO is = 1, nspin_mag
-        !
-        DO ir = 1, dffts%nnr
-           !
-           delta_vr(ir,is) = delta_vr(ir,is) + dmuxc(ir,is,spin_component) * rhor(ir,1)/omega
-           delta_vr_(ir,is) = delta_vr_(ir,is) + dmuxc(ir,is,spin_component) * rhor(ir,1)/omega
-           !
-        ENDDO
-        !
-     ENDDO
-     !
-   END IF
-   !
-   ! Add gradient correction to the response XC potential.
-   ! NB: If nlcc=.true. we need to add here its contribution.
-   ! grho contains already the core charge
-   !
-   IF (nlcc_any) rho%of_r(:, 1) = rho%of_r(:, 1) + rho_core (:)
-   IF ( xclib_dft_is('gradient') ) THEN
-      IF (nspin_mag == 4) THEN 
-         ALLOCATE ( rhor_(dffts%nnr,nspin_mag) )
-         rhor_ = CMPLX(0.D0,0.D0,kind=DP)
-         rhor_=rhor/omega
-      ELSE
-         ALLOCATE ( rhor_(dffts%nnr,nspin_gga) )
-         rhor_ = CMPLX(0.D0,0.D0,kind=DP)
-         rhor_(:,spin_component) = rhor(:,1)/omega
-      ENDIF 
-      IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8x, "INFO: ADDING GC to DeltaV_bare",/)')
-      CALL dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, &
-                     dvxc_sr, dvxc_ss, dvxc_s, xq, rhor_, &
-                     nspin_mag, nspin_gga, g, delta_vr)
-      CALL dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, &
-                     dvxc_sr, dvxc_ss, dvxc_s, xq, rhor_, &
-                     nspin_mag, nspin_gga, g, delta_vr_)
-      DEALLOCATE (rhor_)
-   ENDIF
-   !
-  ENDIF
-
-  !
-  ! ... Back to g-space
-  !
-!  IF (nspin==4) THEN
-!   DO is = 1, nrho
-!      !
-!      aux(:) = delta_vr(:,is)
-!      aux_(:) = delta_vr_(:,is) 
-!      !
-!      CALL fwfft ('Rho', aux, dffts)
-!      CALL fwfft ('Rho', aux_, dffts)
-!      !
-!      delta_vg(:,is) = aux(dffts%nl(:))
-!      delta_vg_(:,is) = aux_(dffts%nl(:))
-!      !
-!   ENDDO
-!  ELSE
-    DO is = 1, nspin_mag
-     !
-     aux(:) = delta_vr(:,is)
-     aux_(:) = delta_vr_(:,is) 
-     !
-     CALL fwfft ('Rho', aux, dffts)
-     CALL fwfft ('Rho', aux_, dffts)
-     !
-     delta_vg(:,is) = aux(dffts%nl(:))
-     delta_vg_(:,is) = aux_(dffts%nl(:))
-     !
-    ENDDO
-!   ENDIF
+  DO is = 1, nspin_mag
+    !
+    aux(:) = delta_vr(:,is)
+    aux_(:) = delta_vr_(:,is) 
+    !
+    CALL fwfft ('Rho', aux, dffts)
+    CALL fwfft ('Rho', aux_, dffts)
+    !
+    delta_vg(:,is)  = aux(dffts%nl(:))
+    delta_vg_(:,is) = aux_(dffts%nl(:))
+    !
+  ENDDO
   !
   !
 END subroutine bare_pot
