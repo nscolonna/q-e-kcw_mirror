@@ -55,9 +55,9 @@ CONTAINS
   IF ( nspin == 2 .OR. nspin == 4) full_occ = 1.0d0
   !
   IF ( nspin == 2 ) THEN
-     IF ( nbnd*full_occ <= nelec/2.d0 ) CALL errore('ups', 'bad band number', 2)
+     IF ( nbnd*full_occ < nelec/2.d0 ) CALL errore('ups', 'bad band number', 2)
   ELSE
-     IF ( nbnd*full_occ <= nelec ) CALL errore('ups', 'bad band number', 1)
+     IF ( nbnd*full_occ < nelec ) CALL errore('ups', 'bad band number', 1)
   ENDIF
   !
   ! USPP are not implemented (dipole matrix elements are not trivial at all)
