@@ -1,0 +1,468 @@
+#!/bin/sh
+
+# run from directory where this script is
+cd `dirname $0`
+EXAMPLE_DIR=`pwd`
+
+# check whether ECHO has the -e option
+if test "`echo -e`" = "-e" ; then ECHO=echo ; else ECHO="echo -e" ; fi
+
+$ECHO
+$ECHO "$EXAMPLE_DIR : starting"
+$ECHO
+$ECHO "This example shows how to use pw.x, kcw.x"
+$ECHO "to calculate the KI electronic structure of the H2O molecule. "
+
+# set the needed environment variables
+. ../../../environment_variables
+
+# required executables and pseudopotentials
+BIN_LIST="pw.x kcw.x ups.x"
+PSEUDO_LIST="H.upf  C.upf"
+
+$ECHO
+$ECHO "  executables directory: $BIN_DIR"
+$ECHO "  pseudo directory:      $PSEUDO_DIR"
+$ECHO "  temporary directory:   $TMP_DIR"
+$ECHO
+$ECHO "  checking that needed directories and files exist...\c"
+
+# check for directories
+for DIR in "$BIN_DIR" "$PSEUDO_DIR" ; do
+    if test ! -d $DIR ; then
+        $ECHO
+        $ECHO "ERROR: $DIR not existent or not a directory"
+        $ECHO "Aborting"
+        exit 1
+    fi
+done
+for DIR in "$TMP_DIR" "$EXAMPLE_DIR/results" ; do
+    if test ! -d $DIR ; then
+        mkdir $DIR
+    fi
+done
+cd $EXAMPLE_DIR/results
+
+# check for executables
+for FILE in $BIN_LIST ; do
+    if test ! -x $BIN_DIR/$FILE ; then
+        $ECHO
+        $ECHO "ERROR: $BIN_DIR/$FILE not existent or not executable"
+        $ECHO "Aborting"
+        exit 1
+    fi
+done
+$ECHO " done"
+
+#Overwrite NETWORK_PSEUDO
+NETWORK_PSEUDO="https://raw.githubusercontent.com/epfl-theos/koopmans/master/src/koopmans/pseudopotentials/pseudo_dojo_standard_v0.4.1/lda"
+
+# check for pseudopotentials
+$ECHO "  checking that pseudopotentials files exist      ...\c"
+for FILE in $PSEUDO_LIST ; do
+    if test ! -r $PSEUDO_DIR/$FILE ; then
+       $ECHO
+       $ECHO "Downloading $FILE to $PSEUDO_DIR...\c"
+            $WGET $PSEUDO_DIR/$FILE $NETWORK_PSEUDO/$FILE 2> /dev/null
+    fi
+    if test $? != 0; then
+        $ECHO
+        $ECHO "ERROR: $PSEUDO_DIR/$FILE not existent or not readable"
+        $ECHO "Aborting"
+        exit 1
+    fi
+done
+$ECHO " done"
+
+# how to run executables
+PW_COMMAND="$PARA_PREFIX $BIN_DIR/pw.x $PARA_POSTFIX"
+W90_COMMAND="$BIN_DIR/wannier90.x"
+PW2W90_COMMAND="$PARA_PREFIX $BIN_DIR/pw2wannier90.x"
+KCW_COMMAND_noPOSTFIX="$PARA_PREFIX $BIN_DIR/kcw.x"
+UPS_COMMAND_noPOSTFIX="$PARA_PREFIX $BIN_DIR/ups.x"
+$ECHO
+$ECHO "  running pw.x as:   $PW_COMMAND"
+$ECHO "  running kcw.x as:   $KCW_COMMAND_noPOSTFIX"
+$ECHO "  running ups.x as:   $UPS_COMMAND_noPOSTFIX"
+$ECHO
+
+# clean TMP_DIR
+$ECHO "  cleaning $TMP_DIR...\c"
+rm -rf $TMP_DIR/*
+$ECHO " done"
+
+PREFIX='c6h6'
+
+# self-consistent calculation
+cat > $PREFIX.scf.in << EOF
+&CONTROL
+  calculation='scf'
+  restart_mode='from_scratch',
+  prefix='$PREFIX'
+  outdir='$TMP_DIR/'
+  pseudo_dir = '$PSEUDO_DIR/'
+  verbosity='high'
+ /
+&SYSTEM
+  ecutwfc =   45.0
+  ibrav = 1
+  celldm(1) = 15
+  nat = 12
+  nspin = 2
+  ntyp = 2
+  nbnd = 15
+  assume_isolated='mt'
+  tot_magnetization = 0.0
+/
+&ELECTRONS
+  diagonalization='david'
+  mixing_mode = 'plain'
+  mixing_beta = 0.7
+  conv_thr =  0.5d-12
+/
+ATOMIC_SPECIES
+H 1 H.upf
+C 1 C.upf
+
+ATOMIC_POSITIONS angstrom
+H 5.2194 3.8348 6.16
+C 4.6825 3.9076 5.2087
+C 3.2925 3.9648 5.1973
+H 2.7356 3.937 6.1393
+C 2.6102 4.0572 3.9886
+H 1.5164 4.1021 3.9796
+C 3.3176 4.0925 2.7912
+H 2.7806 4.1652 1.8401
+C 4.7075 4.0352 2.8027
+H 5.2641 4.0628 1.8605
+C 5.3899 3.9428 4.0114
+H 6.4836 3.8978 4.0205
+
+K_POINTS automatic
+1 1 1 0 0 0
+
+EOF
+$ECHO "  Running the SCF calculation for $PREFIX...\c"
+$PW_COMMAND < $PREFIX.scf.in > $PREFIX.scf.out
+$ECHO " done"
+
+
+
+cat > ${PREFIX}.ups_lda.in <<EOF
+&inputpp
+  prefix='$PREFIX'
+  outdir='$TMP_DIR'
+  calculation = 'photospec'
+/
+&energy_grid
+  smeartype    = 'gauss'
+  intersmear   = 0.3
+  intrasmear   = 0.3
+  nw           = 600
+  wmax         = 30.0d0
+  wmin         = 0.0d0
+  nbndmin      = 1
+  nbndmax      = 15
+  !
+  ! PHOTOSPEC additional variables
+  photon_ener  =  21.22
+  wfc_real     = .false.
+  homo_gas     = .true.
+  modified_pw  = .true.
+  othor_pw     = .false.
+/
+EOF
+
+$ECHO "  Running the UPS calculation for $PREFIX [LDA] ...\c"
+$UPS_COMMAND_noPOSTFIX -in $PREFIX.ups_lda.in > $PREFIX.ups_lda.out
+$ECHO " done"
+
+mv photospectra.dat photospectra_lda.dat
+
+
+
+cat > $PREFIX.win << EOF
+num_bands         =   15
+num_wann          =   15
+spin              = up
+use_ws_distance   = .true.
+
+write_hr = .true.
+conv_window = 5
+conv_tol = 1D-10
+conv_noise_amp = 10000
+conv_noise_num = 5
+
+write_xyz = .true.
+write_u_matrices = .true.
+
+num_iter          = 100
+num_print_cycles  = 10
+
+wannier_plot = .true. 
+wannier_plot_supercell = 1
+
+Begin Atoms_cart
+Ang
+H 5.2194 3.8348 6.16
+C 4.6825 3.9076 5.2087
+C 3.2925 3.9648 5.1973
+H 2.7356 3.937 6.1393
+C 2.6102 4.0572 3.9886
+H 1.5164 4.1021 3.9796
+C 3.3176 4.0925 2.7912
+H 2.7806 4.1652 1.8401
+C 4.7075 4.0352 2.8027
+H 5.2641 4.0628 1.8605
+C 5.3899 3.9428 4.0114
+H 6.4836 3.8978 4.0205
+End Atoms_cart
+
+Begin Projections
+ang
+c = 3.2925, 3.9648, 5.1973 : sp2
+c = 3.3176, 4.0925, 2.7912 : sp2
+c = 5.3899, 3.9428, 4.0114 : sp2
+C : pz
+End Projections
+
+begin unit_cell_cart
+bohr
+15.000  0.000  0.000
+ 0.000 15.000  0.000
+ 0.000  0.000 15.00
+end unit_cell_cart
+
+mp_grid      = 1 1 1
+
+begin kpoints
+  0.00000000  0.00000000  0.00000000
+end kpoints
+EOF
+
+$ECHO "  Running W90 -pp for $PREFIX...\c"
+$W90_COMMAND -pp  $PREFIX.win
+$ECHO " done"
+
+
+cat >$PREFIX.pw2wann.in << EOF 
+&inputpp
+  prefix='$PREFIX'
+  outdir='$TMP_DIR'
+  seedname = '$PREFIX'
+  wan_mode   =  'standalone'
+  spin_component = 'up'
+  write_unk = .true.
+/
+EOF
+
+$ECHO "  Running PW2W90 for $PREFIX...\c"
+$PW2W90_COMMAND < $PREFIX.pw2wann.in > $PREFIX.pw2wann.out
+$ECHO " done"
+
+$ECHO "  Running W90 for $PREFIX...\c"
+$W90_COMMAND  $PREFIX.win
+$ECHO " done"
+
+cat > $PREFIX.kcw-wann2kcw.in << EOF
+W2K h2o
+&control
+  prefix='$PREFIX'
+  outdir='$TMP_DIR/'
+  kcw_iverbosity = 2
+  kcw_at_ks=.false.
+  read_unitary_matrix = .true.
+  calculation = 'wann2kcw'
+  mp1 = 1
+  mp2 = 1
+  mp3 = 1
+/
+&wannier
+  seedname = '$PREFIX'
+  check_ks = .true.
+  num_wann_occ = 15
+  num_wann_emp = 0
+  have_empty = .false.
+  has_disentangle = .false.
+/
+EOF
+
+$ECHO "  Running the interface to KCW for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-wann2kcw.in > $PREFIX.kcw-wann2kcw.out
+$ECHO " done"
+
+
+
+cat > $PREFIX.kcw-screen.in << EOF
+KCW H2O KI hamiltonian
+&control
+  prefix='$PREFIX'
+  outdir='$TMP_DIR'
+  kcw_iverbosity = 1
+  kcw_at_ks=.false.
+  homo_only = .false.
+  read_unitary_matrix = .true.
+  assume_isolated = 'mt'
+  calculation = 'screen'
+  lrpa =.false.
+  mp1 = 1
+  mp2 = 1
+  mp3 = 1
+/
+&wannier
+  seedname = '$PREFIX'
+  check_ks = .true.
+  num_wann_occ = 15
+  num_wann_emp = 0
+  have_empty = .false.
+  has_disentangle = .false.
+/
+&screen
+  tr2    =1.0d-18
+  nmix   = 4
+  niter  = 33
+/
+EOF
+
+$ECHO "  Running the KI screening calculation for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-screen.in > $PREFIX.kcw-screen.out
+$ECHO " done"
+
+#echo 15 > file_alpharef.txt
+#for i in `seq 1 15`; do 
+#echo $i 0.8 1.00 >> file_alpharef.txt
+#done 
+
+cat > $PREFIX.kcw-ham.in << EOF
+KCW H2O KI hamiltonian
+&control
+  prefix='$PREFIX'
+  outdir='$TMP_DIR'
+  kcw_iverbosity = 1
+  kcw_at_ks=.false.
+  homo_only = .false.
+  read_unitary_matrix = .true.
+  assume_isolated = 'mt'
+  calculation = 'ham'
+  lrpa =.false.
+  mp1 = 1
+  mp2 = 1
+  mp3 = 1
+/
+&wannier
+  seedname = '$PREFIX'
+  check_ks = .true.
+  num_wann_occ = 15
+  num_wann_emp = 0
+  have_empty = .false.
+  has_disentangle = .false.
+/
+&ham
+  do_bands = .false.
+  use_ws_distance = .false.
+  write_hr = .true.
+/
+EOF
+
+$ECHO "  Running the KI hamiltonian calculation for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham.in > $PREFIX.kcw-ham.out
+$ECHO " done"
+
+cat > ${PREFIX}.ups_ki.in <<EOF
+&inputpp
+  prefix='${PREFIX}_kcw'
+  outdir='$TMP_DIR'
+  calculation = 'photospec'
+/
+&energy_grid
+  smeartype    = 'gauss'
+  intersmear   = 0.3
+  intrasmear   = 0.3
+  nw           = 600
+  wmax         = 30.0d0
+  wmin         = 0.0d0
+  nbndmin      = 1
+  nbndmax      = 15
+  !
+  ! PHOTOSPEC additional variables
+  photon_ener  =  21.22
+  wfc_real     = .false.
+  homo_gas     = .true.
+  modified_pw  = .true.
+  othor_pw     = .false.
+/
+EOF
+
+$ECHO "  Running the UPS calculation for $PREFIX [KI] ...\c"
+$UPS_COMMAND_noPOSTFIX -in $PREFIX.ups_ki.in > $PREFIX.ups_ki.out
+$ECHO " done"
+
+mv photospectra.dat photospectra_ki.dat
+
+
+cat > $PREFIX.kcw-ham_pkipz.in << EOF
+KCW H2O KI hamiltonian
+&control
+  prefix='$PREFIX'
+  outdir='$TMP_DIR'
+  kcw_iverbosity = 1
+  kcw_at_ks=.false.
+  homo_only = .false.
+  read_unitary_matrix = .true.
+  assume_isolated = 'mt'
+  calculation = 'ham'
+  lrpa =.false.
+  mp1 = 1
+  mp2 = 1
+  mp3 = 1
+/
+&wannier
+  seedname = '$PREFIX'
+  check_ks = .true.
+  num_wann_occ = 15
+  num_wann_emp = 0
+  have_empty = .false.
+  has_disentangle = .false.
+/
+&ham
+  do_bands = .false.
+  use_ws_distance = .false.
+  write_hr = .true.
+  kipz_corr = .true.
+/
+EOF
+
+$ECHO "  Running the pKIPZ hamiltonian calculation for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_pkipz.in > $PREFIX.kcw-ham_pkipz.out
+$ECHO " done"
+
+cat > ${PREFIX}.ups_pkipz.in <<EOF
+&inputpp
+  prefix='${PREFIX}_kcw'
+  outdir='$TMP_DIR'
+  calculation = 'photospec'
+/
+&energy_grid
+  smeartype    = 'gauss'
+  intersmear   = 0.3
+  intrasmear   = 0.3
+  nw           = 600
+  wmax         = 30.0d0
+  wmin         = 0.0d0
+  nbndmin      = 1
+  nbndmax      = 15
+  !
+  ! PHOTOSPEC additional variables
+  photon_ener  =  21.22
+  wfc_real     = .false.
+  homo_gas     = .true.
+  modified_pw  = .true.
+  othor_pw     = .false.
+/
+EOF
+
+$ECHO "  Running the UPS calculation for $PREFIX [pKIPZ] ...\c"
+$UPS_COMMAND_noPOSTFIX -in $PREFIX.ups_pkipz.in > $PREFIX.ups_pkipz.out
+$ECHO " done"
+
+mv photospectra.dat photospectra_pkipz.dat

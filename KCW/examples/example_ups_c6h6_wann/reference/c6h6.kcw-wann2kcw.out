@@ -1,0 +1,253 @@
+
+     =--------------------------------------------------------------------------------=
+                      :::    :::           ::::::::         :::       ::: 
+                     :+:   :+:           :+:    :+:        :+:       :+:  
+                    +:+  +:+            +:+               +:+       +:+   
+                   +#++:++             +#+               +#+  +:+  +#+    
+                  +#+  +#+            +#+               +#+ +#+#+ +#+     
+                 #+#   #+#           #+#    #+#         #+#+# #+#+#       
+                ###    ###           ########           ###   ###         
+
+       Koopmans functional implementation based on DFPT; please cite this program as
+
+        N.Colonna, R. De Gennaro, E. Linscott, and N. Marzari, JCTC 18, 5435 (2022) 
+
+                                                                                    
+
+       If you use the non-collinear mode (with/without spin-orbit coupling) please cite
+
+        A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
+     =--------------------------------------------------------------------------------=
+
+     Program KCW v.7.3.1 starts on  7Oct2024 at 15:51:21 
+        Git branch: develop
+        Last git commit: 14be3366ece7f014e5ee010d1559762818bd222f-dirty
+        Last git commit date: Tue Oct 1 08:55:08 2024 +0000
+        Last git commit subject: Merge branch 'develop' into 'develop'
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     4 processors
+
+     MPI processes distributed on     1 nodes
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     9371 MiB available memory on the printing compute node when the environment starts
+ 
+
+     KCW INPUT SUMMARY 
+     ============================================
+
+      CONTROL 
+       # title               =           W2K h2o
+       # out_dir             =/home/colonna_n/CO
+       # prefix              =              c6h6
+       # calculation         =          wann2kcw
+       # kcw_iverbosity      =                 2
+       # kcw_at_ks           =                 F
+       # MP grid             =     1     1     1
+       # spin_component      =                 1
+       # homo_only           =                 F
+       # read_unitary_matrix =                 T
+       # check_ks            =                 T
+       # l_vcut              =                 F
+       # assume_isolated     =              none
+       # io_sp               =                 F
+       # io_real_space       =                 F
+
+      WANNIER 
+       # seedname            =              c6h6
+       # num_wann_occ        =                15
+       # have_empty          =                 F
+       # has_disentangle     =                 F
+       # l_unique_manifold   =                 F
+     ============================================
+
+     INFO: Reading pwscf data
+
+     Reading xml data from directory:
+
+     /home/colonna_n/CODES/q-e-kcw/tempdir/c6h6.save/
+
+     IMPORTANT: XC functional enforced from input :
+     Exchange-correlation= PW
+                           (   1   4   0   0   0   0   0)
+     Any further DFT definition will be discarded
+     Please, verify this is what you really want
+
+ 
+     Parallelization info
+     --------------------
+     sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min         808     808    199                34386    34386    4268
+     Max         809     809    200                34387    34387    4271
+     Sum        3233    3233    797               137545   137545   17077
+ 
+     Using Slab Decomposition
+ 
+     Reading collected, re-writing distributed wavefunctions
+
+     WARNING: assume_isolated from input differs from value read from file
+     WARNING: Going to overwrite value from file
+
+     REPORT # of electrons
+     nelec=     30.00000000
+     nelup=     15.00000000
+     neldw=     15.00000000
+     nkstot=     2
+     nspin=      2
+
+     INFO: Buffer for KS wfcs, OPENED
+
+     INFO: total number of Wannier functions   15
+
+     INFO: Unitary matrix, READ from file
+
+     INFO: Buffer for WFs, OPENED
+
+     INFO: Buffer for WFs ALL-k, OPENED
+
+     INFO: Minimizing orbitals from Unitary Matrix Rotation
+
+        INFO: Performing a check on the eigenvalues of the rotated KS Hamilotnian ... 
+
+        Rotated Occupation Matrix (ROM) ik=    1   xk =  0.0000  0.0000  0.0000
+
+          1.0000 -0.0000  0.0000 -0.0000  0.0000 -0.0000  0.0000 -0.0000 -0.0000 -0.0000 -0.0000 -0.0000 -0.0000  0.0000 -0.0000
+         -0.0000  1.0000 -0.0000 -0.0000  0.0000  0.0000 -0.0000  0.0000 -0.0000 -0.0000 -0.0000 -0.0000 -0.0000  0.0000 -0.0000
+          0.0000 -0.0000  1.0000 -0.0000 -0.0000  0.0000  0.0000 -0.0000 -0.0000 -0.0000  0.0000  0.0000 -0.0000  0.0000 -0.0000
+         -0.0000 -0.0000 -0.0000  1.0000 -0.0000  0.0000  0.0000  0.0000 -0.0000 -0.0000 -0.0000 -0.0000  0.0000 -0.0000 -0.0000
+          0.0000  0.0000 -0.0000 -0.0000  1.0000  0.0000 -0.0000 -0.0000 -0.0000 -0.0000  0.0000 -0.0000  0.0000 -0.0000 -0.0000
+         -0.0000  0.0000  0.0000  0.0000  0.0000  1.0000  0.0000 -0.0000  0.0000 -0.0000 -0.0000  0.0000 -0.0000 -0.0000  0.0000
+          0.0000 -0.0000  0.0000  0.0000 -0.0000  0.0000  1.0000  0.0000  0.0000  0.0000  0.0000 -0.0000 -0.0000 -0.0000 -0.0000
+         -0.0000  0.0000 -0.0000  0.0000 -0.0000 -0.0000  0.0000  1.0000  0.0000 -0.0000  0.0000  0.0000  0.0000  0.0000 -0.0000
+         -0.0000 -0.0000 -0.0000 -0.0000 -0.0000  0.0000  0.0000  0.0000  1.0000  0.0000 -0.0000  0.0000  0.0000  0.0000 -0.0000
+         -0.0000 -0.0000 -0.0000 -0.0000 -0.0000 -0.0000  0.0000 -0.0000  0.0000  1.0000  0.0000 -0.0000 -0.0000 -0.0000  0.0000
+         -0.0000 -0.0000  0.0000 -0.0000  0.0000 -0.0000  0.0000  0.0000 -0.0000  0.0000  1.0000  0.0000 -0.0000 -0.0000  0.0000
+         -0.0000 -0.0000  0.0000 -0.0000 -0.0000  0.0000 -0.0000  0.0000  0.0000 -0.0000  0.0000  1.0000 -0.0000 -0.0000 -0.0000
+         -0.0000 -0.0000 -0.0000  0.0000  0.0000 -0.0000 -0.0000  0.0000  0.0000 -0.0000 -0.0000 -0.0000  1.0000  0.0000  0.0000
+          0.0000  0.0000  0.0000 -0.0000 -0.0000 -0.0000 -0.0000  0.0000  0.0000 -0.0000 -0.0000 -0.0000  0.0000  1.0000 -0.0000
+         -0.0000 -0.0000 -0.0000 -0.0000 -0.0000  0.0000 -0.0000 -0.0000 -0.0000  0.0000  0.0000 -0.0000  0.0000 -0.0000  1.0000
+
+        Trace  15.000000000058254
+        ROM eig     1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
+        ROM eig     1.0000   1.0000   1.0000   1.0000   1.0000   1.0000   1.0000
+
+        KS Hamiltonian calculation at k=      0.0000      0.0000      0.0000   ...    DONE 
+
+        WANN     -20.7114   -17.8329   -17.8244   -14.2137   -14.1805   -12.3123   -10.4722   -10.3139
+        WANN      -9.5447    -9.4665    -8.7758    -7.5434    -7.5031    -5.9764    -5.9682
+        PWSCF    -20.7114   -17.8329   -17.8244   -14.2137   -14.1805   -12.3122   -10.4722   -10.3139
+        PWSCF     -9.5447    -9.4665    -8.7758    -7.5434    -7.5031    -5.9764    -5.9682
+
+        INFO: Performing a check on the eigenvalues of the rotated KS Hamiltonian ... DONE
+
+     INFO: Minimizing orbitals DEFINED
+
+     INFO: Coulomb q+G=0 treatment:
+     INFO: Divergence            none    
+     INFO: q-grid dimension         1   1   1
+     INFO: cell volume              3375.000000000000
+     INFO: Gamma Extrapolation       F
+     INFO: extrapolation q->0 term not estimated
+     INFO: Bare Coulomb q+G=0            0.00000E+00
+
+
+     INFO: PREPARING THE KCW CALCULATION ...
+
+     INFO: Compute Wannier-orbital Densities ...
+
+        ==============================================================================
+        iq =     1
+        The Wannier density at  q =    0.0000000   0.0000000   0.0000000  [Cart ]
+        The Wannier density at  q =    0.0000000   0.0000000   0.0000000  [Cryst]
+        ==============================================================================
+
+        The map (iq,ik) --> ip + G      (    1   1  )        1        +  0.0000  0.0000  0.0000 [Cryst]
+ 
+        INFO: Map k+q -> p in 1BZ DONE  
+
+        INFO: rho_q(r) DONE 
+
+        INFO: iq =     1   Structure Factor S(q) [Re, Im] =   1.00000000  0.00000000
+
+     INFO: Wannier density number
+     iwann=   1   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=   2   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=   3   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=   4   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=   5   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=   6   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=   7   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=   8   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=   9   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=  10   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=  11   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=  12   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=  13   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=  14   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+     iwann=  15   ipol=   1   int rho_wann[ipol](r) [Re, Im] =        1.00000000        0.00000000
+
+     INFO: Orbital Self-Hartree (SH)
+     orb     1     SH   0.353341
+     orb     2     SH   0.350184
+     orb     3     SH   0.517154
+     orb     4     SH   0.529100
+     orb     5     SH   0.382663
+     orb     6     SH   0.311717
+     orb     7     SH   0.364949
+     orb     8     SH   0.359489
+     orb     9     SH   0.482669
+     orb    10     SH   0.492781
+     orb    11     SH   0.467564
+     orb    12     SH   0.466262
+     orb    13     SH   0.462486
+     orb    14     SH   0.483459
+     orb    15     SH   0.495589
+
+     INFO: PREPARING THE KCW CALCULATION ... DONE
+
+
+ 
+     KCW          :      1.24s CPU      1.48s WALL
+
+     INITIALIZATION: 
+     map          :      0.00s CPU      0.00s WALL (       1 calls)
+     rho_of_q     :      0.08s CPU      0.10s WALL (       1 calls)
+ 
+     init_vloc    :      0.06s CPU      0.06s WALL (       1 calls)
+     init_us_1    :      0.00s CPU      0.00s WALL (       1 calls)
+ 
+ 
+ 
+ 
+ 
+     h_psi        :      0.05s CPU      0.05s WALL (       1 calls)
+ 
+     h_psi        :      0.05s CPU      0.05s WALL (       1 calls)
+     add_vuspsi   :      0.00s CPU      0.00s WALL (       1 calls)
+ 
+ 
+ 
+      General routines
+     calbec       :      0.00s CPU      0.00s WALL (       1 calls)
+     fft          :      0.03s CPU      0.07s WALL (       6 calls)
+     ffts         :      0.27s CPU      0.35s WALL (     105 calls)
+     fftw         :      0.06s CPU      0.08s WALL (      60 calls)
+     davcio       :      0.00s CPU      0.01s WALL (       9 calls)
+ 
+ 
+     KCW          :      1.24s CPU      1.48s WALL
+
+ 
+   This run was terminated on:  15:51:22   7Oct2024            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=

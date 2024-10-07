@@ -1,0 +1,105 @@
+
+     Program ups v.7.3.1 starts on  7Oct2024 at 15:56:43 
+        Git branch: ups
+        Last git commit: df814d77005010e079b879dca2dbff4f957f5212-dirty
+        Last git commit date: Fri Oct 4 15:38:48 2024 +0200
+        Last git commit subject: nbnd can be equal to nelec
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     4 processors
+
+     MPI processes distributed on     1 nodes
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     3548 MiB available memory on the printing compute node when the environment starts
+ 
+
+
+     Reading input file...
+     Broadcasting variables...
+     Reading PW restart file...
+
+     Reading xml data from directory:
+
+     /home/colonna_n/CODES/q-e-kcw/tempdir/c6h6_kcw.save/
+     Message from routine qexsd_readschema :
+     input info not found or not readable in xml file
+
+     IMPORTANT: XC functional enforced from input :
+     Exchange-correlation= PW
+                           (   1   4   0   0   0   0   0)
+     Any further DFT definition will be discarded
+     Please, verify this is what you really want
+
+ 
+     Parallelization info
+     --------------------
+     sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min         808     808    199                34386    34386    4268
+     Max         809     809    200                34387    34387    4271
+     Sum        3233    3233    797               137545   137545   17077
+ 
+     Using Slab Decomposition
+ 
+
+
+     Fermi energy [eV] is:  0.00000
+     The system is a dielectric...
+     metallic system: redefining wmin =     0.000000
+
+     Performing photospec calculation...
+
+     Writing the molecule gas properties with spin down
+      25.405721       0.130297       2.000000
+      22.841352       0.276747       2.000000
+      22.658539       0.246580       2.000000
+      19.087103       0.853322       2.000000
+      18.807853       0.505875       2.000000
+      16.972381       0.642987       2.000000
+      15.357379       1.000000       2.000000
+      14.744796       0.780310       2.000000
+      14.045552       0.750554       2.000000
+      13.878228       0.958077       2.000000
+      12.605296       0.394907       2.000000
+      12.018748       0.778982       2.000000
+      11.610339       0.602951       2.000000
+       9.455721       0.497519       2.000000
+       9.324669       0.510564       2.000000
+      20.711373       0.127420       2.000000
+      17.832896       0.295582       2.000000
+      17.824399       0.258209       2.000000
+      14.213695       0.900177       2.000000
+      14.180533       0.488755       2.000000
+      12.312250       0.645385       2.000000
+      10.472182       0.774526       2.000000
+      10.313862       1.000000       2.000000
+       9.544737       0.694366       2.000000
+       9.466478       0.978043       2.000000
+       8.775784       0.394826       2.000000
+       7.543398       0.814696       2.000000
+       7.503065       0.533000       2.000000
+       5.976440       0.515195       2.000000
+       5.968227       0.489711       2.000000
+
+     Writing output on file...
+
+
+     photospec    :      1.13s CPU      1.40s WALL (       1 calls)
+     dipole_calc  :      0.22s CPU      0.36s WALL (       2 calls)
+ 
+ 
+     ups          :      1.58s CPU      1.95s WALL
+
+ 
+   This run was terminated on:  15:56:45   7Oct2024            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=

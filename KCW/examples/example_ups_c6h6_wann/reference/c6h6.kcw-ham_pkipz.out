@@ -1,0 +1,351 @@
+
+     =--------------------------------------------------------------------------------=
+                      :::    :::           ::::::::         :::       ::: 
+                     :+:   :+:           :+:    :+:        :+:       :+:  
+                    +:+  +:+            +:+               +:+       +:+   
+                   +#++:++             +#+               +#+  +:+  +#+    
+                  +#+  +#+            +#+               +#+ +#+#+ +#+     
+                 #+#   #+#           #+#    #+#         #+#+# #+#+#       
+                ###    ###           ########           ###   ###         
+
+       Koopmans functional implementation based on DFPT; please cite this program as
+
+        N.Colonna, R. De Gennaro, E. Linscott, and N. Marzari, JCTC 18, 5435 (2022) 
+
+                                                                                    
+
+       If you use the non-collinear mode (with/without spin-orbit coupling) please cite
+
+        A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
+     =--------------------------------------------------------------------------------=
+
+     Program KCW v.7.3.1 starts on  7Oct2024 at 15:56:39 
+        Git branch: develop
+        Last git commit: 14be3366ece7f014e5ee010d1559762818bd222f-dirty
+        Last git commit date: Tue Oct 1 08:55:08 2024 +0000
+        Last git commit subject: Merge branch 'develop' into 'develop'
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     4 processors
+
+     MPI processes distributed on     1 nodes
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     3885 MiB available memory on the printing compute node when the environment starts
+ 
+
+     KCW INPUT SUMMARY 
+     ============================================
+
+      CONTROL 
+       # title               =KCW H2O KI hamilto
+       # out_dir             =/home/colonna_n/CO
+       # prefix              =              c6h6
+       # calculation         =               ham
+       # kcw_iverbosity      =                 1
+       # kcw_at_ks           =                 F
+       # MP grid             =     1     1     1
+       # spin_component      =                 1
+       # homo_only           =                 F
+       # read_unitary_matrix =                 T
+       # check_ks            =                 T
+       # l_vcut              =                 F
+       # assume_isolated     =                mt
+       # io_sp               =                 F
+       # io_real_space       =                 F
+
+      WANNIER 
+       # seedname            =              c6h6
+       # num_wann_occ        =                15
+       # have_empty          =                 F
+       # has_disentangle     =                 F
+       # l_unique_manifold   =                 F
+
+      HAM 
+       # qp_symm             =                 F
+       # kipz_corr           =                 T
+       # MP grid             =     1     1     1
+       # do_bands            =                 F
+       # use_ws_distance     =                 F
+       # write_hr            =                 T
+       # l_alpha_corr        =                 F
+       # on_site_only        =                 F
+     ============================================
+
+     INFO: Reading pwscf data
+
+     Reading xml data from directory:
+
+     /home/colonna_n/CODES/q-e-kcw/tempdir/c6h6.save/
+
+     IMPORTANT: XC functional enforced from input :
+     Exchange-correlation= PW
+                           (   1   4   0   0   0   0   0)
+     Any further DFT definition will be discarded
+     Please, verify this is what you really want
+
+ 
+     Parallelization info
+     --------------------
+     sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min         808     808    199                34386    34386    4268
+     Max         809     809    200                34387    34387    4271
+     Sum        3233    3233    797               137545   137545   17077
+ 
+     Using Slab Decomposition
+ 
+     Reading collected, re-writing distributed wavefunctions
+
+     INFO: total number of primitive cell    1
+
+     READING SCREENING PARAMETERS
+
+     INFO: alphas read from:/home/colonna_n/CODES/q-e-kcw/tempdir/kcw/c6h6.alpha.dat                                                                                                                                                                                                        
+     iwann =     1   alpha =      0.59967450
+     iwann =     2   alpha =      0.60016679
+     iwann =     3   alpha =      0.54335956
+     iwann =     4   alpha =      0.54007660
+     iwann =     5   alpha =      0.58406667
+     iwann =     6   alpha =      0.61648614
+     iwann =     7   alpha =      0.59287821
+     iwann =     8   alpha =      0.59500514
+     iwann =     9   alpha =      0.61260111
+     iwann =    10   alpha =      0.61143812
+     iwann =    11   alpha =      0.62094749
+     iwann =    12   alpha =      0.62113605
+     iwann =    13   alpha =      0.62124036
+     iwann =    14   alpha =      0.61399072
+     iwann =    15   alpha =      0.55075611
+
+     INFO: MLWF read from file: Reading collected, re-writing distributed wavefunctions
+
+        KS Hamiltonian calculation at k=      0.0000      0.0000      0.0000   ...    DONE 
+
+        WANN     -20.7114   -17.8329   -17.8244   -14.2137   -14.1805   -12.3123   -10.4722   -10.3139
+        WANN      -9.5447    -9.4665    -8.7758    -7.5434    -7.5031    -5.9764    -5.9682
+        PWSCF    -20.7114   -17.8329   -17.8244   -14.2137   -14.1805   -12.3122   -10.4722   -10.3139
+        PWSCF     -9.5447    -9.4665    -8.7758    -7.5434    -7.5031    -5.9764    -5.9682
+
+     INFO: Coulomb kernel treated according to MT scheme
+
+     INFO: READING Wannier-orbital Densities ...
+
+        ==============================================================================
+        iq =     1
+        The  Wannier density at  q =    0.0000000   0.0000000   0.0000000  [Cart ]
+        The  Wannier density at  q =    0.0000000   0.0000000   0.0000000  [Cryst]
+        ==============================================================================
+
+     INFO: total number of wannier to compute   15 from     1 to    15
+     INFO: PREPARING THE KCW CALCULATION ... DONE
+
+
+
+     INFO: KC SCALAR TERM CALCULATION ... START
+
+     INFO: KC SCALAR TERM CALCULATION ... END
+
+     INFO: debug_nc =  T Note: the k-q formula will be used.
+
+
+     INFO: KI[2nd] HAMILTONIAN CALCULATION ik=    1 ...
+
+        INFO: Mapping also k-q -> p in 1BZ DONE  
+
+        INFO: Map k+q -> p in 1BZ DONE  
+
+
+          k = 0.0000 0.0000 0.0000     band energies (ev):
+
+          KS     -20.7114   -17.8329   -17.8244   -14.2137   -14.1805   -12.3123   -10.4722   -10.3139
+          KS      -9.5447    -9.4665    -8.7758    -7.5434    -7.5031    -5.9764    -5.9682
+          KI     -24.9354   -22.2489   -22.1774   -18.7017   -18.5700   -16.9881   -15.0592   -14.7807
+          KI     -14.1563   -14.0692   -12.6640   -12.0728   -11.9994    -9.8750    -9.8206
+
+        KS       highest occupied level (ev):    -5.9682
+        KI[2nd]  highest occupied level (ev):    -9.8206
+
+     INFO: KI calcualtion: Full Hamiltonian ... 
+
+        INFO: Map k+q -> p in 1BZ DONE  
+
+
+        KS Hamiltonian calculation at k=      0.0000      0.0000      0.0000   ...    DONE 
+
+        WANN     -20.7114   -17.8329   -17.8244   -14.2137   -14.1805   -12.3123   -10.4722   -10.3139
+        WANN      -9.5447    -9.4665    -8.7758    -7.5434    -7.5031    -5.9764    -5.9682
+        PWSCF    -24.9354   -22.2489   -22.1774   -18.7017   -18.5700   -16.9881   -15.0592   -14.7807
+        PWSCF    -14.1563   -14.0692   -12.6640   -12.0728   -11.9994    -9.8750    -9.8206
+        self_hatree    1    1    -0.53589494
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.53589494  -29.50348634  -28.46791853   -1.10542553
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.53589494    -0.53499546    -0.70552287    -0.70552287
+ 8x, Delta KIPZ -8.994847136996562E-004
+     .... DONE 
+        orbital  1   spin  1     uKI_diag    -0.46693671 Ry   rKI_diag    -0.28001004 Ry   alpha=     0.59967450
+
+        self_hatree    2    1    -0.53295437
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.53295437  -29.50348634  -28.46345220   -1.10824096
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.53295437    -0.53283314    -0.70265184    -0.70265184
+ 8x, Delta KIPZ -1.212296609257612E-004
+     .... DONE 
+        orbital  2   spin  1     uKI_diag    -0.46486878 Ry   rKI_diag    -0.27899880 Ry   alpha=     0.60016679
+
+        self_hatree    3    1    -0.70275220
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.70275220  -29.50348634  -28.37888465   -1.22829766
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.70275220    -0.66518423    -0.87787812    -0.87787812
+ 8x, Delta KIPZ -3.756796258127960E-002
+     .... DONE 
+        orbital  3   spin  1     uKI_diag    -0.63662419 Ry   rKI_diag    -0.34591584 Ry   alpha=     0.54335956
+
+        self_hatree    4    1    -0.71513500
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71513500  -29.50348634  -28.38550340   -1.22312778
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.71513500    -0.67130460    -0.88595932    -0.88595932
+ 8x, Delta KIPZ -4.383039407897181E-002
+     .... DONE 
+        orbital  4   spin  1     uKI_diag    -0.65382056 Ry   rKI_diag    -0.35311318 Ry   alpha=     0.54007660
+
+        self_hatree    5    1    -0.56626360
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.56626360  -29.50348634  -28.45094828   -1.12521839
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.56626360    -0.55270713    -0.72895657    -0.72895657
+ 8x, Delta KIPZ -1.355647417043174E-002
+     .... DONE 
+        orbital  5   spin  1     uKI_diag    -0.50713975 Ry   rKI_diag    -0.29620343 Ry   alpha=     0.58406667
+
+        self_hatree    6    1    -0.49361229
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.49361229  -29.50348634  -28.48317592   -1.07799536
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.49361229    -0.49675435    -0.65489287    -0.65489287
+ 8x, Delta KIPZ  3.142059202795893E-003
+     .... DONE 
+        orbital  6   spin  1     uKI_diag    -0.43278529 Ry   rKI_diag    -0.26680613 Ry   alpha=     0.61648614
+
+        self_hatree    7    1    -0.54823568
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.54823568  -29.50348634  -28.46938451   -1.10486737
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.54823568    -0.54034679    -0.71259401    -0.71259401
+ 8x, Delta KIPZ -7.888897383755363E-003
+     .... DONE 
+        orbital  7   spin  1     uKI_diag    -0.48535905 Ry   rKI_diag    -0.28775880 Ry   alpha=     0.59287821
+
+        self_hatree    8    1    -0.54249314
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.54249314  -29.50348634  -28.47923087   -1.09485771
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.54249314    -0.53720773    -0.70843766    -0.70843766
+ 8x, Delta KIPZ -5.285409090709599E-003
+     .... DONE 
+        orbital  8   spin  1     uKI_diag    -0.47717631 Ry   rKI_diag    -0.28392236 Ry   alpha=     0.59500514
+
+        self_hatree    9    1    -0.66776337
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.66776337  -29.50348634  -28.56725672   -1.05476602
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.66776337    -0.62863838    -0.82945530    -0.82945530
+ 8x, Delta KIPZ -3.912498669926141E-002
+     .... DONE 
+        orbital  9   spin  1     uKI_diag    -0.58835196 Ry   rKI_diag    -0.36042506 Ry   alpha=     0.61260111
+
+        self_hatree   10    1    -0.67838019
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.67838019  -29.50348634  -28.57652580   -1.05107629
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.67838019    -0.63659591    -0.83998966    -0.83998966
+ 8x, Delta KIPZ -4.178427574203813E-002
+     .... DONE 
+        orbital 10   spin  1     uKI_diag    -0.59604871 Ry   rKI_diag    -0.36444691 Ry   alpha=     0.61143812
+
+        self_hatree   11    1    -0.65205915
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.65205915  -29.50348634  -28.56595129   -1.05496440
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.65205915    -0.62033675    -0.81848094    -0.81848094
+ 8x, Delta KIPZ -3.172239290844699E-002
+     .... DONE 
+        orbital 11   spin  1     uKI_diag    -0.56635219 Ry   rKI_diag    -0.35167497 Ry   alpha=     0.62094749
+
+        self_hatree   12    1    -0.65083248
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.65083248  -29.50348634  -28.56481020   -1.05588037
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.65083248    -0.61934365    -0.81716386    -0.81716386
+ 8x, Delta KIPZ -3.148883428918237E-002
+     .... DONE 
+        orbital 12   spin  1     uKI_diag    -0.56511709 Ry   rKI_diag    -0.35101460 Ry   alpha=     0.62113605
+
+        self_hatree   13    1    -0.64728429
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.64728429  -29.50348634  -28.56035197   -1.05915958
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.64728429    -0.61785543    -0.81518991    -0.81518991
+ 8x, Delta KIPZ -2.942885374562437E-002
+     .... DONE 
+        orbital 13   spin  1     uKI_diag    -0.56068794 Ry   rKI_diag    -0.34832198 Ry   alpha=     0.62124036
+
+        self_hatree   14    1    -0.66904806
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.66904806  -29.50348634  -28.57156888   -1.05433308
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.66904806    -0.63147498    -0.83320779    -0.83320779
+ 8x, Delta KIPZ -3.757307650706460E-002
+     .... DONE 
+        orbital 14   spin  1     uKI_diag    -0.58420552 Ry   rKI_diag    -0.35869677 Ry   alpha=     0.61399072
+
+        self_hatree   15    1    -0.68052686
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.68052686  -29.50348634  -28.37726226   -1.22471598
+     ADDING KIPZ CORRECTION ....
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}     0.68052686    -0.65174018    -0.86008366    -0.86008366
+ 8x, Delta KIPZ -2.878667927098762E-002
+     .... DONE 
+        orbital 15   spin  1     uKI_diag    -0.61082164 Ry   rKI_diag    -0.33641375 Ry   alpha=     0.55075611
+
+     INFO: KI calcualtion: Full Hamiltonian ... DONE
+
+
+          KI[Full]    -25.4057   -22.8414   -22.6585   -19.0871   -18.8079   -16.9724   -15.3574   -14.7448
+          KI[Full]    -14.0456   -13.8782   -12.6053   -12.0187   -11.6103    -9.4557    -9.3247
+
+        KI[full] highest occupied level (ev):    -9.3247
+
+     Writing all to output data dir /home/colonna_n/CODES/q-e-kcw/tempdir/c6h6_kcw.save/ :
+     XML data file, pseudopotentials, collected wavefunctions
+ 
+     KCW          :      2.87s CPU      3.39s WALL
+
+     INITIALIZATION: 
+     map          :      0.00s CPU      0.00s WALL (       2 calls)
+ 
+     init_vloc    :      0.05s CPU      0.05s WALL (       1 calls)
+     init_us_1    :      0.00s CPU      0.00s WALL (       1 calls)
+ 
+ 
+ 
+ 
+ 
+     h_psi        :      0.07s CPU      0.08s WALL (       2 calls)
+ 
+     h_psi        :      0.07s CPU      0.08s WALL (       2 calls)
+     add_vuspsi   :      0.00s CPU      0.00s WALL (       2 calls)
+ 
+ 
+ 
+      General routines
+     calbec       :      0.00s CPU      0.00s WALL (       2 calls)
+     fft          :      0.10s CPU      0.15s WALL (      36 calls)
+     ffts         :      0.22s CPU      0.24s WALL (     120 calls)
+     fftw         :      0.08s CPU      0.09s WALL (     105 calls)
+     davcio       :      0.01s CPU      0.04s WALL (      13 calls)
+ 
+ 
+     KCW          :      2.87s CPU      3.40s WALL
+
+ 
+   This run was terminated on:  15:56:42   7Oct2024            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=
