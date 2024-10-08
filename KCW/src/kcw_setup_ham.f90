@@ -34,10 +34,10 @@ subroutine kcw_setup_ham
   USE io_files,          ONLY : prefix
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer
   USE control_kcw,       ONLY : alpha_final, evc0, iuwfc_wann, iurho_wann, kcw_iverbosity, &
-                                read_unitary_matrix, hamlt, alpha_corr_done, io_real_space, &
+                                read_unitary_matrix, Hamlt, alpha_corr_done, group_alpha, l_do_alpha, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_sp, nrho, nkstot_eff !, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_real_space, io_sp, nrho, nkstot_eff !, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, nks, ngk, igk_k, nelec, nelup, neldw
   USE cell_base,         ONLY : at, omega !, bg
@@ -308,6 +308,11 @@ subroutine kcw_setup_ham
     !
   ENDIF
   !
+  ALLOCATE (l_do_alpha(num_wann), group_alpha(num_wann) ) 
+  l_do_alpha = .TRUE.
+  DO i = 1, num_wann; group_alpha(i)=i; ENDDO
+  CALL group_orbitals ( )
+
   WRITE( stdout, '(5X,"INFO: PREPARING THE KCW CALCULATION ... DONE")')
   WRITE(stdout,'(/)')
   ! 

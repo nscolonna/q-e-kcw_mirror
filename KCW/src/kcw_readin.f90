@@ -64,7 +64,8 @@ SUBROUTINE kcw_readin()
   NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread, alpha_mix
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
-                        write_hr, l_alpha_corr, on_site_only
+                        write_hr, l_alpha_corr, on_site_only, h_diag_scheme, &
+                        l_diag, check_spread, h_corr_scheme
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -111,6 +112,9 @@ SUBROUTINE kcw_readin()
   !! kipz_corr       : Compute the pKIPZ hamiltonian (only for finite systems: Gamma-only calculation in SC) 
   !! l_alpha_corr    : If true a correction is applied to the screening coefficient to mimick effect beyond the 
   !!                   second order
+  !! h_proj          : if true an alterantive definition of the KI Hamitlonian is built and diagonalized
+  !!                   using projectors (see koopmans_ham_proj.f90)
+  !! l_diag          : if true the projectors-KI hamiltonian is applied perturbatively on KS states
   !! io_sp           : write/read wannier orbital densities in single precision to save disk space
   !! io_real_space   : write/read wannier orbital densities in real space (space consuming but more robust when restart)
   ! 
@@ -183,6 +187,9 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
+  h_corr_scheme       = "quadratic"
+  h_diag_scheme       = "wann"
+  l_diag              = .FALSE.
   io_sp               = .FALSE.
   io_real_space       = .FALSE.
   ! 
@@ -210,6 +217,50 @@ SUBROUTINE kcw_readin()
   !
   IF (kcw_at_ks) seedname = prefix
   IF (ionode) tmp_dir = trimcheck (outdir)
+  !
+  IF (ionode) THEN 
+    SELECT CASE( trim( h_diag_scheme ) )
+    CASE( 'wann' )
+       !
+       h_uniq  = .false.
+       h_proj  = .false.
+       !
+    CASE( 'uniq' )
+       !
+       h_uniq  = .true.
+       h_proj  = .false.
+       !
+    CASE( 'proj' )
+       !
+       h_uniq  = .false.
+       h_proj  = .true.
+       !
+    CASE DEFAULT
+       !
+       CALL errore( 'kcw_readin', 'h_diag_scheme=' // trim(h_diag_scheme) // &
+                  & ' not supported!  Valid options: "wann" || "uniq" || "proj" ',1 )
+       !
+    END SELECT
+    !
+    SELECT CASE( trim( h_corr_scheme ) )
+    CASE( 'quadratic', '2nd', 'second_order' )
+       !
+       corr_pc  = .true.
+       corr_sc  = .false.
+       !
+    CASE( 'full' )
+       !
+       corr_pc  = .false.
+       corr_sc  = .true.
+       !
+       CASE DEFAULT
+       !
+       CALL errore( 'kcw_readin', 'h_corr_scheme=' // trim(h_corr_scheme) // &
+                  & ' not supported!  Valid options: 1) "quadratic" || "2nd" || "second_order"; 2) "full"',1 )
+       !
+    END SELECT
+
+  ENDIF
   !
   ! ... broadcasting all input variables to other nodes
   !
@@ -265,6 +316,9 @@ SUBROUTINE kcw_readin()
   ELSE 
     CALL errore('kcw_readin', ' "assume isolated" not recognized', 1)
   ENDIF
+  !
+  IF (noncolin .AND. corr_sc) &
+    CALL errore('kcw_readin', 'h_ocrr_scheme="full" not implemented for the noncollinear case', npool)
   ! 
   IF (do_comp_mt_kcw .AND. mp1*mp2*mp3 /= 1) THEN 
      CALL infomsg('kcw_readin','WARNING: "do_comp_mt" set to FALSE. "l_vcut" set to TRUE instead')
@@ -275,6 +329,30 @@ SUBROUTINE kcw_readin()
   !
   IF (niter .LT.1 .OR. niter .GT. maxter) CALL errore ('kcw_readin', &
        'Wrong niter: it must be greater than 0 and less than maxter', maxter)
+  IF (h_uniq .AND. h_proj) THEN 
+     CALL infomsg('kcw_readin','WARNING: h_proj and h_uniq are mutually exclusive: GOING TO SET h_proj = .FALSE.')
+     h_proj = .FALSE.
+     h_uniq = .TRUE.
+  ENDIF
+  !
+  IF ((h_uniq .OR. h_proj) .AND. do_bands) THEN 
+     CALL infomsg('kcw_readin','WARNING: "do_bands" ignored. Bands interpolation not available when h_proj=.TRUE. OR h_uniq=.TRUE.')
+     CALL infomsg('kcw_readin','WARNING: "write_hr" ignored. H(R) not available when h_proj=.TRUE. OR h_uniq=.TRUE.')
+     do_bands = .FALSE.
+     write_hr = .FALSE.
+  ENDIF
+  !
+  IF (corr_pc .AND. corr_sc) THEN
+     CALL infomsg('kcw_readin','WARNING: corr_pc and corr_sc are mutually exclusive: GOING TO SET corr_sc = .FALSE.')
+     corr_sc = .FALSE.
+     corr_pc = .TRUE.
+  ENDIF
+  !
+  IF (h_proj .AND. corr_sc) THEN
+     CALL infomsg('kcw_readin','WARNING: corr_sc and h_proj are not compatible: GOING TO SWITCH to h_uniq = .FALSE.')
+     h_proj = .FALSE.
+     h_uniq = .TRUE.
+  ENDIF
   !
   ! read data produced by pwscf
   !
@@ -331,6 +409,9 @@ SUBROUTINE kcw_readin()
      l_vcut = .false.
   ENDIF
   !
+  IF (corr_sc .AND. nkstot_eff /= 1) &
+     CALL errore('kcw_readin', 'Is this a SC calculation?', 1)
+  ! 
   IF (lgamma) THEN
      nksq = nks
   ELSE
