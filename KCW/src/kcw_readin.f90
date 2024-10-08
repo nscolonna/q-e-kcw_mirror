@@ -318,7 +318,7 @@ SUBROUTINE kcw_readin()
   ENDIF
   !
   IF (noncolin .AND. corr_sc) &
-    CALL errore('kcw_readin', 'h_ocrr_scheme="full" not implemented for the noncollinear case', npool)
+    CALL errore('kcw_readin', 'h_corr_scheme="full" not implemented for the noncollinear case', npool)
   ! 
   IF (do_comp_mt_kcw .AND. mp1*mp2*mp3 /= 1) THEN 
      CALL infomsg('kcw_readin','WARNING: "do_comp_mt" set to FALSE. "l_vcut" set to TRUE instead')

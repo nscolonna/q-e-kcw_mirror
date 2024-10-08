@@ -121,7 +121,7 @@ SUBROUTINE koopmans_ham (dH_wann)
   !
   !! ... formats
   !
-9043 FORMAT(/,8x,'KS       highest occupied level (ev): ',F10.4 )
+9043 FORMAT(/,8x, 'KS       highest occupied level (ev): ',F10.4 )
 9042 FORMAT(/,8x, 'KS       highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9045 FORMAT(  8x, 'KI[2nd]  highest occupied level (ev): ',F10.4 )
 9044 FORMAT(  8x, 'KI[2nd]  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
