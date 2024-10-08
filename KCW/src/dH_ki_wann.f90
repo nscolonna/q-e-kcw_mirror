@@ -300,10 +300,10 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
          sh(iwann) = sh(iwann) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:)                )*weight(iq)*omega
          IF (nspin_mag ==2 ) THEN
             deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component)) &
-                                     * weight(iq) * omega
+                                        * weight(iq) * omega
          ELSE 
             DO ip = 1, nspin_mag
-                             deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,ip)) * delta_vg(:,ip)) &
+              deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,ip)) * delta_vg(:,ip)) &
                                           * weight(iq) * omega
             ENDDO
          ENDIF
