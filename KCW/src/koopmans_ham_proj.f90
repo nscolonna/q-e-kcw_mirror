@@ -231,10 +231,10 @@ SUBROUTINE koopmans_ham_proj (delta)
   ENDDO
 
   ! 
-9043 FORMAT(/,8x, 'KS       highest occupied level (ev): ',F10.4 )
-9042 FORMAT(/,8x, 'KS       highest occupied, lowest unoccupied level (ev): ',2F10.4 )
-9045 FORMAT(  8x, 'KI[2nd]  highest occupied level (ev): ',F10.4 )
-9044 FORMAT(  8x, 'KI[2nd]  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+9043 FORMAT(/,8x, 'KS  highest occupied level (ev): ',F10.4 )
+9042 FORMAT(/,8x, 'KS  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+9045 FORMAT(  8x, 'KI  highest occupied level (ev): ',F10.4 )
+9044 FORMAT(  8x, 'KI  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
 900 FORMAT(/'     total cpu time spent up to now is ',F10.1,' secs' )
 901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )

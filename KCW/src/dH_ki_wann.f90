@@ -45,6 +45,7 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
   !
   dH_wann = CMPLX(0.D0,0.D0, kind=DP) 
   !
+  WRITE(stdout,'(/,5x,"INFO: KI calcualtion: quadratic Hamiltonian ... ",/ )')
   IF (on_site_only) WRITE(stdout, '(/,5X, "INFO: Skipping off-diag: only R=0 and i=j")') 
   !
   ! The scalar term R=0 i=j 

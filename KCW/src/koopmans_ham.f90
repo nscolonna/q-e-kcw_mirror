@@ -18,7 +18,7 @@ SUBROUTINE koopmans_ham (dH_wann)
   USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : num_wann, Hamlt, nqstot, l_alpha_corr, evc0, &
                                     alpha_final, num_wann_occ, on_site_only, iuwfc_wann, &
-                                    nkstot_eff, spin_component
+                                    nkstot_eff, spin_component, kcw_at_ks
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
   USE units_lr,              ONLY : lrwfc, iuwfc
@@ -36,8 +36,13 @@ SUBROUTINE koopmans_ham (dH_wann)
   !
   COMPLEX(DP), INTENT (IN) :: dH_wann(nkstot_eff,num_wann,num_wann)
   !
+  COMPLEX(DP), ALLOCATABLE :: ham_aux(:,:)
+  REAL(DP), ALLOCATABLE :: eigvl_ki(:)
+  COMPLEX(DP), ALLOCATABLE :: eigvc_ki(:,:)
+  INTEGER i_start, i_end, k
+  !
   ! The new eigenalues 
-  REAL(DP) :: eigvl(num_wann)
+  REAL(DP) :: eigvl(num_wann), eigvl_ks(num_wann)
   !
   INTEGER :: i, iwann, jwann
   ! 
@@ -61,12 +66,10 @@ SUBROUTINE koopmans_ham (dH_wann)
     !
     ! Diagonalize the KS hamiltonian in the Wannier Gauge (just to check)
     ham(:,:) = Hamlt(ik,:,:) 
-    CALL cdiagh( num_wann, ham, num_wann, eigvl, eigvc )
+    CALL cdiagh( num_wann, ham, num_wann, eigvl_ks, eigvc )
     !
-    WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
-    !
-    ehomo_ks = MAX ( ehomo_ks, eigvl(num_wann_occ ) )
-    IF (num_wann > num_wann_occ) elumo_ks = MIN ( elumo_ks, eigvl(num_wann_occ+1 ) )
+    ehomo_ks = MAX ( ehomo_ks, eigvl_ks(num_wann_occ ) )
+    IF (num_wann > num_wann_occ) elumo_ks = MIN ( elumo_ks, eigvl_ks(num_wann_occ+1 ) )
     !
     ! Add the KI contribution to the KS Hamiltonian in the wannier basis
     Hamlt(ik,:,:) = Hamlt(ik,:,:) + dH_wann(ik,:,:) 
@@ -78,9 +81,38 @@ SUBROUTINE koopmans_ham (dH_wann)
     ENDDO
 #endif
     !
+    IF (kcw_at_ks) THEN
+    !
+    WRITE(stdout,'(8x, "INFO: Empty states spectrum as a function of the # of orbitals")')
+    !
+    DO k = 1, num_wann-num_wann_occ
+       !
+       i_start = num_wann_occ+1
+       i_end = num_wann_occ+k
+       !
+       ALLOCATE (ham_aux(k,k), eigvl_ki(k), eigvc_ki(k,k))
+       ham_aux(1:k,1:k) = Hamlt(ik,i_start:i_end,i_start:i_end)
+       !
+       CALL cdiagh( k, ham_aux, k, eigvl_ki, eigvc_ki )
+       !
+       IF (k.le.10) THEN
+          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:k)*rytoev  ! First 10 eigenvalues
+       ELSE
+          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:10)*rytoev  ! First 10 eigenvalues
+       ENDIF
+       !
+       DEALLOCATE (ham_aux)
+       DEALLOCATE (eigvl_ki, eigvc_ki)
+       !
+    ENDDO
+    !
+    ENDIF
+    !
     ! Diagonalize the KI hamitlonian in the Wannier Gauge
     ham(:,:) = Hamlt(ik,:,:) 
     CALL cdiagh( num_wann, ham, num_wann, eigvl, eigvc )
+    !
+    WRITE( stdout, '(/,10x, "KS  ",8F11.4)' ) (eigvl_ks(iwann)*rytoev, iwann=1,num_wann)
     WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
     WRITE(stdout, 901) get_clock('KCW')
     !
@@ -121,10 +153,10 @@ SUBROUTINE koopmans_ham (dH_wann)
   !
   !! ... formats
   !
-9043 FORMAT(/,8x, 'KS       highest occupied level (ev): ',F10.4 )
-9042 FORMAT(/,8x, 'KS       highest occupied, lowest unoccupied level (ev): ',2F10.4 )
-9045 FORMAT(  8x, 'KI[2nd]  highest occupied level (ev): ',F10.4 )
-9044 FORMAT(  8x, 'KI[2nd]  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+9043 FORMAT(/,8x, 'KS  highest occupied level (ev): ',F10.4 )
+9042 FORMAT(/,8x, 'KS  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+9045 FORMAT(  8x, 'KI  highest occupied level (ev): ',F10.4 )
+9044 FORMAT(  8x, 'KI  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
  901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
   !
