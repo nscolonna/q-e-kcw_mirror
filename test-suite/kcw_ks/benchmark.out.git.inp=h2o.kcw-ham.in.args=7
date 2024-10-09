@@ -160,8 +160,8 @@
           KS     -25.6043   -13.1605    -9.2956    -7.1310    -1.2468
           KI     -31.6338   -18.5985   -14.4231   -12.2147     0.4441
 
-        KS       highest occupied, lowest unoccupied level (ev):    -7.1310   -1.2468
-        KI[2nd]  highest occupied, lowest unoccupied level (ev):   -12.2147    0.4441
+        KS  highest occupied, lowest unoccupied level (ev):    -7.1310   -1.2468
+        KI  highest occupied, lowest unoccupied level (ev):   -12.2147    0.4441
 
      INFO: KI calcualtion: Full Hamiltonian ... 
 

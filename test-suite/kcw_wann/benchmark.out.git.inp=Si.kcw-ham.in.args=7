@@ -268,8 +268,8 @@
           KS    -3.2900  -0.7399   5.1127   5.1127
           KI    -4.5674  -2.0172   3.8353   3.8353
 
-        KS       highest occupied level (ev):     6.3478
-        KI[2nd]  highest occupied level (ev):     5.0704
+        KS  highest occupied level (ev):     6.3478
+        KI  highest occupied level (ev):     5.0704
 
      ====================================
      STARTING BAND STRUCTURE INTERPOLATION

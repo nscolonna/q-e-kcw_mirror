@@ -43,10 +43,10 @@ rpi=`grep "iwann  =     1" $fname | awk '{print $6}'`
 upi=`grep "iwann  =     1" $fname | awk '{print $9}'`
 
 ##KCW hamilt
-homo_ks=`grep "KS       highest occupied level (ev):" $fname | tail -1 | awk '{print $6}'`
-homo_kc=`grep "KI\[2nd\]  highest occupied level (ev):" $fname | tail -1 | awk '{print $6}'`
-gap_ks=`grep "KS       highest occupied, lowest unoccupied level (ev):" $fname | tail -1 | awk '{print $9-$8}'`
-gap_kc=`grep "KI\[2nd\]  highest occupied, lowest unoccupied level (ev):" $fname | tail -1 | awk '{print $9-$8}'`
+homo_ks=`grep "KS  highest occupied level (ev):" $fname | tail -1 | awk '{print $6}'`
+homo_kc=`grep "KI  highest occupied level (ev):" $fname | tail -1 | awk '{print $6}'`
+gap_ks=`grep "KS  highest occupied, lowest unoccupied level (ev):" $fname | tail -1 | awk '{print $9-$8}'`
+gap_kc=`grep "KI  highest occupied, lowest unoccupied level (ev)::" $fname | tail -1 | awk '{print $9-$8}'`
 
 if test "$e1" != ""; then
 	echo e1
