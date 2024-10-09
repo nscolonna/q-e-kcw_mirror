@@ -60,7 +60,7 @@ SUBROUTINE koopmans_ham (dH_wann)
   elumo_ks=+1D+6
   !
   WRITE( stdout, '(/,5X, "INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN")')
-  WRITE( stdout, '(  5X, "INFO: Standar scheme: diagonalize on the Wannier basis")')
+  WRITE( stdout, '(  5X, "INFO: Standar scheme: diagonalize on the variational orbitals basis")')
   !
   DO ik = 1, nkstot_eff
     !
