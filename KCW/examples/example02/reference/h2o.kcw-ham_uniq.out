@@ -19,7 +19,7 @@
         A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
      =--------------------------------------------------------------------------------=
 
-     Program KCW v.7.3.1 starts on  9Oct2024 at 16: 5:55 
+     Program KCW v.7.3.1 starts on  9Oct2024 at 16: 5:56 
         Git branch: HPROJinDEV
         Last git commit: ab4da15898d4194ee1aa48614cac2263d3aa3a74-dirty
         Last git commit date: Wed Oct 9 14:43:00 2024 +0200
@@ -38,7 +38,7 @@
 
      MPI processes distributed on     1 nodes
      R & G space division:  proc/nbgrp/npool/nimage =       4
-     7209 MiB available memory on the printing compute node when the environment starts
+     7197 MiB available memory on the printing compute node when the environment starts
  
 
      KCW INPUT SUMMARY 
@@ -179,7 +179,7 @@
      Writing all to output data dir /home/colonna_n/CODES/q-e-kcw/tempdir/h2o_kcw_uniq-H.save/ :
      XML data file, pseudopotentials, collected wavefunctions
  
-     KCW          :      0.64s CPU      0.73s WALL
+     KCW          :      0.64s CPU      0.72s WALL
 
      INITIALIZATION: 
      map          :      0.00s CPU      0.00s WALL (       1 calls)
@@ -201,15 +201,15 @@
       General routines
      calbec       :      0.00s CPU      0.00s WALL (       1 calls)
      fft          :      0.03s CPU      0.04s WALL (      22 calls)
-     ffts         :      0.07s CPU      0.07s WALL (      64 calls)
+     ffts         :      0.06s CPU      0.07s WALL (      64 calls)
      fftw         :      0.01s CPU      0.02s WALL (      32 calls)
      davcio       :      0.00s CPU      0.01s WALL (      10 calls)
  
  
-     KCW          :      0.64s CPU      0.73s WALL
+     KCW          :      0.64s CPU      0.72s WALL
 
  
-   This run was terminated on:  16: 5:55   9Oct2024            
+   This run was terminated on:  16: 5:57   9Oct2024            
 
 =------------------------------------------------------------------------------=
    JOB DONE.

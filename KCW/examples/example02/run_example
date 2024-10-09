@@ -204,9 +204,71 @@ KCW H2O KI hamiltonian
   do_bands = .false.
   use_ws_distance = .false.
   write_hr = .true.
+  h_corr_scheme = 'full'
+  h_diag_scheme = 'uniq'
 /
 EOF
 
-$ECHO "  Running the KI hamiltonian calculation for $PREFIX...\c"
+$ECHO "  Running the KI hamiltonian calculation [ki_corr_scheme = WANN]for $PREFIX...\c"
 $KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham.in > $PREFIX.kcw-ham.out
 $ECHO " done"
+
+cat > $PREFIX.kcw-ham_uniq.in << EOF
+KCW H2O KI hamiltonian
+&control
+  prefix='$PREFIX'
+  outdir='$TMP_DIR'
+  kcw_iverbosity = 1
+  kcw_at_ks=.true.
+  homo_only = .false.
+  read_unitary_matrix = .false.
+  assume_isolated = 'mt'
+  calculation = 'ham'
+  lrpa =.false.
+  mp1 = 1
+  mp2 = 1
+  mp3 = 1
+/
+&ham
+  do_bands = .false.
+  use_ws_distance = .false.
+  write_hr = .true.
+  h_corr_scheme = 'full'
+  h_diag_scheme = 'uniq'
+/
+EOF
+
+$ECHO "  Running the KI hamiltonian calculation [ki_corr_scheme = UNIQ] for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_uniq.in > $PREFIX.kcw-ham_uniq.out
+$ECHO " done"
+
+cat > $PREFIX.kcw-ham_proj.in << EOF
+KCW H2O KI hamiltonian
+&control
+  prefix='$PREFIX'
+  outdir='$TMP_DIR'
+  kcw_iverbosity = 1
+  kcw_at_ks=.true.
+  homo_only = .false.
+  read_unitary_matrix = .false.
+  assume_isolated = 'mt'
+  calculation = 'ham'
+  lrpa =.false.
+  mp1 = 1
+  mp2 = 1
+  mp3 = 1
+/
+&ham
+  do_bands = .false.
+  use_ws_distance = .false.
+  write_hr = .true.
+  h_corr_scheme = 'full'
+  h_diag_scheme = 'proj'
+/
+EOF
+
+$ECHO "  Running the KI hamiltonian calculation [ki_corr_scheme = PROJ] for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_proj.in > $PREFIX.kcw-ham_proj.out
+$ECHO " done"
+
+

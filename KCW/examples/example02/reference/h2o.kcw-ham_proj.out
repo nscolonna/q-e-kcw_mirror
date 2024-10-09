@@ -19,7 +19,7 @@
         A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
      =--------------------------------------------------------------------------------=
 
-     Program KCW v.7.3.1 starts on  9Oct2024 at 16: 5:55 
+     Program KCW v.7.3.1 starts on  9Oct2024 at 16: 5:58 
         Git branch: HPROJinDEV
         Last git commit: ab4da15898d4194ee1aa48614cac2263d3aa3a74-dirty
         Last git commit date: Wed Oct 9 14:43:00 2024 +0200
@@ -38,7 +38,7 @@
 
      MPI processes distributed on     1 nodes
      R & G space division:  proc/nbgrp/npool/nimage =       4
-     7209 MiB available memory on the printing compute node when the environment starts
+     7202 MiB available memory on the printing compute node when the environment starts
  
 
      KCW INPUT SUMMARY 
@@ -70,10 +70,12 @@
        # write_hr            =                 T
        # l_alpha_corr        =                 F
        # on_site_only        =                 F
-       # h_diag_scheme       =              uniq
+       # h_diag_scheme       =              proj
        # h_corr_scheme       =              full
      ============================================
 
+     Message from routine kcw_readin:
+     WARNING: corr_sc and h_proj are not compatible: GOING TO SWITCH to default
      INFO: Reading pwscf data
 
      Reading xml data from directory:
@@ -163,23 +165,23 @@
 
 
      INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN
-     INFO: Unique Hamiltonian scheme using projectors
+     INFO: Standar scheme: diagonalize on the Wannier basis
 
           k = 0.0000 0.0000 0.0000     band energies (ev):
 
-          KS     -25.4754   -13.3483    -9.4516    -7.3908    -1.5378     0.0879     0.1858     0.6870
-          KI     -31.5447   -18.9761   -14.8799   -12.7310     0.0238     1.4870     1.5047     1.9910
-          pKI    -31.5447   -18.9761   -14.8799   -12.7310     0.1117     1.4255     1.5047     1.9646
+          KS      -25.4754   -13.3483    -9.4516    -7.3908    -1.5378     0.0879     0.1858     0.6870
+          KI      -31.5447   -18.9761   -14.8799   -12.7310     0.0238     1.4870     1.5047     1.9910
+          pKI     -31.5447   -18.9761   -14.8799   -12.7310     0.1117     1.4255     1.5047     1.9646
           total cpu time spent up to now is        0.7 secs
 
         KS  highest occupied, lowest unoccupied level (ev):    -7.3908   -1.5378
         KI  highest occupied, lowest unoccupied level (ev):   -12.7310    0.0238
         pKI highest occupied, lowest unoccupied level (ev):   -12.7310    0.1117
 
-     Writing all to output data dir /home/colonna_n/CODES/q-e-kcw/tempdir/h2o_kcw_uniq-H.save/ :
+     Writing all to output data dir /home/colonna_n/CODES/q-e-kcw/tempdir/h2o_kcw.save/ :
      XML data file, pseudopotentials, collected wavefunctions
  
-     KCW          :      0.64s CPU      0.73s WALL
+     KCW          :      0.63s CPU      0.71s WALL
 
      INITIALIZATION: 
      map          :      0.00s CPU      0.00s WALL (       1 calls)
@@ -203,13 +205,13 @@
      fft          :      0.03s CPU      0.04s WALL (      22 calls)
      ffts         :      0.07s CPU      0.07s WALL (      64 calls)
      fftw         :      0.01s CPU      0.02s WALL (      32 calls)
-     davcio       :      0.00s CPU      0.01s WALL (      10 calls)
+     davcio       :      0.00s CPU      0.01s WALL (       9 calls)
  
  
-     KCW          :      0.64s CPU      0.73s WALL
+     KCW          :      0.63s CPU      0.72s WALL
 
  
-   This run was terminated on:  16: 5:55   9Oct2024            
+   This run was terminated on:  16: 5:58   9Oct2024            
 
 =------------------------------------------------------------------------------=
    JOB DONE.
