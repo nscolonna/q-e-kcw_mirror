@@ -23,9 +23,7 @@ SUBROUTINE compute_map_ikq_single (iq,also_minus)
   USE mp,                   ONLY : mp_bcast
   USE mp_global,            ONLY : intra_image_comm 
   USE io_global,            ONLY : stdout
-  USE lsda_mod,             ONLY : nspin
   USE cell_base,            ONLY : at
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
   !
 #ifdef DEBUG
   USE mp_world,             ONLY : mpime
@@ -38,8 +36,6 @@ SUBROUTINE compute_map_ikq_single (iq,also_minus)
   !
   INTEGER :: ik, ikq, ikq_m
   ! Counter for the k, k+q, k-q points in the BZ
-  !
-  INTEGER :: sign_pm
   !
   REAL(DP) :: xkq(3), gvect(3), gvect_(3)
   ! the k+q coordinate and the G vector that shift it into the 1 BZ
@@ -165,12 +161,7 @@ SUBROUTINE find_index_1bz(xkq, gvect, ikq)
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : at, bg
   USE klist,                ONLY : xk, nkstot
-  USE lsda_mod,             ONLY : nspin
   USE control_kcw,          ONLY : nkstot_eff
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
-  !USE mp_world,             ONLY : mpime
-  
-  !USE io_global,            ONLY : stdout
   !
   IMPLICIT NONE
   !
@@ -239,11 +230,7 @@ SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : at, bg
   USE klist,                ONLY : xk, nkstot
-  USE lsda_mod,             ONLY : nspin
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
-  !USE mp_world,             ONLY : mpime
-  
-  !USE io_global,            ONLY : stdout
+  USE noncollin_module,     ONLY : nspin_mag
   !
   IMPLICIT NONE
   !

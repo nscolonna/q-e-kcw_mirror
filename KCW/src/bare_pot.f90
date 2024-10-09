@@ -15,28 +15,21 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   !! charge density. V^{0n}_{Hxc}(r) = \int dr' f_Hxc(r,r') w^{0n}(r')
   !  
   USE kinds,                ONLY : DP
-  USE fft_base,             ONLY : dffts, dfftp
+  USE fft_base,             ONLY : dffts
   USE fft_interfaces,       ONLY : fwfft, invfft
   USE gvecs,                ONLY : ngms
-  USE lsda_mod,             ONLY : nspin
   USE cell_base,            ONLY : tpiba2, omega
   USE control_kcw,          ONLY : spin_component, kcw_iverbosity, x_q, nrho
   USE gvect,                ONLY : g
   USE qpoint,               ONLY : xq
   USE constants,            ONLY : e2, fpi
-  USE eqv,                  ONLY : dmuxc
   USE control_lr,           ONLY : lrpa
   USE martyna_tuckerman,    ONLY : wg_corr_h, do_comp_mt
   USE io_global,            ONLY : stdout
-  !USE exx_base,             ONLY : g2_convolution
-  USE coulomb,             ONLY : g2_convolution
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
-  ! GC LR suff
-  USE xc_lib,            ONLY : xclib_dft_is
-  USE scf,               ONLY : rho, rho_core
-  USE uspp,              ONLY : nlcc_any
-  USE gc_lr,             ONLY : grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s
-  USE dv_of_drho_lr,     ONLY : dv_of_drho_xc
+  USE coulomb,              ONLY : g2_convolution
+  USE noncollin_module,     ONLY : domag, nspin_mag
+  USE xc_lib,               ONLY : xclib_dft_is
+  USE dv_of_drho_lr,        ONLY : dv_of_drho_xc
 
 
   !
@@ -72,7 +65,7 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   COMPLEX(DP), ALLOCATABLE  :: vaux(:)
   ! ... auxiliary vector
   !
-  INTEGER                   :: ig, is, ir, iss, ip
+  INTEGER                   :: ig, is, ip
   ! ... counters 
   !
   REAL(DP)                  :: qg2, eh_corr
@@ -136,7 +129,7 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
     IF (qg2 .lt. 1e-8) vh_rhog_g0eq0(ig) = (0.D0, 0.D0)
     ! ... set to zero the q+g=0 component
     !
-    vh_rhog(ig) =  rhog(ig,1) * cmplx(fac(ig), 0.d0)
+    vh_rhog(ig) =  rhog(ig,1) * cmplx(fac(ig), 0.d0, KIND=DP)
     ! ... the hartree potential possibly with the special treatment of the q+g=0 component  
     !
   ENDDO

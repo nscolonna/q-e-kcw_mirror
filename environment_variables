@@ -74,7 +74,7 @@ PSEUDO_DIR=$PREFIX/pseudo
 TMP_DIR=$PREFIX/tempdir
 
 PARA_PREFIX=" "
-# PARA_PREFIX="mpirun -np 4"
+PARA_PREFIX="mpirun -np 4"
 
 # available flags: 
 #                  -ni n        number of images        (or -nimage)

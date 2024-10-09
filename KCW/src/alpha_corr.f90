@@ -88,8 +88,8 @@ SUBROUTINE alpha_corr ( iwann, delta)
       USE scf,                   ONLY : rho, rho_core, rhog_core
       USE fft_base,              ONLY : dffts
       USE fft_interfaces,        ONLY : fwfft
-      USE lsda_mod,              ONLY : nspin, isk, lsda
-      USE klist,                 ONLY : nkstot, ngk, igk_k, nks
+      USE lsda_mod,              ONLY : isk, lsda
+      USE klist,                 ONLY : ngk, igk_k, nks
       USE control_kcw,           ONLY : evc0, iuwfc_wann, num_wann, spin_component, nqstot, iurho_wann,&
                                         nkstot_eff, nrho
       USE wvfct,                 ONLY : npwx
@@ -97,17 +97,15 @@ SUBROUTINE alpha_corr ( iwann, delta)
       USE mp_bands,              ONLY : intra_bgrp_comm
       USE buffers,               ONLY : get_buffer
       USE mp,                    ONLY : mp_sum
-      USE eqv,                   ONLY : dmuxc
       USE gvecs,                 ONLY : ngms
-      USE noncollin_module,      ONLY : domag, noncolin, m_loc, angle1, angle2, &
-                                        ux, nspin_lsda, nspin_gga, nspin_mag, npol
+      USE noncollin_module,      ONLY : nspin_mag, npol
       USE dv_of_drho_lr,         ONLY : dv_of_drho_xc
       !
       !
       IMPLICIT NONE 
       !  
       INTEGER, INTENT (IN) :: iwann
-      INTEGER :: ik, npw, lrrho, iq, ir, is, ip, iss
+      INTEGER :: ik, npw, lrrho, iq, is, ip
       REAL(DP), INTENT (OUT) :: en, eig, krnl 
       REAL(DP) ::  vtxc, etxc, vxc(dffts%nnr,nspin_mag), eig_k, krnl_q
       INTEGER :: lrwfc
@@ -146,13 +144,13 @@ SUBROUTINE alpha_corr ( iwann, delta)
         CALL invfft_wave (npw, igk_k (1,ik), evc_g , evc_r )
         !! The wfc in R-space at k
         IF (nspin_mag==2) THEN
-            eig_k = sum ( vxc(:,spin_component) * evc_r(:,1) * CONJG(evc_r(:,1) ) ) !check the (:,->1)
+            eig_k = REAL( sum ( vxc(:,spin_component) * evc_r(:,1) * CONJG(evc_r(:,1) ) ) ) !check the (:,->1)
         ELSE
-            eig_k = sum ( vxc(:,1) * (evc_r(:,1) * CONJG(evc_r(:,1) )+evc_r(:,2) * CONJG(evc_r(:,2)))) + & 
-                    sum ( vxc(:,2) * (conjg(evc_r(:,1))*evc_r(:,2) + conjg(evc_r(:,2))*evc_r(:,1))) + & 
-                    sum ( vxc(:,3) * (-CMPLX(0.D0,1.D0, kind=DP) * conjg(evc_r(:,1))*evc_r(:,2) & 
-                                     + CMPLX(0.D0,1.D0, kind=DP) * conjg(evc_r(:,2))*evc_r(:,1))) + & 
-                    sum ( vxc(:,4) * ( conjg(evc_r(:,1))*evc_r(:,1) - conjg(evc_r(:,2))*evc_r(:,2)))
+            eig_k = REAL( sum ( vxc(:,1) * (evc_r(:,1) * CONJG(evc_r(:,1) )+evc_r(:,2) * CONJG(evc_r(:,2)))) + & 
+                          sum ( vxc(:,2) * (conjg(evc_r(:,1))*evc_r(:,2) + conjg(evc_r(:,2))*evc_r(:,1))) + & 
+                          sum ( vxc(:,3) * (-CMPLX(0.D0,1.D0, kind=DP) * conjg(evc_r(:,1))*evc_r(:,2) & 
+                                         + CMPLX(0.D0,1.D0, kind=DP) * conjg(evc_r(:,2))*evc_r(:,1))) + & 
+                         sum ( vxc(:,4) * ( conjg(evc_r(:,1))*evc_r(:,1) - conjg(evc_r(:,2))*evc_r(:,2))) )
         END IF
         eig_k = eig_k/( dffts%nr1*dffts%nr2*dffts%nr3 )
         CALL mp_sum (eig_k, intra_bgrp_comm) 
@@ -192,21 +190,6 @@ SUBROUTINE alpha_corr ( iwann, delta)
         CALL dv_of_drho_xc(delta_vr, rhor_)
         DEALLOCATE (rhor_)
         !
-!        IF (nspin_mag==2) THEN
-!          DO is = 1, nspin_mag
-!            DO ir = 1, dffts%nnr
-!              delta_vr(ir,is) = delta_vr(ir,is) + dmuxc(ir,is,spin_component) * rhor(ir,1)/omega
-!            END DO
-!          END DO
-!        ELSE
-!          DO is = 1, nspin_mag
-!              DO ir = 1, dffts%nnr
-!                  DO iss = 1, nspin_mag
-!                delta_vr(ir,is) = delta_vr(ir,is) + dmuxc(ir,is,iss) * rhor(ir,iss)/omega
-!              END DO
-!            END DO
-!          END DO
-!        END IF
         ! In g-space
         DO is = 1, nspin_mag
           aux(:) = delta_vr(:,is)
@@ -214,11 +197,11 @@ SUBROUTINE alpha_corr ( iwann, delta)
           delta_vg(:,is) = aux(dffts%nl(:))
         ENDDO
         IF (nspin_mag==2) THEN
-          krnl_q = sum (CONJG(rho_wann_g (:,1)) * delta_vg(:,spin_component))*omega
+          krnl_q = REAL(sum (CONJG(rho_wann_g (:,1)) * delta_vg(:,spin_component))*omega)
         ELSE
           krnl_q = 0.0_DP
           DO ip=1,nrho
-            krnl_q = krnl_q + sum (CONJG(rho_wann_g (:,ip)) * delta_vg(:,ip))*omega
+            krnl_q = krnl_q + REAL(sum (CONJG(rho_wann_g (:,ip)) * delta_vg(:,ip))*omega)
           END DO
         END IF
         CALL mp_sum (krnl_q, intra_bgrp_comm)
@@ -238,17 +221,14 @@ SUBROUTINE alpha_corr ( iwann, delta)
       USE scf,                   ONLY : rho, rho_core, rhog_core, create_scf_type, scf_type
       USE fft_base,              ONLY : dffts, dfftp
       USE fft_interfaces,        ONLY : fwfft
-      USE lsda_mod,              ONLY : nspin
-      USE klist,                 ONLY : nkstot
       USE control_kcw,           ONLY : num_wann, nqstot, iurho_wann, &
                                         rvect, x_q, nkstot_eff, nrho
       USE cell_base,             ONLY : omega
       USE buffers,               ONLY : get_buffer
       USE mp,                    ONLY : mp_sum
       USE constants,             ONLY : tpi
-      !USE funct,                 ONLY : dft_is_gradient
       USE xc_lib,                ONLY : xclib_dft_is
-      USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+      USE noncollin_module,      ONLY : nspin_mag
       !
       IMPLICIT NONE 
       !

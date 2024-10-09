@@ -16,8 +16,8 @@ subroutine bcast_wfc (igk_k_all, ngk_all)
   !   
   !
   USE kinds,             ONLY : DP
-  USE lsda_mod,          ONLY : nspin, lsda, isk
-  USE noncollin_module,  ONLY : domag, noncolin, nspin_lsda, nspin_gga, nspin_mag, npol
+  USE lsda_mod,          ONLY : lsda, isk
+  USE noncollin_module,  ONLY : nspin_mag, npol
   USE klist,             ONLY : nkstot, nks, igk_k, ngk
   USE buffers,           ONLY : open_buffer, save_buffer,  get_buffer
   USE control_kcw,       ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, num_wann, spin_component

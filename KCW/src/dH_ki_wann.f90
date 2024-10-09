@@ -14,12 +14,11 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
   !
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
-  USE klist,                 ONLY : nkstot, xk
+  USE klist,                 ONLY : nkstot
   USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : num_wann, nqstot, l_alpha_corr, &
                                     alpha_final, num_wann_occ, on_site_only, h_proj, nkstot_eff
   USE constants,             ONLY : rytoev
-  USE wavefunctions,         ONLY : evc
   USE buffers,               ONLY : get_buffer, save_buffer
   !
   IMPLICIT NONE
@@ -242,14 +241,14 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
     USE kinds,                ONLY : DP
     USE io_global,            ONLY : stdout
     USE control_kcw,          ONLY : num_wann, nqstot, iurho_wann, &
-                                     spin_component, nrho, x_q, kcw_iverbosity
+                                     spin_component, nrho
     USE fft_base,             ONLY : dffts
     USE cell_base,            ONLY : omega
     USE gvecs,                ONLY : ngms
     USE mp_bands,             ONLY : intra_bgrp_comm
     USE mp,                   ONLY : mp_sum
     USE buffers,              ONLY : get_buffer
-    USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+    USE noncollin_module,     ONLY : nspin_mag
     !
     IMPLICIT NONE
     !
@@ -267,14 +266,10 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
     COMPLEX(DP) :: sh(num_wann)
     !
     ! Auxiliary variables 
-    COMPLEX(DP), ALLOCATABLE  :: rhog(:,:), delta_vg(:,:), vh_rhog(:), delta_vg_(:,:), wann_c(:,:,:), rho_c(:,:,:)
+    COMPLEX(DP), ALLOCATABLE  :: rhog(:,:), delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
     !
     ! The weight of each q point
     REAL(DP) :: weight(nqstot)
-    !
-    COMPLEX(DP) :: struct_fact,int_rho,int_wann
-    COMPLEX(DP) :: phase(dffts%nnr)
-    REAL(DP) :: xq_(3)
     !
     WRITE( stdout, '(/,5X, "INFO: KC SCALAR TERM CALCULATION ... START")')
     !
@@ -351,14 +346,9 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
     USE solve_linter_koop_mod 
     USE qpoint,               ONLY : xq
     USE wvfct,                ONLY : npwx 
-    !
-    !USE mp_world,             ONLY : mpime
-    !
     USE cell_base,            ONLY : omega
-    USE noncollin_module,     ONLY : npol
-    !
     USE constants,            ONLY : rytoev
-    USE noncollin_module,     ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+    USE noncollin_module,     ONLY : nspin_mag, npol
     !
     IMPLICIT NONE
     ! 
@@ -412,7 +402,7 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
     LOGICAL :: off_diag = .TRUE., debug_nc = .true.
     ! compute Off-diagonal elements. NsC: not sure off_diag=.false. here makes sense: DO NOT CHANGE!!!!
     !
-    INTEGER :: ip, is, iss
+    INTEGER :: is
     !
     ! If there are no empty wannier functions, RETURN 
     IF (num_wann == num_wann_occ) RETURN 
@@ -595,18 +585,14 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
       !
       !    
     ENDDO ! qpoints
-    !WRITE( stdout, '(5X,"INFO: KC HAMILTONIAN CALCULATION ik= ", i4, " ... DONE")') ik
     !
     dH_wann = nqstot*dH_wann
     CALL mp_sum (dH_wann, intra_bgrp_comm)
     CALL mp_sum (sh, intra_bgrp_comm)
     ! Sum over different processes (G vectors) 
-    !WRITE(stdout, 900) get_clock('KCW')
     !
     RETURN 
     !
-900 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
-  !
   END subroutine 
   !
 END SUBROUTINE dH_ki_wann

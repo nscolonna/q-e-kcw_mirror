@@ -50,7 +50,7 @@ SUBROUTINE merge_centres (nargs, filename)
  CHARACTER (256) :: dum,arg
  REAL*16, ALLOCATABLE :: centres (:,:) 
  REAL*16, ALLOCATABLE :: atoms_pos (:,:) 
- INTEGER :: iline, nlines, iarg, ncentres(nargs), icentres, i, ncentres_tot
+ INTEGER :: iline, nlines, iarg, ncentres(nargs), icentres, i
  INTEGER :: nat
  CHARACTER (2), ALLOCATABLE :: atoms_name(:)
  !
@@ -126,11 +126,11 @@ SUBROUTINE merge_U (nargs, filename)
  CHARACTER(256) :: filename(nargs)
  INTEGER :: iarg, nb1_, ni, nf
  character(256) :: dum,arg
- integer :: nk1, nk2, nb1, nb2
+ integer :: nk1, nb1
  integer :: nb
  complex*16, allocatable :: U(:,:,:)
  real*16, allocatable :: k(:,:)
- integer :: ik, ib, jb, ii, iib, jjb
+ integer :: ik, ib, jb
  !
  nb=0
  iarg = 1 
@@ -151,7 +151,7 @@ SUBROUTINE merge_U (nargs, filename)
  write(*,*) "Final # of kpoints = ", nk1
  ALLOCATE( U(nb,nb,nk1))
  ALLOCATE (k(3,nk1))
- U=cmplx(0.D0,0.D0)
+ U=(0.D0,0.D0)
  !
  nb1_=0
  do iarg = 2, nargs
