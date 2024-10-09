@@ -43,11 +43,13 @@ SUBROUTINE koopmans_ham (dH_wann)
   !
   ! The new eigenalues 
   REAL(DP) :: eigvl(num_wann), eigvl_ks(num_wann)
+  REAL(DP) :: eigvl_pert(num_wann)
   !
   INTEGER :: i, iwann, jwann
   ! 
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
+  REAL(DP) :: ehomo_pert, elumo_pert
   INTEGER  :: lrwannfc
   REAL(DP), EXTERNAL :: get_clock
   !
@@ -74,6 +76,18 @@ SUBROUTINE koopmans_ham (dH_wann)
     ! Add the KI contribution to the KS Hamiltonian in the wannier basis
     Hamlt(ik,:,:) = Hamlt(ik,:,:) + dH_wann(ik,:,:) 
     !
+    ! If using KS state to build the KI Hamiltonian we can do a perturbative approach
+    ! i.e. we keep only the diagonal part of the KI Hamiltoniana
+    IF (kcw_at_ks) THEN
+      DO iwann = 1, num_wann
+        eigvl_pert(iwann) = eigvl_ks(iwann) + DBLE(dH_wann(ik,iwann,iwann))
+      ENDDO
+      ehomo_pert=-1D+6
+      elumo_pert=+1D+6
+      ehomo_pert = MAX ( ehomo_pert, eigvl_pert(num_wann_occ ) )
+      elumo_pert = MIN ( elumo_pert, eigvl_pert(num_wann_occ+1 ) )
+    ENDIF
+    !
 #ifdef DEBUG
     WRITE(stdout, '(/, "KI Hamiltonian at k = ", i4)') ik
     DO iwann = 1, num_wann
@@ -82,38 +96,40 @@ SUBROUTINE koopmans_ham (dH_wann)
 #endif
     !
     IF (kcw_at_ks) THEN
-    !
-    WRITE(stdout,'(8x, "INFO: Empty states spectrum as a function of the # of orbitals")')
-    !
-    DO k = 1, num_wann-num_wann_occ
-       !
-       i_start = num_wann_occ+1
-       i_end = num_wann_occ+k
-       !
-       ALLOCATE (ham_aux(k,k), eigvl_ki(k), eigvc_ki(k,k))
-       ham_aux(1:k,1:k) = Hamlt(ik,i_start:i_end,i_start:i_end)
-       !
-       CALL cdiagh( k, ham_aux, k, eigvl_ki, eigvc_ki )
-       !
-       IF (k.le.10) THEN
-          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:k)*rytoev  ! First 10 eigenvalues
-       ELSE
-          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:10)*rytoev  ! First 10 eigenvalues
-       ENDIF
-       !
-       DEALLOCATE (ham_aux)
-       DEALLOCATE (eigvl_ki, eigvc_ki)
-       !
-    ENDDO
-    !
+      !
+      WRITE(stdout,'(8x, "INFO: Empty states spectrum as a function of the # of orbitals")')
+      !
+      DO k = 1, num_wann-num_wann_occ
+         !
+         i_start = num_wann_occ+1; i_end = num_wann_occ+k
+         !
+         ALLOCATE (ham_aux(k,k), eigvl_ki(k), eigvc_ki(k,k))
+         ham_aux(1:k,1:k) = Hamlt(ik,i_start:i_end,i_start:i_end)
+         !
+         CALL cdiagh( k, ham_aux, k, eigvl_ki, eigvc_ki )
+         !
+         IF (k.le.10) THEN
+            WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:k)*rytoev  ! First 10 eigenvalues
+         ELSE
+            WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:10)*rytoev  ! First 10 eigenvalues
+         ENDIF
+         !
+         DEALLOCATE (ham_aux)
+         DEALLOCATE (eigvl_ki, eigvc_ki)
+         WRITE(stdout,*)
+         !
+      ENDDO
+      !
     ENDIF
     !
     ! Diagonalize the KI hamitlonian in the Wannier Gauge
     ham(:,:) = Hamlt(ik,:,:) 
     CALL cdiagh( num_wann, ham, num_wann, eigvl, eigvc )
     !
-    WRITE( stdout, '(/,10x, "KS  ",8F11.4)' ) (eigvl_ks(iwann)*rytoev, iwann=1,num_wann)
-    WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
+    WRITE( stdout, '(10x, "KS   ",8F11.4)' ) (eigvl_ks(iwann)*rytoev, iwann=1,num_wann)
+    WRITE( stdout, '(10x, "KI   ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
+    IF (kcw_at_ks) &
+      WRITE( stdout, '(10x, "pKI  ",8F11.4)' ) (eigvl_pert(iwann)*rytoev, iwann=1,num_wann)
     WRITE(stdout, 901) get_clock('KCW')
     !
     ! Canonical wfc at each k point (overwrite the evc from DFT)
@@ -141,22 +157,21 @@ SUBROUTINE koopmans_ham (dH_wann)
   IF ( elumo < 1d+6) THEN
      WRITE( stdout, 9042 ) ehomo_ks*rytoev, elumo_ks*rytoev
      WRITE( stdout, 9044 ) ehomo*rytoev, elumo*rytoev
+     IF (kcw_at_ks) WRITE( stdout, 9046 ) ehomo_pert*rytoev, elumo_pert*rytoev
   ELSE
      WRITE( stdout, 9043 ) ehomo_ks*rytoev
      WRITE( stdout, 9045 ) ehomo*rytoev
+     IF (kcw_at_ks) WRITE( stdout, 9047 ) ehomo_pert*rytoev
   END IF
   ! 
-  ! For an isolated molecule the full Hamiltonian is also available
-  ! OSOLETE: moved to dH_KI_wann_supercell.f90 
-  !ik=1
-  !IF (nkstot_eff == 1 .AND. .NOT. nspin_mag==4 ) CALL full_ham ( ik )
-  !
   !! ... formats
   !
 9043 FORMAT(/,8x, 'KS  highest occupied level (ev): ',F10.4 )
 9042 FORMAT(/,8x, 'KS  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9045 FORMAT(  8x, 'KI  highest occupied level (ev): ',F10.4 )
 9044 FORMAT(  8x, 'KI  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+9047 FORMAT(  8x, 'pKI highest occupied level (ev): ',F10.4 )
+9046 FORMAT(  8x, 'pKI highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
  901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
   !

@@ -21,7 +21,7 @@ SUBROUTINE koopmans_ham_proj (delta)
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : xk, ngk, igk_k, nkstot
-  USE control_kcw,           ONLY : num_wann, l_alpha_corr, evc0, Hamlt, l_diag, kcw_iverbosity, &
+  USE control_kcw,           ONLY : num_wann, l_alpha_corr, evc0, Hamlt, kcw_iverbosity, &
                                     alpha_final, num_wann_occ, iuwfc_wann, spin_component, nkstot_eff
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd, current_k
@@ -56,11 +56,13 @@ SUBROUTINE koopmans_ham_proj (delta)
   !
   ! The new eigenalues
   REAL(DP) :: eigvl(nbnd)
+  REAL(DP) :: eigvl_pert(nbnd)
   !
   INTEGER :: i, iwann
   ! 
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
+  REAL(DP) :: ehomo_pert, elumo_pert
   INTEGER  :: lrwannfc
   REAL(DP), EXTERNAL :: get_clock
   !
@@ -79,13 +81,12 @@ SUBROUTINE koopmans_ham_proj (delta)
   WRITE(stdout,'(5X,2(F10.6, 2x), F10.6)') (delta(iwann), occ_mat(iwann), iwann=1, num_wann)
 #endif
   !
-  IF (.NOT. l_diag) WRITE(stdout, '(/, 5x, "INFO: FULL KI")')
-  IF (l_diag)       WRITE(stdout, '(/, 5x, "INFO: PERTURBATIVE KI")') 
-  !
   ehomo=-1D+6
   elumo=+1D+6
   ehomo_ks=-1D+6
   elumo_ks=+1D+6
+  ehomo_pert=-1D+6
+  elumo_pert=+1D+6
   !
   DO ik = 1, nkstot_eff
     !
@@ -98,102 +99,86 @@ SUBROUTINE koopmans_ham_proj (delta)
     IF (nbnd > num_wann_occ) elumo_ks = MIN ( elumo_ks, et(num_wann_occ+1, ik_pw) )
     !
     !
-    IF ( .NOT. l_diag ) THEN 
-      ! Build and diagonalize the projector-based KI Hamiltonian on the Hilbert space spanned
-      ! by the KS states available from the preceeding nscf calculation
-      ! KI contribution at k: deltah_ij = \sum_n [ (1/2-P_n)D_n <u_ki | w_kn><w_kn | u_kj>]
+    ! Build and diagonalize the projector-based KI Hamiltonian on the Hilbert space spanned
+    ! by the KS states available from the preceeding nscf calculation
+    ! KI contribution at k: deltah_ij = \sum_n [ (1/2-P_n)D_n <u_ki | w_kn><w_kn | u_kj>]
+    !
+    IF (.FALSE.) THEN
+      ! In the canonicla KS basis the KS hamiltonian is already diagonal
+      ! maening there is no need to re-build it. I keep this as is in case
+      ! we want to use a diffferent basis
+      current_k = ik_pw
+      IF ( lsda ) current_spin = isk(ik_pw)
+      IF ( nkb > 0 ) CALL init_us_2( npw, igk_k(1,ik_pw), xk(1,ik_pw), vkb )
+      ! FIXME: ned o modify ks_hamiltonian to pass the hammiltonian (and not use Hamlt of kcw_comm)
+      CALL ks_hamiltonian (evc, ik_pw, nbnd, .false.)
       !
-      IF (.FALSE.) THEN
-        ! In the canonicla KS basis the KS hamiltonian is already diagonal
-        ! maening there is no need to re-build it. I keep this as is in case
-        ! we want to use a diffferent basis
-        current_k = ik_pw
-        IF ( lsda ) current_spin = isk(ik_pw)
-        IF ( nkb > 0 ) CALL init_us_2( npw, igk_k(1,ik_pw), xk(1,ik_pw), vkb )
-        ! FIXME: ned o modify ks_hamiltonian to pass the hammiltonian (and not use Hamlt of kcw_comm)
-        CALL ks_hamiltonian (evc, ik_pw, nbnd, .false.)
-        !
-        ! The KS hamiltonian in the Wannier Gauge (just to check)
-        ham(:,:) = Hamlt(ik,:,:) 
-        CALL cdiagh( nbnd, ham, nbnd, eigvl, eigvc )
-        !
-        !WRITE( stdout, 9020 ) ( xk(i,ik_pw), i = 1, 3 )
-        ! this shoud perfetcly matchs with the KS eigenvalues. If not, there is a problem
-        WRITE( stdout, '(10x, "KS* ",8F11.4)' ) (eigvl(ibnd)*rytoev, ibnd=1,nbnd)
-        !
-      ELSE
-        !
-        ! The KS Hamiltonian in the KS basis
-        ham(:,:)=CMPLX(0.D0, 0.D0, kind=DP)
-        DO i = 1, nbnd 
-          ham(i,i)=et(i,ik_pw)
-        ENDDO
-        !
-      ENDIF
-      !
-      ! \Delta_H_KI_ij = <psi_i | \Delta_H_KI | psi_j> with
-      ! \Delta_H_KI = \sum_n (1/2-P_n) * \Delta_n * |w_kn><w_kn|
-      CALL dki_hamiltonian (evc, ik, nbnd, occ_mat, delta, deltah) 
-      !
-      ! Add to the KS Hamiltonian
-      ham(:,:) = ham(:,:) + deltah(:,:) 
-      !
+      ! The KS hamiltonian in the Wannier Gauge (just to check)
+      ham(:,:) = Hamlt(ik,:,:) 
       CALL cdiagh( nbnd, ham, nbnd, eigvl, eigvc )
       !
-      et_ki(1:nbnd,ik)=eigvl(1:nbnd)
-      eigvc_all(:,:,ik) = eigvc(:,:)
+      !WRITE( stdout, 9020 ) ( xk(i,ik_pw), i = 1, 3 )
+      ! this shoud perfetcly matchs with the KS eigenvalues. If not, there is a problem
+      WRITE( stdout, '(10x, "KS* ",8F11.4)' ) (eigvl(ibnd)*rytoev, ibnd=1,nbnd)
       !
-      IF (kcw_iverbosity .gt. 1) THEN
-        eig_win=5
-        eig_start = MAX(num_wann_occ-eig_win+1, 1) 
-        WRITE(stdout,'( 12x, "KI Eigenvalues around Fermi as a function of the Hilbert space")')
-        WRITE(stdout,'( 12x, "KI Eigenvaluse from", I5, " to", I5, " (i.e. +/-", I3, " around VBM),/")') &
-                eig_start, num_wann_occ+eig_win, eig_win
-        WRITE(stdout,'( 12x, " dim   eig1      eig2      ...")')
-        DO k = eig_start, nbnd
-           !
-           ALLOCATE (ham_aux(k,k), eigvl_aux(k), eigvc_aux(k,k))
-           !ham_aux(1:k,1:k) = ham(1:k,1:k)
-           ham_aux(1:k,1:k) = ham(1:k,1:k)
-           !
-           CALL cdiagh( k, ham_aux, k, eigvl_aux, eigvc_aux )
-           !
-           !neig_max = MIN (20, nbnd)
-           IF (k.le.num_wann_occ+eig_win) THEN 
-              WRITE(stdout,'(12x, I3, 10F10.4)') k, eigvl_aux(eig_start:k)*rytoev   
-           ELSE 
-              WRITE(stdout,'(12x, I3, 10F10.4)') k, eigvl_aux(eig_start:num_wann_occ+eig_win)*rytoev 
-           ENDIF
-           !
-           DEALLOCATE (ham_aux)
-           DEALLOCATE (eigvl_aux, eigvc_aux)
-           !
-        ENDDO
-        WRITE(stdout,*)
-      ENDIF
+    ELSE
       !
-    ELSE ! Perturbative, corrects only eigenvalues. 
-      !
-      ! Build a diagonal correction using the projector-based KI Hamiltonian 
-      ! Correction at k: Dk = \sum_n [ (1/2-P_iw)D_ii <u_kv | u_kn><u_kn | uk_v>]
-      !
-      lrwannfc = num_wann*npwx*npol
-      CALL get_buffer ( evc0, lrwannfc, iuwfc_wann, ik )
-      !
-      DO ibnd = 1, nbnd
-        delta_k = CMPLx(0.D0, 0.D0, kind=DP)
-        DO iwann = 1, num_wann
-          overlap = SUM(CONJG(evc(1:npw*npol,ibnd))*(evc0(1:npw*npol,iwann)))
-          CALL mp_sum (overlap, intra_bgrp_comm)
-          overlap = CONJG(overlap)*overlap
-          delta_k = delta_k + (0.5D0 - occ_mat(iwann)) * delta(iwann) * overlap
-          !WRITE(*,'(3X, 2I5, 2F20.12, F20.12, 2F20.12)') ibnd, iwann, delta(iwann), occ_mat(iwann), overlap 
-        ENDDO
-        et_ki(ibnd,ik) = et(ibnd,ik_pw) + REAL(delta_k)
-        !WRITE (*,'(3I5, 2X, 4F20.12)') ik, ik_pw, ibnd, et(ibnd,ik_pw)*rytoev, et_ki(ibnd,ik)*rytoev, delta_k*rytoev
+      ! The KS Hamiltonian in the KS basis
+      ham(:,:)=CMPLX(0.D0, 0.D0, kind=DP)
+      DO i = 1, nbnd 
+        ham(i,i)=et(i,ik_pw)
       ENDDO
       !
-      !
+    ENDIF
+    !
+    ! \Delta_H_KI_ij = <psi_i | \Delta_H_KI | psi_j> with
+    ! \Delta_H_KI = \sum_n (1/2-P_n) * \Delta_n * |w_kn><w_kn|
+    CALL dki_hamiltonian (evc, ik, nbnd, occ_mat, delta, deltah) 
+    !
+    !
+    ! Because we have defined a uniq KI Hamiltonian, we can do a perturbative approach
+    ! i.e. we keep only the diagonal part of the KI Hamiltoniana
+    DO i = 1, nbnd
+      eigvl_pert(i) = et(i,ik_pw) + DBLE(deltah(i,i))
+    ENDDO
+    ehomo_pert = MAX ( ehomo_pert, eigvl_pert(num_wann_occ ) )
+    IF (nbnd > num_wann_occ) elumo_pert = MIN ( elumo_pert, eigvl_pert(num_wann_occ+1 ) )
+    !
+    ! Add the KI contribution to the KS Hamiltonian
+    ham(:,:) = ham(:,:) + deltah(:,:) 
+    ! And Diagonalize it 
+    CALL cdiagh( nbnd, ham, nbnd, eigvl, eigvc )
+    !
+    et_ki(1:nbnd,ik)=eigvl(1:nbnd)
+    eigvc_all(:,:,ik) = eigvc(:,:)
+    !
+    IF (kcw_iverbosity .gt. 1) THEN
+      eig_win=5
+      eig_start = MAX(num_wann_occ-eig_win+1, 1) 
+      WRITE(stdout,'( 12x, "KI Eigenvalues around Fermi as a function of the Hilbert space")')
+      WRITE(stdout,'( 12x, "KI Eigenvaluse from", I5, " to", I5, " (i.e. +/-", I3, " around VBM),/")') &
+              eig_start, num_wann_occ+eig_win, eig_win
+      WRITE(stdout,'( 12x, " dim   eig1      eig2      ...")')
+      DO k = eig_start, nbnd
+         !
+         ALLOCATE (ham_aux(k,k), eigvl_aux(k), eigvc_aux(k,k))
+         !ham_aux(1:k,1:k) = ham(1:k,1:k)
+         ham_aux(1:k,1:k) = ham(1:k,1:k)
+         !
+         CALL cdiagh( k, ham_aux, k, eigvl_aux, eigvc_aux )
+         !
+         !neig_max = MIN (20, nbnd)
+         IF (k.le.num_wann_occ+eig_win) THEN 
+            WRITE(stdout,'(12x, I3, 10F10.4)') k, eigvl_aux(eig_start:k)*rytoev   
+         ELSE 
+            WRITE(stdout,'(12x, I3, 10F10.4)') k, eigvl_aux(eig_start:num_wann_occ+eig_win)*rytoev 
+         ENDIF
+         !
+         DEALLOCATE (ham_aux)
+         DEALLOCATE (eigvl_aux, eigvc_aux)
+         !
+      ENDDO
+      WRITE(stdout,*)
     ENDIF
     !
     ehomo = MAX ( ehomo, et_ki(num_wann_occ, ik ) )
@@ -201,16 +186,19 @@ SUBROUTINE koopmans_ham_proj (delta)
     !
     WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (et(ibnd,ik_pw)*rytoev, ibnd=1,nbnd)
     WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (et_ki(ibnd,ik)*rytoev, ibnd=1,nbnd)
+    WRITE( stdout, '(10x, "pKI ",8F11.4)' ) (eigvl_pert(ibnd)*rytoev, ibnd=1,nbnd)
     WRITE(stdout, 901) get_clock('KCW')
     !
   ENDDO
   !
   IF ( elumo < 1d+6) THEN
-     WRITE( stdout, 9042 ) ehomo_ks*rytoev, elumo_ks*rytoev
-     WRITE( stdout, 9044 ) ehomo*rytoev, elumo*rytoev
+    WRITE( stdout, 9042 ) ehomo_ks*rytoev, elumo_ks*rytoev
+    WRITE( stdout, 9044 ) ehomo*rytoev, elumo*rytoev
+    WRITE( stdout, 9046 ) ehomo_pert*rytoev, elumo_pert*rytoev
   ELSE
-     WRITE( stdout, 9043 ) ehomo_ks*rytoev
-     WRITE( stdout, 9045 ) ehomo*rytoev
+    WRITE( stdout, 9043 ) ehomo_ks*rytoev
+    WRITE( stdout, 9045 ) ehomo*rytoev
+    WRITE( stdout, 9047 ) ehomo_pert*rytoev
   END IF
   !
   !Overwrite et and evc
@@ -235,6 +223,8 @@ SUBROUTINE koopmans_ham_proj (delta)
 9042 FORMAT(/,8x, 'KS  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9045 FORMAT(  8x, 'KI  highest occupied level (ev): ',F10.4 )
 9044 FORMAT(  8x, 'KI  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+9047 FORMAT(  8x, 'pKI highest occupied level (ev): ',F10.4 )
+9046 FORMAT(  8x, 'pKI highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
 900 FORMAT(/'     total cpu time spent up to now is ',F10.1,' secs' )
 901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )

@@ -59,19 +59,28 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   !
   ! The new eigenalues 
   REAL(DP) :: eigvl(nbnd)
+  REAL(DP) :: eigvl_pert(nbnd)
   !
   INTEGER :: i, ibnd
   ! 
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
+  REAL(DP) :: ehomo_pert, elumo_pert
   REAL(DP), EXTERNAL :: get_clock
   EXTERNAL :: ZGEMM, CDIAGH
+  !
+  COMPLEX(DP), ALLOCATABLE :: ham_aux(:,:)
+  REAL(DP), ALLOCATABLE :: eigvl_ki(:)
+  COMPLEX(DP), ALLOCATABLE :: eigvc_ki(:,:)
+  INTEGER i_start, i_end, k
   !
   !
   ehomo=-1D+6
   elumo=+1D+6
   ehomo_ks=-1D+6
   elumo_ks=+1D+6
+  ehomo_pert=-1D+6
+  elumo_pert=+1D+6
   !
   WRITE( stdout, '(/,5X, "INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN")')
   WRITE( stdout, '(  5X, "INFO: Unique Hamiltonian scheme using projectors")')
@@ -105,7 +114,39 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     ! Add to the KS Hamiltonian
     ham(:,:) = ham(:,:) + deltah(:,:)
     !
-    ! Diagonalize it 
+    ! Because we have defined a uniq KI Hamiltonian, we can do a perturbative approach
+    ! i.e. we keep only the diagonal part of the KI Hamiltoniana
+    DO i = 1, nbnd
+      eigvl_pert(i) = et(i,ik_pw) + DBLE(deltah(i,i))
+    ENDDO
+    ehomo_pert = MAX ( ehomo_pert, eigvl_pert(num_wann_occ ) )
+    IF (nbnd > num_wann_occ) elumo_pert = MIN ( elumo_pert, eigvl_pert(num_wann_occ+1 ) )
+    !
+         !
+    WRITE(stdout,'(8x, "INFO: Empty states spectrum as a function of the # of orbitals")')
+    !
+    DO k = 1, nbnd-num_wann_occ
+       !
+       i_start = num_wann_occ+1; i_end = num_wann_occ+k
+       !
+       ALLOCATE (ham_aux(k,k), eigvl_ki(k), eigvc_ki(k,k))
+       ham_aux(1:k,1:k) = ham(i_start:i_end,i_start:i_end)
+       !
+       CALL cdiagh( k, ham_aux, k, eigvl_ki, eigvc_ki )
+       !
+       IF (k.le.10) THEN
+          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:k)*rytoev  ! First 10 eigenvalues
+       ELSE
+          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:10)*rytoev  ! First 10 eigenvalues
+       ENDIF
+       !
+       DEALLOCATE (ham_aux)
+       DEALLOCATE (eigvl_ki, eigvc_ki)
+       WRITE(stdout,*)
+       !
+    ENDDO
+    !
+    ! Diagonalize the KI Hamiltonian
     CALL CDIAGH( nbnd, ham, nbnd, eigvl, eigvc )
     !
     ! Store the eigenvalues and eigenvector at this k point 
@@ -117,6 +158,7 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     !
     WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (et(ibnd,ik_pw)*rytoev, ibnd=1,nbnd)
     WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (et_ki(ibnd,ik)*rytoev, ibnd=1,nbnd)
+    WRITE( stdout, '(10x, "pKI ",8F11.4)' ) (eigvl_pert(ibnd)*rytoev, ibnd=1,nbnd)
     WRITE(stdout, 901) get_clock('KCW')
     !
     !
@@ -125,9 +167,11 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   IF ( elumo < 1d+6) THEN
     WRITE( stdout, 9042 ) ehomo_ks*rytoev, elumo_ks*rytoev
     WRITE( stdout, 9044 ) ehomo*rytoev, elumo*rytoev
+    WRITE( stdout, 9046 ) ehomo_pert*rytoev, elumo_pert*rytoev
   ELSE
     WRITE( stdout, 9043 ) ehomo_ks*rytoev
     WRITE( stdout, 9045 ) ehomo*rytoev
+    WRITE( stdout, 9047 ) ehomo_pert*rytoev
   END IF
   !
   !Overwrite et and evc
@@ -158,6 +202,8 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   9042 FORMAT(/,8x, 'KS  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
   9045 FORMAT(  8x, 'KI  highest occupied level (ev): ',F10.4 )
   9044 FORMAT(  8x, 'KI  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
+  9047 FORMAT(  8x, 'pKI highest occupied level (ev): ',F10.4 )
+  9046 FORMAT(  8x, 'pKI highest occupied, lowest unoccupied level (ev): ',2F10.4 )
   9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
   901 FORMAT('          total cpu time spent up to now is ',F10.1,' secs' )
   !
