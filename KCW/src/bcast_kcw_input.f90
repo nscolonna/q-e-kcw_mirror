@@ -67,7 +67,6 @@ subroutine bcast_kcw_input ( )
   call mp_bcast ( h_proj,              ionode_id, intra_image_comm )
   call mp_bcast ( corr_pc,             ionode_id, intra_image_comm )
   call mp_bcast ( corr_sc,             ionode_id, intra_image_comm )
-  call mp_bcast ( l_diag,              ionode_id, intra_image_comm )
   call mp_bcast ( io_sp,               ionode_id, intra_image_comm )
   call mp_bcast ( io_real_space,       ionode_id, intra_image_comm )
    !

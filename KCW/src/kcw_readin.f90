@@ -65,7 +65,7 @@ SUBROUTINE kcw_readin()
   !
   NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
                         write_hr, l_alpha_corr, on_site_only, h_diag_scheme, &
-                        l_diag, check_spread, h_corr_scheme
+                        check_spread, h_corr_scheme
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -114,7 +114,6 @@ SUBROUTINE kcw_readin()
   !!                   second order
   !! h_proj          : if true an alterantive definition of the KI Hamitlonian is built and diagonalized
   !!                   using projectors (see koopmans_ham_proj.f90)
-  !! l_diag          : if true the projectors-KI hamiltonian is applied perturbatively on KS states
   !! io_sp           : write/read wannier orbital densities in single precision to save disk space
   !! io_real_space   : write/read wannier orbital densities in real space (space consuming but more robust when restart)
   ! 
@@ -189,7 +188,6 @@ SUBROUTINE kcw_readin()
   calculation         = " " 
   h_corr_scheme       = "quadratic"
   h_diag_scheme       = "wann"
-  l_diag              = .FALSE.
   io_sp               = .FALSE.
   io_real_space       = .FALSE.
   ! 
@@ -349,9 +347,9 @@ SUBROUTINE kcw_readin()
   ENDIF
   !
   IF (h_proj .AND. corr_sc) THEN
-     CALL infomsg('kcw_readin','WARNING: corr_sc and h_proj are not compatible: GOING TO SWITCH to h_uniq = .FALSE.')
+     CALL infomsg('kcw_readin','WARNING: corr_sc and h_proj are not compatible: GOING TO SWITCH to default')
      h_proj = .FALSE.
-     h_uniq = .TRUE.
+     h_uniq = .FALSE.
   ENDIF
   !
   ! read data produced by pwscf
