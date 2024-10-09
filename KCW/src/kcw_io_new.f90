@@ -58,7 +58,6 @@ MODULE io_kcw
       INTEGER               :: nr1,nr2,nr3, nr1x, nr2x,nr3x
       INTEGER               :: rhounit, ierr, i, j, jj, k, kk, ldr, ip
       CHARACTER(LEN=256)    :: rho_file
-      CHARACTER(LEN=256)    :: rho_file_hdf5
       CHARACTER(LEN=10)     :: rho_extension
       COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
       COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)

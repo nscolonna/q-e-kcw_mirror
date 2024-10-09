@@ -23,8 +23,6 @@ SUBROUTINE kcw_screen
   !!  Non-collinear code written in 2022-24 by 
   !!  Antimo Marrazzo (SISSA, UniTS) and Nicola Colonna (PSI)
   !
-  USE klist,                 ONLY : nkstot
-  USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : nkstot_eff
   !
   IMPLICIT NONE

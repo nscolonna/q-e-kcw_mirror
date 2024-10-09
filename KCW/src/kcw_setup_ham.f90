@@ -37,13 +37,12 @@ subroutine kcw_setup_ham
                                 read_unitary_matrix, Hamlt, alpha_corr_done, group_alpha, l_do_alpha, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_real_space, io_sp, nrho, nkstot_eff !, wq
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_real_space, nrho, nkstot_eff !, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, nks, ngk, igk_k, nelec, nelup, neldw
   USE cell_base,         ONLY : at, omega !, bg
   USE fft_base,          ONLY : dffts
   !
-  USE control_lr,        ONLY : nbnd_occ
   USE mp,                ONLY : mp_bcast
   USE eqv,               ONLY : dmuxc
   !
@@ -195,13 +194,13 @@ subroutine kcw_setup_ham
   IF (mlwf_from_u) THEN 
     !! ... Rotate the KS state to the localized gauge nd save on a buffer
     WRITE(stdout,'(/,5X, "INFO: MLWF from U matrix: &
-                  Reading collected, re-writing distributed wavefunctions")')
+                  & Reading collected, re-writing distributed wavefunctions")')
     CALL rotate_ks () 
     !
   ELSE 
     dirname = TRIM (tmp_dir_kcw) 
     WRITE(stdout,'(/,5X, "INFO: MLWF read from file: &
-                  Reading collected, re-writing distributed wavefunctions")')
+                  & Reading collected, re-writing distributed wavefunctions")')
     DO ik = 1, nks
         !
         current_k = ik

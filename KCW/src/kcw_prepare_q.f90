@@ -32,7 +32,6 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   USE klist,                ONLY : nelup, neldw, nelec, lgauss, ltetra
   USE start_k,              ONLY : reset_grid
   USE noncollin_module,     ONLY : domag, noncolin
-  USE lsda_mod,             ONLY : lsda
   !
   IMPLICIT NONE
   !

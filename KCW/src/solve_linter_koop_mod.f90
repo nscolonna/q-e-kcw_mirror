@@ -31,15 +31,14 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   USE kinds,                 ONLY : DP
   USE ions_base,             ONLY : nat
   USE io_global,             ONLY : stdout
-  USE wavefunctions,         ONLY : evc, psic
+  USE wavefunctions,         ONLY : evc
   USE klist,                 ONLY : lgauss, ngk
   USE lsda_mod,              ONLY : lsda, nspin, current_spin, isk
   USE fft_base,              ONLY : dffts, dfftp
   USE fft_interfaces,        ONLY : fwfft, invfft, fft_interpolate
-  USE gvect,                 ONLY : gstart
   USE gvecs,                 ONLY : doublegrid, ngms
   USE becmod,                ONLY : calbec
-  USE wvfct,                 ONLY : npw,npwx
+  USE wvfct,                 ONLY : npw
   USE uspp_param,            ONLY : nhm
   USE control_lr,            ONLY : lgamma
   USE units_lr,              ONLY : iuwfc, lrwfc
@@ -50,11 +49,10 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   USE uspp_init,             ONLY : init_us_2
   USE mp,                    ONLY : mp_sum
   USE mp_bands,              ONLY : intra_bgrp_comm
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+  USE noncollin_module,      ONLY : domag, noncolin, nspin_mag, npol
   USE mp_pools,              ONLY : inter_pool_comm
   USE apply_DPot_mod,        ONLY : apply_DPot_bands
   USE response_kernels,      ONLY : sternheimer_kernel
-  USE scf,                   ONLY : vrs
   USE qpoint_aux,            ONLY : ikmks
   !
   !USE cell_base,            ONLY : omega
@@ -103,11 +101,10 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
   REAL(DP) :: tcpu, get_clock ! timing variables
   EXTERNAL ch_psi_all,  cg_psi
   CHARACTER(LEN=256) :: flmixDPot = 'mixd'
+  COMPLEX(DP) :: delta_vg(ngms,nspin_mag)
   !
   !!## DEBUG
-  COMPLEX(DP) :: drhok(dffts%nnr) !<---- WHAT IS THIS? (A.M.)
-  COMPLEX(DP) :: delta_vg(ngms,nspin_mag)
-  INTEGER:: norb
+  !COMPLEX(DP) :: drhok(dffts%nnr) !<---- WHAT IS THIS? (A.M.)
   !!## DEBUG 
   !
   LOGICAL :: new
@@ -179,7 +176,7 @@ subroutine solve_linter_koop ( spin_ref, i_ref, delta_vr, drhog_scf, delta_vg, d
        ! ... Compute dv_bare*psi (dvspi) and store it 
        !     This depends on isolv [if isolv=2 delta_vr(2:4) -> - delta_vr(2:4)]
        IF (isolv==2) delta_vr(:,2:4) = - delta_vr(:,2:4)
-       CALL kcw_dvqpsi (ik, delta_vr, isolv)
+       CALL kcw_dvqpsi (ik, delta_vr)!, isolv)
        CALL save_buffer (dvpsi, lrdvwfc, iudvwfc, nrec)
        !WRITE(*,'("NICOLA dvpsi", I5, 3X, 3(F20.18,2x))') nrec, REAL(CONJG(dvpsi(npwx+1:npwx+3,1))*dvpsi(npwx+1:npwx+3,1))
        ! Restore the sign of delta_vr
@@ -374,7 +371,7 @@ END SUBROUTINE
 
 
 !------------------------------------------------------------------
-SUBROUTINE kcw_dvqpsi (ik, delta_vr, isolv)
+SUBROUTINE kcw_dvqpsi (ik, delta_vr)!, isolv)
   !----------------------------------------------------------------
   ! 
   ! Apply the bare perturbing potential to the unperturbed KS wfc. 
@@ -382,18 +379,18 @@ SUBROUTINE kcw_dvqpsi (ik, delta_vr, isolv)
   USE kinds,                 ONLY : DP
   USE eqv,                   ONLY : dvpsi
   USE control_lr,            ONLY : nbnd_occ
-  USE wvfct,                 ONLY : npw, npwx
+  USE wvfct,                 ONLY : npw
   USE fft_base,              ONLY : dffts
   USE klist,                 ONLY : igk_k, ngk
   USE fft_interfaces,        ONLY : fwfft, invfft
   USE qpoint,                ONLY : npwq, ikks, ikqs
   USE lsda_mod,              ONLY : nspin, current_spin
   USE wavefunctions,         ONLY : evc
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+  USE noncollin_module,      ONLY : domag, nspin_mag, npol
   !
   IMPLICIT NONE
-  INTEGER, INTENT(IN) :: ik, isolv
-  INTEGER :: ibnd, ig, ir, ikk, ikq, ip 
+  INTEGER, INTENT(IN) :: ik!, isolv
+  INTEGER :: ibnd, ir, ikk, ikq
   COMPLEX(DP), INTENT(in) ::delta_vr (dffts%nnr, nspin_mag)
   COMPLEX(DP) :: aux( dffts%nnr,npol)!, aux_g(npwx*npol)
   COMPLEX(DP) :: sup, sdwn    
@@ -469,7 +466,7 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
   USE buffers,               ONLY : save_buffer, get_buffer
   USE uspp_init,             ONLY : init_us_2
   USE mp,                    ONLY : mp_sum
-  USE fft_base,              ONLY : dfftp, dffts
+  USE fft_base,              ONLY : dfftp
   USE klist,                 ONLY : xk, wk, ngk, igk_k
   USE uspp,                  ONLY : vkb
   USE ions_base,             ONLY : nat
@@ -503,7 +500,7 @@ SUBROUTINE sternheimer_kernel_old(first_iter, npert, i_ref, lrdvpsi, iudvpsi, &
   REAL(DP) :: anorm, weight
   !
   !## DEBUG
-  COMPLEX(DP) :: drhok(dffts%nnr)
+  !COMPLEX(DP) :: drhok(dffts%nnr)
   COMPLEX(DP) :: delta_vg(ngms,nspin)
   !##DEBUG 
   ! 

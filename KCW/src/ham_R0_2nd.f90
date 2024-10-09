@@ -31,11 +31,10 @@ SUBROUTINE ham_R0_2nd ()
   USE dv_of_drho_lr,        ONLY : dv_of_drho
   USE fft_interfaces,       ONLY : fwfft
   USE control_lr,           ONLY : lgamma
-  USE lsda_mod,             ONLY : nspin
   USE gvecs,                ONLY : ngms
   USE solve_linter_koop_mod 
   USE qpoint,               ONLY : xq
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+  USE noncollin_module,     ONLY : nspin_mag
   !
   !USE mp_world,             ONLY : mpime
   !

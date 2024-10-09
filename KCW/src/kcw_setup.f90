@@ -31,7 +31,7 @@ subroutine kcw_setup
   USE scf,               ONLY : v, vrs, vltot,  kedtau
   USE fft_base,          ONLY : dfftp, dffts
   USE gvecs,             ONLY : doublegrid, ngms
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
   USE gvect,             ONLY : ig_l2g, mill
   USE wvfct,             ONLY : nbnd
   !USE funct,             ONLY : dft_is_gradient
@@ -45,13 +45,13 @@ subroutine kcw_setup
   USE control_kcw,       ONLY : evc0, iuwfc_wann, iuwfc_wann_allk, kcw_iverbosity, lgamma_iq, &
                                 spin_component, isq, read_unitary_matrix, x_q, tmp_dir_save, & 
                                 num_wann, num_wann_occ, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, &
-                                io_sp, io_real_space, nrho, nkstot_eff!, wq, nqstot
+                                io_real_space, nrho, nkstot_eff!, wq, nqstot
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, nelec, nelup, neldw
   USE cell_base,         ONLY : at, omega, bg, tpiba
   USE fft_base,          ONLY : dffts
   !
-  USE control_lr,       ONLY : nbnd_occ, lgamma
+  USE control_lr,       ONLY : lgamma
   USE scf,              ONLY : rho
   USE io_global,        ONLY : ionode, ionode_id
   USE mp_images,        ONLY : intra_image_comm
@@ -74,7 +74,7 @@ subroutine kcw_setup
   !
   implicit none
 
-  integer :: na, i, ik, ip, ipp
+  integer :: na, i, ik, ip
   ! counters
   !
   INTEGER   :: lrwfc, iun_qlist!, nkstot_eff
@@ -99,7 +99,6 @@ subroutine kcw_setup
   REAL(DP), ALLOCATABLE :: weight(:)
   LOGICAL :: lrpa_save
   REAL(DP) :: xq_(3)
-  INTEGER  :: lrrho
   COMPLEX(DP) :: struct_fact, int_wann, int_rho
   COMPLEX(DP), ALLOCATABLE :: rho_c(:,:,:),wann_c(:,:,:)
   COMPLEX(DP) :: phase(dffts%nnr)

@@ -15,7 +15,6 @@ SUBROUTINE kcw_deallocate_q()
   !
   USE noncollin_module,    ONLY : m_loc
   USE becmod,              ONLY : deallocate_bec_type, becp
-  USE uspp,                ONLY : okvan
   USE qpoint,              ONLY : eigqts, ikks, ikqs, nksq
   USE lrus,                ONLY : becp1
   USE gc_lr,               ONLY : grho, gmag, dvxc_rr, dvxc_sr, dvxc_ss, &

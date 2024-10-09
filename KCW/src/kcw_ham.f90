@@ -26,9 +26,8 @@ SUBROUTINE kcw_ham
   USE io_rho_xml,            ONLY : write_scf
   USE io_files,              ONLY : prefix, iunwfc
   USE scf,                   ONLY : rho
-  USE lsda_mod,              ONLY : nspin
   USE units_lr,              ONLY : iuwfc
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+  USE noncollin_module,      ONLY : noncolin, nspin_mag
   !
   !
   IMPLICIT NONE

@@ -61,7 +61,7 @@ SUBROUTINE rho_of_q (rhowann, ngk_all, igk_k_all)
   INTEGER, EXTERNAL :: global_kpoint_index
   !! The global index of k-points
   !
-  INTEGER :: global_ik, ik_eff, ip, ipp
+  INTEGER :: global_ik, ip
   !
   INTEGER, INTENT(IN) :: &
        igk_k_all(npwx,nkstot),&    ! index of G corresponding to a given index of k+G

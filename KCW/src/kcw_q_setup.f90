@@ -39,18 +39,16 @@ subroutine kcw_q_setup
   !
   USE kinds,            ONLY : DP
   USE ions_base,        ONLY : nat, ityp
-  USE lsda_mod,         ONLY : nspin, starting_magnetization
+  USE lsda_mod,         ONLY : starting_magnetization
   USE scf,              ONLY : v, vrs, vltot, kedtau
   USE fft_base,         ONLY : dfftp
   USE gvecs,            ONLY : doublegrid
   USE symm_base,        ONLY : inverse_s
-  USE noncollin_module, ONLY : domag, noncolin, m_loc, angle1, angle2, ux
-  !USE funct,            ONLY : dft_is_gradient
   USE xc_lib,           ONLY : xclib_dft_is
   USE control_kcw,      ONLY : niter, alpha_mix
   USE symm_base,        ONLY : time_reversal
   USE control_flags,    ONLY : noinv
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+  USE noncollin_module, ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag
   !
   IMPLICIT NONE
   !

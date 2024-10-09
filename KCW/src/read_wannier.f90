@@ -53,8 +53,6 @@ END subroutine read_wannier
   USE io_global,            ONLY : ionode, ionode_id
   USE klist,                ONLY : nkstot, xk
   USE cell_base,            ONLY : bg
-  USE lsda_mod,             ONLY : nspin
-  USE noncollin_module,      ONLY : npol, nspin_lsda, nspin_gga, nspin_mag
   USE wvfct,                ONLY : nbnd
   USE io_global,            ONLY : stdout
   !
@@ -246,7 +244,6 @@ END subroutine read_wannier_unique_manifold
   USE klist,                ONLY : nkstot, xk, nelec, nelup, neldw
   USE cell_base,            ONLY : bg
   USE lsda_mod,             ONLY : nspin
-  USE noncollin_module,     ONLY : npol, nspin_lsda, nspin_gga, nspin_mag
   USE wvfct,                ONLY : nbnd
   USE io_global,            ONLY : stdout
   !

@@ -34,13 +34,12 @@ subroutine kcw_setup_screen
   USE control_kcw,       ONLY : alpha_final, iurho_wann, kcw_iverbosity, io_real_space, &
                                 read_unitary_matrix, num_wann, num_wann_occ, i_orb, iorb_start, &
                                 iorb_end, nqstot, occ_mat, l_do_alpha, group_alpha, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_sp,nrho, spin_component
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, nrho, spin_component
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : xk, nkstot, nelec, nelup, neldw
   USE cell_base,         ONLY : at, omega !, bg
   USE fft_base,          ONLY : dffts
   !
-  USE control_lr,        ONLY : nbnd_occ
   USE mp,                ONLY : mp_bcast
   USE io_kcw,            ONLY : read_rhowann, read_rhowann_g
   !

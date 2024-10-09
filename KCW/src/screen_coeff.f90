@@ -19,14 +19,13 @@ SUBROUTINE screen_coeff ()
   USE klist,                ONLY : nkstot
   USE mp,                   ONLY : mp_sum
   USE control_kcw,          ONLY : kcw_iverbosity, spin_component, num_wann, iorb_start, l_do_alpha, &
-                                   iorb_end, alpha_final, nqstot, eps_inf, l_vcut, l_unique_manifold, &  
-                                   group_alpha, tmp_dir_kcw, iurho_wann, tmp_dir_kcwq, x_q, tmp_dir_save, &
+                                   iorb_end, alpha_final, nqstot, l_vcut, l_unique_manifold, &  
+                                   group_alpha, tmp_dir_kcw, iurho_wann, tmp_dir_kcwq, tmp_dir_save, &
                                    i_orb, nrho
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+  USE noncollin_module,     ONLY : nspin_mag
   USE buffers,              ONLY : get_buffer, save_buffer
   USE io_global,            ONLY : stdout, ionode
   USE mp_bands,             ONLY : intra_bgrp_comm
-  USE cell_base,            ONLY : at
   USE dv_of_drho_lr,        ONLY : dv_of_drho
   USE fft_interfaces,       ONLY : fwfft
   USE control_lr,           ONLY : lgamma
@@ -63,17 +62,16 @@ SUBROUTINE screen_coeff ()
   !
   LOGICAL :: do_band, setup_pw 
   !
-  COMPLEX(DP) :: phase(dffts%nnr), wann_c(dffts%nnr,num_wann,nrho), rho_c(dffts%nnr,num_wann,nrho)
+  COMPLEX(DP) :: wann_c(dffts%nnr,num_wann,nrho)
   !! The phase associated to the hift k+q-> k'
   !
-  COMPLEX(DP) :: int_rho, int_wann, pi_q_unrelax, pi_q_unrelax_, sh_q, pi_q_relax, pi_q_relax_rs
-  COMPLEX(DP) :: struct_fact
+  COMPLEX(DP) :: pi_q_unrelax, pi_q_unrelax_, sh_q, pi_q_relax, pi_q_relax_rs
   LOGICAL :: do_real_space = .false. 
   LOGICAL :: exst
   !
   COMPLEX(DP) :: drho_zero
   !
-  REAL(DP) :: xq_(3), weight(nkstot)
+  REAL(DP) :: weight(nkstot)
   REAL(DP) :: alpha
   REAL(DP) :: div, div_eps
   !
@@ -314,10 +312,6 @@ SUBROUTINE screen_coeff ()
                "rPi_q_RS =", 2f15.8, 3x, "uPi_q =", 2f15.8, 3x, "Self Hartree =", 2f15.8)
 9011 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, "uPi_q =", & 
                2f15.8, 3x, "SH_q =", 2f15.8)
-9012 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, "uPi_q =", & 
-               2f15.8)
-9013 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q* =", 2f15.8, 3x, "uPi_q* =", & 
-               2f15.8)
 
 END subroutine screen_coeff
 
@@ -390,8 +384,6 @@ SUBROUTINE restart_screen (num_wann, iq_start, vki_r, vki_u, sh, do_real_space)
   call mp_bcast ( sh,        ionode_id, intra_image_comm ) 
   RETURN
   !
-9010 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, & 
-               "rPi_q_RS =", 2f15.8, 3x, "uPi_q =", 2f15.8, 3x, "Self Hartree =", 2f15.8)
 9011 FORMAT(/, 8x, "iq =", i4, 3x, "iwann =", i4, 3x, "rPi_q =", 2f15.8, 3x, "uPi_q =", & 
                2f15.8, 3x, "SH_q =", 2f15.8)
   !
@@ -425,70 +417,70 @@ SUBROUTINE check_density (rhowann)
   REAL(DP),    ALLOCATABLE :: int_rhos(:), rhos(:,:), checks(:)
   COMPLEX(DP),    ALLOCATABLE  :: densities(:,:)
   !
-  if (nspin==4) then
+  IF (nspin==4) THEN
     ALLOCATE (rhos(dfftp%nnr, nrho))
     ALLOCATE (densities(dfftp%nnr, nrho))
     densities(:,:) = (0.D0,0.D0)
     ALLOCATE (int_rhos(nrho),checks(nrho))
-  else
+    checks = CMPLX(0.D0,0.D0,KIND=DP)
+  ELSE 
     ALLOCATE (rhoup(dfftp%nnr), rhodw(dfftp%nnr))
-  endif
+  ENDIF
   !
-  density = (0.D0,0.D0)
+  density = CMPLX(0.D0,0.D0,KIND=DP)
   DO iwann = 1, num_wann_occ ! sum over the bands (rhowann already summed over k) 
-    if (nspin==4) then
-        w1 = 1.D0/omega
-        do ii=1,nspin 
-            densities(:,ii) = densities(:,ii) + w1 * rhowann(:,iwann,ii)
-        end do
-    else
-        w1 = 2.D0/nspin  / (omega)    ! true only if wg is the same for each k point (no symm)
-        density(:) = density(:) + w1 * rhowann(:,iwann,1)
-    endif 
-
+    IF (nspin==4) THEN
+      w1 = 1.D0/omega
+      DO ii=1,nspin 
+        densities(:,ii) = densities(:,ii) + w1 * rhowann(:,iwann,ii)
+      ENDDO
+    ELSE
+      w1 = 2.D0/nspin  / (omega)    ! true only if wg is the same for each k point (no symm)
+      density(:) = density(:) + w1 * rhowann(:,iwann,1)
+    ENDIF 
+    !
   ENDDO
   !
-  if (nspin == 1) then
-     !
-     rhoup(:) =  (rho%of_r (:, 1) )
-     rhodw(:) =  (rho%of_r (:, 1) )
-     !
-  elseif (nspin == 2) then
-     !
-     rhoup(:) = ( rho%of_r(:, 1) + rho%of_r(:, 2) )*0.5d0
-     rhodw(:) = ( rho%of_r(:, 1) - rho%of_r(:, 2) )*0.5d0
-     !
-  else 
-     !
-      rhos(:,1) =  (rho%of_r (:, 1) )
-      rhos(:,2) =  (rho%of_r (:, 2) )
-      rhos(:,3) =  (rho%of_r (:, 3) )
-      rhos(:,4) =  (rho%of_r (:, 4) )
-    
-  endif
+  IF (nspin == 1) THEN
+    !
+    rhoup(:) =  (rho%of_r (:, 1) )
+    rhodw(:) =  (rho%of_r (:, 1) )
+    !
+  ELSEIF (nspin == 2) THEN
+    !
+    rhoup(:) = ( rho%of_r(:, 1) + rho%of_r(:, 2) )*0.5d0
+    rhodw(:) = ( rho%of_r(:, 1) - rho%of_r(:, 2) )*0.5d0
+    !
+  ELSE 
+    !
+    rhos(:,1) =  (rho%of_r (:, 1) )
+    rhos(:,2) =  (rho%of_r (:, 2) )
+    rhos(:,3) =  (rho%of_r (:, 3) )
+    rhos(:,4) =  (rho%of_r (:, 4) )
+    !
+  ENDIF
   !
-  if (nspin==4) then
-      do ii=1,nrho
-        checks(ii) = SUM( REAL(densities(:,ii)))/(dffts%nr1*dffts%nr2*dffts%nr3)
-        int_rhos(ii) = SUM( REAL(densities(:,ii))-rhos(:,ii))/(dffts%nr1*dffts%nr2*dffts%nr3)
-        CALL mp_sum( int_rhos(ii), intra_bgrp_comm)
-        CALL mp_sum( checks(ii), intra_bgrp_comm)
-      enddo
-  else
-      IF (spin_component == 1 ) int_rho = SUM( REAL(density(:))-rhoup(:))/(dffts%nr1*dffts%nr2*dffts%nr3) 
-      IF (spin_component == 2 ) int_rho = SUM( REAL(density(:))-rhodw(:))/(dffts%nr1*dffts%nr2*dffts%nr3) 
-      CALL mp_sum( int_rho, intra_bgrp_comm )
-  end if
-
-
+  IF (nspin==4) THEN
+    DO ii=1,nrho
+      checks(ii) = SUM( REAL(densities(:,ii)))/(dffts%nr1*dffts%nr2*dffts%nr3)
+      int_rhos(ii) = SUM( REAL(densities(:,ii))-rhos(:,ii))/(dffts%nr1*dffts%nr2*dffts%nr3)
+      CALL mp_sum( int_rhos(ii), intra_bgrp_comm)
+      CALL mp_sum( checks(ii), intra_bgrp_comm)
+    ENDDO
+  ELSE
+    IF (spin_component == 1 ) int_rho = SUM( REAL(density(:))-rhoup(:))/(dffts%nr1*dffts%nr2*dffts%nr3) 
+    IF (spin_component == 2 ) int_rho = SUM( REAL(density(:))-rhodw(:))/(dffts%nr1*dffts%nr2*dffts%nr3) 
+    CALL mp_sum( int_rho, intra_bgrp_comm )
+  ENDIF
   !
-  if (nspin==4) then
+  IF (nspin==4) THEN
+    !
     WRITE(stdout,'(8X, "DEBUG: check 1 = ",E18.6,/)') checks(1)
     WRITE(stdout,'(8X, "DEBUG: check 2 = ",E18.6,/)') checks(2)
     WRITE(stdout,'(8X, "DEBUG: check 3 = ",E18.6,/)') checks(3)
     WRITE(stdout,'(8X, "DEBUG: check 4 = ",E18.6,/)') checks(4)
-
-    do ii=1,nrho
+    !
+    DO ii=1,nrho
       IF (kcw_iverbosity > 1 ) WRITE(stdout,'(8X, "DEBUG: rho component (range 1-4)= ",I1, /)') ii
       IF (kcw_iverbosity > 1 ) WRITE(stdout,'(8X, "DEBUG: \int dr [rho - rho_PWSCF] = ",E18.6, /)') int_rhos(ii)
       IF ( ABS(int_rhos(ii)) .gt. 1e-4) THEN
@@ -496,16 +488,16 @@ SUBROUTINE check_density (rhowann)
         WRITE(stdout,'(8X, "DEBUG: \int dr [rho - rho_PWSCF] = ",E18.6,/)') int_rhos(ii)
         CALL errore ('check_density','\int dr [rho - rho_PWSCF] > 1e-4; SOMETHING WRONG',1)
       ENDIF
-    enddo
+    ENDDO
     DEALLOCATE (rhos)
-  else
+  ELSE
     IF (kcw_iverbosity > 1 ) WRITE(stdout,'(8X, "DEBUG: \int dr [rho - rho_PWSCF] = ",E18.6, /)') int_rho
     IF ( ABS(int_rho) .gt. 1e-8) THEN
        WRITE(stdout,'(8X, "DEBUG: \int dr [rho - rho_PWSCF] = ",E18.6,/)') int_rho
        CALL errore ('check_density','\int dr [rho - rho_PWSCF] > 1e-8; SOMETHING WRONG',1)
     ENDIF
     DEALLOCATE (rhoup, rhodw)
-  endif
+  ENDIF
   !
-END subroutine check_density
+END SUBROUTINE check_density
 

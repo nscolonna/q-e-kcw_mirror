@@ -17,7 +17,6 @@ SUBROUTINE self_hartree (iwann, sh)
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE buffers,              ONLY : get_buffer
-  USE lsda_mod,             ONLY : nspin
   USE noncollin_module,     ONLY : nspin_mag
   !
   IMPLICIT NONE

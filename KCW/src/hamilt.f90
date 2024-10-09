@@ -30,12 +30,12 @@ SUBROUTINE ham_koopmans_k (ik)
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE dv_of_drho_lr,        ONLY : dv_of_drho
   USE control_lr,           ONLY : lgamma
-  USE lsda_mod,             ONLY : nspin
   USE gvecs,                ONLY : ngms
   USE solve_linter_koop_mod 
   USE qpoint,               ONLY : xq
   USE wvfct,                ONLY : npwx 
-  USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+!  USE noncollin_module,     ONLY : domag, noncolin, m_loc, nspin_mag, npol
+  USE noncollin_module,     ONLY : nspin_mag
   !
   !USE mp_world,             ONLY : mpime
   !
@@ -287,10 +287,10 @@ SUBROUTINE ham_koopmans_k (ik)
   ! Sum over different processes (G vectors) 
   !
   DO iwann = 1, num_wann_occ
-    second_der(iwann) = -deltaH(iwann,iwann)
+    second_der(iwann) = -REAL(deltaH(iwann,iwann), KIND=DP)
   ENDDO
   DO iwann = num_wann_occ+1, num_wann
-    second_der(iwann) = deltaH(iwann,iwann)
+    second_der(iwann) = REAL(deltaH(iwann,iwann), KIND=DP)
   ENDDO
   ! Screening parameter and all-order correction
   ! NEED TO MOVE IT OUTSIDE THE k-point LOOP (DOES NOT DEPEND ON k) !

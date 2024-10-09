@@ -389,10 +389,10 @@ SUBROUTINE kcw_readin()
    CALL infomsg('kcw_readin','Non-collinear KCW calculation.') 
    IF (xclib_dft_is('gradient')) &
        call errore('kcw_readin', 'Non-collinear KCW calculation &
-                    does not support GGA', 1 )
+                    & does not support GGA', 1 )
    IF (xclib_dft_is('meta')) &
        call errore('kcw_readin', 'Non-collinear KCW calculation &
-                    does not support MGGA', 1 )
+                    & does not support MGGA', 1 )
   END IF 
   !
   IF ( nspin == 1 .OR. (nspin==4 .AND. .NOT. domag) ) THEN   !This should be equivalent to nspin_mag==1

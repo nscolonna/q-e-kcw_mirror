@@ -20,7 +20,6 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
   USE kinds,                 ONLY : DP
   USE io_global,             ONLY : stdout
   USE wvfct,                 ONLY : npw, nbnd, npwx
-  USE wvfct,                 ONLY : et
   USE fft_base,              ONLY : dffts, dfftp
   USE lsda_mod,              ONLY : lsda, current_spin,nspin
   USE klist,                 ONLY : nks, ngk, init_igk, igk_k, nkstot
@@ -28,8 +27,10 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
   USE gvecs,                 ONLY : ngms
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
-  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final_full, Hamlt, num_wann_occ, iuwfc_wann, &
-                                    kcw_iverbosity, qp_symm, evc0, kipz_corr, num_wann, spin_component, l_alpha_corr
+  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final_full, &
+                                    num_wann_occ, iuwfc_wann, kcw_iverbosity, &
+                                    qp_symm, evc0, kipz_corr, num_wann, &
+                                    spin_component, l_alpha_corr
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum
   USE mp_bands,              ONLY : intra_bgrp_comm
@@ -48,8 +49,6 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
   ! the k-point index in hte orignal mesh of k-points
   !
   INTEGER :: ibnd, ir, k, dim_ham, nspin_aux, n_orb, lrwfc
-  INTEGER i_start, i_end!, ik_eff
-  !
   !
   REAL(DP) :: n_r(dfftp%nnr), num1, num2, sh, aux_r(dfftp%nnr) 
   ! ... orbital density in rela space
@@ -70,8 +69,6 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
   REAL(DP), ALLOCATABLE :: eigvl_ki(:), et_aux(:,:)
   !
   LOGICAL :: off_diag = .TRUE.
-  REAL(DP) :: ehomo, elumo
-  REAL(DP) :: ehomo_p, elumo_p
   !
   COMPLEX(DP) :: delta_vr(dffts%nnr,nspin), delta_vr_(dffts%nnr,nspin)
   COMPLEX(DP), ALLOCATABLE  :: delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
@@ -449,76 +446,6 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
   !
   WRITE(stdout,'(5x,"INFO: KI calcualtion: Full Hamiltonian ... DONE",/ )')
   ! 
-!#ifdef DEBUG
-!  WRITE(stdout,'(3x, "###  KI HAMILTONIAN ###")')
-!  i_end = MIN(8,n_orb)
-!  DO k = 1, i_end
-!     WRITE(stdout,'(16F12.7)') ham(1:i_end,k)
-!  ENDDO
-!  WRITE(stdout,*) 
-!  !
-!  WRITE(stdout,'(5x, "DATA: KI HAMILTONIAN EMPTY")')
-!  DO k = num_wann_occ+1, n_orb
-!     WRITE(stdout,'(16F12.7)') ham(num_wann_occ+1:n_orb,k)
-!  ENDDO
-!  WRITE(stdout,*) 
-!#endif
-!  !
-!  ! Perturbative approach: ONLY diagonal correction
-!  et_aux(:,ik) = 0.D0
-!  DO ibnd = 1, n_orb
-!     et_aux(ibnd,ik) = DBLE(ham(ibnd,ibnd))
-!  ENDDO
-!  IF (kcw_at_ks) THEN 
-!    ehomo_p=-1D+6
-!    elumo_p=+1D+6
-!    ehomo_p = MAX ( ehomo_p, et_aux(num_wann_occ,ik ) )
-!    elumo_p = MIN ( elumo_p, et_aux(num_wann_occ+1,ik ) )
-!  ENDIF
-!  !
-!  ! Here diagonalize ham for empty states with 
-!  ! different dimension of the hilbert space
-!  ! This makes sense only when kcw_at_ks. 
-!  !
-!  IF (kcw_at_ks) THEN
-!    !
-!    WRITE(stdout,'(8x, "DATA: Empty states spectrum as a function of the # of orbitals")')
-!    !
-!    DO k = 1, dim_ham-num_wann_occ
-!       !
-!       i_start = num_wann_occ+1
-!       i_end = num_wann_occ+k
-!       !
-!       ALLOCATE (ham_aux(k,k), eigvl_ki(k), eigvc_ki(k,k))
-!       !ham_aux(1:k,1:k) = ham(1:k,1:k)
-!       ham_aux(1:k,1:k) = ham(i_start:i_end,i_start:i_end)
-!       !
-!       CALL cdiagh( k, ham_aux, k, eigvl_ki, eigvc_ki )
-!       !
-!       IF (k.le.10) THEN 
-!          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:k)*rytoev  ! First 10 eigenvalues
-!       ELSE
-!          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:10)*rytoev  ! First 10 eigenvalues
-!       ENDIF
-!       !
-!       DEALLOCATE (ham_aux)
-!       DEALLOCATE (eigvl_ki, eigvc_ki)
-!       !
-!    ENDDO
-!    ! 
-!  ENDIF
-!  !
-!  ALLOCATE (ham_aux(n_orb,n_orb), eigvl_ki(n_orb), eigvc_ki(n_orb,n_orb))
-!  ham_aux(1:n_orb,1:n_orb) = ham(1:n_orb,1:n_orb)
-!  CALL cdiagh( n_orb, ham_aux, n_orb, eigvl_ki, eigvc_ki )
-!  DO ibnd = 1, n_orb
-!     et(ibnd,ik) = eigvl_ki(ibnd)
-!  ENDDO
-!  ehomo=-1D+6
-!  elumo=+1D+6
-!  ehomo = MAX ( ehomo, eigvl_ki(num_wann_occ ) )
-!  IF (num_Wann .gt. num_wann_occ) elumo = MIN ( elumo, eigvl_ki(num_wann_occ+1 ) )
-!  !
   DEALLOCATE (ham) 
   DEALLOCATE (ham_up) 
   DEALLOCATE (ham_dw) 
@@ -526,28 +453,9 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
   IF (ALLOCATED(eigvc_ki)) DEALLOCATE (eigvc_ki)
   IF (ALLOCATED(ham_aux)) DEALLOCATE (ham_aux)
   !
-!  WRITE( stdout, '()' )
-!  WRITE( stdout, '(10x, "KI[Full] ",8F11.4)' ) (et(ibnd,ik)*rytoev, ibnd=1,n_orb) 
-!  IF (kcw_at_ks ) WRITE( stdout, '()' )
-!  IF (kcw_at_ks ) WRITE( stdout, '(10x, "KI[Pert] ",8F11.4)' ) (et_aux(ibnd,ik)*rytoev, ibnd=1,n_orb)
-!  !
-!  WRITE( stdout, '()' )
-!  IF ( elumo < 1d+6) THEN
-!     IF (kcw_at_ks) WRITE( stdout, 9043 ) ehomo_p*rytoev, elumo_p*rytoev
-!     WRITE( stdout, 9044 ) ehomo*rytoev, elumo*rytoev
-!  ELSE
-!     IF (kcw_at_ks) WRITE( stdout, 9046 ) ehomo_p*rytoev
-!     WRITE( stdout, 9045 ) ehomo*rytoev
-!  END IF
-  !
   DEALLOCATE (psic_1, vpsi_r, vpsi, v_ki) 
   DEALLOCATE (et_aux)
   DEALLOCATE ( delta_vg, vh_rhog, delta_vg_)
-  !
-9046 FORMAT(8x, 'KI[pert] highest occupied level (ev): ',F10.4 )
-9045 FORMAT(8x, 'KI[full] highest occupied level (ev): ',F10.4 )
-9044 FORMAT(8x, 'KI[full] highest occupied, lowest unoccupied level (ev): ',2F10.4 )
-9043 FORMAT(8x, 'KI[pert] highest occupied, lowest unoccupied level (ev): ',2F10.4 )
   !
   CONTAINS
   !
@@ -564,7 +472,7 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
     COMPLEX(DP), INTENT(INOUT) :: dH_wann
     REAL(DP), INTENT(OUT) :: ddH
     !
-    REAL(DP) :: alpha_(num_wann), alpha_fd(num_wann)
+    REAL(DP) :: alpha_(num_wann)
     ! weight of the q points, alpha from LR, alpha after the all-order correction.
     !
     REAL(DP) second_der, delta
