@@ -18,7 +18,7 @@ SUBROUTINE koopmans_ham (dH_wann)
   USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : num_wann, Hamlt, nqstot, l_alpha_corr, evc0, &
                                     alpha_final, num_wann_occ, on_site_only, iuwfc_wann, &
-                                    nkstot_eff, spin_component, kcw_at_ks
+                                    nkstot_eff, spin_component, kcw_at_ks, kcw_iverbosity
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
   USE units_lr,              ONLY : lrwfc, iuwfc
@@ -95,7 +95,7 @@ SUBROUTINE koopmans_ham (dH_wann)
     ENDDO
 #endif
     !
-    IF (kcw_at_ks) THEN
+    IF (kcw_at_ks .AND. kcw_iverbosity .gt. 1 ) THEN
       !
       WRITE(stdout,'(8x, "INFO: Empty states spectrum as a function of the # of orbitals")')
       !
@@ -116,9 +116,9 @@ SUBROUTINE koopmans_ham (dH_wann)
          !
          DEALLOCATE (ham_aux)
          DEALLOCATE (eigvl_ki, eigvc_ki)
-         WRITE(stdout,*)
          !
       ENDDO
+      WRITE(stdout,*)
       !
     ENDIF
     !

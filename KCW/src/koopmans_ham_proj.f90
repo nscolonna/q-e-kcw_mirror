@@ -47,16 +47,16 @@ SUBROUTINE koopmans_ham_proj (delta)
   REAL(DP) :: occ_mat(num_wann)
   !
   COMPLEX(DP) :: delta_k, overlap
-  COMPLEX(DP) :: ham(nbnd,nbnd), eigvc(nbnd,nbnd), deltah(nbnd,nbnd), eigvc_all(nbnd,nbnd,nkstot_eff)
+  COMPLEX(DP) :: ham(nbnd,nbnd), eigvc(nbnd,nbnd), deltah(nbnd,nbnd)
   !
   ! The new eigenalues 
-  REAL(DP) :: et_ki(nbnd,nkstot_eff)
   REAL(DP), ALLOCATABLE :: eigvl_aux(:)
   COMPLEX(DP) , ALLOCATABLE :: eigvc_aux(:,:), ham_aux(:,:), evc_aux(:,:)
   !
   ! The new eigenalues
   REAL(DP) :: eigvl(nbnd)
   REAL(DP) :: eigvl_pert(nbnd)
+  REAL(DP) :: eigvl_ks(nbnd)
   !
   INTEGER :: i, iwann
   ! 
@@ -126,7 +126,8 @@ SUBROUTINE koopmans_ham_proj (delta)
       ! The KS Hamiltonian in the KS basis
       ham(:,:)=CMPLX(0.D0, 0.D0, kind=DP)
       DO i = 1, nbnd 
-        ham(i,i)=et(i,ik_pw)
+        ham(i,i)    = et(i,ik_pw)
+        eigvl_ks(i) = et(i,ik_pw)
       ENDDO
       !
     ENDIF
@@ -148,9 +149,6 @@ SUBROUTINE koopmans_ham_proj (delta)
     ham(:,:) = ham(:,:) + deltah(:,:) 
     ! And Diagonalize it 
     CALL cdiagh( nbnd, ham, nbnd, eigvl, eigvc )
-    !
-    et_ki(1:nbnd,ik)=eigvl(1:nbnd)
-    eigvc_all(:,:,ik) = eigvc(:,:)
     !
     IF (kcw_iverbosity .gt. 1) THEN
       eig_win=5
@@ -181,11 +179,22 @@ SUBROUTINE koopmans_ham_proj (delta)
       WRITE(stdout,*)
     ENDIF
     !
-    ehomo = MAX ( ehomo, et_ki(num_wann_occ, ik ) )
-    IF (nbnd > num_wann_occ) elumo = MIN ( elumo, et_ki(num_wann_occ+1, ik ) )
+    !Overwrite et and evc
+    et(1:nbnd, ik_pw) = eigvl(1:nbnd)
+    ! MB
+    ! This is different wrt koopmans_ham.f90:
+    ! (1) the first dimension (row of A/evc) = npwx, not npw;
+    ! (2) cannot use the same input matrix as output; need evc_aux
+    CALL ZGEMM( 'N','N', npwx*npol, nbnd, nbnd, ONE, evc, npwx*npol, eigvc, nbnd, &
+    ZERO, evc_aux, npwx*npol )
+    evc(:,:) = evc_aux(:,:)
+    CALL save_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     !
-    WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (et(ibnd,ik_pw)*rytoev, ibnd=1,nbnd)
-    WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (et_ki(ibnd,ik)*rytoev, ibnd=1,nbnd)
+    ehomo = MAX ( ehomo, eigvl(num_wann_occ ) )
+    IF (nbnd > num_wann_occ) elumo = MIN ( elumo, eigvl(num_wann_occ+1 ) )
+    !
+    WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (eigvl_ks(ibnd)*rytoev, ibnd=1,nbnd)
+    WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (eigvl   (ibnd)*rytoev, ibnd=1,nbnd)
     WRITE( stdout, '(10x, "pKI ",8F11.4)' ) (eigvl_pert(ibnd)*rytoev, ibnd=1,nbnd)
     WRITE(stdout, 901) get_clock('KCW')
     !
@@ -201,24 +210,6 @@ SUBROUTINE koopmans_ham_proj (delta)
     WRITE( stdout, 9047 ) ehomo_pert*rytoev
   END IF
   !
-  !Overwrite et and evc
-  DO ik = 1, nkstot_eff
-    ik_pw = ik + (spin_component-1)*(nkstot_eff)
-    et(1:nbnd, ik_pw) = et_ki(1:nbnd,ik)
-    !
-    ! Canonical wfc at each k point (overwrite the evc from DFT)
-    CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
-    ! Retrive the ks function at k (in the Wannier Gauge)
-    eigvc(:,:) = eigvc_all(:,:,ik)
-    CALL ZGEMM( 'N','N', npwx*npol, nbnd, nbnd, ONE, evc, npwx*npol, eigvc, nbnd, &
-                 ZERO, evc_aux, npwx*npol )
-    !write (*,'("NICOLA lrwfc", i20)') lrwfc, iuwfc, nbnd, SIZE(evc)
-    evc(:,:) = evc_aux(:,:)
-    CALL save_buffer ( evc, nwordwfc, iuwfc, ik_pw )
-    !
-  ENDDO
-
-  ! 
 9043 FORMAT(/,8x, 'KS  highest occupied level (ev): ',F10.4 )
 9042 FORMAT(/,8x, 'KS  highest occupied, lowest unoccupied level (ev): ',2F10.4 )
 9045 FORMAT(  8x, 'KI  highest occupied level (ev): ',F10.4 )

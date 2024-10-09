@@ -32,6 +32,9 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
   !
   ! The Hamiltonian due to the real contribution to the potential \int f_Hxc(r,r') rho_0i(r')
   COMPLEX(DP) deltah_real (num_wann, num_wann)
+#ifdef DEBUG
+  COMPLEX(DP) ham (num_wann, num_wann)
+#endif
   !
   COMPLEX(DP), INTENT (OUT) :: dH_wann(nkstot_eff,num_wann,num_wann)
   COMPLEX(DP), INTENT (OUT) :: dH_wann_proj(num_wann)

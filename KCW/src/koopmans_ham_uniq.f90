@@ -28,7 +28,8 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   USE klist,                 ONLY : nkstot, xk, ngk
   USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : num_wann, evc0, spin_component, &
-                                    num_wann_occ, iuwfc_wann, nkstot_eff
+                                    num_wann_occ, iuwfc_wann, nkstot_eff, &
+                                    kcw_iverbosity
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
   USE units_lr,              ONLY : iuwfc
@@ -53,13 +54,12 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   ! the KI operator on the KS basis of the NSCF calculation
   COMPLEX(DP) :: deltah(nbnd,nbnd)
   ! the new hamitonain, and the new eigenvalues and eigenvectors at a given k-point
-  COMPLEX(DP) :: ham(nbnd,nbnd), eigvc(nbnd,nbnd), eigvc_all(nbnd,nbnd,nkstot_eff)
-  !
-  REAL(DP) :: et_ki(nbnd,nkstot_eff)
+  COMPLEX(DP) :: ham(nbnd,nbnd), eigvc(nbnd,nbnd)
   !
   ! The new eigenalues 
   REAL(DP) :: eigvl(nbnd)
   REAL(DP) :: eigvl_pert(nbnd)
+  REAL(DP) :: eigvl_ks(nbnd)
   !
   INTEGER :: i, ibnd
   ! 
@@ -102,7 +102,8 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     ! The KS Hamiltonian in the KS basis
     ham(:,:)=CMPLX(0.D0, 0.D0, kind=DP)
     DO i = 1, nbnd
-      ham(i,i)=et(i,ik_pw)
+      ham(i,i)    = et(i,ik_pw)
+      eigvl_ks(i) = et(i,ik_pw)
     ENDDO
     !
     ehomo_ks = MAX ( ehomo_ks, et(num_wann_occ  , ik_pw) )
@@ -114,6 +115,18 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     ! Add to the KS Hamiltonian
     ham(:,:) = ham(:,:) + deltah(:,:)
     !
+#ifdef DEBUG
+    WRITE(stdout, '(/, "dKI Hamiltonian at k = ", i4)') ik
+    DO k = 1, 10
+      WRITE(stdout, '(200(2f8.4,2x))') (REAL(deltah(k,i)),AIMAG(deltah(k,i)), i=1,10)
+    ENDDO
+    !
+    WRITE(stdout, '(/, "KI Hamiltonian at k = ", i4)') ik
+    DO k = 1, 10
+      WRITE(stdout, '(200(2f8.4,2x))') (REAL(ham(k,i)),AIMAG(ham(k,i)), i=1,10)
+    ENDDO
+#endif
+    !
     ! Because we have defined a uniq KI Hamiltonian, we can do a perturbative approach
     ! i.e. we keep only the diagonal part of the KI Hamiltoniana
     DO i = 1, nbnd
@@ -122,42 +135,50 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     ehomo_pert = MAX ( ehomo_pert, eigvl_pert(num_wann_occ ) )
     IF (nbnd > num_wann_occ) elumo_pert = MIN ( elumo_pert, eigvl_pert(num_wann_occ+1 ) )
     !
+    IF (kcw_iverbosity .gt. 1 ) THEN
+      WRITE(stdout,'(8x, "INFO: Empty states spectrum as a function of the # of orbitals")')
+      !
+      DO k = 1, nbnd-num_wann_occ
          !
-    WRITE(stdout,'(8x, "INFO: Empty states spectrum as a function of the # of orbitals")')
-    !
-    DO k = 1, nbnd-num_wann_occ
-       !
-       i_start = num_wann_occ+1; i_end = num_wann_occ+k
-       !
-       ALLOCATE (ham_aux(k,k), eigvl_ki(k), eigvc_ki(k,k))
-       ham_aux(1:k,1:k) = ham(i_start:i_end,i_start:i_end)
-       !
-       CALL cdiagh( k, ham_aux, k, eigvl_ki, eigvc_ki )
-       !
-       IF (k.le.10) THEN
-          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:k)*rytoev  ! First 10 eigenvalues
-       ELSE
-          WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:10)*rytoev  ! First 10 eigenvalues
-       ENDIF
-       !
-       DEALLOCATE (ham_aux)
-       DEALLOCATE (eigvl_ki, eigvc_ki)
-       WRITE(stdout,*)
-       !
-    ENDDO
+         i_start = num_wann_occ+1; i_end = num_wann_occ+k
+         !
+         ALLOCATE (ham_aux(k,k), eigvl_ki(k), eigvc_ki(k,k))
+         ham_aux(1:k,1:k) = ham(i_start:i_end,i_start:i_end)
+         !
+         CALL cdiagh( k, ham_aux, k, eigvl_ki, eigvc_ki )
+         !
+         IF (k.le.10) THEN
+            WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:k)*rytoev  ! First 10 eigenvalues
+         ELSE
+            WRITE(stdout,'(8x, I3, 10F10.4)') k, eigvl_ki(1:10)*rytoev  ! First 10 eigenvalues
+         ENDIF
+         !
+         DEALLOCATE (ham_aux)
+         DEALLOCATE (eigvl_ki, eigvc_ki)
+         !
+      ENDDO
+      WRITE(stdout,*)
+    ENDIF
     !
     ! Diagonalize the KI Hamiltonian
     CALL CDIAGH( nbnd, ham, nbnd, eigvl, eigvc )
     !
-    ! Store the eigenvalues and eigenvector at this k point 
-    et_ki(1:nbnd,ik)=eigvl(1:nbnd)
-    eigvc_all(:,:,ik) = eigvc(:,:)
+    !Overwrite et and evc
+    et(1:nbnd, ik_pw) = eigvl(1:nbnd)
+    ! MB
+    ! This is different wrt koopmans_ham.f90:
+    ! (1) the first dimension (row of A/evc) = npwx, not npw;
+    ! (2) cannot use the same input matrix as output; need evc_aux
+    CALL ZGEMM( 'N','N', npwx*npol, nbnd, nbnd, ONE, evc, npwx*npol, eigvc, nbnd, &
+    ZERO, evc_aux, npwx*npol )
+    evc(:,:) = evc_aux(:,:)
+    CALL save_buffer ( evc, nwordwfc, iuwfc, ik_pw )
     !
-    ehomo = MAX ( ehomo, et_ki(num_wann_occ, ik ) )
-    IF (nbnd > num_wann_occ) elumo = MIN ( elumo, et_ki(num_wann_occ+1, ik ) )
+    ehomo = MAX ( ehomo, eigvl(num_wann_occ ) )
+    IF (nbnd > num_wann_occ) elumo = MIN ( elumo, eigvl(num_wann_occ+1 ) )
     !
-    WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (et(ibnd,ik_pw)*rytoev, ibnd=1,nbnd)
-    WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (et_ki(ibnd,ik)*rytoev, ibnd=1,nbnd)
+    WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (eigvl_ks(ibnd)*rytoev, ibnd=1,nbnd)
+    WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (eigvl   (ibnd)*rytoev, ibnd=1,nbnd)
     WRITE( stdout, '(10x, "pKI ",8F11.4)' ) (eigvl_pert(ibnd)*rytoev, ibnd=1,nbnd)
     WRITE(stdout, 901) get_clock('KCW')
     !
@@ -173,27 +194,6 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     WRITE( stdout, 9045 ) ehomo*rytoev
     WRITE( stdout, 9047 ) ehomo_pert*rytoev
   END IF
-  !
-  !Overwrite et and evc
-  DO ik = 1, nkstot_eff
-    ik_pw = ik + (spin_component-1)*(nkstot_eff)
-    et(1:nbnd, ik_pw) = et_ki(1:nbnd,ik)
-    !
-    ! Canonical wfc at each k point (overwrite the evc from DFT)
-    CALL get_buffer ( evc, nwordwfc, iuwfc, ik_pw )
-    ! Retrive the ks function at k (in the Wannier Gauge)
-    eigvc(:,:) = eigvc_all(:,:,ik)
-    ! MB
-    ! This is different wrt koopmans_ham.f90: 
-    ! (1) the first dimension (row of A/evc) = npwx, not npw;
-    ! (2) cannot use the same input matrix as output; need evc_aux
-    CALL ZGEMM( 'N','N', npwx*npol, nbnd, nbnd, ONE, evc, npwx*npol, eigvc, nbnd, &
-    ZERO, evc_aux, npwx*npol )
-    !write (*,'("NICOLA lrwfc", i20)') lrwfc, iuwfc, nbnd, SIZE(evc)
-    evc(:,:) = evc_aux(:,:)
-    CALL save_buffer ( evc, nwordwfc, iuwfc, ik_pw )
-    !
-  ENDDO
   !
   DEALLOCATE (dH_wann_aux)
   DEALLOCATE (evc_aux)
@@ -256,9 +256,10 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
             ! 
             overlap = (overlap_mat(ib,nwann )) * CONJG(overlap_mat(jb,mwann))
             deltah(ib,jb) = deltah(ib,jb) + delta(nwann,mwann) * overlap
-            !WRITE(*,'(3X, 2I5, 2F20.12, F20.12, 2F20.12)') ibnd, iwann, delta(iwann), occ_mat(iwann), overlap
+            !WRITE(*,'(5X, 2I5, 2F20.12, 2F20.12, 2F20.12)') nwann, mwann, delta(nwann,mwann), overlap, deltah(ib,jb)
           ENDDO
         ENDDO
+        !WRITE(*,'(3X, 2I5, 2F20.12)') ib, jb, deltah(ib,jb)
         IF (ib /= jb) deltah(jb,ib) = CONJG(deltah(ib,jb))
         !
       ENDDO
