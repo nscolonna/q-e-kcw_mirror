@@ -257,7 +257,7 @@ SUBROUTINE kcw_readin()
                   & ' not supported!  Valid options: 1) "quadratic" || "2nd" || "second_order"; 2) "full"',1 )
        !
     END SELECT
-
+    !
   ENDIF
   !
   ! ... broadcasting all input variables to other nodes
@@ -408,7 +408,7 @@ SUBROUTINE kcw_readin()
   ENDIF
   !
   IF (corr_sc .AND. nkstot_eff /= 1) &
-     CALL errore('kcw_readin', 'Is this a SC calculation?', 1)
+     CALL errore('kcw_readin', 'h_corr_scheme="full" not implemented for extended systems (nkstot>1)', 1)
   ! 
   IF (lgamma) THEN
      nksq = nks

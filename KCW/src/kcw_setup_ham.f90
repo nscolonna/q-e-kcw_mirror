@@ -25,7 +25,6 @@ subroutine kcw_setup_ham
   USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
   USE wvfct,             ONLY : nbnd
   USE uspp,              ONLY : nkb, vkb
-  !USE funct,             ONLY : dft_is_gradient
   USE xc_lib,            ONLY : xclib_dft_is
   !
   USE units_lr,          ONLY : iuwfc
@@ -36,7 +35,7 @@ subroutine kcw_setup_ham
   USE control_kcw,       ONLY : alpha_final, evc0, iuwfc_wann, iurho_wann, kcw_iverbosity, &
                                 read_unitary_matrix, Hamlt, alpha_corr_done, group_alpha, l_do_alpha, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
-                                calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
+                                calculation, nqstot, occ_mat, spin_component, &
                                 tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_real_space, nrho, nkstot_eff !, wq
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : nkstot, xk, nks, ngk, igk_k, nelec, nelup, neldw
@@ -113,10 +112,6 @@ subroutine kcw_setup_ham
   !
   ALLOCATE ( alpha_final(nbnd) )
   alpha_final(:) = 1.D0
-  IF (nkstot/nspin == 1 .and. nspin.ne.4 ) THEN 
-    ALLOCATE (alpha_final_full(nbnd))
-    alpha_final_full(:) = 1.D0
-  ENDIF
   !
   ! 6) Computes the derivative of the XC potential
   !
@@ -128,8 +123,6 @@ subroutine kcw_setup_ham
     CALL setup_dgc()
     CALL kcw_R_points ()
     CALL read_alpha ()
-    IF (nkstot/nspin == 1 .and. nspin.ne.4 ) alpha_final_full = alpha_final
-  ! CALL setup_dgc()
   ENDIF
   !
   ! Open buffers for the KS and eventualy the minimizing WFCs 

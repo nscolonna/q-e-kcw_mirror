@@ -21,7 +21,6 @@ MODULE control_kcw
   COMPLEX (DP), ALLOCATABLE:: unimatrx_opt(:,:,:)       ! Optimal Unitary matrix from EMP disentanglement
   COMPLEX (DP), ALLOCATABLE:: evc0(:,:)                 ! Variational orbitals at agiven kpoint
   REAL(DP), ALLOCATABLE    :: alpha_final(:)            ! Value of the screening parameter
-  REAL(DP), ALLOCATABLE    :: alpha_final_full(:)       ! Value of the screening parameter in case the full hamiltonian is computed
   LOGICAL                  :: l_unique_manifold         ! IF true no occ/empty distinction from Wannier
   !
   LOGICAL :: kcw_at_ks                                   ! if TRUE calculate alphas for KS orbitals
@@ -79,8 +78,6 @@ MODULE control_kcw
   LOGICAL :: l_alpha_corr ! add a correction to the second order approximation of the energy based 
                           ! on the un-relaxed energy at N \pm 1
   LOGICAL, ALLOCATABLE :: alpha_corr_done(:) ! keep track wheter the correction to alpha was already conputed
-  !
-  REAL(DP), ALLOCATABLE :: delta_alpha(:)
   !
   REAL(DP), ALLOCATABLE :: centers(:,:)    ! Wannier centers
   !

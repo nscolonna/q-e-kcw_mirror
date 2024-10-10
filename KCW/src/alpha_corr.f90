@@ -222,7 +222,7 @@ SUBROUTINE alpha_corr ( iwann, delta)
       USE fft_base,              ONLY : dffts, dfftp
       USE fft_interfaces,        ONLY : fwfft
       USE control_kcw,           ONLY : num_wann, nqstot, iurho_wann, &
-                                        rvect, x_q, nkstot_eff, nrho
+                                        rvect, x_q, nkstot_eff, nrho, spin_component
       USE cell_base,             ONLY : omega
       USE buffers,               ONLY : get_buffer
       USE mp,                    ONLY : mp_sum
@@ -342,7 +342,7 @@ SUBROUTINE alpha_corr ( iwann, delta)
             rho_wann_ir(:,3) = rho_wann_ir(:,3) + phase_sc*phase_pc(:)*nq_r(:,3)/nqstot
             rho_wann_ir(:,4) = rho_wann_ir(:,4) + phase_sc*phase_pc(:)*nq_r(:,4)/nqstot
            end if
-        !
+           !
         ENDDO ! q-points LOOP
         !
         ! ... accumulate over R. To compute the integral of the Wannier over the SC ...
@@ -357,13 +357,17 @@ SUBROUTINE alpha_corr ( iwann, delta)
         !
         ! ... Add the wannier density to the GS density... 
         IF (nspin_mag==4) THEN
-        rho_minus1%of_r(:,1) = REAL(rho_wann_ir(:,1)) + rho_minus1%of_r(:,1)
-        rho_minus1%of_r(:,2) = REAL(rho_wann_ir(:,2)) + rho_minus1%of_r(:,2)
-        rho_minus1%of_r(:,3) = REAL(rho_wann_ir(:,3)) + rho_minus1%of_r(:,3)
-        rho_minus1%of_r(:,4) = REAL(rho_wann_ir(:,4)) + rho_minus1%of_r(:,4)
+          rho_minus1%of_r(:,1) = REAL(rho_wann_ir(:,1)) + rho_minus1%of_r(:,1)
+          rho_minus1%of_r(:,2) = REAL(rho_wann_ir(:,2)) + rho_minus1%of_r(:,2)
+          rho_minus1%of_r(:,3) = REAL(rho_wann_ir(:,3)) + rho_minus1%of_r(:,3)
+          rho_minus1%of_r(:,4) = REAL(rho_wann_ir(:,4)) + rho_minus1%of_r(:,4)
         ELSE
-        rho_minus1%of_r(:,1) = REAL(rho_wann_ir(:,1)) + rho_minus1%of_r(:,1)
-        rho_minus1%of_r(:,2) = REAL(rho_wann_ir(:,1)) + rho_minus1%of_r(:,2) !@Nicola Colonna please check
+          rho_minus1%of_r(:,1) = REAL(rho_wann_ir(:,1)) + rho_minus1%of_r(:,1)
+          !
+          ! The magnetization depends on which channel we remove the orbital from
+          ! we reduce by n_i(r) if current_spin=1, we increase by n_i(r) if current_spin=2
+          ! This is taken care by the factor (3-2*current_spin)
+          rho_minus1%of_r(:,2) = (3-2*spin_component)*REAL(rho_wann_ir(:,1)) + rho_minus1%of_r(:,2) 
         END IF
         !
         ! NOTA BENE: The following is correct only in a 1 k-point calculation (Supercell) 

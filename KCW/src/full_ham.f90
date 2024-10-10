@@ -27,7 +27,7 @@ SUBROUTINE full_ham (ik)
   USE gvect,                 ONLY : ngm
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
-  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final_full, hamlt, num_wann_occ, iuwfc_wann, &
+  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, hamlt, num_wann_occ, iuwfc_wann, &
                                     kcw_iverbosity, qp_symm, evc0, kipz_corr, num_wann, spin_component
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum
@@ -83,7 +83,7 @@ SUBROUTINE full_ham (ik)
   current_spin = spin_component
   w1 = 1.D0 / omega
   !
-  !alpha_final_full(:,:)=1.0  ! Just for debug
+  !alpha_final(:,:)=1.0  ! Just for debug
   !
   nspin_aux=nspin_mag
   nspin_mag=2
@@ -326,23 +326,23 @@ SUBROUTINE full_ham (ik)
         !
      ENDIF
      !
-     IF (alpha_final_full(ibnd) .gt. 1.02 ) THEN 
+     IF (alpha_final(ibnd) .gt. 1.02 ) THEN 
          WRITE(stdout,'("WARNING: alpha for orbital", i5, i3, "  bigger than 1.02.", F15.8, "Set it to 1.00",/)') ibnd, &
-             ik, alpha_final_full(ibnd)
-         alpha_final_full(ibnd) = 1.D0
+             ik, alpha_final(ibnd)
+         alpha_final(ibnd) = 1.D0
      ENDIF 
      !
-     IF (alpha_final_full(ibnd) .lt. 0.00 ) THEN 
+     IF (alpha_final(ibnd) .lt. 0.00 ) THEN 
          WRITE(stdout,'(8x, "WARNING: alpha for orbital", i5, i3, "  smaller than 0.00.", F15.8, "Set it to 1.00",/)') ibnd, &
-             ik, alpha_final_full(ibnd)
-         alpha_final_full(ibnd) = 1.D0
+             ik, alpha_final(ibnd)
+         alpha_final(ibnd) = 1.D0
      ENDIF 
      !
-     v_ki(:,ibnd) = v_ki(:,ibnd) * alpha_final_full(ibnd)
+     v_ki(:,ibnd) = v_ki(:,ibnd) * alpha_final(ibnd)
      !
      WRITE(stdout,'(8x, "orbital", i3, 3x, "spin", i3, 5x, "uKI_diag", F15.8 ," Ry", 3x, "rKI_diag", F15.8, " Ry", 3x, &
-         &"alpha=", F15.8, 3x,/ )') ibnd, current_spin, delta_eig(ibnd), delta_eig(ibnd)*alpha_final_full(ibnd), &
-         alpha_final_full(ibnd)
+         &"alpha=", F15.8, 3x,/ )') ibnd, current_spin, delta_eig(ibnd), delta_eig(ibnd)*alpha_final(ibnd), &
+         alpha_final(ibnd)
      !
   ENDDO orb_loop
   !

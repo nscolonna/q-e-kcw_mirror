@@ -27,7 +27,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   USE gvecs,                 ONLY : ngms
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
-  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final_full, &
+  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, &
                                     num_wann_occ, iuwfc_wann, kcw_iverbosity, &
                                     qp_symm, evc0, kipz_corr, num_wann, &
                                     spin_component, l_alpha_corr
@@ -87,7 +87,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   w1 = 1.D0 / omega
   !
-  !alpha_final_full(:,:)=1.0  ! Just for debug
+  !alpha_final(:,:)=1.0  ! Just for debug
   !
   nspin_aux=nspin
   nspin=2
@@ -116,6 +116,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   v_ki(:,:) = (0.D0,0.D0)
   !GOTO 101
+  !
   !
   n_orb = num_wann
   orb_loop: DO ibnd = 1, n_orb
@@ -162,6 +163,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      deltah_scal = - 0.5D0 * sum (CONJG(n_g (:)) * delta_vg(:,spin_component)) * omega
      !sh = 0.5D0 * sum (CONJG(n_g (:)) * vh_rhog(:)                )*omega
      !WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, sh
+     !
      IF (l_alpha_corr) CALL beyond_2nd (deltah_scal, ddH, ibnd)
      !
      psic(:) = (0.D0, 0.D0)
@@ -212,9 +214,12 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      IF ( ibnd .LE. num_wann_occ ) THEN
         !
         rho_minus1%of_r(:,1) = rho_minus1%of_r(:,1) - n_r(:)  ! denisty rho-rho_i in real space
-        rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) - n_r(:)  ! denisty rho-rho_i in real space
         rho_minus1%of_g(:,1) = rho_minus1%of_g(:,1) - n_g(:)  ! denisty rho-rho_i in reciprocal scape
-        rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) - n_g(:)  ! denisty rho-rho_i in reciprocal scape
+        ! The magnetization depends on which channel we remove the orbital from
+        ! we reduce by n_i(r) if current_spin=1, we increase by n_i(r) if current_spin=2
+        ! This is taken care by the factor (3-2*current_spin)
+        rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) - (3-2*spin_component)*n_r(:)  ! magnetization m-m_i in real space
+        rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) - (3-2*spin_component)*n_g(:)  ! magnetization m-m_i in reciprocal scape
         ! 
         etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
         nspin_aux=nspin; nspin=2
@@ -241,9 +246,12 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      ELSE
         !
         rho_minus1%of_r(:,1) = rho_minus1%of_r(:,1) + n_r(:)  ! denisty rho+rho_i in real space
-        rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) + n_r(:)  ! denisty rho+rho_i in real space
         rho_minus1%of_g(:,1) = rho_minus1%of_g(:,1) + n_g(:)  ! denisty rho+rho_i in reciprocal scape
-        rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) + n_g(:)  ! denisty rho+rho_i in reciprocal scape
+        ! The magnetization depends on which channel we remove the orbital from
+        ! we reduce by n_i(r) if current_spin=1, we increase by n_i(r) if current_spin=2
+        ! This is taken care by the factor (3-2*current_spin)
+        rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) + (3-2*spin_component)*n_r(:)  ! magnetization m+rho_i in real space
+        rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) + (3-2*spin_component)*n_g(:)  ! magnetization m+m_i in reciprocal scape
         ! 
         etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
         nspin_aux=nspin; nspin=2
@@ -256,6 +264,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         !
         ! Scalar-term correction for Diagonal elements only
         delta_eig(ibnd) = -sh + (etxc_minus1 - etxc - etmp1)
+        ! This is to compare with KCP implementation.
         WRITE(stdout, '(8x, "KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i} ", 4F14.8)') sh, &
             etxc, etxc_minus1, etmp 
         IF (lrpa) delta_eig(ibnd) = (-sh)  !! hartree only for debug
@@ -311,6 +320,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         etmp1 = sum ( vxc_minus1(1:dfftp%nnr,current_spin) * n_r(1:dfftp%nnr) )
         etmp1= etmp1/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )*omega
         CALL mp_sum (etmp1, intra_bgrp_comm)
+        ! This is to compare with KCP implementation.
         WRITE(stdout , '(8x, "PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}, int{v_xc[n_i] n_i}", 4F15.8)') &
             sh, etxc_minus1, etmp1, vtxc_minus1
         etmp1 = + sh - etxc_minus1 + etmp1
@@ -336,23 +346,23 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         !
      ENDIF
      !
-     IF (alpha_final_full(ibnd) .gt. 1.02 ) THEN 
+     IF (alpha_final(ibnd) .gt. 1.02 ) THEN 
          WRITE(stdout,'("WARNING: alpha for orbital", i5, i3, "  bigger than 1.02.", F15.8, "Set it to 1.00",/)') ibnd, &
-             ik, alpha_final_full(ibnd)
-         alpha_final_full(ibnd) = 1.D0
+             ik, alpha_final(ibnd)
+         alpha_final(ibnd) = 1.D0
      ENDIF 
      !
-     IF (alpha_final_full(ibnd) .lt. 0.00 ) THEN 
+     IF (alpha_final(ibnd) .lt. 0.00 ) THEN 
          WRITE(stdout,'(8x, "WARNING: alpha for orbital", i5, i3, "  smaller than 0.00.", F15.8, "Set it to 1.00",/)') ibnd, &
-             ik, alpha_final_full(ibnd)
-         alpha_final_full(ibnd) = 1.D0
+             ik, alpha_final(ibnd)
+         alpha_final(ibnd) = 1.D0
      ENDIF 
      !
-     v_ki(:,ibnd) = v_ki(:,ibnd) * alpha_final_full(ibnd)
+     v_ki(:,ibnd) = v_ki(:,ibnd) * alpha_final(ibnd)
      !
      WRITE(stdout,'(8x, "orbital", i3, 3x, "spin", i3, 5x, "uKI_diag", F15.8 ," Ry", 3x, "rKI_diag", F15.8, " Ry", 3x, &
-         &"alpha=", F15.8, 3x,/ )') ibnd, current_spin, delta_eig(ibnd), delta_eig(ibnd)*alpha_final_full(ibnd), &
-         alpha_final_full(ibnd)
+         &"alpha=", F15.8, 3x,/ )') ibnd, current_spin, delta_eig(ibnd), delta_eig(ibnd)*alpha_final(ibnd), &
+         alpha_final(ibnd)
      !
   ENDDO orb_loop
   !
@@ -464,7 +474,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
     !----------------------------------------------------------------
     !
     USE kinds,                 ONLY : DP
-    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final_full, group_alpha, l_do_alpha
+    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final, group_alpha, l_do_alpha
     USE control_lr,            ONLY : lrpa
     !
     IMPLICIT NONE
@@ -472,11 +482,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
     COMPLEX(DP), INTENT(INOUT) :: dH_wann
     REAL(DP), INTENT(OUT) :: ddH
     !
-    REAL(DP) :: alpha_(num_wann)
-    ! weight of the q points, alpha from LR, alpha after the all-order correction.
-    !
-    REAL(DP) second_der, delta
-    !
+    REAL(DP) second_der, delta, alpha_
     !
     REAL(DP), EXTERNAL :: get_clock
     !
@@ -500,7 +506,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
     !DO iwann = 1, num_wann
       !
       delta =0.D0
-      alpha_ = alpha_final(iwann)
+      alpha_ = 0.0
       !
       ! Only if this is one of the unique orbitals
       IF ( l_do_alpha (iwann)) THEN
@@ -514,24 +520,26 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         !
         ! ... The new alpha that should be closer to the Finite-difference one ...
         ! ... Remember DeltaH is nothing but the second derivative wrt the orbital occupation ...
-        alpha_final_full(iwann) = (alpha_final(iwann)*second_der + delta)/ (second_der + delta)
+        alpha_ = (alpha_final(iwann)*second_der + delta)/ (second_der + delta)
         !
       ELSE
         !
-        alpha_final_full(iwann) = alpha_final_full(group_alpha(iwann))
+        alpha_ = (alpha_final(group_alpha(iwann))*second_der + delta)/ (second_der + delta)
         !
       ENDIF
       !
       ! ... Write it just to compare with the FD one from CP ...
       IF (l_do_alpha (iwann)) THEN
-       WRITE(stdout,'(8X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 2f12.8)') &
-               iwann, alpha_final(iwann),alpha_final_full(iwann)
+       WRITE(stdout,'(8X, "INFO: iwann , LR-alpha, alpha", i3, 2f12.8)') &
+               iwann, alpha_final(iwann), alpha_
       ELSE
-       WRITE(stdout,'(8X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 2f12.8)') &
-               iwann, alpha_final(iwann),alpha_final_full(iwann)
+       WRITE(stdout,'(8X, "INFO: iwann*, LR-alpha, alpha", i3, 2f12.8)') &
+               iwann, alpha_final(iwann), alpha_
       ENDIF
       !
-      WRITE( stdout, '(8X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final_full(iwann)
+      ! Re-define the corrected screening parameter. 
+      alpha_final(iwann) = alpha_ 
+      WRITE( stdout, '(8X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
       WRITE(stdout, 900) get_clock('KCW')
       !
     !ENDDO

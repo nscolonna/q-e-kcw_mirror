@@ -146,7 +146,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
     !----------------------------------------------------------------
     !
     USE kinds,                 ONLY : DP
-    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final_full, group_alpha, l_do_alpha
+    USE control_kcw,           ONLY : num_wann, alpha_final, group_alpha, l_do_alpha
     USE control_lr,            ONLY : lrpa
     !
     IMPLICIT NONE  
@@ -154,10 +154,10 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
     COMPLEX(DP), INTENT(INOUT) :: dH_wann(num_wann,num_wann)
     REAL(DP), INTENT(OUT) :: ddH(num_wann)
     !
-    REAL(DP) :: alpha_(num_wann), alpha_fd(num_wann)
-    ! weight of the q points, alpha from LR, alpha after the all-order correction. 
+    REAL(DP) :: alpha_
+    ! alpha after the all-order correction. 
     !
-    REAL(DP) second_der(num_wann), delta 
+    REAL(DP) second_der, delta 
     !
     INTEGER :: iwann
     !
@@ -176,15 +176,12 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
       !
     ENDIF 
     !
-    DO iwann = 1, num_wann
-      second_der(iwann) = -REAL(dH_wann(iwann,iwann))
-    ENDDO
-    !
     !DO iwann = 1, num_wann_occ
     DO iwann = 1, num_wann
       !
-      delta =0.D0 
-      alpha_(iwann) = alpha_final(iwann) 
+      delta  = 0.D0 
+      alpha_ = 0.D0
+      second_der = -REAL(dH_wann(iwann,iwann))
       !
       ! Only if this is one of the unique orbitals
       IF ( l_do_alpha (iwann)) THEN 
@@ -194,38 +191,30 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
         ! ... value of the energy in the frozen orbital approximation ...
         CALL alpha_corr (iwann, delta)
         ddH(iwann) = delta
-        !dH_wann(iwann,iwann) = dH_wann(iwann,iwann)-ddH(iwann)
-        !
-        ! ... The new alpha that should be closer to the Finite-difference one ...
-        ! ... Remember DeltaH is nothing but the second derivative wrt the orbital occupation ...
-        alpha_fd (iwann)= (alpha_final(iwann)*second_der(iwann) + delta)/ (second_der(iwann)+delta)
-        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_fd(iwann)
         !
         ! ... Since the ham in the frozen approximation is approximated to second
         ! ... order only, this is the alpha we want to use. Only the
         ! ... numerator matters.
-        alpha_(iwann) = (alpha_final(iwann)*second_der(iwann) + delta)/second_der(iwann)
+        alpha_ = (alpha_final(iwann)*second_der + delta)/second_der
       ELSE 
         !
-        alpha_fd(iwann) = alpha_fd(group_alpha(iwann))
-        IF(nkstot/nspin == 1) alpha_final_full(iwann) = alpha_final_full(group_alpha(iwann))
-        alpha_(iwann) = alpha_(group_alpha(iwann))
+        alpha_ = (alpha_final(group_alpha(iwann))*second_der + delta)/second_der
         !
       ENDIF
       !
       ! ... Write it just to compare with the FD one from CP ... 
       IF (l_do_alpha (iwann)) THEN
-       WRITE(stdout,'(5X, "INFO: iwann , LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
-               iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
+       WRITE(stdout,'(5X, "INFO: iwann , LR-alpha, alpha", i3, 3f12.8)') &
+               iwann, alpha_final(iwann),  alpha_
       ELSE
-       WRITE(stdout,'(5X, "INFO: iwann*, LR-alpha, FD-alpha, alpha", i3, 3f12.8)') &
-               iwann, alpha_final(iwann),alpha_fd(iwann),  alpha_(iwann)
+       WRITE(stdout,'(5X, "INFO: iwann*, LR-alpha, alpha", i3, 3f12.8)') &
+               iwann, alpha_final(iwann), alpha_
       ENDIF
       !
       !WRITE(stdout,'("Nicola", i3, 6f12.8)') iwann, dH_wann(iwann,iwann)
       !
       ! Re-define the corrected screening parameter. 
-      alpha_final(iwann) = alpha_(iwann) 
+      alpha_final(iwann) = alpha_ 
       WRITE( stdout, '(5X,"INFO: alpha RE-DEFINED ...", i5, f12.8)') iwann, alpha_final(iwann)
       WRITE(stdout, 900) get_clock('KCW')
       !
