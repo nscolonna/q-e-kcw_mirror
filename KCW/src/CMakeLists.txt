@@ -47,8 +47,8 @@ set(src_kcw
     kcw_deallocate_q.f90
     setup_coulomb_exx.f90
     coulomb.f90
-    dH_ki_wann.f90
-    dH_ki_wann_supercell.f90
+    dH_ki_quadratic.f90
+    dH_ki_full.f90
     koopmans_ham_proj.f90
     koopmans_ham_uniq.f90)
 

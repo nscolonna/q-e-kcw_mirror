@@ -9,7 +9,7 @@
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
 !-----------------------------------------------------------------------
-SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
+SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
   !---------------------------------------------------------------------
   !
   USE io_global,             ONLY : stdout
@@ -595,4 +595,4 @@ SUBROUTINE dH_ki_wann (dH_wann, dH_wann_proj)
     !
   END subroutine 
   !
-END SUBROUTINE dH_ki_wann
+END SUBROUTINE dH_ki_quadratic

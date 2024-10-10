@@ -11,7 +11,7 @@
 #define ONE  ( 1.D0, 0.D0 )
 !
 !-----------------------------------------------------------------------
-SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
+SUBROUTINE dH_ki_full (ik, dH_wann)
   !-----------------------------------------------------------------------
   !
   ! This routine compute the KI correction to the spectrum
@@ -539,4 +539,4 @@ SUBROUTINE dH_ki_wann_supercell (ik, dH_wann)
     !
   END SUBROUTINE beyond_2nd
   !
-END subroutine dH_ki_wann_supercell
+END subroutine dH_ki_full

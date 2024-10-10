@@ -43,11 +43,11 @@ SUBROUTINE kcw_ham
   !
   ! 2) compute the KI correction on the Wannier basis
   IF (corr_pc ) THEN 
-    CALL dH_ki_wann ( dH_wann, dH_wann_proj )
+    CALL dH_ki_quadratic ( dH_wann, dH_wann_proj )
   ELSEIF( corr_sc) THEN 
     ! This should never happen (see check in kcw_readin). Just for extra safety
     IF (noncolin) CALL errore( 'kcw_ham', 'h_corr_scheme="full" not implemented for noncollinear calculations',1 )
-    CALL dH_ki_wann_supercell ( 1, dH_wann)
+    CALL dH_ki_full ( 1, dH_wann)
   ELSE
     ! This should never happen (see check in kcw_readin). Just for extra safety
     CALL errore( 'kcw_ham', 'Something wrong with h_corr_scheme',1 )
