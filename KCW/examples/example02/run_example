@@ -205,7 +205,7 @@ KCW H2O KI hamiltonian
   use_ws_distance = .false.
   write_hr = .true.
   h_corr_scheme = 'full'
-  h_diag_scheme = 'uniq'
+  h_diag_scheme = 'wann'
 /
 EOF
 
