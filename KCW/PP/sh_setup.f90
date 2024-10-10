@@ -22,7 +22,8 @@ subroutine sh_setup
   USE control_flags,     ONLY : io_level, gamma_only
   USE buffers,           ONLY : open_buffer, save_buffer, close_buffer
   USE control_kcw,       ONLY : iurho_wann, kcw_iverbosity, x_q, lgamma_iq, nrho, &
-                                num_wann, nqstot, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, io_sp, io_real_space
+                                num_wann, nqstot, occ_mat, tmp_dir_kcw, tmp_dir_kcwq, &
+                                io_real_space
   USE io_global,         ONLY : stdout
   USE klist,             ONLY : xk, nkstot
   USE cell_base,         ONLY : at, omega !, bg

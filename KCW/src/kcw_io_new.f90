@@ -272,7 +272,6 @@ MODULE io_kcw
      INTEGER               :: me_group, me_group2, me_group3, &
                               nproc_group, nproc_group2, nproc_group3
      CHARACTER(LEN=256)    :: rho_file
-     CHARACTER(LEN=256)    :: rho_file_hdf5
      COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
      COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
      INTEGER,  ALLOCATABLE :: kowner(:)
@@ -467,7 +466,6 @@ MODULE io_kcw
      INTEGER               :: nr1,nr2,nr3, nr1x, nr2x,nr3x
      INTEGER               :: rhounit, ierr, i, j, jj, k, kk, ldr, ip
      CHARACTER(LEN=256)    :: rho_file
-     CHARACTER(LEN=256)    :: rho_file_hdf5
      CHARACTER(LEN=10)     :: rho_extension
      COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
      COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
@@ -661,7 +659,6 @@ MODULE io_kcw
      INTEGER               :: me_group, me_group2, me_group3, &
                               nproc_group, nproc_group2, nproc_group3
      CHARACTER(LEN=256)    :: rho_file
-     CHARACTER(LEN=256)    :: rho_file_hdf5
      COMPLEX(DP), ALLOCATABLE :: rho_plane(:)
      COMPLEX(sgl), ALLOCATABLE :: rho_plane_sgl(:)
      INTEGER,  ALLOCATABLE :: kowner(:)
@@ -823,16 +820,15 @@ MODULE io_kcw
      USE buffers,              ONLY : get_buffer
      USE klist,                ONLY : nks, nkstot, xk, ngk, igk_k
      USE gvect,                ONLY : mill
-     USE wvfct,                ONLY : npwx, nbnd
+     USE wvfct,                ONLY : npwx
      USE lsda_mod,             ONLY : nspin, isk, lsda, nspin
      USE mp_pools,             ONLY : intra_pool_comm
      USE mp_bands,             ONLY : me_bgrp, root_bgrp, intra_bgrp_comm, &
                                       root_bgrp_id, my_bgrp_id
      USE clib_wrappers,        ONLY : f_mkdir_safe
      !
-     USE control_kcw,          ONLY : tmp_dir_kcw, nrho
-     USE control_kcw,          ONLY : num_wann, spin_component, evc0, iuwfc_wann, nkstot_eff
-     USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+     USE control_kcw,          ONLY : num_wann, spin_component, evc0, iuwfc_wann, tmp_dir_kcw
+     USE noncollin_module,     ONLY : nspin_mag, npol
 
      !
      IMPLICIT NONE
@@ -1050,16 +1046,16 @@ MODULE io_kcw
      !
      USE control_flags,        ONLY : gamma_only
      USE klist,                ONLY : nkstot, nks, ngk, igk_k
-     USE wvfct,                ONLY : npwx, nbnd
+     USE wvfct,                ONLY : npwx
      USE gvect,                ONLY : ig_l2g
      USE mp_bands,             ONLY : root_bgrp, intra_bgrp_comm
      USE mp_pools,             ONLY : me_pool, root_pool, &
                                       intra_pool_comm
      USE mp,                   ONLY : mp_sum, mp_max
      USE io_base,              ONLY : read_wfc
-     USE lsda_mod,             ONLY : nspin, isk, nspin
+     USE lsda_mod,             ONLY : isk
      USE control_kcw,          ONLY : num_wann
-     USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+     USE noncollin_module,     ONLY : nspin_mag
      !
      IMPLICIT NONE
      !
@@ -1172,7 +1168,6 @@ MODULE io_kcw
       !
       USE mp,                   ONLY : mp_sum, mp_bcast, mp_size, mp_rank
       USE mp_wave,              ONLY : mergewf, mergekg
-      USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
 #if defined (__HDF5)
       USE qeh5_base_module
 #endif
@@ -1210,7 +1205,7 @@ MODULE io_kcw
       !! Global Miller indices collected on root proc
       INTEGER                  :: me_in_group, nproc_in_group
       LOGICAL                  :: ionode_in_group
-      INTEGER                  :: ngm, nspin, ngm_g, igwx
+      INTEGER                  :: ngm, nspin, ngm_g
       INTEGER                  :: iun, ns, ig, ierr
       !
 #if defined __HDF5
@@ -1388,10 +1383,9 @@ MODULE io_kcw
       !! Processor "root_in_group" reads from file, distributes to
       !! all processors in the intra_group_comm communicator
       !
-      USE mp,         ONLY : mp_size, mp_rank, mp_bcast
-      USE mp_wave,    ONLY : splitwf
-      USE gvect,      ONLY : ngm_g
-      USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
+      USE mp,                ONLY : mp_size, mp_rank, mp_bcast
+      USE mp_wave,           ONLY : splitwf
+      USE gvect,             ONLY : ngm_g
       !
 #if defined (__HDF5)
       USE qeh5_base_module
@@ -1421,10 +1415,10 @@ MODULE io_kcw
       COMPLEX(sgl), ALLOCATABLE :: rho_g_sgl(:)
       COMPLEX(dp), ALLOCATABLE :: rhoaux(:)
       REAL(dp)                 :: b1(3), b2(3), b3(3)
-      INTEGER                  :: ngm, nspin_, isup, isdw
+      INTEGER                  :: ngm, nspin_
       INTEGER                  :: iun, ns, ig, ierr
       INTEGER                  :: me_in_group, nproc_in_group
-      LOGICAL                  :: ionode_in_group, gamma_only_, readmill
+      LOGICAL                  :: ionode_in_group, gamma_only_
       INTEGER                  :: ngm_g_
       INTEGER, ALLOCATABLE     :: mill_g(:,:)
       !

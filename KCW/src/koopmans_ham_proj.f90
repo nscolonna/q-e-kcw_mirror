@@ -20,9 +20,9 @@ SUBROUTINE koopmans_ham_proj (delta)
   !
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
-  USE klist,                 ONLY : xk, ngk, igk_k, nkstot
-  USE control_kcw,           ONLY : num_wann, l_alpha_corr, evc0, Hamlt, kcw_iverbosity, &
-                                    alpha_final, num_wann_occ, iuwfc_wann, spin_component, nkstot_eff
+  USE klist,                 ONLY : xk, ngk, igk_k
+  USE control_kcw,           ONLY : num_wann, evc0, Hamlt, kcw_iverbosity, &
+                                    num_wann_occ, iuwfc_wann, spin_component, nkstot_eff
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd, current_k
   USE units_lr,              ONLY : iuwfc
@@ -31,7 +31,7 @@ SUBROUTINE koopmans_ham_proj (delta)
   USE io_files,              ONLY : nwordwfc
   USE mp_bands,              ONLY : intra_bgrp_comm
   USE mp,                    ONLY : mp_sum
-  USE lsda_mod,              ONLY : lsda, isk, current_spin, nspin
+  USE lsda_mod,              ONLY : lsda, isk, current_spin
   USE uspp,                  ONLY : nkb, vkb
   USE uspp_init,             ONLY : init_us_2
   USE noncollin_module,      ONLY : npol
@@ -46,7 +46,7 @@ SUBROUTINE koopmans_ham_proj (delta)
   ! and occupations numbers of WFs: P_n = \sum_kv f_kv <u_kv|w_kn><w_kn|u_kn> 
   REAL(DP) :: occ_mat(num_wann)
   !
-  COMPLEX(DP) :: delta_k, overlap
+  COMPLEX(DP) :: overlap
   COMPLEX(DP) :: ham(nbnd,nbnd), eigvc(nbnd,nbnd), deltah(nbnd,nbnd)
   !
   ! The new eigenalues 
@@ -58,7 +58,7 @@ SUBROUTINE koopmans_ham_proj (delta)
   REAL(DP) :: eigvl_pert(nbnd)
   REAL(DP) :: eigvl_ks(nbnd)
   !
-  INTEGER :: i, iwann
+  INTEGER :: i
   ! 
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
@@ -278,7 +278,7 @@ SUBROUTINE koopmans_ham_proj (delta)
     USE control_kcw,           ONLY : num_wann, spin_component
     USE wvfct,                 ONLY : nbnd
     USE lsda_mod,              ONLY : nspin
-    USE klist,                 ONLY : nkstot, ngk
+    USE klist,                 ONLY : ngk
     USE wvfct,                 ONLY : wg
     USE mp_bands,              ONLY : intra_bgrp_comm
     USE mp,                    ONLY : mp_sum

@@ -26,7 +26,7 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
   USE constants,            ONLY : rytoev
   USE control_kcw,          ONLY : Hamlt, calculation, spin_component, check_ks
   USE lsda_mod,             ONLY : nspin
-  USE noncollin_module,     ONLY : npol, nspin_lsda, nspin_gga, nspin_mag
+  USE noncollin_module,     ONLY : npol
 
   ! 
   IMPLICIT NONE

@@ -44,9 +44,7 @@ subroutine input_pp_summary ( )
 41  FORMAT(5X, A23, A18)
 42  FORMAT(5X, A23, A18)
 43  FORMAT(5X, A23, L18)
-44  FORMAT(5X, A23, F12.8, 3x, " [Ry]")
 45  FORMAT(5X, A23, I18)
-46  FORMAT(5X, A23, E18.2)
 47  FORMAT(5X, A23, 3I6)
   !
   RETURN

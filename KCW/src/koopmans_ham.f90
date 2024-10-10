@@ -16,15 +16,15 @@ SUBROUTINE koopmans_ham (dH_wann)
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : nkstot, xk
   USE lsda_mod,              ONLY : nspin
-  USE control_kcw,           ONLY : num_wann, Hamlt, nqstot, l_alpha_corr, evc0, &
-                                    alpha_final, num_wann_occ, on_site_only, iuwfc_wann, &
-                                    nkstot_eff, spin_component, kcw_at_ks, kcw_iverbosity
+  USE control_kcw,           ONLY : num_wann, Hamlt, evc0, num_wann_occ, & 
+                                    iuwfc_wann, nkstot_eff, spin_component,&
+                                    kcw_at_ks, kcw_iverbosity
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
   USE units_lr,              ONLY : lrwfc, iuwfc
   USE wavefunctions,         ONLY : evc
   USE buffers,               ONLY : get_buffer, save_buffer
-  USE noncollin_module,      ONLY : npol, nspin_lsda, nspin_gga, nspin_mag
+  USE noncollin_module,      ONLY : npol
   !
   IMPLICIT NONE
   !
@@ -45,7 +45,7 @@ SUBROUTINE koopmans_ham (dH_wann)
   REAL(DP) :: eigvl(num_wann), eigvl_ks(num_wann)
   REAL(DP) :: eigvl_pert(num_wann)
   !
-  INTEGER :: i, iwann, jwann
+  INTEGER :: i, iwann
   ! 
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks

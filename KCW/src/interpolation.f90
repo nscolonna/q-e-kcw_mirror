@@ -133,7 +133,7 @@ CONTAINS
     USE mp,                   ONLY : mp_sum
     USE mp_global,            ONLY : inter_pool_comm
     USE constants,            ONLY : tpi
-    USE lsda_mod,             ONLY : lsda, isk, nspin
+    USE lsda_mod,             ONLY : lsda, isk
     USE control_kcw,          ONLY : spin_component, irvect, xk_bands, centers, &
                                      use_ws_distance, nkstot_eff
     USE cell_base,            ONLY : at

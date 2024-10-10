@@ -19,7 +19,7 @@ subroutine kcw_allocate_q
   USE fft_base,             ONLY : dfftp
   USE wavefunctions,        ONLY : evc
   USE becmod,               ONLY : allocate_bec_type, becp
-  USE uspp,                 ONLY : nkb, okvan
+  USE uspp,                 ONLY : nkb
   USE qpoint,               ONLY : nksq, eigqts
   USE lrus,                 ONLY : becp1
   USE eqv,                  ONLY : dpsi, evq, dmuxc, dvpsi

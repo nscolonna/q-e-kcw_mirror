@@ -21,10 +21,9 @@ SUBROUTINE kcw_pp_readin()
   USE mp,                ONLY : mp_bcast
   USE run_info,          ONLY : title
   USE io_files,          ONLY : tmp_dir, prefix, check_tempdir
-  USE noncollin_module,  ONLY : noncolin
   USE read_cards_module, ONLY : read_cards
   USE io_global,         ONLY : ionode
-  USE mp_global,         ONLY :  intra_image_comm 
+  USE mp_global,         ONLY : intra_image_comm 
   USE paw_variables,     ONLY : okpaw
   USE uspp,              ONLY : okvan
   USE control_kcw

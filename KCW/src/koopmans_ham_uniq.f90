@@ -25,8 +25,7 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
-  USE klist,                 ONLY : nkstot, xk, ngk
-  USE lsda_mod,              ONLY : nspin
+  USE klist,                 ONLY : xk, ngk
   USE control_kcw,           ONLY : num_wann, evc0, spin_component, &
                                     num_wann_occ, iuwfc_wann, nkstot_eff, &
                                     kcw_iverbosity

@@ -17,7 +17,6 @@ SUBROUTINE kcw_R_points
   USE cell_base,            ONLY : at
   USE control_kcw,          ONLY : Rvect, mp1, mp2 ,mp3, irvect, nkstot_eff
   USE klist,                ONLY : nkstot
-  USE lsda_mod,             ONLY : nspin
   USE io_global,            ONLY : stdout
   !
   IMPLICIT NONE

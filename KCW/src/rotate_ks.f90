@@ -23,15 +23,13 @@ SUBROUTINE rotate_ks ()
   USE units_lr,              ONLY : iuwfc
   USE wvfct,                 ONLY : npw, nbnd, npwx, current_k
   USE lsda_mod,              ONLY : lsda, isk, nspin, current_spin
-  USE noncollin_module,      ONLY : npol, nspin_lsda, nspin_gga, nspin_mag
+  USE noncollin_module,      ONLY : npol
   USE klist,                 ONLY : ngk, xk, igk_k, nkstot, nks
   USE uspp,                  ONLY : nkb, vkb
   USE uspp_init,             ONLY : init_us_2
   USE buffers,               ONLY : get_buffer, save_buffer
   USE control_kcw,           ONLY : kcw_at_ks, evc0, read_unitary_matrix, iuwfc_wann, &
                                     check_ks, spin_component, num_wann, occ_mat
-  USE control_lr,            ONLY : nbnd_occ
-  !
   USE wvfct,                 ONLY : wg
   USE klist,                 ONLY : wk
   !
