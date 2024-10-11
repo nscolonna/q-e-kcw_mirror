@@ -63,9 +63,9 @@ SUBROUTINE kcw_readin()
   !
   NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread, alpha_mix
   !
-  NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
+  NAMELIST / HAM /      qp_symm, i_orb, do_bands, use_ws_distance, & 
                         write_hr, l_alpha_corr, on_site_only, h_diag_scheme, &
-                        check_spread, h_corr_scheme
+                        check_spread, which_odd
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -109,7 +109,6 @@ SUBROUTINE kcw_readin()
   !! write_hr        : if .true. KC H(R) is printed into a file
   !! on_site_only    : if .true. only H(R=0) and i=j is computed
   !! qp_symm         : if TRUE make the KI hamitonian hermitian in the spirit of quasiparticle GW scheme 
-  !! kipz_corr       : Compute the pKIPZ hamiltonian (only for finite systems: Gamma-only calculation in SC) 
   !! l_alpha_corr    : If true a correction is applied to the screening coefficient to mimick effect beyond the 
   !!                   second order
   !! h_proj          : if true an alterantive definition of the KI Hamitlonian is built and diagonalized
@@ -186,7 +185,7 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
-  h_corr_scheme       = "quadratic"
+  which_odd           = "qki"
   h_diag_scheme       = "wann"
   io_sp               = .FALSE.
   io_real_space       = .FALSE.
@@ -240,21 +239,30 @@ SUBROUTINE kcw_readin()
        !
     END SELECT
     !
-    SELECT CASE( trim( h_corr_scheme ) )
-    CASE( 'quadratic', '2nd', 'second_order' )
+    SELECT CASE( trim( which_odd ) )
+    CASE( 'qki', '2nd', 'second_order' )
        !
        corr_pc  = .true.
        corr_sc  = .false.
        !
-    CASE( 'full' )
+    CASE( 'ki', 'full' )
        !
        corr_pc  = .false.
        corr_sc  = .true.
        !
-       CASE DEFAULT
+    CASE ( 'pkipz' )
        !
-       CALL errore( 'kcw_readin', 'h_corr_scheme=' // trim(h_corr_scheme) // &
-                  & ' not supported!  Valid options: 1) "quadratic" || "2nd" || "second_order"; 2) "full"',1 )
+       corr_pc  = .false.
+       corr_sc  = .true.
+       kipz_corr = .TRUE. 
+       !
+    CASE DEFAULT
+       !
+       CALL errore( 'kcw_readin', 'which_odd=' // trim(which_odd) // &
+                  & ' not supported!  Valid options: & 
+                  &   1) "qki" || "quadratic" || "2nd" || "second_order"; &
+                  &   2) "ki" || "full"; &
+                  &   3) "pkipz" ',1 )
        !
     END SELECT
     !
@@ -316,7 +324,7 @@ SUBROUTINE kcw_readin()
   ENDIF
   !
   IF (noncolin .AND. corr_sc) &
-    CALL errore('kcw_readin', 'h_corr_scheme="full" not implemented for the noncollinear case', npool)
+    CALL errore('kcw_readin', 'which_odd="ki | pkipz" not implemented for the noncollinear case', npool)
   ! 
   IF (do_comp_mt_kcw .AND. mp1*mp2*mp3 /= 1) THEN 
      CALL infomsg('kcw_readin','WARNING: "do_comp_mt" set to FALSE. "l_vcut" set to TRUE instead')
@@ -408,7 +416,7 @@ SUBROUTINE kcw_readin()
   ENDIF
   !
   IF (corr_sc .AND. nkstot_eff /= 1) &
-     CALL errore('kcw_readin', 'h_corr_scheme="full" not implemented for extended systems (nkstot>1)', 1)
+     CALL errore('kcw_readin', 'which_odd="ki || pkipz" not implemented for extended systems (nkstot>1)', 1)
   ! 
   IF (lgamma) THEN
      nksq = nks

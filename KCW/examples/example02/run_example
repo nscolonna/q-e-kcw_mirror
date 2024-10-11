@@ -204,7 +204,7 @@ KCW H2O KI hamiltonian
   do_bands = .false.
   use_ws_distance = .false.
   write_hr = .true.
-  h_corr_scheme = 'full'
+  which_odd = 'full'
   h_diag_scheme = 'wann'
 /
 EOF
@@ -233,7 +233,7 @@ KCW H2O KI hamiltonian
   do_bands = .false.
   use_ws_distance = .false.
   write_hr = .true.
-  h_corr_scheme = 'full'
+  which_odd = 'full'
   h_diag_scheme = 'uniq'
 /
 EOF
@@ -262,7 +262,7 @@ KCW H2O KI hamiltonian
   do_bands = .false.
   use_ws_distance = .false.
   write_hr = .true.
-  h_corr_scheme = 'full'
+  which_odd = 'full'
   h_diag_scheme = 'proj'
 /
 EOF

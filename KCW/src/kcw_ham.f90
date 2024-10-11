@@ -46,11 +46,11 @@ SUBROUTINE kcw_ham
     CALL dH_ki_quadratic ( dH_wann, dH_wann_proj )
   ELSEIF( corr_sc) THEN 
     ! This should never happen (see check in kcw_readin). Just for extra safety
-    IF (noncolin) CALL errore( 'kcw_ham', 'h_corr_scheme="full" not implemented for noncollinear calculations',1 )
+    IF (noncolin) CALL errore( 'kcw_ham', 'which_odd="ki | pkipz" not implemented for noncollinear calculations',1 )
     CALL dH_ki_full ( 1, dH_wann)
   ELSE
     ! This should never happen (see check in kcw_readin). Just for extra safety
-    CALL errore( 'kcw_ham', 'Something wrong with h_corr_scheme',1 )
+    CALL errore( 'kcw_ham', 'Something wrong with which_odd',1 )
   ENDIF 
   !
   ! 3) Build UP the Koopmans Hamiltonian (depending on the scheme) 
