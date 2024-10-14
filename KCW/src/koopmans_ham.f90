@@ -58,6 +58,8 @@ SUBROUTINE koopmans_ham (dH_wann)
   elumo=+1D+6
   ehomo_ks=-1D+6
   elumo_ks=+1D+6
+  ehomo_pert=-1D+6
+  elumo_pert=+1D+6
   !
   WRITE( stdout, '(/,5X, "INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN")')
   WRITE( stdout, '(  5X, "INFO: Standar scheme: diagonalize on the variational orbitals basis")')
@@ -82,8 +84,6 @@ SUBROUTINE koopmans_ham (dH_wann)
       DO iwann = 1, num_wann
         eigvl_pert(iwann) = eigvl_ks(iwann) + DBLE(dH_wann(ik,iwann,iwann))
       ENDDO
-      ehomo_pert=-1D+6
-      elumo_pert=+1D+6
       ehomo_pert = MAX ( ehomo_pert, eigvl_pert(num_wann_occ ) )
       IF (num_wann > num_wann_occ) elumo_pert = MIN ( elumo_pert, eigvl_pert(num_wann_occ+1 ) )
     ENDIF
