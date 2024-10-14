@@ -85,7 +85,7 @@ SUBROUTINE koopmans_ham (dH_wann)
       ehomo_pert=-1D+6
       elumo_pert=+1D+6
       ehomo_pert = MAX ( ehomo_pert, eigvl_pert(num_wann_occ ) )
-      elumo_pert = MIN ( elumo_pert, eigvl_pert(num_wann_occ+1 ) )
+      IF (num_wann > num_wann_occ) elumo_pert = MIN ( elumo_pert, eigvl_pert(num_wann_occ+1 ) )
     ENDIF
     !
 #ifdef DEBUG
