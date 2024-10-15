@@ -14,7 +14,6 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
   !
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
-  USE klist,                 ONLY : nkstot
   USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : num_wann, nqstot, l_alpha_corr, &
                                     alpha_final, num_wann_occ, on_site_only, h_proj, nkstot_eff

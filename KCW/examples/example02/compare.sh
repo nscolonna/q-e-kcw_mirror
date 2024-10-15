@@ -62,8 +62,8 @@ for scheme in "" "_uniq" "_proj"; do
 sscheme=`echo $scheme | sed -e "s/_//" | sed -e 's/[a-z]/\U&/g'`
 check=1
 
-grep " KI    " results/h2o.kcw-ham${scheme}.out > pp
-grep " KI    " reference/h2o.kcw-ham${scheme}.out >> pp
+grep "   KI    " results/h2o.kcw-ham${scheme}.out > pp
+grep "   KI    " reference/h2o.kcw-ham${scheme}.out >> pp
 #cat pp
 for j in `seq 1 8`; do 
  col=`echo $j+1 | bc`
