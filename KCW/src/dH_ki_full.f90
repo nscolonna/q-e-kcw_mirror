@@ -270,6 +270,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         DO k = num_wann_occ+1, n_orb
            IF (k == ibnd) CYCLE
            ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * v_ki(:,ibnd) * alpha_final(ibnd) ) 
+           CALL mp_sum (ham_right, intra_bgrp_comm)
            !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
         ENDDO 
         !
@@ -320,6 +321,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
            DO k = 1, n_orb
               IF (k == ibnd ) CYCLE
               ham_right(k,ibnd) = ham_right(k,ibnd) + SUM ( CONJG(evc0(:,k)) * v_ki(:,ibnd) * alpha_final(ibnd) )
+              CALL mp_sum (ham_right, intra_bgrp_comm)
               !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
            ENDDO
            !
