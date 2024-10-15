@@ -22,14 +22,14 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   USE wvfct,                 ONLY : npw, nbnd, npwx
   USE fft_base,              ONLY : dffts, dfftp
   USE lsda_mod,              ONLY : lsda, current_spin,nspin
-  USE klist,                 ONLY : nks, ngk, init_igk, igk_k, nkstot
+  USE klist,                 ONLY : ngk, init_igk, igk_k, nkstot
   USE gvect,                 ONLY : ngm
   USE gvecs,                 ONLY : ngms
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
   USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, &
                                     num_wann_occ, iuwfc_wann, kcw_iverbosity, &
-                                    qp_symm, evc0, kipz_corr, &
+                                    qp_symm, evc0, kipz_corr, num_wann, &
                                     spin_component, l_alpha_corr, on_site_only
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum
@@ -64,9 +64,8 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   COMPLEX(DP) :: etmp2
   REAL(DP) :: etmp1
   !
-  COMPLEX(DP) , ALLOCATABLE :: psic_1(:) , eigvc_ki(:,:)
-  COMPLEX(DP) , ALLOCATABLE :: ham (:,:), ham_left(:,:), ham_right(:,:), vpsi(:), vpsi_r(:), ham_aux(:,:), v_ki(:,:)
-  REAL(DP), ALLOCATABLE :: eigvl_ki(:), et_aux(:,:)
+  COMPLEX(DP) , ALLOCATABLE :: psic_1(:) 
+  COMPLEX(DP) , ALLOCATABLE :: ham (:,:), ham_left(:,:), ham_right(:,:), vpsi_r(:), vpsi_g(:)
   !
   COMPLEX(DP) :: delta_vr(dffts%nnr,nspin), delta_vr_(dffts%nnr,nspin)
   COMPLEX(DP), ALLOCATABLE  :: delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
@@ -75,8 +74,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   INTEGER :: segno
   !
   !
-  ALLOCATE (psic_1( dfftp%nnr), vpsi_r(dffts%nnr), vpsi(npwx), v_ki(npwx,nbnd))
-  ALLOCATE (et_aux(nbnd,nks))
+  ALLOCATE (psic_1( dfftp%nnr), vpsi_r(dffts%nnr), vpsi_g(npwx))
   ALLOCATE ( delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
   !
@@ -103,7 +101,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   dim_ham = num_wann
   ALLOCATE ( ham (dim_ham,dim_ham) )
-  ALLOCATE ( ham_aux (dim_ham,dim_ham) )
   ALLOCATE ( ham_left (dim_ham,dim_ham) )
   ALLOCATE ( ham_right (dim_ham,dim_ham) )
   ham (:,:) = (0.D0,0.D0)
@@ -114,7 +111,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !ik_eff = ik + (spin_component -1)*nkstot/nspin
   !CALL ks_hamiltonian (evc0, ik_eff, dim_ham, .true.)
   !
-  v_ki(:,:) = (0.D0,0.D0)
   !GOTO 101
   !
   !
@@ -122,6 +118,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   orb_loop: DO ibnd = 1, n_orb
      !
+     vpsi_g(:) = (0.D0,0.D0)
      segno = -1 
      IF (ibnd .gt. num_wann_occ) segno = +1
      !
@@ -264,11 +261,11 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         !
         ! 1) GO to G-space and store the ki gradient. v_i|phi_i> 
         CALL fwfft ('Wave', vpsi_r, dffts)
-        v_ki(:,ibnd) = vpsi_r(dffts%nl(igk_k(:,ik)))
+        vpsi_g(:) = vpsi_r(dffts%nl(igk_k(:,ik)))
         !
         DO k = num_wann_occ+1, n_orb
            IF (k == ibnd) CYCLE
-           ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * v_ki(:,ibnd) * alpha_final(ibnd) ) 
+           ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) ) 
            CALL mp_sum (ham_right, intra_bgrp_comm)
            !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
         ENDDO 
@@ -315,11 +312,11 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
            !
            ! 1) GO to G-space and store the ki gradient 
            CALL fwfft ('Wave', vpsi_r, dffts)
-           v_ki(:,ibnd) = vpsi_r(dffts%nl(igk_k(:,ik)))
+           vpsi_g(:) = vpsi_r(dffts%nl(igk_k(:,ik)))
            !
            DO k = 1, n_orb
               IF (k == ibnd ) CYCLE
-              ham_right(k,ibnd) = ham_right(k,ibnd) + SUM ( CONJG(evc0(:,k)) * v_ki(:,ibnd) * alpha_final(ibnd) )
+              ham_right(k,ibnd) = ham_right(k,ibnd) + SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
               CALL mp_sum (ham_right, intra_bgrp_comm)
               !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
            ENDDO
@@ -350,12 +347,8 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   DEALLOCATE (ham) 
   DEALLOCATE (ham_left) 
   DEALLOCATE (ham_right) 
-  IF (ALLOCATED(eigvl_ki)) DEALLOCATE (eigvl_ki)
-  IF (ALLOCATED(eigvc_ki)) DEALLOCATE (eigvc_ki)
-  IF (ALLOCATED(ham_aux)) DEALLOCATE (ham_aux)
   !
-  DEALLOCATE (psic_1, vpsi_r, vpsi, v_ki) 
-  DEALLOCATE (et_aux)
+  DEALLOCATE (psic_1, vpsi_r, vpsi_g) 
   DEALLOCATE ( delta_vg, vh_rhog, delta_vg_)
   !
   CONTAINS
