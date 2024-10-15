@@ -29,7 +29,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   USE fft_interfaces,        ONLY : fwfft, invfft
   USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, &
                                     num_wann_occ, iuwfc_wann, kcw_iverbosity, &
-                                    qp_symm, evc0, kipz_corr, num_wann, &
+                                    qp_symm, evc0, kipz_corr, &
                                     spin_component, l_alpha_corr, on_site_only
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum
@@ -67,8 +67,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   COMPLEX(DP) , ALLOCATABLE :: psic_1(:) , eigvc_ki(:,:)
   COMPLEX(DP) , ALLOCATABLE :: ham (:,:), ham_left(:,:), ham_right(:,:), vpsi(:), vpsi_r(:), ham_aux(:,:), v_ki(:,:)
   REAL(DP), ALLOCATABLE :: eigvl_ki(:), et_aux(:,:)
-  !
-  LOGICAL :: off_diag = .TRUE.
   !
   COMPLEX(DP) :: delta_vr(dffts%nnr,nspin), delta_vr_(dffts%nnr,nspin)
   COMPLEX(DP), ALLOCATABLE  :: delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
@@ -259,7 +257,8 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         vpsi_r(:) = (0.D0, 0.D0)
         etmp2 = (0.D0, 0.D0)
         DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) ),0.D0, kind=DP) * psic_1(ir)
+           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - &
+                   vxc(ir,current_spin) ),0.D0, kind=DP) * psic_1(ir)
            IF (lrpa) vpsi_r (ir) = CMPLX( v(ir,current_spin), 0.D0, kind=DP) * psic_1(ir)
         ENDDO
         !
