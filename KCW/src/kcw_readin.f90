@@ -415,8 +415,12 @@ SUBROUTINE kcw_readin()
      l_vcut = .false.
   ENDIF
   !
-  IF (corr_sc .AND. nkstot_eff /= 1) &
-     CALL errore('kcw_readin', 'which_odd="ki || pkipz" not implemented for extended systems (nkstot>1)', 1)
+  IF (corr_sc .AND. nkstot_eff /= 1) THEN
+     WRITE(stdout, '(/, 5X, "ERROR: which_odd= [ki || pkipz]  not implemented yet for extended systems treated with k-points (nkstot>1)")')
+     WRITE(stdout, '(   5X, "       Switch to a SC setup (with mp1=mp2=mp3=1) to use ki or pkipz")')
+     WRITE(stdout, '(   5X, "       Switch to which_odd=qki to use a PC formulation plus k/q point sampling")')
+     CALL errore('kcw_readin',  '', 1 )
+  ENDIF
   ! 
   IF (lgamma) THEN
      nksq = nks
