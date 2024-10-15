@@ -47,7 +47,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
   !
   dH_wann = CMPLX(0.D0,0.D0, kind=DP) 
   !
-  WRITE(stdout,'(/,5x,"INFO: KI calcualtion: quadratic Hamiltonian ... ",/ )')
+  WRITE(stdout,'(/,5x,"INFO: qKI calcualtion: quadratic Hamiltonian ... ",/ )')
   IF (on_site_only) WRITE(stdout, '(/,5X, "INFO: Skipping off-diag: only R=0 and i=j")') 
   !
   ! The scalar term R=0 i=j 
@@ -126,7 +126,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
     ENDDO
     !
 #ifdef DEBUG
-    WRITE(stdout, '("KI Contribution to the Hamiltonian at k = ", i4)') ik
+    WRITE(stdout, '("qKI Contribution to the Hamiltonian at k = ", i4)') ik
     DO iwann = 1, num_wann
       WRITE(stdout, '(200(2f8.4,2x))') (REAL(dH_wann(ik, iwann,jwann)),AIMAG(dH_wann(ik, iwann,jwann)), jwann=1,num_wann)
     ENDDO
@@ -399,7 +399,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
     IF (nspin_mag==2 .AND. debug_nc) &
       WRITE (stdout, '(/,5X,"INFO: debug_nc = ", L2, " Note: the k-q formula will be used.")') debug_nc
     !
-    WRITE( stdout, '(/,/,5X,"INFO: KI[2nd] HAMILTONIAN CALCULATION ik= ", i4, " ...", /)') ik
+    WRITE( stdout, '(/,/,5X,"INFO: qKI  HAMILTONIAN CALCULATION ik= ", i4, " ...", /)') ik
     !
     nqs = nqstot
     !

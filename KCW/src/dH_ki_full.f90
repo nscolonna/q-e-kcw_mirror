@@ -81,7 +81,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   ALLOCATE ( delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
   !
-  WRITE(stdout,'(/,5x,"INFO: KI calcualtion: Full Hamiltonian ... ",/ )')
+  WRITE(stdout,'(/,5x,"INFO: KC calcualtion: Full Hamiltonian ... ",/ )')
   !
   ! ... Loop over k_point: actually it's a loop over the spin ik=1 ==> spin_up; ik=2 ==> spin_dw ...
   !
@@ -265,7 +265,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         ! Scalar-term correction for Diagonal elements only
         delta_eig(ibnd) = -sh + (etxc_minus1 - etxc - etmp1)
         ! This is to compare with KCP implementation.
-        WRITE(stdout, '(8x, "KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i} ", 4F14.8)') sh, &
+        WRITE(stdout, '(8x, "KC corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i} ", 4F14.8)') sh, &
             etxc, etxc_minus1, etmp 
         IF (lrpa) delta_eig(ibnd) = (-sh)  !! hartree only for debug
 !        delta_eig(ibnd) = -sh
@@ -360,7 +360,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      !
      v_ki(:,ibnd) = v_ki(:,ibnd) * alpha_final(ibnd)
      !
-     WRITE(stdout,'(8x, "orbital", i3, 3x, "spin", i3, 5x, "uKI_diag", F15.8 ," Ry", 3x, "rKI_diag", F15.8, " Ry", 3x, &
+     WRITE(stdout,'(8x, "orbital", i3, 3x, "spin", i3, 5x, "uKC_diag", F15.8 ," Ry", 3x, "rKC_diag", F15.8, " Ry", 3x, &
          &"alpha=", F15.8, 3x,/ )') ibnd, current_spin, delta_eig(ibnd), delta_eig(ibnd)*alpha_final(ibnd), &
          alpha_final(ibnd)
      !
@@ -431,7 +431,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
 !!!!!!!!!!
   !
 #ifdef DEBUG
-  WRITE(stdout,'(5x, "###  KI HAMILTONIAN EMPTY ###")')
+  WRITE(stdout,'(5x, "###  KC HAMILTONIAN EMPTY ###")')
   DO k = num_wann_occ+1, num_wann_occ+4
      WRITE(stdout,'(5x, 16F20.15)') ham_up(num_wann_occ+1:num_wann_occ+4,k)
   ENDDO
@@ -454,7 +454,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   ! Store the res in the global variable
   dH_wann(ik,:,:) = ham(:,:)
   !
-  WRITE(stdout,'(5x,"INFO: KI calcualtion: Full Hamiltonian ... DONE",/ )')
+  WRITE(stdout,'(5x,"INFO: KC calcualtion: Full Hamiltonian ... DONE",/ )')
   ! 
   DEALLOCATE (ham) 
   DEALLOCATE (ham_up) 
