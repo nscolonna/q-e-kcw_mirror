@@ -14,7 +14,49 @@
 SUBROUTINE dH_ki_full (ik, dH_wann)
   !-----------------------------------------------------------------------
   !
-  ! This routine compute the KI correction to the spectrum
+  ! This routine compute the full KI or the pKIPZ correction to the spectrum
+  ! KI potential:   See Eq. A8-A11 in PRB 90, 075135 (2014).
+  ! KIPZ potential: See Eq. A15 in PRB 90, 075135 (2014).
+  ! NB: Only the insulating case -i.e. fi=1 or fi=0
+  ! 
+  ! KI potenital:
+  ! First the diagonal corrections are computed (i==j):
+
+  !                     | -E_H[n_i] + E_xc[\rho] - E_xc[\rho-n_i] -\int v_xc[\rho](r) n_i(r)  if f_i=1 (OCC) (Eq. A8)
+  ! <i | v^{KI}_i |i> = | 
+  !                     | -E_H[n_i] - E_xc[\rho] + E_xc[\rho+n_i] -\int v_xc[\rho](r) n_i(r)  if f_i=0 (EMP) (Eq. A8 and A10)
+  !
+  ! Then possibly the off-diagonal (i /= j) (ONLY apply to EMPTY states) 
+  ! (The scalar term C does not contribute as <i|C|j> = 0 if i/=j):
+  !
+  ! <i | v^{KI}_i |j> = \int \phi*_i(r) [v_H[n_i](r) + v_xc[\rho+n_i](r) - v_xc[\rho](r) ] \phi_j(r)  if (f_i=f_j=0) (Eq. A10)
+  !
+  ! pKIPZ potenital adds to KI potential:
+  !
+  ! First the diagonal corrections are computed (i==j):
+  ! <i | Dv^{PZ}_i |i> = -E_{Hxc}[n_i]  (Eq. A15)
+  !
+  ! Then possibly the off-diagonal (i /= j) 
+  ! (The scalar term C does not contribute as <i|C|j> = 0 if i/=j):
+  ! <i | Dv^{PZ}_i |j> = \int \phi*_i(r) [ -v_{Hxc}[n_i](r)] \phi_j(r)
+  !
+  ! NB: The Hamiltonian is not Hermitian in general because we do not enforce the pederson condition 
+  !     whien using KS or MLWFs as variational orbitals. We force it to be hermitina in two ways:
+  !     1) Just keep the upper part of the Hamiltonian and build the lower part by CC (this is not actually done 
+  !        because in any case the diagonalization (cdiagh in ../PW/src/cdiagh.f90) implicitely assume H to be hermitian
+  !        and only consider the upper half of H).
+  !     2) We define an hermitian operator as follow 
+  !        H_{ij} = 0.5*(<i|hj|j> + <i|h_i|j>)  = 
+  !               = 0.5*(<i|hj|j> + <j|h_i|i>*) =
+  !               = 0.5*(h^L_{ij} + [h^L_ji]*)  = 
+  !     --> H = 0.5*(h^L+CONGJ(transpose(h_L))
+  !     where h^L is the Left hamiltonian: h^L_{ij}= <i | h_j | j> 
+  !
+  !     IF the pederson condition would have been satisfied (i.e.  <i |v_j |j > = <i |v_i|j>), then H == h^L == h^R.
+  !     This is the case for the KI hamiltonian for the occupied manifold (as the potential is simply a scalar and the 
+  !     Pederson condition is trivially satisfied), or the case of the on_site_only apporximation (as we only keep the 
+  !     diagonal term, i.e.  <j|h_i|i> = <j|h_j|i> ==0 for each i/=j.)
+  ! 
   !
   USE wavefunctions,         ONLY : psic
   USE kinds,                 ONLY : DP
@@ -48,7 +90,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   INTEGER, INTENT(IN) :: ik
   ! the k-point index in hte orignal mesh of k-points
   !
-  INTEGER :: ibnd, ir, k, dim_ham, nspin_aux, n_orb, lrwfc
+  INTEGER :: ibnd, ir, k, dim_ham, nspin_aux, lrwfc
   !
   REAL(DP) :: n_r(dfftp%nnr), num1, num2, sh, aux_r(dfftp%nnr) 
   ! ... orbital density in rela space
@@ -80,11 +122,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   WRITE(stdout,'(/,5x,"INFO: KI calcualtion: Full Hamiltonian ... ",/ )')
   !
-  ! ... Loop over k_point: actually it's a loop over the spin ik=1 ==> spin_up; ik=2 ==> spin_dw ...
-  !
   w1 = 1.D0 / omega
-  !
-  !alpha_final(:,:)=1.0  ! Just for debug
   !
   nspin_aux=nspin
   nspin=2
@@ -93,7 +131,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   lrwfc = num_wann*npwx
   CALL get_buffer ( evc0, lrwfc, iuwfc_wann, ik )
-  ! Retrive the ks function at k 
+  ! Retrive the variational orbital at kpoint k (includes spin)  
   IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8X, "INFO: u_k(g) RETRIEVED"/)')
   !
   CALL compute_map_ikq_single (ik)
@@ -107,22 +145,15 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   ham_left (:,:) = (0.D0,0.D0)
   ham_right (:,:) = (0.D0,0.D0)
   !
-  !! ... KS Hamiltonian ....
-  !ik_eff = ik + (spin_component -1)*nkstot/nspin
-  !CALL ks_hamiltonian (evc0, ik_eff, dim_ham, .true.)
-  !
-  !GOTO 101
-  !
-  !
-  n_orb = num_wann
-  !
-  orb_loop: DO ibnd = 1, n_orb
+  orb_loop: DO ibnd = 1, num_wann
      !
      vpsi_g(:) = (0.D0,0.D0)
+     ! keep track of occ ...
      segno = -1 
+     ! ... vs empty states
      IF (ibnd .gt. num_wann_occ) segno = +1
      !
-     IF (kcw_at_ks .AND. homo_only .AND. (ibnd .ne. num_wann) ) CYCLE orb_loop ! only homo orbilal (for fast debug) 
+     IF (kcw_at_ks .AND. homo_only .AND. (ibnd .ne. num_wann_occ) ) CYCLE orb_loop ! only homo orbilal (for fast debug) 
      ! 
      IF ( lsda ) current_spin = spin_component
      ! 
@@ -263,7 +294,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         CALL fwfft ('Wave', vpsi_r, dffts)
         vpsi_g(:) = vpsi_r(dffts%nl(igk_k(:,ik)))
         !
-        DO k = num_wann_occ+1, n_orb
+        DO k = num_wann_occ+1, num_wann
            IF (k == ibnd) CYCLE
            ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) ) 
            CALL mp_sum (ham_right, intra_bgrp_comm)
@@ -314,7 +345,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
            CALL fwfft ('Wave', vpsi_r, dffts)
            vpsi_g(:) = vpsi_r(dffts%nl(igk_k(:,ik)))
            !
-           DO k = 1, n_orb
+           DO k = 1, num_wann
               IF (k == ibnd ) CYCLE
               ham_right(k,ibnd) = ham_right(k,ibnd) + SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
               CALL mp_sum (ham_right, intra_bgrp_comm)
