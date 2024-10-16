@@ -348,6 +348,8 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
            !
            DO k = 1, num_wann
               IF (k == ibnd ) CYCLE
+              IF (ibnd .LE. num_wann_occ .AND. k .GT. num_wann_occ ) CYCLE  ! NO occ-empty matrix elements
+              IF (ibnd .GT. num_wann_occ .AND. k .LE. num_wann_occ ) CYCLE  ! NO empty-occ matrix elements
               dhkipz = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
               CALL mp_sum (dhkipz, intra_bgrp_comm)
               ham_right(k,ibnd) = ham_right(k,ibnd) + dhkipz
