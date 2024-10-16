@@ -105,8 +105,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   TYPE (scf_type) :: rho_minus1
   !
   REAL(DP) ::  vtxc, etxc, vtxc_minus1, etxc_minus1, etmp, delta_eig(nbnd)
-  COMPLEX(DP) :: etmp2
-  REAL(DP) :: etmp1
   !
   COMPLEX(DP) , ALLOCATABLE :: psic_1(:) 
   COMPLEX(DP) , ALLOCATABLE :: ham (:,:), ham_left(:,:), ham_right(:,:), vpsi_r(:), vpsi_g(:)
@@ -115,6 +113,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   COMPLEX(DP), ALLOCATABLE  :: delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
   COMPLEX(DP) :: deltah_scal
   REAL(DP) :: ddH
+  COMPLEX(DP) :: dhkipz
   INTEGER :: segno
   !
   !
@@ -122,7 +121,12 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   ALLOCATE ( delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
   !
-  WRITE(stdout,'(/,5x,"INFO: KI calcualtion: Full Hamiltonian ... ",/ )')
+  IF (kipz_corr) THEN 
+     WRITE(stdout,'(/,5x,"INFO: pKIPZ calcualtion ... ",/ )')
+  ELSE
+     WRITE(stdout,'(/,5x,"INFO: KI calcualtion: Full Hamiltonian ... ",/ )')
+  ENDIF
+  IF (on_site_only) WRITE(stdout, '(/,5X, "INFO: Skipping off-diag: only R=0 and i=j")') 
   !
   w1 = 1.D0 / omega
   !
@@ -238,7 +242,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      etxc = 0.D0; vtxc = 0.D0; vxc(:,:) = 0.D0
      CALL v_xc( rho, rho_core, rhog_core, etxc, vtxc, vxc )
      !
-     etmp=0.D0
+     etmp =0.D0
      etmp = sum ( vxc(1:dfftp%nnr,current_spin) * n_r(1:dfftp%nnr) )
      etmp = etmp/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )*omega
      CALL mp_sum (etmp, intra_bgrp_comm) 
@@ -253,7 +257,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         rho_minus1%of_g(:,:) = rho%of_g(:,:)
      ENDIF
      !
-     etmp1 = 0.D0
      delta_eig(ibnd) = 0.D0
      !
      rho_minus1%of_r(:,1) = rho_minus1%of_r(:,1) + segno * n_r(:)  ! denisty rho \pm rho_i in real space
@@ -284,7 +287,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      IF ( .NOT. on_site_only .AND. ibnd .GT. num_wann_occ) THEN
         !
         vpsi_r(:) = (0.D0, 0.D0)
-        etmp2 = (0.D0, 0.D0)
         DO ir = 1, dffts%nnr
            vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - &
                    vxc(ir,current_spin) ),0.D0, kind=DP) * psic_1(ir)
@@ -336,7 +338,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         IF ( .NOT. on_site_only) THEN 
            !
            vpsi_r(:) = (0.D0, 0.D0)
-           etmp2 = (0.D0, 0.D0)
            DO ir = 1, dffts%nnr
               vpsi_r (ir) = CMPLX( ( - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0, kind=DP) * psic_1(ir)
            ENDDO 
@@ -347,8 +348,9 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
            !
            DO k = 1, num_wann
               IF (k == ibnd ) CYCLE
-              ham_right(k,ibnd) = ham_right(k,ibnd) + SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
-              CALL mp_sum (ham_right(k,ibnd), intra_bgrp_comm)
+              dhkipz = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
+              CALL mp_sum (dhkipz, intra_bgrp_comm)
+              ham_right(k,ibnd) = ham_right(k,ibnd) + dhkipz
               !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
            ENDDO
            !
@@ -385,7 +387,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
     !----------------------------------------------------------------
     !
     USE kinds,                 ONLY : DP
-    USE control_kcw,           ONLY : num_wann, alpha_final, alpha_final, group_alpha, l_do_alpha
+    USE control_kcw,           ONLY : alpha_final, alpha_final, group_alpha, l_do_alpha
     USE control_lr,            ONLY : lrpa
     !
     IMPLICIT NONE
