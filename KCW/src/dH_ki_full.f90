@@ -47,10 +47,12 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !        and only consider the upper half of H).
   !     2) We define an hermitian operator as follow 
   !        H_{ij} = 0.5*(<i|hj|j> + <i|h_i|j>)  = 
+  !               = 0.5*(  h^R_ij  + h^L_ij  )  = 
   !               = 0.5*(<i|hj|j> + <j|h_i|i>*) =
-  !               = 0.5*(h^L_{ij} + [h^L_ji]*)  = 
-  !     --> H = 0.5*(h^L+CONGJ(transpose(h_L))
-  !     where h^L is the Left hamiltonian: h^L_{ij}= <i | h_j | j> 
+  !               = 0.5*(h^R_{ij} + [h^R_ji]*)  = 
+  !     --> H = 0.5*(h^R+CONGJ(TRANSPOSE(h^R))
+  !     where h^R(h^L) is the Right(Left) hamiltonian: h^R_{ij}= <i | h_j | j> (h^L_{ij}= <i | h_i | j>)
+  !     H is Hermitian by construction H_ij = [H_ji]*
   !
   !     IF the pederson condition would have been satisfied (i.e.  <i |v_j |j > = <i |v_i|j>), then H == h^L == h^R.
   !     This is the case for the KI hamiltonian for the occupied manifold (as the potential is simply a scalar and the 
@@ -275,9 +277,8 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      IF (lrpa) delta_eig(ibnd) = segno * sh  !! hartree only for debug
      WRITE(stdout,'(8X, "Delta KI", 2F15.8)')  delta_eig(ibnd), delta_eig(ibnd)*alpha_final(ibnd)
      !
-     ham_left(ibnd,ibnd) = delta_eig(ibnd) * alpha_final(ibnd)
      ham_right(ibnd,ibnd) = delta_eig(ibnd) * alpha_final(ibnd)
-     WRITE(*,*) ibnd, ibnd, REAL(ham_left(ibnd,ibnd)), AIMAG(ham_left(ibnd,ibnd))
+     !WRITE(stdout,*) ibnd, ibnd, REAL(ham_right(ibnd,ibnd)), AIMAG(ham_right(ibnd,ibnd))
      !
      ! Eventually the KI off-diagonal contribution. Only apply to empty manifold. 
      IF ( .NOT. on_site_only .AND. ibnd .GT. num_wann_occ) THEN
@@ -297,8 +298,8 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         DO k = num_wann_occ+1, num_wann
            IF (k == ibnd) CYCLE
            ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) ) 
-           CALL mp_sum (ham_right, intra_bgrp_comm)
-           !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
+           CALL mp_sum (ham_right(k,ibnd), intra_bgrp_comm)
+           !WRITE(stdout,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
         ENDDO 
         !
      ENDIF
@@ -328,7 +329,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         WRITE(stdout,'(8X, "Delta PZ", 2F15.8)')  -(sh+etxc_minus1), -(sh+etxc_minus1)*alpha_final(ibnd)
         !
         delta_eig(ibnd) = delta_eig(ibnd) -(sh+etxc_minus1)
-        ham_left(ibnd,ibnd) = ham_left(ibnd,ibnd) -(sh+etxc_minus1) *alpha_final(ibnd)
         ham_right(ibnd,ibnd) = ham_right(ibnd,ibnd) -(sh+etxc_minus1) *alpha_final(ibnd)
         !
         !
@@ -348,7 +348,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
            DO k = 1, num_wann
               IF (k == ibnd ) CYCLE
               ham_right(k,ibnd) = ham_right(k,ibnd) + SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
-              CALL mp_sum (ham_right, intra_bgrp_comm)
+              CALL mp_sum (ham_right(k,ibnd), intra_bgrp_comm)
               !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
            ENDDO
            !
@@ -362,16 +362,12 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      !
   ENDDO orb_loop
   !
-  ham=(0.D0,0.D0)
   ! h^R_{ij} = <\phi_i | H_j | \phi_j> 
   ! h^L_{ij} = <\phi_i | H_i | \phi_j> = [<\phi_j | H_i | \phi_i>]^* = [h^R_{ji}]^*
-  ham_left = CONJG(TRANSPOSE(ham_right))
-  !
-  ham = ham_right
-  IF (qp_symm) ham = 0.5D0*(ham_left+ham_right)
+  IF (qp_symm) ham_right = 0.5D0*(ham_right + CONJG(TRANSPOSE(ham_right)))
   !
   ! Store the res in the global variable
-  dH_wann(ik,:,:) = ham(:,:)
+  dH_wann(ik,:,:) = ham_right(:,:)
   !
   WRITE(stdout,'(5x,"INFO: KI calcualtion: Full Hamiltonian ... DONE",/ )')
   ! 
