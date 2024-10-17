@@ -71,10 +71,10 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   USE gvecs,                 ONLY : ngms
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
-  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, &
+  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, iurho_wann, &
                                     num_wann_occ, iuwfc_wann, kcw_iverbosity, &
                                     qp_symm, evc0, kipz_corr, num_wann, &
-                                    spin_component, l_alpha_corr, on_site_only
+                                    spin_component, l_alpha_corr, on_site_only, nrho
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum
   USE mp_bands,              ONLY : intra_bgrp_comm
@@ -94,30 +94,32 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   INTEGER :: ibnd, ir, k, dim_ham, nspin_aux, lrwfc
   !
-  REAL(DP) :: n_r(dfftp%nnr), num1, num2, sh, aux_r(dfftp%nnr) 
+  REAL(DP) :: sh, aux_r(dfftp%nnr) 
+  COMPLEX(DP) :: rhor(dffts%nnr)
   ! ... orbital density in rela space
   !
-  COMPLEX(DP) n_g(ngm), n_g_aux(ngm,nspin), aux_g(ngm)
+  COMPLEX(DP) rhog(ngms), n_g_aux(ngm,nspin), aux_g(ngm)
   ! ... orbital density in G space
   !
-  REAL(DP) :: ehart, v(dfftp%nnr,nspin), vxc_minus1(dfftp%nnr,2), vxc(dfftp%nnr,nspin), charge, w1
+  REAL(DP) :: ehart, vh_rhor(dfftp%nnr,nspin), vxc_minus1(dfftp%nnr,2), vxc(dfftp%nnr,nspin), charge, w1
   !  
   TYPE (scf_type) :: rho_minus1
   !
   REAL(DP) ::  vtxc, etxc, vtxc_minus1, etxc_minus1, etmp, delta_eig(nbnd)
   !
-  COMPLEX(DP) , ALLOCATABLE :: psic_1(:) 
-  COMPLEX(DP) , ALLOCATABLE :: ham (:,:), ham_left(:,:), ham_right(:,:), vpsi_r(:), vpsi_g(:)
+  COMPLEX(DP) , ALLOCATABLE :: ham_right(:,:), vpsi_r(:), vpsi_g(:)
   !
   COMPLEX(DP) :: delta_vr(dffts%nnr,nspin), delta_vr_(dffts%nnr,nspin)
+  COMPLEX(DP) :: rhowann(dffts%nnr, num_wann, nrho)
   COMPLEX(DP), ALLOCATABLE  :: delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
   COMPLEX(DP) :: deltah_scal
   REAL(DP) :: ddH
   COMPLEX(DP) :: dhkipz
   INTEGER :: segno
+  INTEGER :: lrrho
   !
   !
-  ALLOCATE (psic_1( dfftp%nnr), vpsi_r(dffts%nnr), vpsi_g(npwx))
+  ALLOCATE (vpsi_r(dffts%nnr), vpsi_g(npwx))
   ALLOCATE ( delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
   !
@@ -140,15 +142,16 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   ! Retrive the variational orbital at kpoint k (includes spin)  
   IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8X, "INFO: u_k(g) RETRIEVED"/)')
   !
+  lrrho=num_wann*dffts%nnr*nrho
+  CALL get_buffer (rhowann, lrrho, iurho_wann, ik)
+  IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8X, "INFO: rhowann RETRIEVED"/)')
+  !
+  ! FIXME: Do I really need this? 
   CALL compute_map_ikq_single (ik)
   ! find tha map k+q --> k'+G and store the res 
   !
   dim_ham = num_wann
-  ALLOCATE ( ham (dim_ham,dim_ham) )
-  ALLOCATE ( ham_left (dim_ham,dim_ham) )
   ALLOCATE ( ham_right (dim_ham,dim_ham) )
-  ham (:,:) = (0.D0,0.D0)
-  ham_left (:,:) = (0.D0,0.D0)
   ham_right (:,:) = (0.D0,0.D0)
   !
   orb_loop: DO ibnd = 1, num_wann
@@ -170,35 +173,14 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      psic(dffts%nl(igk_k(1:npw,ik))) = evc0(1:npw,ibnd)
      CALL invfft ('Wave', psic, dffts)
      !
-     ! Store the result needed below
-     psic_1(:) = psic(:) 
-     !
-     ! ... orbital density in real space ...
-     num1 = 0.D0
-     num2 = 0.D0
-     n_r(:) = 0.0
-     DO ir = 1, dffts%nnr
-       n_r(ir) = n_r(ir) + ( DBLE( psic(ir) )**2 + AIMAG( psic(ir) )**2 )*w1
-#ifdef DEBUG
-       num1 = num1 + DBLE( DBLE( psic(ir) )**2 + AIMAG( psic(ir) )**2  )*w1
-       num2 = num2 + rho%of_r(ir,1)
-#endif
-     ENDDO 
-     !
-#ifdef DEBUG
-     CALL mp_sum (num1, intra_bgrp_comm) 
-     CALL mp_sum (num2, intra_bgrp_comm) 
-     WRITE(stdout,'(8x, "orbital charge", 2F18.12)') num1/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )*omega
-     WRITE(stdout,'(8x, "spin-up charge", 2F18.12)') num2/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )*omega
-#endif
-     !
-     ! ... orbital density in reciprocal space ...
-     !
-     CALL bare_pot ( CMPLX(n_r*omega, 0.0, kind=DP), n_g, vh_rhog, delta_vr, delta_vg, 1, delta_vr_, delta_vg_ )
+     rhor(:) = rhowann(:,ibnd,1)
+     CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, 1, delta_vr_, delta_vg_ )
+     rhor = rhor/omega
      !! The periodic part of the perturbation DeltaV_q(G)
      !
-     deltah_scal = - 0.5D0 * sum (CONJG(n_g (:)) * delta_vg(:,spin_component)) * omega
-     !sh = 0.5D0 * sum (CONJG(n_g (:)) * vh_rhog(:)                )*omega
+     deltah_scal = - 0.5D0 * sum (CONJG(rhog (:)) * delta_vg(:,spin_component)) * omega
+     sh          =   0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:)                ) * omega
+     CALL mp_sum (sh, intra_bgrp_comm)
      !WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, sh
      !
      IF (l_alpha_corr) CALL beyond_2nd (deltah_scal, ddH, ibnd)
@@ -215,27 +197,10 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         alpha_final(ibnd) = 1.D0
      ENDIF
      !
-     psic(:) = (0.D0, 0.D0)
-     psic(:) =  CMPLX(n_r(:),0.D0,kind=dp)
-     CALL fwfft ('Rho', psic, dfftp)
-     n_g(:) = psic(dfftp%nl(:))
-     !
-     ! ... Compute Int[e^2/|r-r'|*n_i(r')] ...
-     !
-     sh = 0.D0
-     v(:,:)=0.D0
+     vh_rhor(:,:)=0.D0
      n_g_aux(:,:) = (0.D0, 0.D0)
-     n_g_aux(:,1) = n_g(:)
-     CALL v_h( n_g_aux, ehart, charge, v )
-     sh = ehart
-     !
-!     WRITE(stdout,'("v_hatree", 2i5, 3F15.8)') ibnd, current_spin ,REAL(v(1:3,1))
-     !WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, sh
-     !
-#ifdef DEBUG
-     WRITE(stdout,'(8x, "orbital=", i3, 2x, "Self-Hartree", F15.10, 3x, "Ry",/)') ibnd, sh
-     WRITE(stdout,'(8x,"orbital charge from v_h",F15.12,/)') charge
-#endif
+     n_g_aux(:,1) = rhog(:)
+     CALL v_h( n_g_aux, ehart, charge, vh_rhor )
      !
      ! .. Add the xc contribution ...
      !
@@ -243,7 +208,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      CALL v_xc( rho, rho_core, rhog_core, etxc, vtxc, vxc )
      !
      etmp =0.D0
-     etmp = sum ( vxc(1:dfftp%nnr,current_spin) * n_r(1:dfftp%nnr) )
+     etmp = sum ( vxc(1:dffts%nnr,current_spin) * REAL(rhor(1:dffts%nnr),kind=DP) )
      etmp = etmp/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )*omega
      CALL mp_sum (etmp, intra_bgrp_comm) 
      !
@@ -259,13 +224,13 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      !
      delta_eig(ibnd) = 0.D0
      !
-     rho_minus1%of_r(:,1) = rho_minus1%of_r(:,1) + segno * n_r(:)  ! denisty rho \pm rho_i in real space
-     rho_minus1%of_g(:,1) = rho_minus1%of_g(:,1) + segno * n_g(:)  ! denisty rho \pm rho_i in reciprocal scape
+     rho_minus1%of_r(:,1) = rho_minus1%of_r(:,1) + segno * REAL(rhor(:),kind=DP)  ! denisty rho \pm rho_i in real space
+     rho_minus1%of_g(:,1) = rho_minus1%of_g(:,1) + segno * rhog(:)  ! denisty rho \pm rho_i in reciprocal scape
      ! The magnetization depends on which channel we remove the orbital from
      ! we reduce by n_i(r) if current_spin=1, we increase by n_i(r) if current_spin=2
      ! This is taken care by the factor (3-2*current_spin)
-     rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) + segno * (3-2*spin_component)*n_r(:)  ! magnetization m-m_i in real space
-     rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) + segno * (3-2*spin_component)*n_g(:)  ! magnetization m-m_i in reciprocal scape
+     rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) + segno * (3-2*spin_component)*REAL(rhor(:),kind=DP)  ! magnetization m-m_i in real space
+     rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) + segno * (3-2*spin_component)*rhog(:)  ! magnetization m-m_i in reciprocal scape
      ! 
      etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
      nspin_aux=nspin; nspin=2
@@ -275,8 +240,13 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      delta_eig(ibnd) = (sh - etxc + etxc_minus1 - segno * etmp)
      delta_eig(ibnd) = segno * delta_eig(ibnd)
      !
-     WRITE(stdout, '(8x, "KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i} ", 4F14.8)') sh, &
-         etxc, etxc_minus1, etmp 
+     IF (segno == -1) THEN
+       WRITE(stdout, '(8x, "KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i} ", 4F14.8)') sh, &
+           etxc, etxc_minus1, etmp 
+     ELSE
+       WRITE(stdout, '(8x, "KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i} ", 4F14.8)') sh, &
+           etxc, etxc_minus1, etmp 
+     ENDIF
      IF (lrpa) delta_eig(ibnd) = segno * sh  !! hartree only for debug
      WRITE(stdout,'(8X, "Delta KI", 2F15.8)')  delta_eig(ibnd), delta_eig(ibnd)*alpha_final(ibnd)
      !
@@ -288,9 +258,9 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         !
         vpsi_r(:) = (0.D0, 0.D0)
         DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - &
-                   vxc(ir,current_spin) ),0.D0, kind=DP) * psic_1(ir)
-           IF (lrpa) vpsi_r (ir) = CMPLX( v(ir,current_spin), 0.D0, kind=DP) * psic_1(ir)
+           vpsi_r (ir) = CMPLX( ( vh_rhor(ir,current_spin) + vxc_minus1(ir,current_spin) - &
+                   vxc(ir,current_spin) ),0.D0, kind=DP) * psic(ir)
+           IF (lrpa) vpsi_r (ir) = CMPLX( vh_rhor(ir,current_spin), 0.D0, kind=DP) * psic(ir)
         ENDDO
         !
         ! 1) GO to G-space and store the ki gradient. v_i|phi_i> 
@@ -314,10 +284,10 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         ! Use rho_minus as a workspace 
         rho_minus1%of_r(:,:) = 0.D0
         rho_minus1%of_g(:,:) = (0.D0, 0.D0)
-        rho_minus1%of_r(:,1) = n_r(:)  ! orbital denisty rho_i in real space
-        rho_minus1%of_r(:,2) = (3-2*spin_component)*n_r(:)  ! orbital magnetization m_i in real space
-        rho_minus1%of_g(:,1) = n_g(:)  ! orbital denisty rho_i in reciprocal scape
-        rho_minus1%of_g(:,2) = (3-2*spin_component)*n_g(:)  ! orbital magnetization m_i in reciprocal scape
+        rho_minus1%of_r(:,1) = REAL(rhor(:),kind=DP)  ! orbital denisty rho_i in real space
+        rho_minus1%of_r(:,2) = (3-2*spin_component)*REAL(rhor(:),kind=DP)  ! orbital magnetization m_i in real space
+        rho_minus1%of_g(:,1) = rhog(:)  ! orbital denisty rho_i in reciprocal scape
+        rho_minus1%of_g(:,2) = (3-2*spin_component)*rhog(:)  ! orbital magnetization m_i in reciprocal scape
         !
         etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
         nspin_aux=nspin; nspin=2
@@ -339,7 +309,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
            !
            vpsi_r(:) = (0.D0, 0.D0)
            DO ir = 1, dffts%nnr
-              vpsi_r (ir) = CMPLX( ( - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0, kind=DP) * psic_1(ir)
+              vpsi_r (ir) = CMPLX( ( - vh_rhor(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0, kind=DP) * psic(ir)
            ENDDO 
            !
            ! 1) GO to G-space and store the ki gradient 
@@ -373,13 +343,15 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   ! Store the res in the global variable
   dH_wann(ik,:,:) = ham_right(:,:)
   !
-  WRITE(stdout,'(5x,"INFO: KI calcualtion: Full Hamiltonian ... DONE",/ )')
+  IF (kipz_corr) THEN 
+          WRITE(stdout,'(5x,"INFO: pKIPZ calcualtion ... DONE",/ )')
+  ELSE
+          WRITE(stdout,'(5x,"INFO: KI calcualtion: Full Hamiltonian ... DONE",/ )')
+  ENDIF
   ! 
-  DEALLOCATE (ham) 
-  DEALLOCATE (ham_left) 
   DEALLOCATE (ham_right) 
   !
-  DEALLOCATE (psic_1, vpsi_r, vpsi_g) 
+  DEALLOCATE (vpsi_r, vpsi_g) 
   DEALLOCATE ( delta_vg, vh_rhog, delta_vg_)
   !
   CONTAINS
