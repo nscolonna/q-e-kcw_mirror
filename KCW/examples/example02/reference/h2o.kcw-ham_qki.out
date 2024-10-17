@@ -19,11 +19,11 @@
         A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
      =--------------------------------------------------------------------------------=
 
-     Program KCW v.7.3.1 starts on 10Oct2024 at 13:54: 1 
+     Program KCW v.7.3.1 starts on 17Oct2024 at 10:50:19 
         Git branch: HPROJinDEV
-        Last git commit: 4cc42137f667829d6a750b025d1674679d039d7b-dirty
-        Last git commit date: Thu Oct 10 12:11:55 2024 +0200
-        Last git commit subject: More appopriate name to KCW hamiltonian subroutine
+        Last git commit: 831a4faf8b89b6f76944e15e7d8fcc3b5cf9be3f-dirty
+        Last git commit date: Thu Oct 17 10:19:37 2024 +0200
+        Last git commit subject: Uniform the notation in dH_ki_full
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
@@ -34,18 +34,19 @@
      in publications or presentations arising from this work. More details at
      http://www.quantum-espresso.org/quote
 
-     Parallel version (MPI), running on     1 processors
+     Parallel version (MPI), running on     4 processors
 
      MPI processes distributed on     1 nodes
-     9008 MiB available memory on the printing compute node when the environment starts
- 
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     1445 MiB available memory on the printing compute node when the environment starts
+
 
      KCW INPUT SUMMARY 
      ============================================
 
       CONTROL 
        # title               =KCW H2O KI hamilto
-       # out_dir             =/home/colonna_n/CO
+       # out_dir             =/home/nicola/CODES
        # prefix              =               h2o
        # calculation         =               ham
        # kcw_iverbosity      =                 1
@@ -70,14 +71,14 @@
        # l_alpha_corr        =                 F
        # on_site_only        =                 F
        # h_diag_scheme       =              wann
-       # h_corr_scheme       =              full
+       # which_odd           =               qki
      ============================================
 
      INFO: Reading pwscf data
 
      Reading xml data from directory:
 
-     /home/colonna_n/CODES/q-e-kcw/tempdir/h2o.save/
+     /home/nicola/CODES/q-e-kcw/tempdir/h2o.save/
 
      IMPORTANT: XC functional enforced from input :
      Exchange-correlation= PW
@@ -85,14 +86,16 @@
      Any further DFT definition will be discarded
      Please, verify this is what you really want
 
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min         975     975    244                44983    44983    5620
+     Max         977     977    245                44984    44984    5623
      Sum        3905    3905    979               179933   179933   22489
- 
+
      Using Slab Decomposition
- 
+
 
      Check: negative core charge=   -0.000035
      Reading collected, re-writing distributed wavefunctions
@@ -101,7 +104,7 @@
 
      READING SCREENING PARAMETERS
 
-     INFO: alphas read from:/home/colonna_n/CODES/q-e-kcw/tempdir/kcw/h2o.alpha.dat                                                                                                                                                                                                         
+     INFO: alphas read from:/home/nicola/CODES/q-e-kcw/tempdir/kcw/h2o.alpha.dat                                                                                                                                                                                                            
      iwann =     1   alpha =      0.63566336
      iwann =     2   alpha =      0.70868990
      iwann =     3   alpha =      0.64498744
@@ -128,36 +131,26 @@
 
 
 
-     INFO: KI calcualtion: Full Hamiltonian ... 
+     INFO: qKI calculation: quadratic Hamiltonian ... 
+
+
+     INFO: KC SCALAR TERM CALCULATION ... START
+
+     INFO: KC SCALAR TERM CALCULATION ... END
+
+     total cpu time spent up to now is        0.8 secs
+
+     INFO: debug_nc =  T Note: the k-q formula will be used.
+
+
+     INFO: qKI  HAMILTONIAN CALCULATION ik=    1 ...
+
+        INFO: Mapping also k-q -> p in 1BZ DONE  
 
         INFO: Map k+q -> p in 1BZ DONE  
 
-        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.76908198   -9.52899993   -8.11277548   -1.48354159
-        orbital  1   spin  1     uKI_diag    -0.70176483 Ry   rKI_diag    -0.44608619 Ry   alpha=     0.63566336
 
-        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.66823847   -9.52899993   -8.29668378   -1.31689705
-        orbital  2   spin  1     uKI_diag    -0.58365756 Ry   rKI_diag    -0.41363222 Ry   alpha=     0.70868990
-
-        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71631749   -9.52899993   -8.28401451   -1.34273725
-        orbital  3   spin  1     uKI_diag    -0.61856566 Ry   rKI_diag    -0.39896708 Ry   alpha=     0.64498744
-
-        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71295393   -9.52899993   -8.26927972   -1.35414840
-        orbital  4   spin  1     uKI_diag    -0.61852574 Ry   rKI_diag    -0.39249447 Ry   alpha=     0.63456449
-
-        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.16383639   -9.52899993   -9.78294489   -0.21817552
-        orbital  5   spin  1     uKI_diag     0.12806695 Ry   rKI_diag     0.12123651 Ry   alpha=     0.94666509
-
-        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.16194873   -9.52899993   -9.81560523   -0.23592217
-        orbital  6   spin  1     uKI_diag     0.11126560 Ry   rKI_diag     0.09831374 Ry   alpha=     0.88359513
-
-        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.15949731   -9.52899993   -9.76771161   -0.18623366
-        orbital  7   spin  1     uKI_diag     0.10701928 Ry   rKI_diag     0.09694195 Ry   alpha=     0.90583634
-
-        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.15737641   -9.52899993   -9.72224773   -0.12833218
-        orbital  8   spin  1     uKI_diag     0.09246079 Ry   rKI_diag     0.09390133 Ry   alpha=     1.01558008
-
-     INFO: KI calcualtion: Full Hamiltonian ... DONE
-
+     total cpu time spent up to now is        1.2 secs
 
      INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN
      INFO: Standar scheme: diagonalize on the variational orbitals basis
@@ -165,48 +158,48 @@
           k = 0.0000 0.0000 0.0000     band energies (ev):
 
           KS      -25.4754   -13.3483    -9.4516    -7.3908    -1.5378     0.0879     0.1858     0.6870
-          KI      -31.5447   -18.9761   -14.8799   -12.7310     0.0238     1.4870     1.5047     1.9910
-          pKI     -31.5447   -18.9761   -14.8799   -12.7310     0.1117     1.4255     1.5047     1.9646
-          total cpu time spent up to now is        2.4 secs
+          KI      -31.5892   -19.0673   -15.0006   -12.8315    -0.9804     0.0010     0.6020     1.3658
+          pKI     -31.5892   -19.0673   -15.0006   -12.8315    -0.4189     0.5115     0.6067     0.2890
+          total cpu time spent up to now is        1.2 secs
 
         KS  highest occupied, lowest unoccupied level (ev):    -7.3908   -1.5378
-        KI  highest occupied, lowest unoccupied level (ev):   -12.7310    0.0238
-        pKI highest occupied, lowest unoccupied level (ev):   -12.7310    0.1117
+        KI  highest occupied, lowest unoccupied level (ev):   -12.8315   -0.9804
+        pKI highest occupied, lowest unoccupied level (ev):   -12.8315   -0.4189
 
-     Writing all to output data dir /home/colonna_n/CODES/q-e-kcw/tempdir/h2o_kcw.save/ :
+     Writing all to output data dir /home/nicola/CODES/q-e-kcw/tempdir/h2o_kcw.save/ :
      XML data file, pseudopotentials, collected wavefunctions
- 
-     KCW          :      2.19s CPU      2.42s WALL
+
+     KCW          :      1.11s CPU      1.23s WALL
 
      INITIALIZATION: 
      map          :      0.00s CPU      0.00s WALL (       1 calls)
- 
-     init_vloc    :      0.03s CPU      0.03s WALL (       1 calls)
+
+     init_vloc    :      0.01s CPU      0.01s WALL (       1 calls)
      init_us_1    :      0.00s CPU      0.00s WALL (       1 calls)
- 
- 
- 
- 
- 
-     h_psi        :      0.04s CPU      0.04s WALL (       1 calls)
- 
-     h_psi        :      0.04s CPU      0.04s WALL (       1 calls)
+
+
+
+
+
+     h_psi        :      0.01s CPU      0.01s WALL (       1 calls)
+
+     h_psi        :      0.01s CPU      0.01s WALL (       1 calls)
      add_vuspsi   :      0.00s CPU      0.00s WALL (       1 calls)
- 
- 
- 
+
+
+
       General routines
      calbec       :      0.00s CPU      0.00s WALL (       1 calls)
-     fft          :      0.07s CPU      0.07s WALL (      22 calls)
-     ffts         :      0.15s CPU      0.16s WALL (      64 calls)
-     fftw         :      0.07s CPU      0.07s WALL (      32 calls)
-     davcio       :      0.01s CPU      0.04s WALL (       9 calls)
- 
- 
-     KCW          :      2.19s CPU      2.43s WALL
+     fft          :      0.38s CPU      0.39s WALL (       6 calls)
+     ffts         :      0.26s CPU      0.28s WALL (     144 calls)
+     fftw         :      0.03s CPU      0.03s WALL (      30 calls)
+     davcio       :      0.00s CPU      0.02s WALL (      12 calls)
 
- 
-   This run was terminated on:  13:54: 4  10Oct2024            
+
+     KCW          :      1.11s CPU      1.28s WALL
+
+
+   This run was terminated on:  10:50:20  17Oct2024            
 
 =------------------------------------------------------------------------------=
    JOB DONE.

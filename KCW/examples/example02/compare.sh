@@ -58,12 +58,11 @@ done
 if (( $check )); then echo -e "  ${GREEN}KC_SCREEN   OK!${NC}"; fi
 
 
-for scheme in "" "_uniq" "_proj"; do
-sscheme=`echo $scheme | sed -e "s/_//" | sed -e 's/[a-z]/\U&/g'`
+for which_odd in "qki" "ki" "pkipz"; do
 check=1
 
-grep "   KI    " results/h2o.kcw-ham${scheme}.out > pp
-grep "   KI    " reference/h2o.kcw-ham${scheme}.out >> pp
+grep "   KI    " results/h2o.kcw-ham_${which_odd}.out > pp
+grep "   KI    " reference/h2o.kcw-ham_${which_odd}.out >> pp
 #cat pp
 for j in `seq 1 8`; do 
  col=`echo $j+1 | bc`
@@ -71,11 +70,11 @@ for j in `seq 1 8`; do
  eig_ref=`tail -1 pp | awk -v col=$col '{print $col}'`
  err=`echo $i $eig $eig_ref | awk '{printf "%20.15f \n", sqrt(($2-$3)*($2-$3))}'`
  if (( $(echo "$err > $tol_eig" |bc -l) )); then
-  echo -e "  ${RED}KC_HAM $sscheme   WARNING: ${NC}eig does not match for orbital $j: $eig $eig_ref $err"
+  echo -e "  ${RED}KC_HAM $which_odd   WARNING: ${NC}eig does not match for orbital $j: $eig $eig_ref $err"
   check=0
  fi
 done
-if (( $check )); then echo -e "  ${GREEN}KC_HAM  $sscheme    OK!${NC}"; fi
+if (( $check )); then echo -e "  ${GREEN}KC_HAM  $which_odd    OK!${NC}"; fi
 rm pp
 
 done
