@@ -84,6 +84,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   USE exx,                   ONLY : vexx, exxinit, exxenergy2
   USE input_parameters,      ONLY : exxdiv_treatment
+  USE fft_rho,               ONLY : rho_g2r
   !
   IMPLICIT NONE
   !
@@ -98,10 +99,11 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   COMPLEX(DP) :: rhor(dffts%nnr)
   ! ... orbital density in rela space
   !
-  COMPLEX(DP) rhog(ngms), n_g_aux(ngm,nspin), aux_g(ngm)
+  COMPLEX(DP) rhog(ngms), aux_g(ngm)
   ! ... orbital density in G space
   !
-  REAL(DP) :: ehart, vh_rhor(dfftp%nnr,nspin), vxc_minus1(dfftp%nnr,2), vxc(dfftp%nnr,nspin), charge, w1
+  REAL(DP) :: vxc_minus1(dfftp%nnr,2), vxc(dfftp%nnr,nspin), w1
+  COMPLEX(DP) :: vh_rhor(dfftp%nnr,nspin)
   !  
   TYPE (scf_type) :: rho_minus1
   !
@@ -197,10 +199,11 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         alpha_final(ibnd) = 1.D0
      ENDIF
      !
+     ! ... transform Hartree potential to real space
+     !
      vh_rhor(:,:)=0.D0
-     n_g_aux(:,:) = (0.D0, 0.D0)
-     n_g_aux(:,1) = rhog(:)
-     CALL v_h( n_g_aux, ehart, charge, vh_rhor )
+     vh_rhor(dffts%nl(:),spin_component) = vh_rhog(:) 
+     CALL invfft ('Rho', vh_rhor (:,spin_component), dffts)
      !
      ! .. Add the xc contribution ...
      !
@@ -258,9 +261,9 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         !
         vpsi_r(:) = (0.D0, 0.D0)
         DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( vh_rhor(ir,current_spin) + vxc_minus1(ir,current_spin) - &
-                   vxc(ir,current_spin) ),0.D0, kind=DP) * psic(ir)
-           IF (lrpa) vpsi_r (ir) = CMPLX( vh_rhor(ir,current_spin), 0.D0, kind=DP) * psic(ir)
+           vpsi_r (ir) = ( vh_rhor(ir,current_spin) + vxc_minus1(ir,current_spin) - &
+                   vxc(ir,current_spin) ) * psic(ir)
+           IF (lrpa) vpsi_r (ir) =  vh_rhor(ir,current_spin) * psic(ir)
         ENDDO
         !
         ! 1) GO to G-space and store the ki gradient. v_i|phi_i> 
@@ -309,7 +312,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
            !
            vpsi_r(:) = (0.D0, 0.D0)
            DO ir = 1, dffts%nnr
-              vpsi_r (ir) = CMPLX( ( - vh_rhor(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0, kind=DP) * psic(ir)
+              vpsi_r (ir) = ( - vh_rhor(ir,current_spin) - vxc_minus1(ir,current_spin) ) * psic(ir)
            ENDDO 
            !
            ! 1) GO to G-space and store the ki gradient 
