@@ -29,7 +29,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   ! Then possibly the off-diagonal (i /= j) (ONLY apply to EMPTY states) 
   ! (The scalar term C does not contribute as <i|C|j> = 0 if i/=j):
   !
-  ! <i | v^{KI}_i |j> = \int \phi*_i(r) [v_H[n_i](r) + v_xc[\rho+n_i](r) - v_xc[\rho](r) ] \phi_j(r)  if (f_i=f_j=0) (Eq. A10)
+  ! <i | v^{KI}_j |j> = \int \phi*_i(r) [v_H[n_j](r) + v_xc[\rho+n_j](r) - v_xc[\rho](r) ] \phi_j(r)  if (f_i=f_j=0) (Eq. A10)
   !
   ! pKIPZ potenital adds to KI potential:
   !
@@ -38,7 +38,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   ! Then possibly the off-diagonal (i /= j) 
   ! (The scalar term C does not contribute as <i|C|j> = 0 if i/=j):
-  ! <i | Dv^{PZ}_i |j> = \int \phi*_i(r) [ -v_{Hxc}[n_i](r)] \phi_j(r)
+  ! <i | Dv^{PZ}_j |j> = \int \phi*_i(r) [ -v_{Hxc}[n_j](r)] \phi_j(r)
   !
   ! NB: The Hamiltonian is not Hermitian in general because we do not enforce the pederson condition 
   !     whien using KS or MLWFs as variational orbitals. We force it to be hermitina in two ways:
