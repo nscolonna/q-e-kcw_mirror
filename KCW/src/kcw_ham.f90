@@ -48,6 +48,8 @@ SUBROUTINE kcw_ham
     ! This should never happen (see check in kcw_readin). Just for extra safety
     IF (noncolin) CALL errore( 'kcw_ham', 'which_odd="ki | pkipz" not implemented for noncollinear calculations',1 )
     CALL dH_ki_full ( 1, dH_wann)
+    !!! Partial implementation for kpoint sampling.
+    !CALL dH_ki_full_qpoints (1, dH_wann)
   ELSE
     ! This should never happen (see check in kcw_readin). Just for extra safety
     CALL errore( 'kcw_ham', 'Something wrong with which_odd',1 )

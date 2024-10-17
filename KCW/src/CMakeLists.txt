@@ -40,6 +40,7 @@ set(src_kcw
     koopmans_ham.f90
     full_ham.f90
     self_hartree.f90
+    self_Hxc.f90
     group_orbitals.f90
     kcw_run_nscf.f90
     kcw_init_q.f90
@@ -49,6 +50,7 @@ set(src_kcw
     coulomb.f90
     dH_ki_quadratic.f90
     dH_ki_full.f90
+    dH_ki_full_qpoints.f90
     koopmans_ham_proj.f90
     koopmans_ham_uniq.f90)
 

@@ -11,7 +11,7 @@
 #define ONE  ( 1.D0, 0.D0 )
 !
 !-----------------------------------------------------------------------
-SUBROUTINE dH_ki_full (ik, dH_wann)
+SUBROUTINE dH_ki_full_qpoints (ik, dH_wann)
   !-----------------------------------------------------------------------
   !
   ! This routine compute the full KI or the pKIPZ correction to the spectrum
@@ -60,26 +60,22 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !     diagonal term, i.e.  <j|h_i|i> = <j|h_j|i> ==0 for each i/=j.)
   ! 
   !
-  USE wavefunctions,         ONLY : psic
   USE kinds,                 ONLY : DP
   USE io_global,             ONLY : stdout
-  USE wvfct,                 ONLY : npw, nbnd, npwx
-  USE fft_base,              ONLY : dffts, dfftp
+  USE wvfct,                 ONLY : nbnd, npwx
+  USE fft_base,              ONLY : dffts
   USE lsda_mod,              ONLY : lsda, current_spin,nspin
-  USE klist,                 ONLY : ngk, init_igk, igk_k, nkstot
-  USE gvect,                 ONLY : ngm
+  USE klist,                 ONLY : init_igk, nkstot
   USE gvecs,                 ONLY : ngms
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
-  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, iurho_wann, &
-                                    num_wann_occ, iuwfc_wann, kcw_iverbosity, &
-                                    qp_symm, evc0, kipz_corr, num_wann, &
-                                    spin_component, l_alpha_corr, on_site_only, nrho
+  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, &
+                                    num_wann_occ, &
+                                    qp_symm, kipz_corr, num_wann, &
+                                    spin_component, l_alpha_corr, on_site_only
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum
-  USE mp_bands,              ONLY : intra_bgrp_comm
-  USE cell_base,             ONLY : omega
-  USE scf,                   ONLY : rho, rho_core, rhog_core, create_scf_type, scf_type
+  USE scf,                   ONLY : create_scf_type, scf_type
   USE constants,             ONLY : rytoev
   !
   USE exx,                   ONLY : vexx, exxinit, exxenergy2
@@ -92,36 +88,24 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   INTEGER, INTENT(IN) :: ik
   ! the k-point index in hte orignal mesh of k-points
   !
-  INTEGER :: ibnd, ir, k, dim_ham, nspin_aux, lrwfc
+  INTEGER :: ibnd, dim_ham
   !
-  REAL(DP) :: sh, aux_r(dfftp%nnr) 
-  COMPLEX(DP) :: rhor(dffts%nnr)
-  ! ... orbital density in rela space
+  REAL(DP) :: sh
+  COMPLEX(DP) :: shxc 
   !
-  COMPLEX(DP) rhog(ngms), aux_g(ngm)
-  ! ... orbital density in G space
-  !
-  REAL(DP) :: vxc_minus1(dfftp%nnr,2), vxc(dfftp%nnr,nspin), w1
-  COMPLEX(DP) :: vh_rhor(dfftp%nnr,nspin)
-  !  
-  TYPE (scf_type) :: rho_minus1
-  !
-  REAL(DP) ::  vtxc, etxc, vtxc_minus1, etxc_minus1, etmp, delta_eig(nbnd)
+  REAL(DP) ::  etxc, etxc_minus1, etmp, delta_eig(nbnd)
   !
   COMPLEX(DP) , ALLOCATABLE :: ham_right(:,:), vpsi_r(:), vpsi_g(:)
   !
-  COMPLEX(DP) :: delta_vr(dffts%nnr,nspin), delta_vr_(dffts%nnr,nspin)
-  COMPLEX(DP) :: rhowann(dffts%nnr, num_wann, nrho)
-  COMPLEX(DP), ALLOCATABLE  :: delta_vg(:,:), vh_rhog(:), delta_vg_(:,:)
-  COMPLEX(DP) :: deltah_scal
+  COMPLEX(DP), ALLOCATABLE  :: vh_rhog(:), delta_vg_(:,:)
   REAL(DP) :: ddH
-  COMPLEX(DP) :: dhkipz
   INTEGER :: segno
-  INTEGER :: lrrho
+  REAL(DP) :: krnl
+  LOGICAL :: is_emp
   !
   !
   ALLOCATE (vpsi_r(dffts%nnr), vpsi_g(npwx))
-  ALLOCATE ( delta_vg(ngms,nspin), vh_rhog(ngms), delta_vg_(ngms,nspin) )
+  ALLOCATE ( vh_rhog(ngms), delta_vg_(ngms,nspin) )
   !
   !
   IF (kipz_corr) THEN 
@@ -130,26 +114,9 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      WRITE(stdout,'(/,5x,"INFO: KI calcualtion: Full Hamiltonian ... ",/ )')
   ENDIF
   IF (on_site_only) WRITE(stdout, '(/,5X, "INFO: Skipping off-diag: only R=0 and i=j")') 
-  !
-  w1 = 1.D0 / omega
-  !
-  nspin_aux=nspin
-  nspin=2
-  CALL create_scf_type (rho_minus1)
-  nspin=nspin_aux
-  !
-  lrwfc = num_wann*npwx
-  CALL get_buffer ( evc0, lrwfc, iuwfc_wann, ik )
-  ! Retrive the variational orbital at kpoint k (includes spin)  
-  IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8X, "INFO: u_k(g) RETRIEVED"/)')
-  !
-  lrrho=num_wann*dffts%nnr*nrho
-  CALL get_buffer (rhowann, lrrho, iurho_wann, ik)
-  IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8X, "INFO: rhowann RETRIEVED"/)')
-  !
-  ! FIXME: Do I really need this? 
-  CALL compute_map_ikq_single (ik)
-  ! find tha map k+q --> k'+G and store the res 
+  IF ( .NOT. on_site_only) THEN
+     CALL infomsg('dH_ki_full_qpoints','WARNING: off-diagonal matrix element not implemented yet with k point sampling.')
+  ENDIF 
   !
   dim_ham = num_wann
   ALLOCATE ( ham_right (dim_ham,dim_ham) )
@@ -157,7 +124,6 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   orb_loop: DO ibnd = 1, num_wann
      !
-     vpsi_g(:) = (0.D0,0.D0)
      ! keep track of occ ...
      segno = -1 
      ! ... vs empty states
@@ -167,24 +133,10 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      ! 
      IF ( lsda ) current_spin = spin_component
      ! 
-     ! ... Compute the orbital density ...
-     !
-     npw = ngk(ik)
-     psic(:) = ( 0.D0, 0.D0 )
-     psic(dffts%nl(igk_k(1:npw,ik))) = evc0(1:npw,ibnd)
-     CALL invfft ('Wave', psic, dffts)
-     !
-     rhor(:) = rhowann(:,ibnd,1)
-     CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, 1, delta_vr_, delta_vg_ )
-     rhor = rhor/omega
-     !! The periodic part of the perturbation DeltaV_q(G)
-     !
-     deltah_scal = - 0.5D0 * sum (CONJG(rhog (:)) * delta_vg(:,spin_component)) * omega
-     sh          =   0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:)                ) * omega
-     CALL mp_sum (sh, intra_bgrp_comm)
-     !WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, sh
-     !
-     IF (l_alpha_corr) CALL beyond_2nd (deltah_scal, ddH, ibnd)
+     shxc = 0.0
+     CALL self_hxc(ibnd, shxc)
+     shxc=-shxc
+     IF (l_alpha_corr) CALL beyond_2nd (shxc, ddH, ibnd)
      !
      IF (alpha_final(ibnd) .gt. 1.02 ) THEN
         WRITE(stdout,'("WARNING: alpha for orbital", i5, i3, "  bigger than 1.02.", F15.8, "Set it to 1.00",/)') ibnd, &
@@ -198,46 +150,13 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         alpha_final(ibnd) = 1.D0
      ENDIF
      !
-     ! ... transform Hartree potential to real space
-     !
-     vh_rhor(:,:)=0.D0
-     vh_rhor(dffts%nl(:),spin_component) = vh_rhog(:) 
-     CALL invfft ('Rho', vh_rhor (:,spin_component), dffts)
-     !
-     ! .. Add the xc contribution ...
-     !
-     etxc = 0.D0; vtxc = 0.D0; vxc(:,:) = 0.D0
-     CALL v_xc( rho, rho_core, rhog_core, etxc, vtxc, vxc )
-     !
-     etmp =0.D0
-     etmp = sum ( vxc(1:dffts%nnr,current_spin) * REAL(rhor(1:dffts%nnr),kind=DP) )
-     etmp = etmp/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )*omega
-     CALL mp_sum (etmp, intra_bgrp_comm) 
-     !
-     IF (nspin == 1 ) THEN
-        rho_minus1%of_r(:,1) = rho%of_r(:,1)
-        rho_minus1%of_r(:,2) = 0.D0
-        rho_minus1%of_g(:,1) = rho%of_g(:,1)
-        rho_minus1%of_g(:,2) = 0.D0
-     ELSE
-        rho_minus1%of_r(:,:) = rho%of_r(:,:)
-        rho_minus1%of_g(:,:) = rho%of_g(:,:)
-     ENDIF
-     !
-     delta_eig(ibnd) = 0.D0
-     !
-     rho_minus1%of_r(:,1) = rho_minus1%of_r(:,1) + segno * REAL(rhor(:),kind=DP)  ! denisty rho \pm rho_i in real space
-     rho_minus1%of_g(:,1) = rho_minus1%of_g(:,1) + segno * rhog(:)  ! denisty rho \pm rho_i in reciprocal scape
-     ! The magnetization depends on which channel we remove the orbital from
-     ! we reduce by n_i(r) if current_spin=1, we increase by n_i(r) if current_spin=2
-     ! This is taken care by the factor (3-2*current_spin)
-     rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) + segno * (3-2*spin_component)*REAL(rhor(:),kind=DP)  ! magnetization m-m_i in real space
-     rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) + segno * (3-2*spin_component)*rhog(:)  ! magnetization m-m_i in reciprocal scape
-     ! 
-     etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
-     nspin_aux=nspin; nspin=2
-     CALL v_xc( rho_minus1, rho_core, rhog_core, etxc_minus1, vtxc_minus1, vxc_minus1 )
-     nspin=nspin_aux
+     sh = 0.D0
+     CALL self_hartree (ibnd, sh)
+     krnl   = 0.d0
+     is_emp = .false.
+     IF (ibnd .gt. num_wann_occ) is_emp = .true.
+     CALL xc_energy_n    ( ibnd, etxc, etmp, krnl ) 
+     CALL xc_energy_npm1 ( ibnd, etxc_minus1, is_emp )
      !
      delta_eig(ibnd) = (sh - etxc + etxc_minus1 - segno * etmp)
      delta_eig(ibnd) = segno * delta_eig(ibnd)
@@ -256,79 +175,21 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      !WRITE(stdout,*) ibnd, ibnd, REAL(ham_right(ibnd,ibnd)), AIMAG(ham_right(ibnd,ibnd))
      !
      ! Eventually the KI off-diagonal contribution. Only apply to empty manifold. 
-     IF ( .NOT. on_site_only .AND. ibnd .GT. num_wann_occ) THEN
-        !
-        vpsi_r(:) = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = ( vh_rhor(ir,current_spin) + vxc_minus1(ir,current_spin) - &
-                   vxc(ir,current_spin) ) * psic(ir)
-           IF (lrpa) vpsi_r (ir) =  vh_rhor(ir,current_spin) * psic(ir)
-        ENDDO
-        !
-        ! 1) GO to G-space and store the ki gradient. v_i|phi_i> 
-        CALL fwfft ('Wave', vpsi_r, dffts)
-        vpsi_g(:) = vpsi_r(dffts%nl(igk_k(:,ik)))
-        !
-        DO k = num_wann_occ+1, num_wann
-           IF (k == ibnd) CYCLE
-           ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) ) 
-           CALL mp_sum (ham_right(k,ibnd), intra_bgrp_comm)
-           !WRITE(stdout,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
-        ENDDO 
-        !
-     ENDIF
-     !
      ! pKIPZ
      IF (kipz_corr) THEN 
         !
         ! First the diagonal correction 
         !
-        ! Use rho_minus as a workspace 
-        rho_minus1%of_r(:,:) = 0.D0
-        rho_minus1%of_g(:,:) = (0.D0, 0.D0)
-        rho_minus1%of_r(:,1) = REAL(rhor(:),kind=DP)  ! orbital denisty rho_i in real space
-        rho_minus1%of_r(:,2) = (3-2*spin_component)*REAL(rhor(:),kind=DP)  ! orbital magnetization m_i in real space
-        rho_minus1%of_g(:,1) = rhog(:)  ! orbital denisty rho_i in reciprocal scape
-        rho_minus1%of_g(:,2) = (3-2*spin_component)*rhog(:)  ! orbital magnetization m_i in reciprocal scape
+        ! TO BE WRITTEN
+        CALL xc_energy_iwann ( ibnd, etxc_minus1) 
         !
-        etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
-        nspin_aux=nspin; nspin=2
-        aux_r =0.D0 ; aux_g = (0.D0, 0.D0)
-        CALL v_xc( rho_minus1, aux_r, aux_g, etxc_minus1, vtxc_minus1, vxc_minus1 )
-        nspin=nspin_aux
-        !
-        WRITE(stdout , '(8x, "PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}", 3F15.8)') &
-            sh, etxc_minus1, vtxc_minus1
+        WRITE(stdout , '(8x, "PZ corr const term, sh[n_i], Exc[n_i]}", 3F15.8)') &
+            sh, etxc_minus1
         !
         WRITE(stdout,'(8X, "Delta PZ", 2F15.8)')  -(sh+etxc_minus1), -(sh+etxc_minus1)*alpha_final(ibnd)
         !
         delta_eig(ibnd) = delta_eig(ibnd) -(sh+etxc_minus1)
         ham_right(ibnd,ibnd) = ham_right(ibnd,ibnd) -(sh+etxc_minus1) *alpha_final(ibnd)
-        !
-        !
-        ! Eventually the off-diagonal contribution
-        IF ( .NOT. on_site_only) THEN 
-           !
-           vpsi_r(:) = (0.D0, 0.D0)
-           DO ir = 1, dffts%nnr
-              vpsi_r (ir) = ( - vh_rhor(ir,current_spin) - vxc_minus1(ir,current_spin) ) * psic(ir)
-           ENDDO 
-           !
-           ! 1) GO to G-space and store the ki gradient 
-           CALL fwfft ('Wave', vpsi_r, dffts)
-           vpsi_g(:) = vpsi_r(dffts%nl(igk_k(:,ik)))
-           !
-           DO k = 1, num_wann
-              IF (k == ibnd ) CYCLE
-              IF (ibnd .LE. num_wann_occ .AND. k .GT. num_wann_occ ) CYCLE  ! NO occ-empty matrix elements
-              IF (ibnd .GT. num_wann_occ .AND. k .LE. num_wann_occ ) CYCLE  ! NO empty-occ matrix elements
-              dhkipz = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
-              CALL mp_sum (dhkipz, intra_bgrp_comm)
-              ham_right(k,ibnd) = ham_right(k,ibnd) + dhkipz
-              !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
-           ENDDO
-           !
-        ENDIF 
         !
      ENDIF
      !
@@ -354,7 +215,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   DEALLOCATE (ham_right) 
   !
   DEALLOCATE (vpsi_r, vpsi_g) 
-  DEALLOCATE ( delta_vg, vh_rhog, delta_vg_)
+  DEALLOCATE ( vh_rhog, delta_vg_)
   !
   CONTAINS
   !
@@ -436,4 +297,4 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
     !
   END SUBROUTINE beyond_2nd
   !
-END subroutine dH_ki_full
+END subroutine dH_ki_full_qpoints
