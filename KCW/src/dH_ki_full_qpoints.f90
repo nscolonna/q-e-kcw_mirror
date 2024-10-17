@@ -103,10 +103,8 @@ SUBROUTINE dH_ki_full_qpoints (ik, dH_wann)
   REAL(DP) :: krnl
   LOGICAL :: is_emp
   !
-  !
   ALLOCATE (vpsi_r(dffts%nnr), vpsi_g(npwx))
   ALLOCATE ( vh_rhog(ngms), delta_vg_(ngms,nspin) )
-  !
   !
   IF (kipz_corr) THEN 
      WRITE(stdout,'(/,5x,"INFO: pKIPZ calcualtion ... ",/ )')
@@ -180,7 +178,7 @@ SUBROUTINE dH_ki_full_qpoints (ik, dH_wann)
         !
         ! First the diagonal correction 
         !
-        ! TO BE WRITTEN
+        ! The xc energy of rho_i
         CALL xc_energy_iwann ( ibnd, etxc_minus1) 
         !
         WRITE(stdout , '(8x, "PZ corr const term, sh[n_i], Exc[n_i]}", 3F15.8)') &
