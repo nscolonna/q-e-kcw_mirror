@@ -12,13 +12,14 @@
 SUBROUTINE koopmans_ham ()
   !---------------------------------------------------------------------
   !
-  USE io_global,             ONLY : stdout
+  USE io_global,             ONLY : stdout, ionode
+  USE io_files,              ONLY : prefix 
   USE kinds,                 ONLY : DP
   USE klist,                 ONLY : nkstot, xk
   USE lsda_mod,              ONLY : nspin
   USE control_kcw,           ONLY : num_wann, Hamlt, nqstot, l_alpha_corr, evc0, &
                                     alpha_final, num_wann_occ, on_site_only, iuwfc_wann, &
-                                    nkstot_eff
+                                    nkstot_eff, tmp_dir_kcw
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
   USE units_lr,              ONLY : lrwfc, iuwfc
@@ -29,7 +30,7 @@ SUBROUTINE koopmans_ham ()
   IMPLICIT NONE
   !
   ! The k point index 
-  INTEGER :: ik
+  INTEGER :: ik, iks
   !
   ! The scalar part (independent on k) <rho_0i|v_0i|rho_0i>delta_ij
   COMPLEX(DP) :: deltah_scal (num_wann, num_wann)
@@ -39,6 +40,7 @@ SUBROUTINE koopmans_ham ()
   !
   ! the KI hamiltonian, the KI contribution, and the new eigenvectors at a given k-point
   COMPLEX(DP) :: ham(num_wann,num_wann), deltaH(num_wann,num_wann), eigvc(npwx*npol,num_wann)
+  COMPLEX(DP) :: hks(nkstot, num_wann, num_wann)
   !
   ! The new eigenalues 
   REAL(DP) :: eigvl(num_wann)
@@ -51,6 +53,9 @@ SUBROUTINE koopmans_ham ()
   REAL(DP) :: ehomo, elumo
   REAL(DP) :: ehomo_ks, elumo_ks
   INTEGER  :: lrwannfc
+  LOGICAL  :: exst
+  INTEGER  :: iun_res
+  LOGICAL  :: ikdone(nkstot)
   !
   !
   IF (on_site_only) WRITE(stdout, '(/,5X, "INFO: Skipping off-diag: only R=0 and i=j")') 
@@ -58,6 +63,7 @@ SUBROUTINE koopmans_ham ()
   ! The scalar term R=0 i=j 
   deltah_scal=CMPLX(0.D0,0.D0,kind=DP)
   CALL ham_scalar (deltah_scal)
+  !
   ! 
 #ifdef DEBUG
   WRITE( stdout,'(/,5X," Scalar term Hamiltonian:")')
@@ -74,7 +80,6 @@ SUBROUTINE koopmans_ham ()
   WRITE( stdout,'(/,5X," Scalar term Hamiltonian plus correction:")')
   ham = deltah_scal
   DO iwann=1, num_wann
-    ham(iwann,iwann) = ham(iwann,iwann)-ddH(iwann)
     WRITE(stdout,'(5X,10(2F10.6, 2x))') (ham(iwann,jwann), jwann=1,num_wann)
   ENDDO
   ! DEBUG
@@ -85,50 +90,74 @@ SUBROUTINE koopmans_ham ()
   ehomo_ks=-1D+6
   elumo_ks=+1D+6
   !
+  ! Restart hamitl
+  iks = 1
+  iun_res = 987
+  OPEN (iun_res, file = TRIM(tmp_dir_kcw)//TRIM(prefix)//'.hamlt_res.txt')
+  !
+  hks = CMPLX(0.D0, 0.D0, kind=DP)
+  ikdone(:) = .FALSE.
+  hks = Hamlt
+  CALL read_ham (ikdone, iun_res)
+  !
   DO ik = 1, nkstot_eff
     !
-    deltah_real = CMPLX(0.D0, 0.D0, kind = DP)
-    !
-    IF (.NOT. on_site_only) THEN 
-       ! General routine for empty state hamiltonian at k
-       CALL koopmans_ham_real_k ( ik, deltah_real )
-    ELSE
-      ! SKIP off-diagonal elements in REAL SPACE (i.e. R/=0 i/=j) 
-      ! If only R=0 and i=j, then the "real" contribution for empty states
-      ! is <wi| {\int f_Hxc wi^2} |wi> (which is simply -2.D0 times
-      ! the scalar controbution -0.5*<wi^2|f_Hxc|wi^2>) 
-      DO iwann = num_wann_occ+1, num_wann
-        deltah_real(iwann,iwann) = -2.D0*deltah_scal(iwann,iwann)
-      ENDDO
-    ENDIF
-    !
-    !
+    IF (.NOT. ikdone (ik) ) THEN 
+      !      
+      deltah_real = CMPLX(0.D0, 0.D0, kind = DP)
+      !
+      IF (.NOT. on_site_only) THEN 
+         ! General routine for empty state hamiltonian at k
+         CALL koopmans_ham_real_k ( ik, deltah_real )
+      ELSE
+        ! SKIP off-diagonal elements in REAL SPACE (i.e. R/=0 i/=j) 
+        ! If only R=0 and i=j, then the "real" contribution for empty states
+        ! is <wi| {\int f_Hxc wi^2} |wi> (which is simply -2.D0 times
+        ! the scalar controbution -0.5*<wi^2|f_Hxc|wi^2>) 
+        DO iwann = num_wann_occ+1, num_wann
+          deltah_real(iwann,iwann) = -2.D0*deltah_scal(iwann,iwann)
+        ENDDO
+      ENDIF
+      !
+      !
 #ifdef DEBUG
-    WRITE( stdout,'(/,5X," Real term Hamiltonian ik =:", i5)') ik
-    DO iwann=1, num_wann
-      WRITE(stdout,'(5X,10(2F10.6, 2x))') (deltah_real(iwann,jwann), jwann=1,num_wann)
-    ENDDO
-#endif
-    !
-    ! The KS hamiltonian in the Wannier Gauge (just to check)
-    ham(:,:) = Hamlt(ik,:,:) 
-    CALL cdiagh( num_wann, ham, num_wann, eigvl, eigvc )
-    !
-    ! The KI contribution at k
-    deltaH = deltah_scal + deltah_real
-    !
-    ! Apply the screening coefficient
-!    DO iwann = 1, num_wann; deltaH(:,iwann) = alpha_final (iwann)* deltaH(:,iwann) ; ENDDO  
-    DO iwann = 1, num_wann
-      DO jwann = iwann , num_wann
-        deltaH(iwann,jwann) = deltaH(iwann,jwann)*alpha_final(jwann)
-        deltaH(jwann,iwann) = CONJG(deltaH(iwann,jwann))
+      WRITE( stdout,'(/,5X," Real term Hamiltonian ik =:", i5)') ik
+      DO iwann=1, num_wann
+        WRITE(stdout,'(5X,10(2F10.6, 2x))') (deltah_real(iwann,jwann), jwann=1,num_wann)
       ENDDO
-    ENDDO
-  
+#endif
+      !
+      !
+      ! The KI contribution at k
+      deltaH = deltah_scal + deltah_real
+      !
+      ! Apply the screening coefficient
+  !    DO iwann = 1, num_wann; deltaH(:,iwann) = alpha_final (iwann)* deltaH(:,iwann) ; ENDDO  
+      DO iwann = 1, num_wann
+        DO jwann = iwann , num_wann
+          deltaH(iwann,jwann) = deltaH(iwann,jwann)*alpha_final(jwann)
+          deltaH(jwann,iwann) = CONJG(deltaH(iwann,jwann))
+        ENDDO
+      ENDDO
+      !
+      ! Add to the KS Hamiltonian
+      Hamlt(ik,:,:) = Hamlt(ik,:,:) + deltaH(:,:) 
+      !
+    ELSE
+       WRITE(stdout, '(5X, "ik = ", I5, "from restart file")') ik
+    ENDIF ! ikdone
     !
-    ! Add to the KS Hamiltonian
-    Hamlt(ik,:,:) = Hamlt(ik,:,:) + deltaH(:,:) 
+    ! Write partial results on file
+    ham(:,:) = Hamlt(ik,:,:) 
+    !
+    IF (ionode) THEN 
+      CALL write_ham (ik, ham, iun_res)
+      !
+      ! Save the satus of the hamiltonian calculation
+      OPEN(985, file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.hamlt.status')
+      REWIND(985)
+      WRITE(985,'(i5)') ik
+    ENDIF
     !
 #ifdef DEBUG
     WRITE(stdout, '("KI Contribution to the Hamiltonian at k = ", i4)') ik
@@ -141,6 +170,10 @@ SUBROUTINE koopmans_ham ()
       WRITE(stdout, '(200(2f8.4,2x))') (REAL(Hamlt(ik, iwann,jwann)),AIMAG(Hamlt(ik,iwann,jwann)), jwann=1,num_wann)
     ENDDO
 #endif
+    !
+    ! The KS hamiltonian in the Wannier Gauge (just to check)
+    ham(:,:) = hks(ik,:,:) 
+    CALL cdiagh( num_wann, ham, num_wann, eigvl, eigvc )
     !
     WRITE( stdout, 9020 ) ( xk(i,ik), i = 1, 3 )
     WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
@@ -197,6 +230,78 @@ SUBROUTINE koopmans_ham ()
   !
   CONTAINS 
   !
+  !-----------------------------------------------------------------------
+SUBROUTINE read_ham (ikdone, iun_res)
+  !-----------------------------------------------------------------------
+  !
+  USE kinds,            ONLY : DP
+  USE io_global,        ONLY : ionode, ionode_id, stdout
+  USE mp,               ONLY : mp_bcast
+  USE mp_global,        ONLY : intra_image_comm
+  USE control_kcw,      ONLY : l_do_alpha, iorb_start, iorb_end, tmp_dir_kcw, nkstot_eff, num_wann
+  USE io_files,         ONLY : prefix
+  !
+  IMPLICIT NONE
+  !
+  INTEGER, INTENT(IN)    :: iun_res
+  LOGICAL, INTENT(INOUT) :: ikdone(nkstot_eff)
+  INTEGER :: ik, ik_, iks
+  INTEGER :: iw, jw
+  COMPLEX(DP) :: ham(num_wann,num_wann)
+  !
+  LOGICAL :: exst, do_real_space
+  !
+  INQUIRE(file=TRIM(tmp_dir_kcw)//TRIM(prefix)//'.hamlt.status', exist=exst)
+  IF( .NOT. exst) THEN
+    RETURN
+  ELSE
+    OPEN( 985, file = TRIM(tmp_dir_kcw)//TRIM(prefix)//'.hamlt.status')
+  ENDIF
+  !
+  OPEN (iun_res, file = TRIM(tmp_dir_kcw)//TRIM(prefix)//'.hamlt_res.txt')
+  IF (ionode) THEN
+    !
+    READ(985, '(i5)') iks
+    iks = iks+1
+    !
+    WRITE(stdout, '(5X, "restart FOUND. ")')
+    DO ik = 1, iks -1
+      ikdone(ik) = .TRUE.
+      READ  (iun_res,'(I5)') ik_
+      !
+      DO iw = 1, num_wann
+         READ(iun_res, '(2F24.18)') (ham(iw,jw), jw=1,num_wann)
+      ENDDO
+      !
+      Hamlt(ik,:,:) = ham(:,:)
+    ENDDO
+    !
+  ENDIF
+  !
+  call mp_bcast ( ham,  ionode_id, intra_image_comm )
+  RETURN
+  !
+END SUBROUTINE read_ham
+  !
+  !----------------------------------------------------------------
+  SUBROUTINE write_ham (ik, ham, iun_res)
+    !----------------------------------------------------------------
+    USE kinds,                 ONLY : DP
+    USE control_kcw,           ONLY : num_wann
+    IMPLICIT NONE
+    !
+    COMPLEX(DP), INTENT(IN) :: ham(num_wann,num_wann)
+    INTEGER, INTENT(IN)     :: ik, iun_res
+    INTEGER :: iw,jw
+    !
+    WRITE(*, '(5X, "Writing partial results on disk. ik =", I5)') ik
+    WRITE(iun_res,'(I5)') ik
+    DO iw = 1, num_wann
+      WRITE(iun_res, '(2F24.18)') (REAL(ham(iw,jw)), AIMAG(ham(iw,jw)), jw=1,num_wann)
+    ENDDO
+    !
+    RETURN
+  END subroutine write_ham
   !
   !----------------------------------------------------------------
   SUBROUTINE beyond_2nd (deltaH, ddH)
