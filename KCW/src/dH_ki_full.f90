@@ -17,7 +17,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   ! This routine compute the full KI or the pKIPZ correction to the spectrum
   ! KI potential:   See Eq. A8-A11 in PRB 90, 075135 (2014).
   ! KIPZ potential: See Eq. A15 in PRB 90, 075135 (2014).
-  ! NB: Only the insulating case -i.e. fi=1 or fi=0
+  ! NB: Only the insulating case -i.e. fi=1 or fi=0 is considered
   ! 
   ! KI potenital:
   ! First the diagonal corrections are computed (i==j):

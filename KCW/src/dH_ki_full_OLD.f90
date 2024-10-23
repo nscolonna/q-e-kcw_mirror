@@ -15,6 +15,9 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !-----------------------------------------------------------------------
   !
   ! This routine compute the KI correction to the spectrum
+  ! Nov 2024
+  ! OBSOLETE: Refactorized in dH_ki_full.f90 
+  !           Kept here for reference. Will disappear soon.
   !
   USE wavefunctions,         ONLY : psic
   USE kinds,                 ONLY : DP

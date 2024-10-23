@@ -17,7 +17,7 @@ SUBROUTINE dH_ki_full_qpoints (ik, dH_wann)
   ! This routine compute the full KI or the pKIPZ correction to the spectrum
   ! KI potential:   See Eq. A8-A11 in PRB 90, 075135 (2014).
   ! KIPZ potential: See Eq. A15 in PRB 90, 075135 (2014).
-  ! NB: Only the insulating case -i.e. fi=1 or fi=0
+  ! NB: Only the insulating case -i.e. fi=1 or fi=0 for each i- is considered
   ! 
   ! KI potenital:
   ! First the diagonal corrections are computed (i==j):
@@ -172,7 +172,6 @@ SUBROUTINE dH_ki_full_qpoints (ik, dH_wann)
      ham_right(ibnd,ibnd) = delta_eig(ibnd) * alpha_final(ibnd)
      !WRITE(stdout,*) ibnd, ibnd, REAL(ham_right(ibnd,ibnd)), AIMAG(ham_right(ibnd,ibnd))
      !
-     ! Eventually the KI off-diagonal contribution. Only apply to empty manifold. 
      ! pKIPZ
      IF (kipz_corr) THEN 
         !
