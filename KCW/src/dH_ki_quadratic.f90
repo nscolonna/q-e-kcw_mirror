@@ -15,7 +15,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
   USE io_global,             ONLY : stdout
   USE kinds,                 ONLY : DP
   USE lsda_mod,              ONLY : nspin
-  USE control_kcw,           ONLY : num_wann, nqstot, l_alpha_corr, &
+  USE control_kcw,           ONLY : num_wann, nqstot, l_alpha_corr, qp_symm, &
                                     alpha_final, num_wann_occ, on_site_only, h_proj, nkstot_eff
   USE constants,             ONLY : rytoev
   USE buffers,               ONLY : get_buffer, save_buffer
@@ -30,6 +30,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
   !
   ! The Hamiltonian due to the real contribution to the potential \int f_Hxc(r,r') rho_0i(r')
   COMPLEX(DP) deltah_real (num_wann, num_wann)
+  COMPLEX, ALLOCATABLE :: ham_right(:,:)
 #ifdef DEBUG
   COMPLEX(DP) ham (num_wann, num_wann)
 #endif
@@ -44,6 +45,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
   ! 
   REAL(DP), EXTERNAL :: get_clock
   !
+  ALLOCATE (ham_right (num_wann, num_wann) )
   dH_wann = CMPLX(0.D0,0.D0, kind=DP) 
   !
   WRITE(stdout,'(/,5x,"INFO: qKI calculation: quadratic Hamiltonian ... ",/ )')
@@ -111,18 +113,23 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
     ENDDO
 #endif
     !
-    !
     ! The KI contribution at k
-    dH_wann(ik,:,:) = deltah_scal(:,:) + deltah_real(:,:)
+    ham_right = deltah_scal + deltah_real
     !
     ! Apply the screening coefficient
 !    DO iwann = 1, num_wann; dH_wann(:,iwann) = alpha_final (iwann)* dH_wann(:,iwann) ; ENDDO  
     DO iwann = 1, num_wann
       DO jwann = iwann , num_wann
-        dH_wann(ik,iwann,jwann) = dH_wann(ik,iwann,jwann)*alpha_final(jwann)
-        dH_wann(ik,jwann,iwann) = CONJG(dH_wann(ik,iwann,jwann))
+        ham_right (iwann,jwann) = ham_right(iwann,jwann)*alpha_final(jwann)
       ENDDO
     ENDDO
+    !
+    ! h^R_{ij} = <\phi_i | H_j | \phi_j> 
+    ! h^L_{ij} = <\phi_i | H_i | \phi_j> = [<\phi_j | H_i | \phi_i>]^* = [h^R_{ji}]^*
+    IF (qp_symm) ham_right = 0.5D0*(ham_right + CONJG(TRANSPOSE(ham_right)))
+    !
+    ! Store the res in the global variable
+    dH_wann(ik,:,:) = ham_right(:,:)
     !
 #ifdef DEBUG
     WRITE(stdout, '("qKI Contribution to the Hamiltonian at k = ", i4)') ik
@@ -135,6 +142,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
   !
 900 FORMAT(/'     total cpu time spent up to now is ',F10.1,' secs' )
   !
+  DEALLOCATE ( ham_right ) 
 999 CONTINUE
   RETURN
   !
@@ -562,7 +570,6 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
             !dH_wann(jwann, iwann) = dH_wann(jwann,iwann) + SUM(rho_g_nm(:)*CONJG(delta_vg(:,spin_component)))*weight(iq)*omega
             !WRITE(*,'("NICOLA G", 2i5, 2F20.15)') iwann, jwann, SUM (CONJG(rho_g_nm (:)) * delta_vg(:,spin_component))*weight(iq)*omega
             !WRITE(*,'("NICOLA G", 2i5, 2F20.15)') iwann, jwann, SUM (rho_g_nm (:) * CONJG(delta_vg(:,spin_component)))*weight(iq)*omega
-            dH_wann(jwann,iwann) = CONJG(dH_wann(iwann,jwann))
             !
          ENDDO ! jwann
          ! 

@@ -83,7 +83,7 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
   !
   WRITE( stdout, '(/,5X, "INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN")')
   WRITE( stdout, '(  5X, "INFO: Unique Hamiltonian scheme using projectors:")')
-  WRITE( stdout, '(  5X, "      build and diagonalize the KI Hamiltonian on")')
+  WRITE( stdout, '(  5X, "      build and diagonalize the KI Hamiltonian in")')
   WRITE( stdout, '(  5X, "      the basis of KS orbitals")')
   !
   ALLOCATE ( dH_wann_aux(num_wann, num_wann) )
