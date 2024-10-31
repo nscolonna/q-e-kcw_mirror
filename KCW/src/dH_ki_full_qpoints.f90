@@ -67,7 +67,6 @@ SUBROUTINE dH_ki_full_qpoints (ik, dH_wann)
   USE lsda_mod,              ONLY : lsda, current_spin,nspin
   USE klist,                 ONLY : init_igk, nkstot
   USE gvecs,                 ONLY : ngms
-  USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
   USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, &
                                     num_wann_occ, &
