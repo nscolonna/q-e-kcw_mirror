@@ -30,6 +30,7 @@ compute_map_ikq_single.o \
 calculate_phase.o \
 structure_factor.o \
 rho_of_q.o \
+rho_of_q_gamma.o \
 kcw_prepare_q.o \
 bare_pot.o \
 solve_linter_koop_mod.o \

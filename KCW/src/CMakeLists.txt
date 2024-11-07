@@ -19,6 +19,7 @@ set(src_kcw
     calculate_phase.f90
     structure_factor.f90
     rho_of_q.f90
+    rho_of_q_gamma.f90
     kcw_prepare_q.f90
     bare_pot.f90
     solve_linter_koop_mod.f90

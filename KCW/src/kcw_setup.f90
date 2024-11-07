@@ -295,7 +295,11 @@ subroutine kcw_setup
     rhowann(:,:,:)=ZERO
     !! Initialize the periodic part of the wannier orbtal density at this q
     !
-    CALL rho_of_q (rhowann, ngk_all, igk_k_all)
+    IF (gamma_only) THEN
+      CALL rho_of_q_gamma (rhowann, ngk_all, igk_k_all)
+    ELSE
+      CALL rho_of_q (rhowann, ngk_all, igk_k_all)
+    ENDIF
     ! Compute the peridic part rho_q(r) of the wannier density rho(r)
     ! rho(r)   = \sum_q exp[iqr]rho_q(r)
     !
