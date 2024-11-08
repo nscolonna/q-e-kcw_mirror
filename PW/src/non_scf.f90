@@ -36,6 +36,7 @@ SUBROUTINE non_scf( )
   USE gvecs,                ONLY : doublegrid
   USE ions_base,            ONLY : nat
   USE xc_lib,               ONLY : stop_exx, xclib_dft_is
+  USE noncollin_module,     ONLY : noncolin
   !
   IMPLICIT NONE
   !
@@ -180,10 +181,92 @@ SUBROUTINE non_scf( )
      IF ( lorbm ) CALL orbm_kubo()
   END IF
   !
+  IF ( lsda .OR. noncolin ) CALL compute_magnetization()
+  !
   CALL stop_clock( 'electrons' )
   !
 9000 FORMAT(/'     total cpu time spent up to now is ',F10.1,' secs' )
 9002 FORMAT(/'     Band Structure Calculation' )
 9102 FORMAT(/'     End of band structure calculation' )
   !
+  !
+  CONTAINS
+     !-----------------------------------------------------------------------
+     SUBROUTINE compute_magnetization()
+       !-----------------------------------------------------------------------
+       !
+       USE cell_base,            ONLY : omega
+       USE noncollin_module,     ONLY : noncolin, magtot_nc, bfield
+       USE lsda_mod,             ONLY : magtot, absmag
+       USE mp_bands,             ONLY : intra_bgrp_comm
+       USE klist,                ONLY : lgauss
+       USE mp,                   ONLY : mp_sum
+       !
+       IMPLICIT NONE
+       !
+       INTEGER :: ir
+       REAL(DP) :: mag
+       !! local magnetization
+       !
+       !
+       IF ( lsda ) THEN
+          !
+          magtot = 0.D0
+          absmag = 0.D0
+          !
+          DO ir = 1, dfftp%nnr
+             !
+             mag = rho%of_r(ir,2)
+             !
+             magtot = magtot + mag
+             absmag = absmag + ABS( mag )
+             !
+          ENDDO
+          !
+          magtot = magtot * omega / ( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
+          absmag = absmag * omega / ( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
+          !
+          CALL mp_sum( magtot, intra_bgrp_comm )
+          CALL mp_sum( absmag, intra_bgrp_comm )
+          !
+          IF (two_fermi_energies.and.lgauss) bfield(3)=0.5D0*(ef_up-ef_dw)
+          !
+       ELSEIF ( noncolin ) THEN
+          !
+          magtot_nc = 0.D0
+          absmag    = 0.D0
+          !
+          DO ir = 1,dfftp%nnr
+             !
+             mag = SQRT( rho%of_r(ir,2)**2 + &
+                         rho%of_r(ir,3)**2 + &
+                         rho%of_r(ir,4)**2 )
+             !
+             DO i = 1, 3
+                !
+                magtot_nc(i) = magtot_nc(i) + rho%of_r(ir,i+1)
+                !
+             ENDDO
+             !
+             absmag = absmag + ABS( mag )
+             !
+          ENDDO
+          !
+          CALL mp_sum( magtot_nc, intra_bgrp_comm )
+          CALL mp_sum( absmag, intra_bgrp_comm )
+          !
+          DO i = 1, 3
+             !
+             magtot_nc(i) = magtot_nc(i) * omega / ( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
+             !
+          ENDDO
+          !
+          absmag = absmag * omega / ( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
+          !
+       ENDIF
+       !
+       RETURN
+       !
+     END SUBROUTINE compute_magnetization
+     !
 END SUBROUTINE non_scf
