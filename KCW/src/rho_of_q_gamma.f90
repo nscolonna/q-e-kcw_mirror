@@ -119,8 +119,8 @@ SUBROUTINE rho_of_q_gamma (rhowann, ngk_all, igk_k_all)
        w1 = 1.D0 
        w2 = w1
        !
-       rhowann(:,iband,1) =  w1 * DBLE ( psic(:) )**2 
-       rhowann(:,ebnd,1)  =  w2 * AIMAG( psic(:) )**2 
+       rhowann(:,iband,1) =  CMPLX(w1 * DBLE ( psic(:) )**2,kind=DP)
+       rhowann(:,ebnd,1)  =  CMPLX(w2 * AIMAG( psic(:) )**2, kind=DP)
        !
     ENDDO ! bands
     ! 

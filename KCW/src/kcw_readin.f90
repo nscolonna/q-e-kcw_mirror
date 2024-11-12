@@ -303,7 +303,7 @@ SUBROUTINE kcw_readin()
   IF ( mp1*mp2*mp3 /= nkstot_eff ) &
      CALL errore('kcw_readin', ' WRONG number of k points from input, check mp1, mp2, mp3', 1)
   !
-  IF (gamma_only) CALL errore('kcw_readin',&
+  IF (gamma_only .AND. calculation /= 'wann2kcw') CALL errore('kcw_readin',&
      'cannot start from pw.x data file using Gamma-point tricks',1)
   !
   IF (okpaw.or.okvan) CALL errore('kcw_readin',&

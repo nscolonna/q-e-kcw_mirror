@@ -350,7 +350,11 @@ subroutine kcw_setup
       rhowann_g(:,i,:) = rhog
       !! The periodic part of the perturbation DeltaV_q(G)
       ! 
-      sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:) )*weight(iq)*omega
+      IF (gamma_only) THEN 
+         sh(i) = sh(i) + sum (CONJG(rhog (:,1)) * vh_rhog(:) )*weight(iq)*omega
+      ELSE
+         sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:) )*weight(iq)*omega
+      ENDIF
       !
     ENDDO
     !
