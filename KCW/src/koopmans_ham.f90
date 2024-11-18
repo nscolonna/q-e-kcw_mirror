@@ -5,7 +5,7 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-!#define DEBUG
+#define DEBUG
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
 !-----------------------------------------------------------------------
@@ -281,10 +281,12 @@ SUBROUTINE koopmans_ham ()
     USE fft_base,             ONLY : dffts
     USE cell_base,            ONLY : omega
     USE gvecs,                ONLY : ngms
+    USE gvect,                ONLY : gstart
     USE mp_bands,             ONLY : intra_bgrp_comm
     USE mp,                   ONLY : mp_sum
     USE buffers,              ONLY : get_buffer
-    USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+    USE noncollin_module,     ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+    USE control_flags,        ONLY: gamma_only
     !
     IMPLICIT NONE
     !
@@ -344,16 +346,33 @@ SUBROUTINE koopmans_ham ()
          CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
          !! The periodic part of the perturbation DeltaV_q(G)
          ! 
-         sh(iwann) = sh(iwann) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:))*weight(iq)*omega
+         IF (gamma_only) THEN 
+           sh(iwann) = sh(iwann) + DBLE(sum (CONJG(rhog (:,1)) * vh_rhog(:))) * weight(iq)*omega
+           IF (gstart == 2) sh(iwann) = sh(iwann) - 0.5D0*DBLE(CONJG(rhog (1,1)) * vh_rhog(1)) *weight(iq)*omega
+         ELSE
+           sh(iwann) = sh(iwann) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:))*weight(iq)*omega
+         ENDIF
+         !
+         WRITE(*,*) "NICOLA SH =", sh(iwann)
          IF (nspin_mag==2) THEN
-           deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component)) &
+           !
+           IF (gamma_only) THEN 
+              deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) & 
+                      - DBLE( sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component))) * weight(iq) * omega
+              IF (gstart == 2) deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) & 
+                      + 0.5D0*DBLE(CONJG(rhog (1,1)) * delta_vg(1,spin_component)) * weight(iq) * omega
+           ELSE
+              deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component)) &
                                        * weight(iq) * omega
+           ENDIF
+           !
          ELSE
            DO ip =1,nspin_mag
               deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,ip)) * delta_vg(:,ip)) &
                                           * weight(iq) * omega
           END DO
-        END IF
+         END IF
+         WRITE(*,*) "NICOLA SHxc =", deltah_scal(iwann, iwann)
       ENDDO
       ! 
     ENDDO ! qpoints
@@ -401,7 +420,9 @@ SUBROUTINE koopmans_ham ()
     USE noncollin_module,     ONLY : npol
     !
     USE constants,            ONLY : rytoev
-    USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+    USE noncollin_module,     ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
+    USE control_flags,        ONLY: gamma_only
+    USE gvect,                ONLY : gstart
     ! 
     !
     IMPLICIT NONE
@@ -611,9 +632,19 @@ SUBROUTINE koopmans_ham ()
   !          ENDIF
             !
             IF (nspin==2 .and. .not. debug_nc) THEN
-              deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component)))*weight(iq)*omega
+              IF (gamma_only) THEN 
+                 deltaH(iwann, jwann) = deltaH(iwann,jwann) + 2.D0*DBLE(SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component))))*weight(iq)*omega
+                 IF (gstart ==2 ) deltaH(iwann, jwann) = deltaH(iwann,jwann) -1.D0*DBLE((rho_g_nm(1,1))*CONJG(delta_vg(1,spin_component)))*weight(iq)*omega
+              ELSE
+                 deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component)))*weight(iq)*omega
+              ENDIF
             ELSE IF (nspin==2 .and. debug_nc ) THEN 
-              deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))*weight(iq)*omega
+              IF (gamma_only) THEN
+                 deltaH(iwann, jwann) = deltaH(iwann,jwann) + 2.D0*DBLE(SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))) *weight(iq)*omega
+                 IF (gstart ==2 ) deltaH(iwann, jwann) = deltaH(iwann,jwann) -1.D0 *DBLE(delta_vg(1,spin_component)*conjg(rho_g_nm(1,1))) *weight(iq)*omega
+              ELSE
+                 deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))*weight(iq)*omega
+              ENDIF
             ELSE
               DO is=1,nspin_mag
                 deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM(CONJG(rho_g_nm(:,is))*(delta_vg(:,is)))*weight(iq)*omega

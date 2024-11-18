@@ -14,11 +14,13 @@ SUBROUTINE self_hartree (iwann, sh)
   USE fft_base,             ONLY : dffts
   USE cell_base,            ONLY : omega
   USE gvecs,                ONLY : ngms
+  USE gvect,                ONLY : gstart
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE buffers,              ONLY : get_buffer
   USE lsda_mod,             ONLY : nspin
   USE noncollin_module,     ONLY : nspin_mag
+  USE control_flags,        ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -62,7 +64,12 @@ SUBROUTINE self_hartree (iwann, sh)
     CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
     !! The periodic part of the perturbation DeltaV_q(G)
     ! 
-    sh = sh + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:) )*weight(iq)*omega
+    IF (gamma_only) THEN 
+      sh = sh + DBLE ( sum (CONJG(rhog (:,1)) * vh_rhog(:) ) ) * weight(iq)*omega
+      IF (gstart == 2) sh = sh - 0.5D0 * DBLE( CONJG(rhog (1,1)) * vh_rhog(1) ) *weight(iq)*omega
+    ELSE
+      sh = sh + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:) )*weight(iq)*omega
+    ENDIF
     !
     ! 
   ENDDO ! qpoints
