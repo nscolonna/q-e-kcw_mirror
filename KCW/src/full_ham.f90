@@ -220,9 +220,15 @@ SUBROUTINE full_ham (ik)
         IF (lrpa) delta_eig(ibnd) = (-sh)  !! hartree only for debug
         !
         vpsi_r(:) = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0) * psic_1(ir)
-        ENDDO
+        IF (gamma_only) THEN 
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+           ENDDO
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0) * psic_1(ir)
+           ENDDO
+        ENDIF
         !
         CALL fwfft ('Wave', vpsi_r, dffts)
         v_ki(:,ibnd) = vpsi_r(dffts%nl(igk_k(:,ik))) 
@@ -260,12 +266,21 @@ SUBROUTINE full_ham (ik)
         ! This is the KI gradient (the non-scalar part)
         vpsi_r(:) = (0.D0, 0.D0)
         etmp2 = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
-                                  delta_eig(ibnd)),0.D0) * psic_1(ir)
-           IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
-           etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
-        ENDDO 
+        IF (gamma_only) THEN
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
+                                     delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+              IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+              etmp2 = etmp2 + DBLE(psic_1(ir))*vpsi_r(ir)
+           ENDDO 
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
+                                     delta_eig(ibnd)),0.D0) * psic_1(ir)
+              IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
+              etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
+           ENDDO 
+        ENDIF
 !!        WRITE(*,'("NICOLA i, vi_r", i5, 10F16.8)') ibnd, v(1:5,spin_component)
         etmp2=etmp2/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
         CALL mp_sum (etmp2, intra_bgrp_comm)
@@ -309,11 +324,18 @@ SUBROUTINE full_ham (ik)
         !
         vpsi_r(:) = (0.D0, 0.D0)
         etmp2 = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0) * psic_1(ir)
-           etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
-!           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
-        ENDDO
+        IF (gamma_only) THEN 
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0) * DBLE(psic_1(ir))
+              etmp2 = etmp2 + DBLE(psic_1(ir))*vpsi_r(ir)
+           ENDDO
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0) * psic_1(ir)
+              etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
+!              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
+           ENDDO
+        ENDIF 
         ! The diagonal term. It's the shift of the KS eigenvalue in the canonical representation
         etmp2=etmp2/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
         CALL mp_sum (etmp2, intra_bgrp_comm)
