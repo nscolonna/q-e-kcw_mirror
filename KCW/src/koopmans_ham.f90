@@ -5,7 +5,7 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-#define DEBUG
+!#define DEBUG
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
 !-----------------------------------------------------------------------
@@ -353,7 +353,6 @@ SUBROUTINE koopmans_ham ()
            sh(iwann) = sh(iwann) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:))*weight(iq)*omega
          ENDIF
          !
-         WRITE(*,*) "NICOLA SH =", sh(iwann)
          IF (nspin_mag==2) THEN
            !
            IF (gamma_only) THEN 
@@ -372,7 +371,6 @@ SUBROUTINE koopmans_ham ()
                                           * weight(iq) * omega
           END DO
          END IF
-         WRITE(*,*) "NICOLA SHxc =", deltah_scal(iwann, iwann)
       ENDDO
       ! 
     ENDDO ! qpoints
@@ -549,7 +547,15 @@ SUBROUTINE koopmans_ham ()
          npw_k = ngk(ik)
          evc_k_g(:) =  evc0(:,iwann)
          evc_k_r(:,:) = CMPLX(0.D0,0.D0,kind=DP)
-         CALL invfft_wave (npw_k, igk_k (1,ik), evc_k_g , evc_k_r )
+         !
+         IF (gamma_only) THEN 
+           ! NOTA: non collinear and Gamma_trick not compatible --> npol will always be 1 here 
+           evc_k_r(dffts%nl(igk_k(1:npw_k,ik)),1)  = evc_k_g(1:npw_k)
+           evc_k_r(dffts%nlm(igk_k(1:npw_k,ik)),1)  = CONJG(evc_k_g(1:npw_k))
+           CALL invfft ('Wave', evc_k_r(:,1), dffts)
+         ELSE
+           CALL invfft_wave (npw_k, igk_k (1,ik), evc_k_g , evc_k_r )
+         ENDIF
          !! The wfc R=0 n=iwann in R-space at k
          !
          !DO jwann = iwann+1, num_wann 
@@ -570,12 +576,25 @@ SUBROUTINE koopmans_ham ()
             !
             evc_kq_g = evc0_kq(:,jwann)
             evc_kq_r = CMPLX(0.D0,0.D0,kind=DP)
+            !
             IF(nspin==4 .or. debug_nc ) THEN
               npw_kq_m = ngk(ikq_m)
-              CALL invfft_wave (npw_kq_m, igk_k (1,ikq_m), evc_kq_g , evc_kq_r )
+              IF (gamma_only) THEN
+                evc_kq_r(dffts%nl(igk_k(1:npw_kq_m,ik)),1)  = evc_kq_g(1:npw_kq_m)
+                evc_kq_r(dffts%nlm(igk_k(1:npw_kq_m,ik)),1)  = CONJG(evc_kq_g(1:npw_kq_m))
+                CALL invfft ('Wave', evc_kq_r(:,1), dffts)
+              ELSE
+                CALL invfft_wave (npw_kq_m, igk_k (1,ikq_m), evc_kq_g , evc_kq_r )
+              ENDIF
             ELSE
               npw_kq = ngk(ikq)
-              CALL invfft_wave (npw_kq, igk_k (1,ikq), evc_kq_g , evc_kq_r )
+              IF (gamma_only) THEN 
+                evc_kq_r(dffts%nl(igk_k(1:npw_kq,ik)),1)  = evc_kq_g(1:npw_kq)
+                evc_kq_r(dffts%nlm(igk_k(1:npw_kq,ik)),1)  = CONJG(evc_kq_g(1:npw_kq))
+                CALL invfft ('Wave', evc_kq_r(:,1), dffts)
+              ELSE
+                CALL invfft_wave (npw_kq, igk_k (1,ikq), evc_kq_g , evc_kq_r )
+              ENDIF 
             END IF
 
             ! The wfc in R-space at k' <-- k+q where k' = (k+q)-G_bar
@@ -635,15 +654,23 @@ SUBROUTINE koopmans_ham ()
               IF (gamma_only) THEN 
                  deltaH(iwann, jwann) = deltaH(iwann,jwann) + 2.D0*DBLE(SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component))))*weight(iq)*omega
                  IF (gstart ==2 ) deltaH(iwann, jwann) = deltaH(iwann,jwann) -1.D0*DBLE((rho_g_nm(1,1))*CONJG(delta_vg(1,spin_component)))*weight(iq)*omega
+                 ! NsC DEBUG 
+                 !deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM(rho_r_nm(:,1)*CONJG(delta_vr(:,spin_component))) * weight(iq) / (dffts%nr1*dffts%nr2*dffts%nr3 )
               ELSE
                  deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component)))*weight(iq)*omega
+                 ! NsC DEBUG 
+                 !deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM(rho_r_nm(:,1)*CONJG(delta_vr(:,spin_component))) * weight(iq) / ( dffts%nr1*dffts%nr2*dffts%nr3 )
               ENDIF
             ELSE IF (nspin==2 .and. debug_nc ) THEN 
               IF (gamma_only) THEN
                  deltaH(iwann, jwann) = deltaH(iwann,jwann) + 2.D0*DBLE(SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))) *weight(iq)*omega
                  IF (gstart ==2 ) deltaH(iwann, jwann) = deltaH(iwann,jwann) -1.D0 *DBLE(delta_vg(1,spin_component)*conjg(rho_g_nm(1,1))) *weight(iq)*omega
+                 ! NsC DEBUG
+                 !deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM(CONJG(rho_r_nm(:,1))*(delta_vr(:,spin_component))) * weight(iq) / ( dffts%nr1*dffts%nr2*dffts%nr3 )
               ELSE
                  deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))*weight(iq)*omega
+                 ! Nsc DEBUG
+                 !deltaH(iwann, jwann) = deltaH(iwann,jwann) + SUM(CONJG(rho_r_nm(:,1))*(delta_vr(:,spin_component))) * weight(iq) / ( dffts%nr1*dffts%nr2*dffts%nr3 )
               ENDIF
             ELSE
               DO is=1,nspin_mag
