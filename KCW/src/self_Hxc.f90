@@ -14,10 +14,12 @@ SUBROUTINE self_hxc (iwann, shxc)
   USE fft_base,             ONLY : dffts
   USE cell_base,            ONLY : omega
   USE gvecs,                ONLY : ngms
+  USE gvect,                ONLY : gstart
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : nspin_mag
+  USE control_flags,        ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -60,8 +62,14 @@ SUBROUTINE self_hxc (iwann, shxc)
     !
     CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
     !! The periodic part of the perturbation DeltaV_q(G)
-    ! 
-    shxc = shxc + 0.5D0 * sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component)) * weight(iq) * omega
+    !
+    ! FIXME: Is the factor 0.5 correct? 
+    IF (gamma_only) THEN 
+      shxc = shxc + DBLE ( sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component) ) ) * weight(iq) * omega
+      IF (gstart == 2)  shxc = shxc - 0.5D0 * DBLE ( CONJG(rhog (1,1)) * delta_vg(1,spin_component) ) * weight(iq) * omega
+    ELSE
+      shxc = shxc + 0.5D0 * sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component)) * weight(iq) * omega
+    ENDIF
     !
     ! 
   ENDDO ! qpoints

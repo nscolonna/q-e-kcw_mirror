@@ -24,7 +24,7 @@ SUBROUTINE full_ham (ik)
   USE fft_base,              ONLY : dffts, dfftp
   USE lsda_mod,              ONLY : lsda, current_spin
   USE klist,                 ONLY : nks, ngk, init_igk, igk_k, nkstot
-  USE gvect,                 ONLY : ngm
+  USE gvect,                 ONLY : ngm, gstart
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
   USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, hamlt, num_wann_occ, iuwfc_wann, &
@@ -39,6 +39,7 @@ SUBROUTINE full_ham (ik)
   USE exx,                   ONLY : vexx, exxinit, exxenergy2
   USE input_parameters,      ONLY : exxdiv_treatment
   USE noncollin_module,      ONLY : nspin_mag
+  USE control_flags,         ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -126,6 +127,7 @@ SUBROUTINE full_ham (ik)
      npw = ngk(ik)
      psic(:) = ( 0.D0, 0.D0 )
      psic(dffts%nl(igk_k(1:npw,ik))) = evc0(1:npw,ibnd)
+     IF (gamma_only) psic(dffts%nlm(igk_k(1:npw,ik))) = CONJG(evc0(1:npw,ibnd))
      CALL invfft ('Wave', psic, dffts)
      !
      ! Store the result needed below
@@ -218,9 +220,15 @@ SUBROUTINE full_ham (ik)
         IF (lrpa) delta_eig(ibnd) = (-sh)  !! hartree only for debug
         !
         vpsi_r(:) = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
-        ENDDO
+        IF (gamma_only) THEN 
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+           ENDDO
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
+           ENDDO
+        ENDIF
         !
         CALL fwfft ('Wave', vpsi_r, dffts)
         v_ki(:,ibnd) = vpsi_r(dffts%nl(igk_k(:,ik))) 
@@ -258,12 +266,21 @@ SUBROUTINE full_ham (ik)
         ! This is the KI gradient (the non-scalar part)
         vpsi_r(:) = (0.D0, 0.D0)
         etmp2 = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
-                                  delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
-           IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
-           etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
-        ENDDO 
+        IF (gamma_only) THEN
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
+                                     delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+              IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+              etmp2 = etmp2 + DBLE(psic_1(ir))*vpsi_r(ir)
+           ENDDO 
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
+                                     delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
+              IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
+              etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
+           ENDDO 
+        ENDIF
 !!        WRITE(*,'("NICOLA i, vi_r", i5, 10F16.8)') ibnd, v(1:5,spin_component)
         etmp2=etmp2/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
         CALL mp_sum (etmp2, intra_bgrp_comm)
@@ -307,11 +324,18 @@ SUBROUTINE full_ham (ik)
         !
         vpsi_r(:) = (0.D0, 0.D0)
         etmp2 = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0, KIND=DP) * psic_1(ir)
-           etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
-!           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
-        ENDDO
+        IF (gamma_only) THEN 
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0) * DBLE(psic_1(ir))
+              etmp2 = etmp2 + DBLE(psic_1(ir))*vpsi_r(ir)
+           ENDDO
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0, KIND=DP) * psic_1(ir)
+              etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
+!              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
+           ENDDO
+        ENDIF 
         ! The diagonal term. It's the shift of the KS eigenvalue in the canonical representation
         etmp2=etmp2/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
         CALL mp_sum (etmp2, intra_bgrp_comm)
@@ -357,10 +381,16 @@ SUBROUTINE full_ham (ik)
      DO k = ibnd, n_orb
         !
         etmp2 = 0.D0
-        DO ir = 1, npw
-!           etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k)+hpsi(ir,k))
-           etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k))
-        ENDDO
+        IF (gamma_only) THEN 
+           DO ir = 1, npw
+              etmp2 = etmp2 + 2.D0*DBLE(CONJG(evc0(ir,ibnd)) * (v_ki(ir,k)))
+           ENDDO
+           IF (gstart ==2 ) etmp2 = etmp2 - 1.D0 *DBLE(CONJG(evc0(1,ibnd)) * (v_ki(1,k)))
+        ELSE
+           DO ir = 1, npw
+              etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k))
+           ENDDO
+        ENDIF
         CALL mp_sum (etmp2, intra_bgrp_comm)
 !        WRITE(*,'("Nic: KI    matrix ele", 2i5, 3x, 2F20.15)') ibnd, k , etmp2
 !        WRITE(*,'("Nic: KS    matrix ele", 2i5, 3x, 2F20.15)') ibnd, k , Hamlt(ik,ibnd,k)
@@ -381,16 +411,23 @@ SUBROUTINE full_ham (ik)
         DO k = 1, ibnd
            !
         etmp2 = 0.D0
+        IF (gamma_only) THEN 
+           DO ir = 1, npw
+              etmp2 = etmp2 + 2.D0*DBLE(CONJG(evc0(ir,ibnd)) * (v_ki(ir,k)))
+           ENDDO
+           IF (gstart ==2 ) etmp2 = etmp2 - 1.D0 *DBLE(CONJG(evc0(1,ibnd)) * (v_ki(1,k)))
+        ELSE
            DO ir = 1, npw
 !              etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k)+hpsi(ir,k))
               etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k))
            ENDDO
-           CALL mp_sum (etmp2, intra_bgrp_comm)
-           !
-           ham_dw(ibnd,k) = etmp2
-           IF (ibnd .gt. num_wann_occ .AND. k .le. num_wann_occ ) ham_dw (ibnd, k) = (0.D0,0D0)  ! kill occ-empty matrix elements
-           ham_dw(k,ibnd) = CONJG(ham_dw(ibnd,k))
-           !
+        ENDIF
+        CALL mp_sum (etmp2, intra_bgrp_comm)
+        !
+        ham_dw(ibnd,k) = etmp2
+        IF (ibnd .gt. num_wann_occ .AND. k .le. num_wann_occ ) ham_dw (ibnd, k) = (0.D0,0D0)  ! kill occ-empty matrix elements
+        ham_dw(k,ibnd) = CONJG(ham_dw(ibnd,k))
+        !
         ENDDO
         !
      ENDIF

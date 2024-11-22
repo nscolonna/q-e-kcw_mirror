@@ -19,7 +19,7 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
   USE uspp,                 ONLY : nkb
   USE becmod,               ONLY : becp, allocate_bec_type, deallocate_bec_type
   USE mp_bands,             ONLY : intra_bgrp_comm
-  USE gvect,                ONLY : ngm, g
+  USE gvect,                ONLY : ngm, g, gstart
   USE gvecw,                ONLY : gcutw
   USE klist,                ONLY : init_igk, xk, nkstot
   USE mp,                   ONLY : mp_sum
@@ -27,6 +27,7 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
   USE control_kcw,          ONLY : Hamlt, calculation, spin_component, check_ks
   USE lsda_mod,             ONLY : nspin
   USE noncollin_module,     ONLY : npol
+  USE control_flags,        ONLY : gamma_only
 
   ! 
   IMPLICIT NONE
@@ -60,10 +61,17 @@ SUBROUTINE ks_hamiltonian (evc, ik, h_dim)
      ! 
      DO jband = iband, h_dim
         !
-        hij = 0.D0
-        DO ig = 1, npw*npol
-           hij = hij + CONJG(evc(ig,iband)) * hpsi(ig,jband)
-        ENDDO
+        hij = CMPLX(0.D0,0.D0,kind=DP)
+        IF (gamma_only) THEN 
+          DO ig = 1, npw
+            hij = hij + 2.D0 * DBLE(CONJG(evc(ig,iband)) * hpsi(ig,jband))
+          ENDDO
+          IF (gstart == 2) hij = hij - DBLE(CONJG(evc(1,iband)) * hpsi(1,jband))
+        ELSE 
+          DO ig = 1, npw*npol
+             hij = hij + CONJG(evc(ig,iband)) * hpsi(ig,jband)
+          ENDDO
+        ENDIF
         CALL mp_sum (hij, intra_bgrp_comm)
         !
         ham(iband,jband) = hij

@@ -32,7 +32,7 @@ subroutine kcw_setup
   USE fft_base,          ONLY : dfftp, dffts
   USE gvecs,             ONLY : doublegrid, ngms
   USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
-  USE gvect,             ONLY : ig_l2g, mill
+  USE gvect,             ONLY : ig_l2g, mill, gstart
   USE wvfct,             ONLY : nbnd
   !USE funct,             ONLY : dft_is_gradient
   USE xc_lib,            ONLY : xclib_dft_is
@@ -70,7 +70,7 @@ subroutine kcw_setup
                                root_bgrp, intra_bgrp_comm, &
                                inter_bgrp_comm
 
-
+  USE eqv,               ONLY : dmuxc
   !
   implicit none
 
@@ -91,6 +91,7 @@ subroutine kcw_setup
   !
   ! Auxiliary variables for SH calculation
   COMPLEX(DP), ALLOCATABLE  :: rhog(:,:), delta_vg(:,:), vh_rhog(:), delta_vg_(:,:), sh(:),rhor(:,:), rhog_aux(:)
+  COMPLEX(DP), ALLOCATABLE :: upi(:)
   ! The periodic part of the wannier orbital density
   COMPLEX(DP), ALLOCATABLE  :: rhowann_g(:,:,:)
   COMPLEX(DP) :: delta_vr(dffts%nnr,nspin_mag), delta_vr_(dffts%nnr,nspin_mag)
@@ -141,6 +142,11 @@ subroutine kcw_setup
      !if (dft_is_gradient()) call compute_ux(m_loc,ux,nat)
   ENDIF
   !
+  allocate (dmuxc ( dfftp%nnr , nspin_mag, nspin_mag))
+  dmuxc = 0.d0
+  CALL setup_dmuxc()
+  ! Setup all gradient correction stuff
+  CALL setup_dgc()
   ! ... Computes the number of occupied bands for each k point
   !
   !call setup_nbnd_occ ( ) 
@@ -197,9 +203,11 @@ subroutine kcw_setup
   ALLOCATE ( rhowann_g (ngms, num_wann, nrho) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
   ALLOCATE ( sh(num_wann) )
+  ALLOCATE ( upi(num_wann) )
   ALLOCATE ( rho_c(dffts%nnr,num_wann,nrho) )
   ALLOCATE ( wann_c(dffts%nnr,num_wann,nrho) )
   sh(:) = CMPLX(0.D0,0.D0,kind=DP)
+  upi(:) = CMPLX(0.D0,0.D0,kind=DP)
   occ_mat = 0.D0
   !
   ! ... Open a new buffer to store the KS states in the WANNIER gauge
@@ -294,7 +302,11 @@ subroutine kcw_setup
     rhowann(:,:,:)=ZERO
     !! Initialize the periodic part of the wannier orbtal density at this q
     !
-    CALL rho_of_q (rhowann, ngk_all, igk_k_all)
+    IF (gamma_only) THEN
+      CALL rho_of_q_gamma (rhowann, ngk_all, igk_k_all)
+    ELSE
+      CALL rho_of_q (rhowann, ngk_all, igk_k_all)
+    ENDIF
     ! Compute the peridic part rho_q(r) of the wannier density rho(r)
     ! rho(r)   = \sum_q exp[iqr]rho_q(r)
     !
@@ -302,9 +314,7 @@ subroutine kcw_setup
     !
     ! Compute the Self Hartree
     weight(iq) = 1.D0/nqs ! No SYMM 
-    lrpa_save=lrpa
-    lrpa = .true.
-
+    !
     !!! Start code to check sum over q for wannier objects
     !tmp_dir = tmp_dir_save  ! the periodic part are written on the original outdir 
     !lrrho=num_wann*dffts%nnr
@@ -345,11 +355,17 @@ subroutine kcw_setup
       rhowann_g(:,i,:) = rhog
       !! The periodic part of the perturbation DeltaV_q(G)
       ! 
-      sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:) )*weight(iq)*omega
+      IF (gamma_only) THEN 
+         sh(i) = sh(i) + DBLE(sum (CONJG(rhog (:,1)) * vh_rhog(:) ))*weight(iq)*omega
+         IF (gstart == 2) sh(i) = sh(i) - 0.5D0*DBLE(CONJG(rhog (1,1)) * vh_rhog(1)) *weight(iq)*omega
+         upi(i)  = upi(i) + 2.D0 * DBLE(sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component))) *weight(iq)*omega
+         IF (gstart == 2 ) upi(i) = upi(i) - DBLE(CONJG(rhog (1,1)) * delta_vg(1,spin_component)) *weight(iq)*omega
+      ELSE
+         sh(i) = sh(i) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:) )*weight(iq)*omega
+         upi(i)  = upi(i) + sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component)) *weight(iq)*omega
+      ENDIF
       !
     ENDDO
-    !
-    lrpa=lrpa_save
     !
     ! ... each q /= gamma is saved on a different directory
     lgamma = lgamma_iq(iq)
@@ -422,11 +438,12 @@ subroutine kcw_setup
   !
   ! Print on output the self-Hatree
   CALL mp_sum (sh, intra_bgrp_comm)
+  CALL mp_sum (upi, intra_bgrp_comm)
   !
   OPEN (128, file = TRIM(tmp_dir_kcw)//'sh.txt')
   WRITE(stdout,'(/, 5X, "INFO: Orbital Self-Hartree (SH)")') 
   DO i = 1, num_wann
-    WRITE(stdout,'(5X, "orb ", 1i5, 5X, "SH ", 1F10.6)') i, REAL(sh(i))
+    WRITE(stdout,'(5X, "orb ", 1i5, 5X, "SH ", 2F26.12, 5X, "uPi ", 2F26.12)') i, sh(i), upi(i)
     WRITE(128,*) sh(i)
   ENDDO
   CLOSE (128)
@@ -442,6 +459,7 @@ subroutine kcw_setup
   DEALLOCATE (rhowann_g)
   DEALLOCATE (rhog , delta_vg, vh_rhog, delta_vg_, rhog_aux )
   DEALLOCATE (sh, rho_c, wann_c) 
+  DEALLOCATE( upi)
   !
   RETURN
   !

@@ -67,7 +67,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   USE fft_base,              ONLY : dffts, dfftp
   USE lsda_mod,              ONLY : lsda, current_spin,nspin
   USE klist,                 ONLY : ngk, init_igk, igk_k, nkstot
-  USE gvect,                 ONLY : ngm
+  USE gvect,                 ONLY : ngm, gstart
   USE gvecs,                 ONLY : ngms
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
@@ -84,6 +84,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   USE exx,                   ONLY : vexx, exxinit, exxenergy2
   USE input_parameters,      ONLY : exxdiv_treatment
+  USE control_flags,         ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -103,6 +104,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   !
   REAL(DP) :: vxc_minus1(dfftp%nnr,2), vxc(dfftp%nnr,nspin), w1
   COMPLEX(DP) :: vh_rhor(dfftp%nnr,nspin)
+  !REAL(DP) :: vh_rhor(dfftp%nnr,nspin)
   !  
   TYPE (scf_type) :: rho_minus1
   !
@@ -172,6 +174,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      npw = ngk(ik)
      psic(:) = ( 0.D0, 0.D0 )
      psic(dffts%nl(igk_k(1:npw,ik))) = evc0(1:npw,ibnd)
+     IF (gamma_only) psic(dffts%nlm(igk_k(1:npw,ik))) = CONJG(evc0(1:npw,ibnd))
      CALL invfft ('Wave', psic, dffts)
      !
      rhor(:) = rhowann(:,ibnd,1)
@@ -179,8 +182,14 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      rhor = rhor/omega
      !! The periodic part of the perturbation DeltaV_q(G)
      !
-     deltah_scal = - 0.5D0 * sum (CONJG(rhog (:)) * delta_vg(:,spin_component)) * omega
-     sh          =   0.5D0 * sum (CONJG(rhog (:)) * vh_rhog(:)                ) * omega
+     deltah_scal = - 0.5D0 * SUM (CONJG(rhog (:)) * delta_vg(:,spin_component) ) * omega
+     IF (gamma_only) THEN
+        sh       =     DBLE (SUM (CONJG(rhog (:)) * vh_rhog(:))                ) * omega
+        IF (gstart == 2) & 
+              sh = sh - 0.5D0 * DBLE ( CONJG(rhog (1)) * vh_rhog(1)            ) * omega
+     ELSE
+        sh       =   0.5D0 * SUM (CONJG(rhog (:)) * vh_rhog(:)                 ) * omega
+     ENDIF
      CALL mp_sum (sh, intra_bgrp_comm)
      !WRITE(stdout,'(8x, "self_hatree", 2i5, 1F15.8)') ibnd, current_spin, sh
      !
@@ -200,8 +209,9 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      !
      ! ... transform Hartree potential to real space
      !
-     vh_rhor(:,:)=0.D0
+     vh_rhor(:,:)=CMPLX(0.D0, 0.D0)
      vh_rhor(dffts%nl(:),spin_component) = vh_rhog(:) 
+     IF (gamma_only) vh_rhor(dffts%nlm(:),spin_component) = CONJG(vh_rhog(:))
      CALL invfft ('Rho', vh_rhor (:,spin_component), dffts)
      !
      ! .. Add the xc contribution ...
@@ -259,11 +269,23 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
      IF ( .NOT. on_site_only .AND. ibnd .GT. num_wann_occ) THEN
         !
         vpsi_r(:) = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = ( vh_rhor(ir,current_spin) + vxc_minus1(ir,current_spin) - &
-                   vxc(ir,current_spin) ) * psic(ir)
-           IF (lrpa) vpsi_r (ir) =  vh_rhor(ir,current_spin) * psic(ir)
-        ENDDO
+        IF (gamma_only) THEN
+           !
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = (vh_rhor(ir,current_spin) + CMPLX( vxc_minus1(ir,current_spin) - &
+                      vxc(ir,current_spin), 0.D0 )) * DBLE(psic(ir))
+              IF (lrpa) vpsi_r (ir) =  vh_rhor(ir,current_spin) * DBLE(psic(ir))
+           ENDDO
+           !
+        ELSE
+           !
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = (vh_rhor(ir,current_spin) + CMPLX( vxc_minus1(ir,current_spin) - &
+                      vxc(ir,current_spin), 0.D0 )) * psic(ir)
+              IF (lrpa) vpsi_r (ir) =  vh_rhor(ir,current_spin) * psic(ir)
+           ENDDO
+           !
+        ENDIF
         !
         ! 1) GO to G-space and store the ki gradient. v_i|phi_i> 
         CALL fwfft ('Wave', vpsi_r, dffts)
@@ -271,9 +293,14 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         !
         DO k = num_wann_occ+1, num_wann
            IF (k == ibnd) CYCLE
-           ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) ) 
+           IF (gamma_only) THEN
+             ham_right(k,ibnd) = 2.D0*DBLE( SUM ( CONJG(evc0(:,k)) * vpsi_g(:)) ) * alpha_final(ibnd) 
+             IF (gstart ==2 ) ham_right(k,ibnd) = ham_right(k,ibnd) -1.D0*DBLE( CONJG(evc0(1,k)) * vpsi_g(1) ) * alpha_final(ibnd) 
+           ELSE
+             ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) ) * alpha_final(ibnd)
+           ENDIF
            CALL mp_sum (ham_right(k,ibnd), intra_bgrp_comm)
-           !WRITE(stdout,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
+           WRITE(stdout,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
         ENDDO 
         !
      ENDIF
@@ -310,9 +337,19 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
         IF ( .NOT. on_site_only) THEN 
            !
            vpsi_r(:) = (0.D0, 0.D0)
-           DO ir = 1, dffts%nnr
-              vpsi_r (ir) = ( - vh_rhor(ir,current_spin) - vxc_minus1(ir,current_spin) ) * psic(ir)
-           ENDDO 
+           IF (gamma_only) THEN
+              !
+              DO ir = 1, dffts%nnr
+                 vpsi_r (ir) = (- vh_rhor(ir,current_spin) - CMPLX( vxc_minus1(ir,current_spin), 0.D0 )) * DBLE(psic(ir))
+              ENDDO 
+              !
+           ELSE
+              !
+              DO ir = 1, dffts%nnr
+                 vpsi_r (ir) = (- vh_rhor(ir,current_spin) - CMPLX( vxc_minus1(ir,current_spin), 0.D0 )) * psic(ir)
+              ENDDO 
+              !
+           ENDIF
            !
            ! 1) GO to G-space and store the ki gradient 
            CALL fwfft ('Wave', vpsi_r, dffts)
@@ -322,7 +359,12 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
               IF (k == ibnd ) CYCLE
               IF (ibnd .LE. num_wann_occ .AND. k .GT. num_wann_occ ) CYCLE  ! NO occ-empty matrix elements
               IF (ibnd .GT. num_wann_occ .AND. k .LE. num_wann_occ ) CYCLE  ! NO empty-occ matrix elements
-              dhkipz = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
+              IF (gamma_only) THEN 
+                 dhkipz = 2.D0 * DBLE ( SUM ( CONJG(evc0(:,k)) * vpsi_g(:) ) ) * alpha_final(ibnd) 
+                 IF (gstart == 2) dhkipz = dhkipz - 1.D0 * DBLE ( CONJG(evc0(1,k)) * vpsi_g(1) ) * alpha_final(ibnd) 
+              ELSE
+                 dhkipz = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) * alpha_final(ibnd) )
+              ENDIF
               CALL mp_sum (dhkipz, intra_bgrp_comm)
               ham_right(k,ibnd) = ham_right(k,ibnd) + dhkipz
               !WRITE(*,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))

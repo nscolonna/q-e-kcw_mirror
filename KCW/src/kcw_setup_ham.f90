@@ -254,6 +254,7 @@ subroutine kcw_setup_ham
                ig_l2g, 1, rhog(:), .FALSE., gamma_only )
           rhowann_aux=(0.d0,0.d0)
           rhowann_aux(dffts%nl(:)) = rhog(:)
+          IF (gamma_only) rhowann_aux(dffts%nlm(:)) = CONJG(rhog(:))
           CALL invfft ('Rho', rhowann_aux, dffts)
           rhowann(:,i,ip) = rhowann_aux(:)*omega
           !

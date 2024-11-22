@@ -241,10 +241,12 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
     USE fft_base,             ONLY : dffts
     USE cell_base,            ONLY : omega
     USE gvecs,                ONLY : ngms
+    USE gvect,                ONLY : gstart
     USE mp_bands,             ONLY : intra_bgrp_comm
     USE mp,                   ONLY : mp_sum
     USE buffers,              ONLY : get_buffer
     USE noncollin_module,     ONLY : nspin_mag
+    USE control_flags,        ONLY : gamma_only
     !
     IMPLICIT NONE
     !
@@ -292,10 +294,25 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
          CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_ )
          !! The periodic part of the perturbation DeltaV_q(G)
          ! 
-         sh(iwann) = sh(iwann) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:)                )*weight(iq)*omega
+         IF (gamma_only) THEN
+           sh(iwann) = sh(iwann) + DBLE(sum (CONJG(rhog (:,1)) * vh_rhog(:))) * weight(iq)*omega
+           IF (gstart == 2) sh(iwann) = sh(iwann) - 0.5D0*DBLE(CONJG(rhog (1,1)) * vh_rhog(1)) *weight(iq)*omega
+         ELSE
+           sh(iwann) = sh(iwann) + 0.5D0 * sum (CONJG(rhog (:,1)) * vh_rhog(:))*weight(iq)*omega
+         ENDIF
+         !
          IF (nspin_mag ==2 ) THEN
-            deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component)) &
-                                        * weight(iq) * omega
+           !
+           IF (gamma_only) THEN
+              deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) &
+                      - DBLE( sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component))) * weight(iq) * omega
+              IF (gstart == 2) deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) &
+                      + 0.5D0*DBLE(CONJG(rhog (1,1)) * delta_vg(1,spin_component)) * weight(iq) * omega
+           ELSE
+              deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,1)) * delta_vg(:,spin_component)) &
+                                       * weight(iq) * omega
+           ENDIF
+           !
          ELSE 
             DO ip = 1, nspin_mag
               deltah_scal(iwann, iwann) = deltah_scal(iwann,iwann) - 0.5D0 * sum (CONJG(rhog (:,ip)) * delta_vg(:,ip)) &
@@ -345,6 +362,9 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
     USE cell_base,            ONLY : omega
     USE constants,            ONLY : rytoev
     USE noncollin_module,     ONLY : nspin_mag, npol
+    USE control_flags,        ONLY: gamma_only
+    USE gvect,                ONLY : gstart
+
     !
     IMPLICIT NONE
     ! 
@@ -477,7 +497,15 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
          npw_k = ngk(ik)
          evc_k_g(:)   =  evc0(:,iwann)
          evc_k_r(:,:) = CMPLX(0.D0,0.D0,kind=DP)
-         CALL invfft_wave (npw_k, igk_k (1,ik), evc_k_g , evc_k_r )
+         !
+         IF (gamma_only) THEN
+           ! NOTA: non collinear and Gamma_trick not compatible --> npol will always be 1 here
+           evc_k_r(dffts%nl(igk_k(1:npw_k,ik)),1)  = evc_k_g(1:npw_k)
+           evc_k_r(dffts%nlm(igk_k(1:npw_k,ik)),1)  = CONJG(evc_k_g(1:npw_k))
+           CALL invfft ('Wave', evc_k_r(:,1), dffts)
+         ELSE
+           CALL invfft_wave (npw_k, igk_k (1,ik), evc_k_g , evc_k_r )
+         ENDIF
          !! The wfc R=0 n=iwann in R-space at k
          !
          !DO jwann = iwann+1, num_wann 
@@ -498,13 +526,26 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
             !
             evc_kq_g = evc0_kq(:,jwann)
             evc_kq_r = CMPLX(0.D0,0.D0,kind=DP)
+            !
             IF(nspin==4 .or. debug_nc ) THEN
               npw_kq_m = ngk(ikq_m)
-              CALL invfft_wave (npw_kq_m, igk_k (1,ikq_m), evc_kq_g , evc_kq_r )
+              IF (gamma_only) THEN
+                evc_kq_r(dffts%nl(igk_k(1:npw_kq_m,ik)),1)  = evc_kq_g(1:npw_kq_m)
+                evc_kq_r(dffts%nlm(igk_k(1:npw_kq_m,ik)),1)  = CONJG(evc_kq_g(1:npw_kq_m))
+                CALL invfft ('Wave', evc_kq_r(:,1), dffts)
+              ELSE
+                CALL invfft_wave (npw_kq_m, igk_k (1,ikq_m), evc_kq_g , evc_kq_r )
+              ENDIF
             ELSE
               npw_kq = ngk(ikq)
-              CALL invfft_wave (npw_kq, igk_k (1,ikq), evc_kq_g , evc_kq_r )
-            ENDIF
+              IF (gamma_only) THEN
+                evc_kq_r(dffts%nl(igk_k(1:npw_kq,ik)),1)  = evc_kq_g(1:npw_kq)
+                evc_kq_r(dffts%nlm(igk_k(1:npw_kq,ik)),1)  = CONJG(evc_kq_g(1:npw_kq))
+                CALL invfft ('Wave', evc_kq_r(:,1), dffts)
+              ELSE
+                CALL invfft_wave (npw_kq, igk_k (1,ikq), evc_kq_g , evc_kq_r )
+              ENDIF
+            END IF
             !
             ! The wfc in R-space at k' <-- k+q where k' = (k+q)-G_bar
             ! evc_k+q(r) = sum_G exp[iG r] c_(k+q+G) = sum_G exp[iG r] c_k'+G_bar+G 
@@ -559,9 +600,35 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
   !          ENDIF
             !
             IF (nspin==2 .and. .not. debug_nc) THEN
-              dH_wann(iwann, jwann) = dH_wann(iwann,jwann) + SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component)))*weight(iq)*omega
+              !
+              IF (gamma_only) THEN 
+                 !
+                 dH_wann(iwann, jwann) = dH_wann(iwann,jwann) + &
+                    2.D0*DBLE(SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component))))*weight(iq)*omega
+                 IF (gstart == 2) dH_wann(iwann, jwann) = dH_wann(iwann,jwann) - &
+                                     1.D0*DBLE((rho_g_nm(1,1))*CONJG(delta_vg(1,spin_component)))*weight(iq)*omega
+                 !
+              ELSE
+                !
+                dH_wann(iwann, jwann) = dH_wann(iwann,jwann) + SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component)))*weight(iq)*omega
+                !
+              ENDIF
+              !
             ELSE IF (nspin==2 .and. debug_nc ) THEN 
-              dH_wann(iwann, jwann) = dH_wann(iwann, jwann) + SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))*weight(iq)*omega
+              !
+              IF (gamma_only) THEN
+                 !
+                 dH_wann(iwann, jwann) = dH_wann(iwann, jwann) + &
+                    2.D0*DBLE(SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1))))*weight(iq)*omega
+                 IF (gstart == 2) dH_wann(iwann, jwann) = dH_wann(iwann, jwann) - &
+                                     1.D0*DBLE(delta_vg(1,spin_component)*conjg(rho_g_nm(1,1)))*weight(iq)*omega
+                 !
+              ELSE
+                 !
+                 dH_wann(iwann, jwann) = dH_wann(iwann, jwann) + SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))*weight(iq)*omega
+                 !
+              ENDIF
+              !
             ELSE
               DO is = 1, nspin_mag
                 dH_wann(iwann, jwann) = dH_wann(iwann, jwann) + SUM(CONJG(rho_g_nm(:,is))*(delta_vg(:,is)))*weight(iq)*omega

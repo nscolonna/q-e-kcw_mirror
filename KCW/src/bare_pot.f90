@@ -30,7 +30,7 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   USE noncollin_module,     ONLY : domag, nspin_mag
   USE xc_lib,               ONLY : xclib_dft_is
   USE dv_of_drho_lr,        ONLY : dv_of_drho_xc
-
+  USE control_flags,      ONLY : gamma_only
 
   !
   IMPLICIT NONE
@@ -156,6 +156,12 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   aux_=(0.d0,0.d0)
   aux(dffts%nl(:))  = vh_rhog(:)                    ! G-space components of the Hartree potential
   aux_(dffts%nl(:)) = vh_rhog_g0eq0(:)
+  !
+  IF (gamma_only) THEN
+    aux(dffts%nlm(:))  = CONJG(vh_rhog(:))
+    aux_(dffts%nlm(:)) = CONJG(vh_rhog_g0eq0(:))
+  ENDIF 
+  !
   CALL invfft ('Rho', aux, dffts)
   CALL invfft ('Rho', aux_, dffts)
   !
