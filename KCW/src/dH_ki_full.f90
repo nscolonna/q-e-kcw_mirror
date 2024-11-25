@@ -300,7 +300,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
              ham_right(k,ibnd) = SUM ( CONJG(evc0(:,k)) * vpsi_g(:) ) * alpha_final(ibnd)
            ENDIF
            CALL mp_sum (ham_right(k,ibnd), intra_bgrp_comm)
-           WRITE(stdout,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
+           !WRITE(stdout,*) k, ibnd, REAL(ham_right(k,ibnd)), AIMAG(ham_right(k,ibnd))
         ENDDO 
         !
      ENDIF
