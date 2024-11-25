@@ -170,9 +170,8 @@ cat >> file_alpharef.txt << EOF
 8 1.01558008 1
 EOF
 
-for which_odd in "qki" "ki" "pkipz"; do
 
-cat > $PREFIX.kcw-ham_${which_odd}.in << EOF
+cat > $PREFIX.kcw-ham.in << EOF
 KCW H2O KI hamiltonian
 &control
   prefix='$PREFIX'
@@ -192,15 +191,13 @@ KCW H2O KI hamiltonian
   do_bands = .false.
   use_ws_distance = .false.
   write_hr = .true.
-  which_odd = '$which_odd'
 /
 EOF
 
 $ECHO "  Running the $which_odd hamiltonian calculation  for $PREFIX...\c"
-$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_${which_odd}.in > $PREFIX.kcw-ham_${which_odd}.out
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham.in > $PREFIX.kcw-ham.out
 $ECHO " done"
 
-done 
 
 
 
