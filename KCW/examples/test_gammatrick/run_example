@@ -64,7 +64,7 @@ for FILE in $PSEUDO_LIST ; do
     if test ! -r $PSEUDO_DIR/$FILE ; then
        $ECHO
        $ECHO "Downloading $FILE to $PSEUDO_DIR...\c"
-            wget $PSEUDO_DIR/$FILE $NETWORK_PSEUDO/$FILE 2> /dev/null
+            $WGET $PSEUDO_DIR/$FILE $NETWORK_PSEUDO/$FILE 2> /dev/null
     fi
     if test $? != 0; then
         $ECHO
@@ -170,6 +170,12 @@ cat >> file_alpharef.txt << EOF
 8 1.01558008 1
 EOF
 
+for diag in "wann" "uniq" "proj"; do 
+$ECHO 
+$ECHO "Diagonalization scheme = $diag" 
+mkdir diag_$diag
+cd diag_$diag
+
 for which_odd in "qki" "ki" "pkipz"; do
 
 cat > $PREFIX.kcw-ham_${which_odd}.in << EOF
@@ -193,6 +199,7 @@ KCW H2O KI hamiltonian
   use_ws_distance = .false.
   write_hr = .true.
   which_odd = '$which_odd'
+  h_diag_scheme = '$diag'
 /
 EOF
 
@@ -201,6 +208,10 @@ $KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_${which_odd}.in > $PREFIX.kcw-ham_${w
 $ECHO " done"
 
 done 
+cd ../
+
+$ECHO
+done
 
 
-
+ 

@@ -44,11 +44,16 @@ fi
 if (( $check )); then echo -e "  ${GREEN}PWNSCF      OK!${NC}"; fi
 
 
+for diag in "wann" "uniq" "proj"; do
+
+echo 
+echo "  Diagonalization scheme = $diag" 
+
 for which_odd in "qki" "ki" "pkipz"; do
 check=1
 
-grep "   KI    " results_gamma/h2o.kcw-ham_${which_odd}.out > pp
-grep "   KI    " results/h2o.kcw-ham_${which_odd}.out >> pp
+grep "   KI    " results_gamma/diag_$diag/h2o.kcw-ham_${which_odd}.out > pp
+grep "   KI    " results/diag_$diag/h2o.kcw-ham_${which_odd}.out >> pp
 #cat pp
 for j in `seq 1 8`; do 
  col=`echo $j+1 | bc`
@@ -64,5 +69,8 @@ if (( $check )); then echo -e "  ${GREEN}KC_HAM  $which_odd    OK!${NC}"; fi
 rm pp
 
 done
+
+
+done 
 
 echo 
