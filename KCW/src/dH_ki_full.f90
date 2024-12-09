@@ -150,7 +150,7 @@ SUBROUTINE dH_ki_full (ik, dH_wann)
   IF (kcw_iverbosity .gt. 1 ) WRITE(stdout,'(8X, "INFO: rhowann RETRIEVED"/)')
   !
   ! FIXME: Do I really need this? 
-  CALL compute_map_ikq_single (ik)
+  CALL compute_map_ikq_single (ik, .false.)
   ! find tha map k+q --> k'+G and store the res 
   !
   dim_ham = num_wann
