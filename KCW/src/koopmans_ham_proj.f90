@@ -233,6 +233,8 @@ SUBROUTINE koopmans_ham_proj (delta)
     USE buffers,               ONLY : get_buffer
     USE control_kcw,           ONLY : num_wann
     USE wvfct,                 ONLY : npwx
+    USE control_flags,         ONLY : gamma_only
+    USE gvect,                 ONLY : gstart
     !
     IMPLICIT NONE
     !
@@ -254,8 +256,17 @@ SUBROUTINE koopmans_ham_proj (delta)
       DO jb = ib, nbnd
         !
         DO iwann = 1, num_wann
-          overlap_in = SUM(CONJG(evc(1:npw*npol,ib))*(evc0(1:npw*npol,iwann)))
-          overlap_nj = SUM(CONJG(evc0(1:npw*npol,iwann))*(evc(1:npw*npol,jb)))
+          IF ( gamma_only ) THEN 
+            overlap_in = 2.D0 * SUM(DBLE(CONJG(evc(1:npw*npol,ib))*(evc0(1:npw*npol,iwann))))
+            overlap_nj = 2.D0 * SUM(DBLE(CONJG(evc0(1:npw*npol,iwann))*(evc(1:npw*npol,jb))))
+            IF (gstart == 2) THEN
+               overlap_in = overlap_in - DBLE(CONJG(evc(1,ib))*(evc0(1,iwann)))
+               overlap_nj = overlap_nj - DBLE(CONJG(evc0(1,iwann))*(evc(1,jb)))
+            ENDIF
+          ELSE
+            overlap_in = SUM(CONJG(evc(1:npw*npol,ib))*(evc0(1:npw*npol,iwann)))
+            overlap_nj = SUM(CONJG(evc0(1:npw*npol,iwann))*(evc(1:npw*npol,jb)))
+          ENDIF
           CALL mp_sum (overlap_in, intra_bgrp_comm)
           CALL mp_sum (overlap_nj, intra_bgrp_comm)
           overlap = overlap_in*overlap_nj
@@ -282,6 +293,8 @@ SUBROUTINE koopmans_ham_proj (delta)
     USE wvfct,                 ONLY : wg
     USE mp_bands,              ONLY : intra_bgrp_comm
     USE mp,                    ONLY : mp_sum
+    USE control_flags,         ONLY : gamma_only
+    USE gvect,                 ONLY : gstart
     !
     REAL(DP), INTENT(INOUT) :: occ_mat(num_wann)
     INTEGER :: iwann, ik, ibnd, ik_pw, spin_deg
@@ -302,7 +315,12 @@ SUBROUTINE koopmans_ham_proj (delta)
         IF(nspin == 1) spin_deg = 2
         overlap = CMPLX(0.D0, 0.D0, kind=DP)
         DO ibnd = 1, nbnd
-          overlap = SUM(CONJG(evc(1:npw*npol,ibnd))*(evc0(1:npw*npol,iwann)))
+          IF (gamma_only) THEN 
+             overlap = 2.D0*SUM(DBLE(CONJG(evc(1:npw*npol,ibnd))*(evc0(1:npw*npol,iwann))))
+             IF (gstart ==2 ) overlap = overlap-1.D0*(DBLE(CONJG(evc(1,ibnd))*(evc0(1,iwann))))
+          ELSE
+             overlap = SUM(CONJG(evc(1:npw*npol,ibnd))*(evc0(1:npw*npol,iwann)))
+          ENDIF
           CALL mp_sum (overlap, intra_bgrp_comm)
           overlap = CONJG(overlap)*overlap
           occ_mat(iwann) = occ_mat(iwann) + wg(ibnd,ik)/spin_deg * REAL(overlap)

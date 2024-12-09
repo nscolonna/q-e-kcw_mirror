@@ -218,6 +218,8 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     USE buffers,               ONLY : get_buffer
     USE control_kcw,           ONLY : num_wann
     USE wvfct,                 ONLY : npwx
+    USE control_flags,         ONLY : gamma_only
+    USE gvect,                 ONLY : gstart
     !
     IMPLICIT NONE
     !
@@ -231,6 +233,7 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     COMPLEX(DP) :: overlap
     !
     COMPLEX (DP) :: overlap_mat(nbnd,num_wann)
+    REAL(DP), ALLOCATABLE :: overlap_mat_real(:,:)
     !
     EXTERNAL :: ZGEMM
     !
@@ -239,21 +242,29 @@ SUBROUTINE koopmans_ham_uniq ( dH_wann )
     !
     deltah = CMPLX(0.D0, 0.D0, kind=DP)
     !
-    CALL ZGEMM( 'C','N', nbnd, num_wann, npwx*npol, ONE, evc, npwx*npol, evc0, npwx*npol, &
-    ZERO, overlap_mat, nbnd) 
+    IF (gamma_only) THEN 
+      ALLOCATE ( overlap_mat_real(nbnd,num_wann) )
+      CALL DGEMM( 'C', 'N', nbnd, num_wann, 2*npw, 2.0_DP, evc, 2*npwx, evc0, &
+             2*npwx, 0.0_DP, overlap_mat_real, nbnd )
+     IF ( gstart == 2 ) &
+        CALL DGER( nbnd, num_wann, -1.0_DP, evc , 2*npwx, evc0, 2*npwx, overlap_mat_real, nbnd )
+    ELSE
+      CALL ZGEMM( 'C','N', nbnd, num_wann, npwx*npol, ONE, evc, npwx*npol, evc0, npwx*npol, &
+      ZERO, overlap_mat, nbnd) 
+    ENDIF
+    !
+    IF (gamma_only) THEN 
+       overlap_mat = CMPLX(overlap_mat_real, 0.D0, kind=DP)
+       DEALLOCATE ( overlap_mat_real )
+    ENDIF
+    !
     CALL mp_sum (overlap_mat, intra_bgrp_comm)
-    !     
+    !
     DO ib = 1, nbnd
       DO jb = ib, nbnd
         !
         DO nwann = 1, num_wann
           DO mwann = 1, num_wann
-            ! OLD 
-            !overlap_in = SUM(CONJG(evc(1:npw,ib))*(evc0(1:npw,nwann)))
-            !overlap_mj = SUM(CONJG(evc0(1:npw,mwann))*(evc(1:npw,jb)))
-            !CALL mp_sum (overlap_in, intra_bgrp_comm)
-            !CALL mp_sum (overlap_mj, intra_bgrp_comm)
-            !overlap = overlap_in*overlap_mj
             ! 
             overlap = (overlap_mat(ib,nwann )) * CONJG(overlap_mat(jb,mwann))
             deltah(ib,jb) = deltah(ib,jb) + delta(nwann,mwann) * overlap
