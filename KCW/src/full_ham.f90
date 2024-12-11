@@ -22,12 +22,12 @@ SUBROUTINE full_ham (ik)
   USE wvfct,                 ONLY : npw, nbnd, npwx
   USE wvfct,                 ONLY : et
   USE fft_base,              ONLY : dffts, dfftp
-  USE lsda_mod,              ONLY : lsda, current_spin,nspin
+  USE lsda_mod,              ONLY : lsda, current_spin
   USE klist,                 ONLY : nks, ngk, init_igk, igk_k, nkstot
-  USE gvect,                 ONLY : ngm
+  USE gvect,                 ONLY : ngm, gstart
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
-  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final_full, hamlt, num_wann_occ, iuwfc_wann, &
+  USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final, hamlt, num_wann_occ, iuwfc_wann, &
                                     kcw_iverbosity, qp_symm, evc0, kipz_corr, num_wann, spin_component
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum
@@ -38,6 +38,8 @@ SUBROUTINE full_ham (ik)
   !
   USE exx,                   ONLY : vexx, exxinit, exxenergy2
   USE input_parameters,      ONLY : exxdiv_treatment
+  USE noncollin_module,      ONLY : nspin_mag
+  USE control_flags,         ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -51,10 +53,10 @@ SUBROUTINE full_ham (ik)
   REAL(DP) :: n_r(dfftp%nnr), num1, num2, sh, aux_r(dfftp%nnr) 
   ! ... orbital density in rela space
   !
-  COMPLEX(DP) n_g(ngm), n_g_aux(ngm,nspin), aux_g(ngm)
+  COMPLEX(DP) n_g(ngm), n_g_aux(ngm,nspin_mag), aux_g(ngm)
   ! ... orbital density in G space
   !
-  REAL(DP) :: ehart, v(dfftp%nnr,nspin), vxc_minus1(dfftp%nnr,2), vxc(dfftp%nnr,nspin), charge, w1
+  REAL(DP) :: ehart, v(dfftp%nnr,nspin_mag), vxc_minus1(dfftp%nnr,2), vxc(dfftp%nnr,nspin_mag), charge, w1
   !  
   TYPE (scf_type) :: rho_minus1
   !
@@ -79,14 +81,15 @@ SUBROUTINE full_ham (ik)
   !
   ! ... Loop over k_point: actually it's a loop over the spin ik=1 ==> spin_up; ik=2 ==> spin_dw ...
   !
+  current_spin = spin_component
   w1 = 1.D0 / omega
   !
-  !alpha_final_full(:,:)=1.0  ! Just for debug
+  !alpha_final(:,:)=1.0  ! Just for debug
   !
-  nspin_aux=nspin
-  nspin=2
+  nspin_aux=nspin_mag
+  nspin_mag=2
   CALL create_scf_type (rho_minus1)
-  nspin=nspin_aux
+  nspin_mag=nspin_aux
   !
   lrwfc = num_wann*npwx
   CALL get_buffer ( evc0, lrwfc, iuwfc_wann, ik )
@@ -105,7 +108,7 @@ SUBROUTINE full_ham (ik)
   ham_dw (:,:) = (0.D0,0.D0)
   !
   ! ... KS Hamiltonian ....
-  ik_eff = ik + (spin_component -1)*nkstot/nspin
+  ik_eff = ik + (spin_component -1)*nkstot/nspin_mag
   CALL ks_hamiltonian (evc0, ik_eff, dim_ham)
   !
   v_ki(:,:) = (0.D0,0.D0)
@@ -124,6 +127,7 @@ SUBROUTINE full_ham (ik)
      npw = ngk(ik)
      psic(:) = ( 0.D0, 0.D0 )
      psic(dffts%nl(igk_k(1:npw,ik))) = evc0(1:npw,ibnd)
+     IF (gamma_only) psic(dffts%nlm(igk_k(1:npw,ik))) = CONJG(evc0(1:npw,ibnd))
      CALL invfft ('Wave', psic, dffts)
      !
      ! Store the result needed below
@@ -181,7 +185,7 @@ SUBROUTINE full_ham (ik)
      etmp = etmp/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )*omega
      CALL mp_sum (etmp, intra_bgrp_comm) 
      !
-     IF (nspin == 1 ) THEN
+     IF (nspin_mag == 1 ) THEN
         rho_minus1%of_r(:,1) = rho%of_r(:,1)
         rho_minus1%of_r(:,2) = 0.D0
         rho_minus1%of_g(:,1) = rho%of_g(:,1)
@@ -197,14 +201,17 @@ SUBROUTINE full_ham (ik)
      IF ( ibnd .LE. num_wann_occ ) THEN
         !
         rho_minus1%of_r(:,1) = rho_minus1%of_r(:,1) - n_r(:)  ! denisty rho-rho_i in real space
-        rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) - n_r(:)  ! denisty rho-rho_i in real space
         rho_minus1%of_g(:,1) = rho_minus1%of_g(:,1) - n_g(:)  ! denisty rho-rho_i in reciprocal scape
-        rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) - n_g(:)  ! denisty rho-rho_i in reciprocal scape
+        ! The magnetization depends on which channel we remove the orbital from
+        ! we reduce by n_i(r) if current_spin=1, we increase by n_i(r) if current_spin=2
+        ! This is taken care by the factor (3-2*current_spin)
+        rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) - (3-2*current_spin)*n_r(:)  ! denisty rho-rho_i in real space
+        rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) - (3-2*current_spin)*n_g(:)  ! denisty rho-rho_i in reciprocal scape
         ! 
         etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
-        nspin_aux=nspin; nspin=2
+        nspin_aux=nspin_mag; nspin_mag=2
         CALL v_xc( rho_minus1, rho_core, rhog_core, etxc_minus1, vtxc_minus1, vxc_minus1 )
-        nspin=nspin_aux
+        nspin_mag=nspin_aux
         ! 
         !
         delta_eig(ibnd) = (-sh+(etxc-etxc_minus1-etmp)) 
@@ -213,9 +220,15 @@ SUBROUTINE full_ham (ik)
         IF (lrpa) delta_eig(ibnd) = (-sh)  !! hartree only for debug
         !
         vpsi_r(:) = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0) * psic_1(ir)
-        ENDDO
+        IF (gamma_only) THEN 
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+           ENDDO
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
+           ENDDO
+        ENDIF
         !
         CALL fwfft ('Wave', vpsi_r, dffts)
         v_ki(:,ibnd) = vpsi_r(dffts%nl(igk_k(:,ik))) 
@@ -226,14 +239,14 @@ SUBROUTINE full_ham (ik)
      ELSE
         !
         rho_minus1%of_r(:,1) = rho_minus1%of_r(:,1) + n_r(:)  ! denisty rho+rho_i in real space
-        rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) + n_r(:)  ! denisty rho+rho_i in real space
         rho_minus1%of_g(:,1) = rho_minus1%of_g(:,1) + n_g(:)  ! denisty rho+rho_i in reciprocal scape
-        rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) + n_g(:)  ! denisty rho+rho_i in reciprocal scape
+        rho_minus1%of_r(:,2) = rho_minus1%of_r(:,2) + (3-2*current_spin)*n_r(:)  ! denisty rho+rho_i in real space
+        rho_minus1%of_g(:,2) = rho_minus1%of_g(:,2) + (3-2*current_spin)*n_g(:)  ! denisty rho+rho_i in reciprocal scape
         ! 
         etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
-        nspin_aux=nspin; nspin=2
+        nspin_aux=nspin_mag; nspin_mag=2
         CALL v_xc( rho_minus1, rho_core, rhog_core, etxc_minus1, vtxc_minus1, vxc_minus1 )
-        nspin=nspin_aux
+        nspin_mag=nspin_aux
         ! 
         etmp1 = sum ( vxc_minus1(1:dfftp%nnr,current_spin) * n_r(1:dfftp%nnr) )
         etmp1= etmp1/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )*omega
@@ -253,16 +266,25 @@ SUBROUTINE full_ham (ik)
         ! This is the KI gradient (the non-scalar part)
         vpsi_r(:) = (0.D0, 0.D0)
         etmp2 = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
-                                  delta_eig(ibnd)),0.D0) * psic_1(ir)
-           IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
-           etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
-        ENDDO 
+        IF (gamma_only) THEN
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
+                                     delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+              IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * DBLE(psic_1(ir))
+              etmp2 = etmp2 + DBLE(psic_1(ir))*vpsi_r(ir)
+           ENDDO 
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + vxc_minus1(ir,current_spin) - vxc(ir,current_spin) + &
+                                     delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
+              IF(lrpa) vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0, KIND=DP) * psic_1(ir)
+              etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
+           ENDDO 
+        ENDIF
 !!        WRITE(*,'("NICOLA i, vi_r", i5, 10F16.8)') ibnd, v(1:5,spin_component)
         etmp2=etmp2/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
         CALL mp_sum (etmp2, intra_bgrp_comm)
-        delta_eig(ibnd) = etmp2 
+        delta_eig(ibnd) = REAL(etmp2, kind=DP)
         !
         ! 1) GO to G-space and store the ki gradient 
         CALL fwfft ('Wave', vpsi_r, dffts)
@@ -286,10 +308,10 @@ SUBROUTINE full_ham (ik)
         rho_minus1%of_g(:,2) = n_g(:)  ! orbital denisty rho_i in reciprocal scape
         !
         etxc_minus1 = 0.D0; vtxc_minus1 = 0.D0; vxc_minus1(:,:) = 0.D0
-        nspin_aux=nspin; nspin=2
+        nspin_aux=nspin_mag; nspin_mag=2
         aux_r =0.D0 ; aux_g = (0.D0, 0.D0)
         CALL v_xc( rho_minus1, aux_r, aux_g, etxc_minus1, vtxc_minus1, vxc_minus1 )
-        nspin=nspin_aux
+        nspin_mag=nspin_aux
         !
         ! The constant term 
         etmp1 =0.D0
@@ -302,11 +324,18 @@ SUBROUTINE full_ham (ik)
         !
         vpsi_r(:) = (0.D0, 0.D0)
         etmp2 = (0.D0, 0.D0)
-        DO ir = 1, dffts%nnr
-           vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0) * psic_1(ir)
-           etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
-!           vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
-        ENDDO
+        IF (gamma_only) THEN 
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0) * DBLE(psic_1(ir))
+              etmp2 = etmp2 + DBLE(psic_1(ir))*vpsi_r(ir)
+           ENDDO
+        ELSE
+           DO ir = 1, dffts%nnr
+              vpsi_r (ir) = CMPLX( ( etmp1 - v(ir,current_spin) - vxc_minus1(ir,current_spin) ),0.D0, KIND=DP) * psic_1(ir)
+              etmp2 = etmp2 + CONJG(psic_1(ir))*vpsi_r(ir)
+!              vpsi_r (ir) = CMPLX( ( v(ir,current_spin) + delta_eig(ibnd)),0.D0) * psic_1(ir)
+           ENDDO
+        ENDIF 
         ! The diagonal term. It's the shift of the KS eigenvalue in the canonical representation
         etmp2=etmp2/( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
         CALL mp_sum (etmp2, intra_bgrp_comm)
@@ -321,27 +350,27 @@ SUBROUTINE full_ham (ik)
         !
      ENDIF
      !
-     IF (alpha_final_full(ibnd) .gt. 1.02 ) THEN 
+     IF (alpha_final(ibnd) .gt. 1.02 ) THEN 
          WRITE(stdout,'("WARNING: alpha for orbital", i5, i3, "  bigger than 1.02.", F15.8, "Set it to 1.00",/)') ibnd, &
-             ik, alpha_final_full(ibnd)
-         alpha_final_full(ibnd) = 1.D0
+             ik, alpha_final(ibnd)
+         alpha_final(ibnd) = 1.D0
      ENDIF 
      !
-     IF (alpha_final_full(ibnd) .lt. 0.00 ) THEN 
+     IF (alpha_final(ibnd) .lt. 0.00 ) THEN 
          WRITE(stdout,'(8x, "WARNING: alpha for orbital", i5, i3, "  smaller than 0.00.", F15.8, "Set it to 1.00",/)') ibnd, &
-             ik, alpha_final_full(ibnd)
-         alpha_final_full(ibnd) = 1.D0
+             ik, alpha_final(ibnd)
+         alpha_final(ibnd) = 1.D0
      ENDIF 
      !
-     v_ki(:,ibnd) = v_ki(:,ibnd) * alpha_final_full(ibnd)
+     v_ki(:,ibnd) = v_ki(:,ibnd) * alpha_final(ibnd)
      !
-     WRITE(stdout,'(8x, "orbital", i3, 3x, "spin", i3, 5x, "uKI_diag", F15.8 ," Ry", 3x, "rKI_diag", F15.8, " Ry", 3x, &
-         &"alpha=", F15.8, 3x,/ )') ibnd, current_spin, delta_eig(ibnd), delta_eig(ibnd)*alpha_final_full(ibnd), &
-         alpha_final_full(ibnd)
+     WRITE(stdout,'(8x, "orbital", i3, 3x, "spin", i3, 5x, "uKC_diag", F15.8 ," Ry", 3x, "rKC_diag", F15.8, " Ry", 3x, &
+         &"alpha=", F15.8, 3x,/ )') ibnd, current_spin, delta_eig(ibnd), delta_eig(ibnd)*alpha_final(ibnd), &
+         alpha_final(ibnd)
      !
   ENDDO orb_loop
   !
-101  CONTINUE
+!101  CONTINUE
   !
   ! ##### Build up the KI Hamiltonian 
   !
@@ -352,10 +381,16 @@ SUBROUTINE full_ham (ik)
      DO k = ibnd, n_orb
         !
         etmp2 = 0.D0
-        DO ir = 1, npw
-!           etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k)+hpsi(ir,k))
-           etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k))
-        ENDDO
+        IF (gamma_only) THEN 
+           DO ir = 1, npw
+              etmp2 = etmp2 + 2.D0*DBLE(CONJG(evc0(ir,ibnd)) * (v_ki(ir,k)))
+           ENDDO
+           IF (gstart ==2 ) etmp2 = etmp2 - 1.D0 *DBLE(CONJG(evc0(1,ibnd)) * (v_ki(1,k)))
+        ELSE
+           DO ir = 1, npw
+              etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k))
+           ENDDO
+        ENDIF
         CALL mp_sum (etmp2, intra_bgrp_comm)
 !        WRITE(*,'("Nic: KI    matrix ele", 2i5, 3x, 2F20.15)') ibnd, k , etmp2
 !        WRITE(*,'("Nic: KS    matrix ele", 2i5, 3x, 2F20.15)') ibnd, k , Hamlt(ik,ibnd,k)
@@ -376,16 +411,23 @@ SUBROUTINE full_ham (ik)
         DO k = 1, ibnd
            !
         etmp2 = 0.D0
+        IF (gamma_only) THEN 
+           DO ir = 1, npw
+              etmp2 = etmp2 + 2.D0*DBLE(CONJG(evc0(ir,ibnd)) * (v_ki(ir,k)))
+           ENDDO
+           IF (gstart ==2 ) etmp2 = etmp2 - 1.D0 *DBLE(CONJG(evc0(1,ibnd)) * (v_ki(1,k)))
+        ELSE
            DO ir = 1, npw
 !              etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k)+hpsi(ir,k))
               etmp2 = etmp2 + CONJG(evc0(ir,ibnd)) * (v_ki(ir,k))
            ENDDO
-           CALL mp_sum (etmp2, intra_bgrp_comm)
-           !
-           ham_dw(ibnd,k) = etmp2
-           IF (ibnd .gt. num_wann_occ .AND. k .le. num_wann_occ ) ham_dw (ibnd, k) = (0.D0,0D0)  ! kill occ-empty matrix elements
-           ham_dw(k,ibnd) = CONJG(ham_dw(ibnd,k))
-           !
+        ENDIF
+        CALL mp_sum (etmp2, intra_bgrp_comm)
+        !
+        ham_dw(ibnd,k) = etmp2
+        IF (ibnd .gt. num_wann_occ .AND. k .le. num_wann_occ ) ham_dw (ibnd, k) = (0.D0,0D0)  ! kill occ-empty matrix elements
+        ham_dw(k,ibnd) = CONJG(ham_dw(ibnd,k))
+        !
         ENDDO
         !
      ENDIF

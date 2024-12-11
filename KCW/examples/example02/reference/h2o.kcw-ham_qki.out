@@ -1,0 +1,206 @@
+
+     =--------------------------------------------------------------------------------=
+                      :::    :::           ::::::::         :::       ::: 
+                     :+:   :+:           :+:    :+:        :+:       :+:  
+                    +:+  +:+            +:+               +:+       +:+   
+                   +#++:++             +#+               +#+  +:+  +#+    
+                  +#+  +#+            +#+               +#+ +#+#+ +#+     
+                 #+#   #+#           #+#    #+#         #+#+# #+#+#       
+                ###    ###           ########           ###   ###         
+
+       Koopmans functional implementation based on DFPT; please cite this program as
+
+        N.Colonna, R. De Gennaro, E. Linscott, and N. Marzari, JCTC 18, 5435 (2022) 
+
+                                                                                    
+
+       If you use the non-collinear mode (with/without spin-orbit coupling) please cite
+
+        A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
+     =--------------------------------------------------------------------------------=
+
+     Program KCW v.7.3.1 starts on 17Oct2024 at 10:50:19 
+        Git branch: HPROJinDEV
+        Last git commit: 831a4faf8b89b6f76944e15e7d8fcc3b5cf9be3f-dirty
+        Last git commit date: Thu Oct 17 10:19:37 2024 +0200
+        Last git commit subject: Uniform the notation in dH_ki_full
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     4 processors
+
+     MPI processes distributed on     1 nodes
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     1445 MiB available memory on the printing compute node when the environment starts
+
+
+     KCW INPUT SUMMARY 
+     ============================================
+
+      CONTROL 
+       # title               =KCW H2O KI hamilto
+       # out_dir             =/home/nicola/CODES
+       # prefix              =               h2o
+       # calculation         =               ham
+       # kcw_iverbosity      =                 1
+       # kcw_at_ks           =                 T
+       # MP grid             =     1     1     1
+       # spin_component      =                 1
+       # homo_only           =                 F
+       # read_unitary_matrix =                 F
+       # check_ks            =                 F
+       # l_vcut              =                 F
+       # assume_isolated     =                mt
+       # io_sp               =                 F
+       # io_real_space       =                 F
+
+      HAM 
+       # qp_symm             =                 F
+       # kipz_corr           =                 F
+       # MP grid             =     1     1     1
+       # do_bands            =                 F
+       # use_ws_distance     =                 F
+       # write_hr            =                 T
+       # l_alpha_corr        =                 F
+       # on_site_only        =                 F
+       # h_diag_scheme       =              wann
+       # which_odd           =               qki
+     ============================================
+
+     INFO: Reading pwscf data
+
+     Reading xml data from directory:
+
+     /home/nicola/CODES/q-e-kcw/tempdir/h2o.save/
+
+     IMPORTANT: XC functional enforced from input :
+     Exchange-correlation= PW
+                           (   1   4   0   0   0   0   0)
+     Any further DFT definition will be discarded
+     Please, verify this is what you really want
+
+
+     Parallelization info
+     --------------------
+     sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min         975     975    244                44983    44983    5620
+     Max         977     977    245                44984    44984    5623
+     Sum        3905    3905    979               179933   179933   22489
+
+     Using Slab Decomposition
+
+
+     Check: negative core charge=   -0.000035
+     Reading collected, re-writing distributed wavefunctions
+
+     INFO: total number of primitive cell    1
+
+     READING SCREENING PARAMETERS
+
+     INFO: alphas read from:/home/nicola/CODES/q-e-kcw/tempdir/kcw/h2o.alpha.dat                                                                                                                                                                                                            
+     iwann =     1   alpha =      0.63566336
+     iwann =     2   alpha =      0.70868990
+     iwann =     3   alpha =      0.64498744
+     iwann =     4   alpha =      0.63456449
+     iwann =     5   alpha =      0.94666509
+     iwann =     6   alpha =      0.88359513
+     iwann =     7   alpha =      0.90583634
+     iwann =     8   alpha =      1.01558008
+
+     INFO: MLWF read from file:  Reading collected, re-writing distributed wavefunctions
+
+     INFO: Coulomb kernel treated according to MT scheme
+
+     INFO: READING Wannier-orbital Densities ...
+
+        ==============================================================================
+        iq =     1
+        The  Wannier density at  q =    0.0000000   0.0000000   0.0000000  [Cart ]
+        The  Wannier density at  q =    0.0000000   0.0000000   0.0000000  [Cryst]
+        ==============================================================================
+
+     INFO: total number of wannier to compute    8 from     1 to     8
+     INFO: PREPARING THE KCW CALCULATION ... DONE
+
+
+
+     INFO: qKI calculation: quadratic Hamiltonian ... 
+
+
+     INFO: KC SCALAR TERM CALCULATION ... START
+
+     INFO: KC SCALAR TERM CALCULATION ... END
+
+     total cpu time spent up to now is        0.8 secs
+
+     INFO: debug_nc =  T Note: the k-q formula will be used.
+
+
+     INFO: qKI  HAMILTONIAN CALCULATION ik=    1 ...
+
+        INFO: Mapping also k-q -> p in 1BZ DONE  
+
+        INFO: Map k+q -> p in 1BZ DONE  
+
+
+     total cpu time spent up to now is        1.2 secs
+
+     INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN
+     INFO: Standar scheme: diagonalize on the variational orbitals basis
+
+          k = 0.0000 0.0000 0.0000     band energies (ev):
+
+          KS      -25.4754   -13.3483    -9.4516    -7.3908    -1.5378     0.0879     0.1858     0.6870
+          KI      -31.5892   -19.0673   -15.0006   -12.8315    -0.9804     0.0010     0.6020     1.3658
+          pKI     -31.5892   -19.0673   -15.0006   -12.8315    -0.4189     0.5115     0.6067     0.2890
+          total cpu time spent up to now is        1.2 secs
+
+        KS  highest occupied, lowest unoccupied level (ev):    -7.3908   -1.5378
+        KI  highest occupied, lowest unoccupied level (ev):   -12.8315   -0.9804
+        pKI highest occupied, lowest unoccupied level (ev):   -12.8315   -0.4189
+
+     Writing all to output data dir /home/nicola/CODES/q-e-kcw/tempdir/h2o_kcw.save/ :
+     XML data file, pseudopotentials, collected wavefunctions
+
+     KCW          :      1.11s CPU      1.23s WALL
+
+     INITIALIZATION: 
+     map          :      0.00s CPU      0.00s WALL (       1 calls)
+
+     init_vloc    :      0.01s CPU      0.01s WALL (       1 calls)
+     init_us_1    :      0.00s CPU      0.00s WALL (       1 calls)
+
+
+
+
+
+     h_psi        :      0.01s CPU      0.01s WALL (       1 calls)
+
+     h_psi        :      0.01s CPU      0.01s WALL (       1 calls)
+     add_vuspsi   :      0.00s CPU      0.00s WALL (       1 calls)
+
+
+
+      General routines
+     calbec       :      0.00s CPU      0.00s WALL (       1 calls)
+     fft          :      0.38s CPU      0.39s WALL (       6 calls)
+     ffts         :      0.26s CPU      0.28s WALL (     144 calls)
+     fftw         :      0.03s CPU      0.03s WALL (      30 calls)
+     davcio       :      0.00s CPU      0.02s WALL (      12 calls)
+
+
+     KCW          :      1.11s CPU      1.28s WALL
+
+
+   This run was terminated on:  10:50:20  17Oct2024            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=

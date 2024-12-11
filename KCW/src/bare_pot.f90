@@ -18,40 +18,41 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   USE fft_base,             ONLY : dffts
   USE fft_interfaces,       ONLY : fwfft, invfft
   USE gvecs,                ONLY : ngms
-  USE lsda_mod,             ONLY : nspin
   USE cell_base,            ONLY : tpiba2, omega
-  USE control_kcw,          ONLY : spin_component, kcw_iverbosity, x_q 
+  USE control_kcw,          ONLY : spin_component, kcw_iverbosity, x_q, nrho
   USE gvect,                ONLY : g
   USE qpoint,               ONLY : xq
   USE constants,            ONLY : e2, fpi
-  USE eqv,                  ONLY : dmuxc
   USE control_lr,           ONLY : lrpa
   USE martyna_tuckerman,    ONLY : wg_corr_h, do_comp_mt
   USE io_global,            ONLY : stdout
-  !USE exx_base,             ONLY : g2_convolution
-  USE coulomb,             ONLY : g2_convolution
+  USE coulomb,              ONLY : g2_convolution
+  USE noncollin_module,     ONLY : domag, nspin_mag
+  USE xc_lib,               ONLY : xclib_dft_is
+  USE control_flags,      ONLY : gamma_only
+
   !
   IMPLICIT NONE
   !
-  COMPLEX(DP), INTENT (OUT) :: rhog(ngms)
+  COMPLEX(DP), INTENT (OUT) :: rhog(ngms,nrho)
   ! ... periodic part of wannier density in G-space
   !
-  COMPLEX(DP), INTENT (OUT) :: delta_vg(ngms,nspin)
+  COMPLEX(DP), INTENT (OUT) :: delta_vg(ngms,nspin_mag)
   ! ... perturbing potential [f_hxc(r,r') x wann(r')] in G-space
   !
-  COMPLEX(DP), INTENT (OUT) :: delta_vg_(ngms,nspin)
+  COMPLEX(DP), INTENT (OUT) :: delta_vg_(ngms,nspin_mag)
   ! ... perturbing potential [f_hxc(r,r') x wann(r')] in G-space without g=0 contribution
   !
   COMPLEX(DP), INTENT (OUT) :: vh_rhog(ngms)
   ! ... Hartree perturbing potential [f_hxc(r,r') x wann(r')] in G-space
   ! 
-  COMPLEX(DP), INTENT (OUT) :: delta_vr(dffts%nnr,nspin)
+  COMPLEX(DP), INTENT (OUT) :: delta_vr(dffts%nnr,nspin_mag)
   ! ... perturbing potential [f_hxc(r,r') x wann(r')] in r-space
   !
-  COMPLEX(DP), INTENT (OUT) :: delta_vr_(dffts%nnr,nspin)
+  COMPLEX(DP), INTENT (OUT) :: delta_vr_(dffts%nnr,nspin_mag)
   ! ... perturbing potential [f_hxc(r,r') x wann(r')] in r-space without g=0 contribution
   !
-  COMPLEX(DP), INTENT (IN)  :: rhor(dffts%nnr)
+  COMPLEX(DP), INTENT (IN)  :: rhor(dffts%nnr,nrho)
   ! ... periodic part of wannier density in r-space
   !
   INTEGER, INTENT (IN)      :: iq
@@ -63,7 +64,7 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   COMPLEX(DP), ALLOCATABLE  :: vaux(:)
   ! ... auxiliary vector
   !
-  INTEGER                   :: ig, is, ir
+  INTEGER                   :: ig, is, ip
   ! ... counters 
   !
   REAL(DP)                  :: qg2, eh_corr
@@ -80,14 +81,34 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   COMPLEX(DP)               :: vh_rhog_g0eq0(ngms)
   ! ... The hartree potential with th q+g=0 component set to zero
   !
-  aux(:) = rhor(:)/omega
-  CALL fwfft ('Rho', aux, dffts)  ! NsC: Dense or smooth grid?? I think smooth is the right one. 
-  rhog(:) = aux(dffts%nl(:))
+  COMPLEX(DP), ALLOCATABLE :: rhor_(:,:)
+  !
   !! The periodic part of the orbital density in g space  
+  DO ip=1,nrho !<---CONSIDER TO SUBSTITUTE WITH nspin_mag
+      aux(:) = rhor(:,ip)/omega
+      CALL fwfft ('Rho', aux, dffts)  
+      rhog(:,ip) = aux(dffts%nl(:))
+  END DO
   !
   delta_vr = ZERO
   delta_vr_ = ZERO
   aux      = ZERO
+  !
+  ! .. First the xc contribution
+  !
+  IF (.NOT. lrpa) THEN 
+    ALLOCATE ( rhor_(dffts%nnr,nspin_mag) )
+    rhor_ = CMPLX(0.D0,0.D0,kind=DP)
+    IF (nspin_mag == 4) THEN
+      rhor_=rhor/omega
+    ELSE
+      rhor_(:,spin_component) = rhor(:,1)/omega
+    ENDIF
+    CALL dv_of_drho_xc(delta_vr, rhor_)
+    DEALLOCATE (rhor_)
+  ENDIF 
+  !
+  delta_vr_ = delta_vr 
   !
   xk(:) = 0.D0
   xkq(:) = -x_q(:,iq)
@@ -103,11 +124,11 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
     !
     qg2 = SUM ( (g(:,ig)+x_q(:,iq))**2 )
     !
-    vh_rhog_g0eq0(ig) =  e2 * fpi * rhog(ig) / (tpiba2 * qg2)
+    vh_rhog_g0eq0(ig) =  e2 * fpi * rhog(ig,1) / (tpiba2 * qg2)
     IF (qg2 .lt. 1e-8) vh_rhog_g0eq0(ig) = (0.D0, 0.D0)
     ! ... set to zero the q+g=0 component
     !
-    vh_rhog(ig) =  rhog(ig) * cmplx(fac(ig), 0.d0)
+    vh_rhog(ig) =  rhog(ig,1) * cmplx(fac(ig), 0.d0, KIND=DP)
     ! ... the hartree potential possibly with the special treatment of the q+g=0 component  
     !
   ENDDO
@@ -132,49 +153,109 @@ SUBROUTINE bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, de
   !
   aux=(0.d0,0.d0)
   aux_=(0.d0,0.d0)
-  aux(dffts%nl(:)) = vh_rhog(:)
+  aux(dffts%nl(:))  = vh_rhog(:)                    ! G-space components of the Hartree potential
   aux_(dffts%nl(:)) = vh_rhog_g0eq0(:)
+  !
+  IF (gamma_only) THEN
+    aux(dffts%nlm(:))  = CONJG(vh_rhog(:))
+    aux_(dffts%nlm(:)) = CONJG(vh_rhog_g0eq0(:))
+  ENDIF 
+  !
   CALL invfft ('Rho', aux, dffts)
   CALL invfft ('Rho', aux_, dffts)
   !
-  DO is = 1, nspin
-     !
-     delta_vr(:,is) = aux(:)
-     delta_vr_(:,is) = aux_(:)
-     !
-  END DO
+  IF (nspin_mag==4 .and. domag) THEN    ! Perturbing potential due to Hartree
+    delta_vr(:,1) = delta_vr(:,1)   + aux(:)
+    delta_vr_(:,1) = delta_vr_(:,1) + aux_(:)
+  ELSEIF (nspin_mag==4 .and. .NOT. domag) THEN
+    delta_vr(:,1) = delta_vr(:,1) + aux(:)
+    delta_vr_(:,1) = delta_vr_(:,1) + aux_(:)
+  ELSE
+    DO is = 1, nspin_mag
+      delta_vr(:,is)  = delta_vr(:,is)   + aux(:)
+      delta_vr_(:,is) = delta_vr_(:,is) + aux_(:)
+    END DO
+  END IF
   !
-  ! .. Add the xc contribution
-  !
-  IF (.NOT. lrpa) THEN
-     !
-     DO is = 1, nspin
-        !
-        DO ir = 1, dffts%nnr
-           !
-           delta_vr(ir,is) = delta_vr(ir,is) + dmuxc(ir,is,spin_component) * rhor(ir)/omega
-           delta_vr_(ir,is) = delta_vr_(ir,is) + dmuxc(ir,is,spin_component) * rhor(ir)/omega
-           !
-        ENDDO
-        !
-     ENDDO
-     !
-  ENDIF
-  !
-  ! ... Back to g-space
-  !
-  DO is = 1, nspin
-     !
-     aux(:) = delta_vr(:,is)
-     aux_(:) = delta_vr_(:,is) 
-     !
-     CALL fwfft ('Rho', aux, dffts)
-     CALL fwfft ('Rho', aux_, dffts)
-     !
-     delta_vg(:,is) = aux(dffts%nl(:))
-     delta_vg_(:,is) = aux_(dffts%nl(:))
-     !
+  DO is = 1, nspin_mag
+    !
+    aux(:) = delta_vr(:,is)
+    aux_(:) = delta_vr_(:,is) 
+    !
+    CALL fwfft ('Rho', aux, dffts)
+    CALL fwfft ('Rho', aux_, dffts)
+    !
+    delta_vg(:,is)  = aux(dffts%nl(:))
+    delta_vg_(:,is) = aux_(dffts%nl(:))
+    !
   ENDDO
   !
   !
 END subroutine bare_pot
+
+!-----------------------------------------------------------------------
+subroutine dv_of_drho_xc (dv, drho)
+  !-----------------------------------------------------------------------
+  !
+  !  This routine computes the change of the self consistent potential
+  !  (Hartree and XC) due to the perturbation.
+  !  Note: gamma_only is disregarded for PHonon calculations,
+  !  TDDFPT purposes only.
+  !
+  USE kinds,             ONLY : DP
+  USE constants,         ONLY : e2, fpi
+  USE fft_base,          ONLY : dfftp
+  USE fft_interfaces,    ONLY : fwfft, invfft
+  USE gvect,             ONLY : g
+  USE noncollin_module,  ONLY : nspin_lsda, nspin_mag, nspin_gga
+  USE funct,             ONLY : dft_is_nonlocc
+  USE xc_lib,            ONLY : xclib_dft_is
+  USE scf,               ONLY : rho, rho_core
+  USE uspp,              ONLY : nlcc_any
+  USE Coul_cut_2D_ph,    ONLY : cutoff_dv_of_drho
+  USE qpoint,            ONLY : xq
+  USE gc_lr,             ONLY : grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s
+  USE eqv,               ONLY : dmuxc
+
+  IMPLICIT NONE
+  COMPLEX(DP), INTENT(INOUT) :: dv(dfftp%nnr, nspin_mag)
+  ! output: response XC potential
+  COMPLEX(DP), INTENT(IN) :: drho(dfftp%nnr, nspin_mag)
+  ! input:  response charge density
+
+  INTEGER :: ir, is, is1
+  ! counter on r vectors
+  ! counter on spin polarizations
+  REAL(DP) :: fac
+  ! fac: 1 / nspin_lsda
+  COMPLEX(DP), ALLOCATABLE :: drhotot(:, :)
+  ! Total charge density. Sum of electronic (drho) and nlcc (drhoc) terms.
+  !
+  ALLOCATE(drhotot(dfftp%nnr, nspin_mag))
+  !
+  drhotot = drho
+  !
+  do is = 1, nspin_mag
+     do is1 = 1, nspin_mag
+        do ir = 1, dfftp%nnr
+           dv(ir,is) = dv(ir,is) + dmuxc(ir,is,is1) * drhotot(ir,is1)
+        enddo
+     enddo
+  enddo
+  !
+  ! Add gradient correction to the response XC potential.
+  ! NB: If nlcc=.true. we need to add here its contribution.
+  ! grho contains already the core charge
+  !
+  if (nlcc_any) rho%of_r(:, 1) = rho%of_r(:, 1) + rho_core (:)
+  !
+  if ( xclib_dft_is('gradient') ) call dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, &
+                                dvxc_sr, dvxc_ss, dvxc_s, xq, drhotot, &
+                                nspin_mag, nspin_gga, g, dv)
+  !
+  if ( dft_is_nonlocc() )  call dnonloccorr(rho%of_r, drhotot, xq, dv)
+  !
+  if (nlcc_any) rho%of_r(:, 1) = rho%of_r(:, 1) - rho_core (:)
+  !
+end subroutine dv_of_drho_xc
+

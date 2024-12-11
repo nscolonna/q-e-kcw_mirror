@@ -9,7 +9,7 @@
 !#define DEBUG
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_map_ikq_single (iq)
+SUBROUTINE compute_map_ikq_single (iq,also_minus)
   !-----------------------------------------------------------------------
   !
   !! This routine compute the map to go from (iq,ik) --> ikq_1BZ
@@ -19,11 +19,10 @@ SUBROUTINE compute_map_ikq_single (iq)
   USE kinds,                ONLY : DP
   USE klist,                ONLY : xk, nkstot
   USE io_global,            ONLY : ionode, ionode_id
-  USE control_kcw,          ONLY : map_ikq, shift_1bz, kcw_iverbosity
+  USE control_kcw,          ONLY : map_ikq, shift_1bz, kcw_iverbosity, nkstot_eff, map_ikq_minus, shift_1bz_minus
   USE mp,                   ONLY : mp_bcast
   USE mp_global,            ONLY : intra_image_comm 
   USE io_global,            ONLY : stdout
-  USE lsda_mod,             ONLY : nspin
   USE cell_base,            ONLY : at
   !
 #ifdef DEBUG
@@ -35,11 +34,16 @@ SUBROUTINE compute_map_ikq_single (iq)
   INTEGER, INTENT(IN) :: iq 
   ! The index of the q point
   !
-  INTEGER :: ik, ikq
-  ! Counter for the k and k+q points in the BZ
+  INTEGER :: ik, ikq, ikq_m
+  ! Counter for the k, k+q, k-q points in the BZ
   !
   REAL(DP) :: xkq(3), gvect(3), gvect_(3)
   ! the k+q coordinate and the G vector that shift it into the 1 BZ
+  !
+  REAL(DP) :: xkq_m(3), gvect_m(3), gvect_m_(3)
+  ! the k-q coordinate and the G vector that shift it into the 1 BZ
+  LOGICAL, INTENT(IN), OPTIONAL :: also_minus
+  LOGICAL :: do_minus = .false.
   !
 #ifdef DEBUG
   REAL(DP) :: xk_(3), xq_(3), xkq_(3)
@@ -48,17 +52,38 @@ SUBROUTINE compute_map_ikq_single (iq)
   CALL start_clock ('map')
   IF ( ALLOCATED (map_ikq) ) DEALLOCATE (map_ikq)
   IF ( ALLOCATED (shift_1bz) ) DEALLOCATE (shift_1bz)
+  IF ( ALLOCATED (map_ikq_minus) ) DEALLOCATE (map_ikq_minus)
+  IF ( ALLOCATED (shift_1bz_minus) ) DEALLOCATE (shift_1bz_minus)
   !
   ALLOCATE ( map_ikq(nkstot) )
   ALLOCATE ( shift_1bz(3,nkstot) )
+  ALLOCATE ( map_ikq_minus(nkstot) )
+  ALLOCATE ( shift_1bz_minus(3,nkstot) )
   map_ikq (:) = 0
   shift_1bz(:,:) = 0.D0 
+  map_ikq_minus (:) = 0
+  shift_1bz_minus(:,:) = 0.D0 
+  !
+  IF(present(also_minus)) THEN
+    IF (also_minus) THEN
+        WRITE( stdout, '(8X,"INFO: Mapping also k-q -> p in 1BZ DONE  ",/)') 
+        do_minus = .true.
+    ELSE
+      do_minus = .false.
+    END IF
+  ELSE
+      do_minus = .false.
+  ENDIF
+  
   !
   IF (ionode) THEN 
     !
-    DO ik = 1, nkstot/nspin
+    DO ik = 1, nkstot_eff
       !
       xkq(:) = xk(:,ik)+xk(:,iq)
+      IF (do_minus) THEN
+      xkq_m(:) = -xk(:,ik)+xk(:,iq)
+      END IF
       ! the k+q coordinate (cart)
       !
 #ifdef DEBUG
@@ -66,36 +91,57 @@ SUBROUTINE compute_map_ikq_single (iq)
       CALL cryst_to_cart(1, xq_, at, -1)
       xk_(:) = xk(:,ik)
       CALL cryst_to_cart(1, xk_, at, -1)
-      WRITE(mpime+100,'("iq, xq", i5, 3f8.4)') iq, xq_(:)
-      WRITE(mpime+100,'("ik, xk", i5, 3f8.4)') ik, xk_(:)
+      WRITE(mpime+100,,'("iq, xq", i5, 3f8.4)') iq, xq_(:)
+      WRITE(mpime+100,,'("ik, xk", i5, 3f8.4)') ik, xk_(:)
 #endif
       gvect(:) = 0.D0
+      gvect_m(:) = 0.D0
       ! the index of the corresponding k point in the IBZ
       !
       !CALL find_index_1bz(xkq, gvect, ikq)
       CALL find_index_1bz_iterate(xkq, gvect, ikq)
+      IF (do_minus) THEN
+      CALL find_index_1bz_iterate(xkq_m, gvect_m, ikq_m)
+      ! NsC >>
+      gvect_m = -gvect_m
+      ! NsC <<
+      END IF
       !
       ! ... Store the result in a global variable 
       map_ikq(ik) = ikq
       shift_1bz(:,ik) = gvect(:)
       gvect_(:) = gvect(:)
       CALL cryst_to_cart(1, gvect_, at, -1)
+      IF (do_minus) THEN
+      map_ikq_minus(ik) = ikq_m
+      shift_1bz_minus(:,ik) = gvect_m(:)
+      gvect_m_(:) = gvect_m(:)
+      CALL cryst_to_cart(1, gvect_m_, at, -1)
+      END IF
 #ifdef DEBUG
       xkq_(:) = xkq(:)
       CALL cryst_to_cart(1, xkq_, at, -1)
       WRITE(mpime+100,'("The map (iq,ik) --> ikq", 2i, 8x, i)') iq,ik, ikq
-      WRITE(mpime+100,'("xkq, shift" , 5x, 3f8.4, 5x, 3f8.4)') xkq_(:), gvect_(:)
-      WRITE(mpime+100,'("ikq, xkq_1BZ", i5, 3f8.4,/)') ikq, xq_(:) + xk_(:) -gvect_(:)
+      WRITE(mpime+100,,'("xkq, shift" , 5x, 3f8.4, 5x, 3f8.4)') xkq_(:), gvect_(:)
+      WRITE(mpime+100,,'("ikq, xkq_1BZ", i5, 3f8.4,/)') ikq, xq_(:) + xk_(:) -gvect_(:)
 #endif
       !
-      IF (kcw_iverbosity .gt. 1) WRITE(stdout,'(8X, "The map (iq,ik) --> ip + G", 5x, & 
-                                                &  " (", 2i3, "  ) " , 5x, i3 , 8x, "+", 3f8.4, " [Cryst]" )') iq, ik, ikq, gvect_
+      IF (kcw_iverbosity .gt. 1) THEN
+        WRITE(stdout,'(8X, "The map (iq,ik) --> ip + G", 5x, & 
+                                                &  " ( ", 2i4, "  ) " , 5x, i3 , 8x, "+", 3f8.4, " [Cryst]" )') iq, ik, ikq, gvect_
+        IF (do_minus) THEN
+          WRITE(stdout,'(8X, "The map [-q] (iq,ik) --> ip + G", 5x, & 
+          &  " ( ", 2i4, "  ) " , 5x, i3 , 8x, "+", 3f8.4, " [Cryst]" )') iq, ik, ikq_m, gvect_m_
+        END IF
+      END IF
     ENDDO
     !
   ENDIF 
   !
   CALL mp_bcast ( map_ikq, ionode_id, intra_image_comm )
   CALL mp_bcast ( shift_1bz, ionode_id, intra_image_comm )
+  CALL mp_bcast ( map_ikq_minus, ionode_id, intra_image_comm )
+  CALL mp_bcast ( shift_1bz_minus, ionode_id, intra_image_comm )
   !
   IF (kcw_iverbosity .gt. 1) WRITE(stdout, *) ""
   WRITE( stdout, '(8X,"INFO: Map k+q -> p in 1BZ DONE  ",/)') 
@@ -115,10 +161,7 @@ SUBROUTINE find_index_1bz(xkq, gvect, ikq)
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : at, bg
   USE klist,                ONLY : xk, nkstot
-  USE lsda_mod,             ONLY : nspin
-  !USE mp_world,             ONLY : mpime
-  
-  !USE io_global,            ONLY : stdout
+  USE control_kcw,          ONLY : nkstot_eff
   !
   IMPLICIT NONE
   !
@@ -144,7 +187,7 @@ SUBROUTINE find_index_1bz(xkq, gvect, ikq)
   !WRITE(100,*) 'xkq_1BZ', xkq_
   !
   cntr = 0
-  DO ik = 1, nkstot/nspin
+  DO ik = 1, nkstot_eff
     !
     !
     ! The k point in crystal coordinates
@@ -187,20 +230,22 @@ SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : at, bg
   USE klist,                ONLY : xk, nkstot
-  USE lsda_mod,             ONLY : nspin
-  !USE mp_world,             ONLY : mpime
-  
-  !USE io_global,            ONLY : stdout
+  USE noncollin_module,     ONLY : nspin_mag
   !
   IMPLICIT NONE
   !
   REAL(DP), INTENT(IN) :: xkq(3)
   REAL(DP), INTENT(OUT) :: gvect(3)
   REAL(DP) :: xkq_(3), dist, xk_(3)
-  INTEGER :: ikq, ik, cntr
+  INTEGER :: ikq, ik, cntr,nkstot_eff
   LOGICAL :: found(nkstot)
   INTEGER :: g1, g2 ,g3, count_g
   !
+  IF (nspin_mag == 4) THEN
+    nkstot_eff = nkstot
+  ELSE
+    nkstot_eff = nkstot/nspin_mag
+  ENDIF 
   !
   count_g = 0
   !
@@ -219,7 +264,7 @@ SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
          !WRITE(100,*) 'xkq_trial', xkq_
          !
          cntr = 0
-         DO ik = 1, nkstot/nspin
+         DO ik = 1, nkstot_eff
            ! 
            ! The k point in crystal coordinates
            xk_(:)  = xk(:,ik)

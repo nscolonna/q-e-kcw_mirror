@@ -4,8 +4,8 @@ GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
 tol_ene=0.000001
-tol_eig=0.001
-tol_a=0.001
+tol_eig=0.005
+tol_a=0.005
 check=1
 echo 
 echo " Testing the results ..." 
@@ -57,10 +57,12 @@ fi
 done
 if (( $check )); then echo -e "  ${GREEN}KC_SCREEN   OK!${NC}"; fi
 
+
+for which_odd in "qki" "ki" "pkipz"; do
 check=1
 
-grep "KI\[Full\]" results/h2o.kcw-ham.out > pp
-grep "KI\[Full\]" reference/h2o.kcw-ham.out >> pp
+grep "   KI    " results/h2o.kcw-ham_${which_odd}.out > pp
+grep "   KI    " reference/h2o.kcw-ham_${which_odd}.out >> pp
 #cat pp
 for j in `seq 1 8`; do 
  col=`echo $j+1 | bc`
@@ -68,11 +70,13 @@ for j in `seq 1 8`; do
  eig_ref=`tail -1 pp | awk -v col=$col '{print $col}'`
  err=`echo $i $eig $eig_ref | awk '{printf "%20.15f \n", sqrt(($2-$3)*($2-$3))}'`
  if (( $(echo "$err > $tol_eig" |bc -l) )); then
-  echo -e "  ${RED}KC_HAM    WARNING: ${NC}eig does not match for orbital $j: $eig $eig_ref $err"
+  echo -e "  ${RED}KC_HAM $which_odd   WARNING: ${NC}eig does not match for orbital $j: $eig $eig_ref $err"
   check=0
  fi
 done
-if (( $check )); then echo -e "  ${GREEN}KC_HAM      OK!${NC}"; fi
+if (( $check )); then echo -e "  ${GREEN}KC_HAM  $which_odd    OK!${NC}"; fi
 rm pp
-echo 
 
+done
+
+echo 

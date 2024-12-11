@@ -21,10 +21,9 @@ SUBROUTINE kcw_pp_readin()
   USE mp,                ONLY : mp_bcast
   USE run_info,          ONLY : title
   USE io_files,          ONLY : tmp_dir, prefix, check_tempdir
-  USE noncollin_module,  ONLY : noncolin
   USE read_cards_module, ONLY : read_cards
   USE io_global,         ONLY : ionode
-  USE mp_global,         ONLY :  intra_image_comm 
+  USE mp_global,         ONLY : intra_image_comm 
   USE paw_variables,     ONLY : okpaw
   USE uspp,              ONLY : okvan
   USE control_kcw
@@ -60,7 +59,7 @@ SUBROUTINE kcw_pp_readin()
   ! nogg         : if .true. lgamma_gamma tricks are not used
   !
   NAMELIST / KCW_PP /    outdir, prefix, mp1, mp2, mp3, num_wann, seedname, use_ws_distance, &
-                         num_wann_occ, num_wann_emp
+                         num_wann_occ, num_wann_emp, io_sp, io_real_space
   !
   ! prefix       : the prefix of files produced by pwscf
   ! outdir       : directory where input, output, temporary files reside
@@ -107,6 +106,8 @@ SUBROUTINE kcw_pp_readin()
   mp2                 = -1
   mp3                 = -1
   use_ws_distance     = .TRUE.
+  io_sp               = .FALSE.
+  io_real_space       = .FALSE.
   ! 
   ! ...  reading the namelist inputki
   !
@@ -150,9 +151,6 @@ SUBROUTINE kcw_pp_readin()
   !
   IF (okpaw.or.okvan) CALL errore('kcw_pp_readin',&
      'The kcw code with US or PAW is not available yet',1)
-
-  IF (noncolin) CALL errore('kcw_pp_readin',&
-   'The kcw code with non colliner spin is not available yet',1)
   !
   RETURN
   !

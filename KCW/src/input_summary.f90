@@ -40,6 +40,8 @@ subroutine input_summary ( )
     WRITE(stdout, 43)  "# check_ks            =", check_ks
     WRITE(stdout, 43)  "# l_vcut              =", l_vcut    
     WRITE(stdout, 42)  "# assume_isolated     =", TRIM(assume_isolated)
+    WRITE(stdout, 43)  "# io_sp               =", io_sp
+    WRITE(stdout, 43)  "# io_real_space       =", io_real_space
     !
     IF ( .NOT. kcw_at_ks .AND. .NOT. calculation=='cc' ) THEN 
 !!! WANNIER
@@ -76,6 +78,8 @@ subroutine input_summary ( )
       WRITE(stdout, 43)  "# write_hr            =", write_hr
       WRITE(stdout, 43)  "# l_alpha_corr        =", l_alpha_corr
       WRITE(stdout, 43)  "# on_site_only        =", on_site_only
+      WRITE(stdout, 42)  "# h_diag_scheme       =", TRIM(h_diag_scheme)
+      WRITE(stdout, 42)  "# which_odd           =", TRIM(which_odd)
     ENDIF
     !
     WRITE(stdout,'(5X, 44("="),/)')
@@ -85,7 +89,6 @@ subroutine input_summary ( )
 41  FORMAT(7X, A23, A18)
 42  FORMAT(7X, A23, A18)
 43  FORMAT(7X, A23, L18)
-44  FORMAT(7X, A23, F12.8, 3x, " [Ry]")
 45  FORMAT(7X, A23, I18)
 46  FORMAT(7X, A23, E18.4)
 47  FORMAT(7X, A23, 3I6)

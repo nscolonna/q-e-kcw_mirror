@@ -25,7 +25,7 @@ SUBROUTINE kcw_readin()
   USE control_lr,         ONLY : lgamma, lrpa
   USE qpoint,             ONLY : nksq
   USE io_files,           ONLY : tmp_dir, prefix, check_tempdir
-  USE noncollin_module,   ONLY : noncolin
+  USE noncollin_module,   ONLY : noncolin,domag
   USE read_cards_module,  ONLY : read_cards
   USE io_global,          ONLY : ionode
   USE mp_global,          ONLY : intra_image_comm 
@@ -38,6 +38,7 @@ SUBROUTINE kcw_readin()
   USE martyna_tuckerman,  ONLY : do_comp_mt
   USE exx_base,           ONLY : x_gamma_extrapolation
   USE mp_pools,           ONLY : npool
+  USE xc_lib,             ONLY : xclib_dft_is
   !
   IMPLICIT NONE
   !
@@ -50,18 +51,21 @@ SUBROUTINE kcw_readin()
   LOGICAL, EXTERNAL   :: imatches
   LOGICAL, EXTERNAL   :: has_xml
   LOGICAL             :: exst, parallelfs
+  LOGICAL             :: do_comp_mt_kcw
   !
   NAMELIST / CONTROL /  outdir, prefix, read_unitary_matrix, kcw_at_ks, &
                         spread_thr, homo_only, kcw_iverbosity, calculation, &
-                        l_vcut, assume_isolated, spin_component, mp1, mp2, mp3, lrpa
+                        l_vcut, assume_isolated, spin_component, & 
+                        mp1, mp2, mp3, lrpa, io_sp, io_real_space
   !
   NAMELIST / WANNIER /  num_wann_occ, num_wann_emp, have_empty, has_disentangle, &
                         seedname, check_ks, l_unique_manifold
   !
-  NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread
+  NAMELIST / SCREEN /   fix_orb, niter, nmix, tr2, i_orb, eps_inf, check_spread, alpha_mix
   !
-  NAMELIST / HAM /      qp_symm, kipz_corr, i_orb, do_bands, use_ws_distance, & 
-                        write_hr, l_alpha_corr, on_site_only
+  NAMELIST / HAM /      qp_symm, i_orb, do_bands, use_ws_distance, & 
+                        write_hr, l_alpha_corr, on_site_only, h_diag_scheme, &
+                        check_spread, which_odd
   !
   !### COTROL
   !! outdir          : directory where input, output, temporary files reside 
@@ -105,9 +109,12 @@ SUBROUTINE kcw_readin()
   !! write_hr        : if .true. KC H(R) is printed into a file
   !! on_site_only    : if .true. only H(R=0) and i=j is computed
   !! qp_symm         : if TRUE make the KI hamitonian hermitian in the spirit of quasiparticle GW scheme 
-  !! kipz_corr       : Compute the pKIPZ hamiltonian (only for finite systems: Gamma-only calculation in SC) 
   !! l_alpha_corr    : If true a correction is applied to the screening coefficient to mimick effect beyond the 
   !!                   second order
+  !! h_proj          : if true an alterantive definition of the KI Hamitlonian is built and diagonalized
+  !!                   using projectors (see koopmans_ham_proj.f90)
+  !! io_sp           : write/read wannier orbital densities in single precision to save disk space
+  !! io_real_space   : write/read wannier orbital densities in real space (space consuming but more robust when restart)
   ! 
   IF (ionode) THEN
     !
@@ -178,6 +185,10 @@ SUBROUTINE kcw_readin()
   check_spread        = .FALSE.
   on_site_only        = .FALSE.
   calculation         = " " 
+  which_odd           = "qki"
+  h_diag_scheme       = "wann"
+  io_sp               = .FALSE.
+  io_real_space       = .FALSE.
   ! 
   ! ...  reading the namelists (if needed)
   !
@@ -204,6 +215,59 @@ SUBROUTINE kcw_readin()
   IF (kcw_at_ks) seedname = prefix
   IF (ionode) tmp_dir = trimcheck (outdir)
   !
+  IF (ionode) THEN 
+    SELECT CASE( trim( h_diag_scheme ) )
+    CASE( 'wann' )
+       !
+       h_uniq  = .false.
+       h_proj  = .false.
+       !
+    CASE( 'uniq' )
+       !
+       h_uniq  = .true.
+       h_proj  = .false.
+       !
+    CASE( 'proj' )
+       !
+       h_uniq  = .false.
+       h_proj  = .true.
+       !
+    CASE DEFAULT
+       !
+       CALL errore( 'kcw_readin', 'h_diag_scheme=' // trim(h_diag_scheme) // &
+                  & ' not supported!  Valid options: "wann" || "uniq" || "proj" ',1 )
+       !
+    END SELECT
+    !
+    SELECT CASE( trim( which_odd ) )
+    CASE( 'qki', '2nd', 'second_order' )
+       !
+       corr_pc  = .true.
+       corr_sc  = .false.
+       !
+    CASE( 'ki', 'full' )
+       !
+       corr_pc  = .false.
+       corr_sc  = .true.
+       !
+    CASE ( 'pkipz' )
+       !
+       corr_pc  = .false.
+       corr_sc  = .true.
+       kipz_corr = .TRUE. 
+       !
+    CASE DEFAULT
+       !
+       CALL errore( 'kcw_readin', 'which_odd=' // trim(which_odd) // &
+                  & ' not supported!  Valid options: & 
+                  &   1) "qki" || "quadratic" || "2nd" || "second_order"; &
+                  &   2) "ki" || "full"; &
+                  &   3) "pkipz" ',1 )
+       !
+    END SELECT
+    !
+  ENDIF
+  !
   ! ... broadcasting all input variables to other nodes
   !
   CALL input_summary ()
@@ -219,11 +283,13 @@ SUBROUTINE kcw_readin()
   CALL check_tempdir ( tmp_dir_kcw, exst, parallelfs )
   tmp_dir_kcwq=tmp_dir_kcw
   !
+  !
   ! ... Check all namelist variables
   !
   IF (kcw_iverbosity .gt. 1) iverbosity = 1
   !
   IF (spin_component /= 1 .AND. spin_component /= 2) & 
+     ! TO CHANGE
      CALL errore ('kcw_readin', ' spin_component either 1 (UP) or 2 (DOWN) ', 1)
   !
   IF (kcw_at_ks .AND. read_unitary_matrix) THEN 
@@ -250,18 +316,48 @@ SUBROUTINE kcw_readin()
      CALL errore('kcw_readin', 'pools not implemented for "ham" calculation', npool)
   !
   IF (trim( assume_isolated ) == 'mt' .OR. trim( assume_isolated ) == 'm-t' .OR. trim(assume_isolated) == 'martyna-tuckerman' ) THEN 
-    do_comp_mt =.true. 
+    do_comp_mt_kcw =.true. 
   ELSE IF ( trim(assume_isolated) == 'none' ) THEN
-    do_comp_mt = .false.
+    do_comp_mt_kcw = .false.
   ELSE 
     CALL errore('kcw_readin', ' "assume isolated" not recognized', 1)
   ENDIF
+  !
+  IF (noncolin .AND. corr_sc) &
+    CALL errore('kcw_readin', 'which_odd="ki | pkipz" not implemented for the noncollinear case', npool)
   ! 
-  IF (do_comp_mt .AND. mp1*mp2*mp3 /= 1) THEN 
+  IF (do_comp_mt_kcw .AND. mp1*mp2*mp3 /= 1) THEN 
      CALL infomsg('kcw_readin','WARNING: "do_comp_mt" set to FALSE. "l_vcut" set to TRUE instead')
      WRITE(stdout,'()') 
-     do_comp_mt =.false.
+     do_comp_mt_kcw =.false.
      l_vcut = .true.
+  ENDIF
+  !
+  IF (niter .LT.1 .OR. niter .GT. maxter) CALL errore ('kcw_readin', &
+       'Wrong niter: it must be greater than 0 and less than maxter', maxter)
+  IF (h_uniq .AND. h_proj) THEN 
+     CALL infomsg('kcw_readin','WARNING: h_proj and h_uniq are mutually exclusive: GOING TO SET h_proj = .FALSE.')
+     h_proj = .FALSE.
+     h_uniq = .TRUE.
+  ENDIF
+  !
+  IF ((h_uniq .OR. h_proj) .AND. do_bands) THEN 
+     CALL infomsg('kcw_readin','WARNING: "do_bands" ignored. Bands interpolation not available when h_proj=.TRUE. OR h_uniq=.TRUE.')
+     CALL infomsg('kcw_readin','WARNING: "write_hr" ignored. H(R) not available when h_proj=.TRUE. OR h_uniq=.TRUE.')
+     do_bands = .FALSE.
+     write_hr = .FALSE.
+  ENDIF
+  !
+  IF (corr_pc .AND. corr_sc) THEN
+     CALL infomsg('kcw_readin','WARNING: corr_pc and corr_sc are mutually exclusive: GOING TO SET corr_sc = .FALSE.')
+     corr_sc = .FALSE.
+     corr_pc = .TRUE.
+  ENDIF
+  !
+  IF (h_proj .AND. corr_sc) THEN
+     CALL infomsg('kcw_readin','WARNING: corr_sc and h_proj are not compatible: GOING TO SWITCH to default')
+     h_proj = .FALSE.
+     h_uniq = .FALSE.
   ENDIF
   !
   ! read data produced by pwscf
@@ -269,24 +365,49 @@ SUBROUTINE kcw_readin()
   WRITE( stdout, '(5X,"INFO: Reading pwscf data")')
   CALL read_file ( )
   !
+  ! Overwrite do_compt_mt from file. do_comp_mt (actually assume_isolated) is read from file since 
+  ! Feb 18 2024. See: https://gitlab.com/QEF/q-e/-/commit/509f059b74461865705b0de9620f42913990058a
+  ! I prefer to keep assume_isolated as input of KCW for more flexibility
+  IF (do_comp_mt .neqv. do_comp_mt_kcw) THEN 
+     WRITE(stdout, '(/, 5X, "WARNING: assume_isolated from input differs from value read from file")')
+     WRITE(stdout, '(   5X, "WARNING: Going to overwrite value from file")') 
+     do_comp_mt = do_comp_mt_kcw
+  ENDIF
+  !
   IF ( lgauss .OR. ltetra ) CALL errore( 'kcw_readin', &
       'KC corrections only for insulators!', 1 )
   !
-  IF (calculation /= 'wann2kcw' .AND. (mp1*mp2*mp3 /= nkstot/nspin) ) &
+      IF (nspin == 4) THEN
+         nkstot_eff = nkstot
+         nrho = 4
+      ELSE
+         nkstot_eff = nkstot/nspin
+         nrho = 1
+      ENDIF 
+  IF ( mp1*mp2*mp3 /= nkstot_eff ) &
      CALL errore('kcw_readin', ' WRONG number of k points from input, check mp1, mp2, mp3', 1)
   !
-  IF (gamma_only) CALL errore('kcw_readin',&
+  IF (gamma_only .AND. calculation == 'screen') CALL errore('kcw_readin',&
      'cannot start from pw.x data file using Gamma-point tricks',1)
   !
   IF (okpaw.or.okvan) CALL errore('kcw_readin',&
      'The KCW code with US or PAW is not available yet',1)
   !
-  IF (noncolin) CALL errore('kcw_readin',&
-   'The KCW code with non colliner spin is not available yet',1)
+  IF (noncolin) THEN 
+   CALL infomsg('kcw_readin','Non-collinear KCW calculation.') 
+   IF (xclib_dft_is('gradient')) &
+       call errore('kcw_readin', 'Non-collinear KCW calculation &
+                    & does not support GGA', 1 )
+   IF (xclib_dft_is('meta')) &
+       call errore('kcw_readin', 'Non-collinear KCW calculation &
+                    & does not support MGGA', 1 )
+  END IF 
   !
-  IF ( nspin == 1 ) THEN
-     WRITE(stdout, '(/, 5X, "WARNING: nspin=1. A meaningfull KC requires nspin=2 ALWAYS (even for spin-unpolarized systems)")')
-     WRITE(stdout, '(   5X, "WARNING: use nspin=1 only if you know what you are doing")') 
+  IF ( nspin == 1 .OR. (nspin==4 .AND. .NOT. domag) ) THEN   !This should be equivalent to nspin_mag==1
+     WRITE(stdout, '(/, 5X, "WARNING: !!! NON-MAGNETIC setup !!!")')
+     WRITE(stdout, '(   5X, "WARNING: A meaningfull KC requires to ALWAYS account for the spin")')
+     WRITE(stdout, '(   5X, "WARNING: degrees of freedom (even for non-magnetic systems")')
+     WRITE(stdout, '(   5X, "WARNING: use a non-magnetic setup only if you know what you are doing")') 
   ENDIF
   !
   IF (l_vcut .AND. do_comp_mt ) THEN
@@ -294,6 +415,14 @@ SUBROUTINE kcw_readin()
      l_vcut = .false.
   ENDIF
   !
+  IF (corr_sc .AND. nkstot_eff /= 1) THEN
+     WRITE(stdout, '(/, 5X, "ERROR: which_odd= [ki || pkipz]  not implemented yet for extended systems &
+             &treated with k-points (nkstot>1)")')
+     WRITE(stdout, '(   5X, "       Switch to a SC setup (with mp1=mp2=mp3=1) to use ki or pkipz")')
+     WRITE(stdout, '(   5X, "       Switch to which_odd=qki to use a PC formulation plus k/q point sampling")')
+     CALL errore('kcw_readin',  '', 1 )
+  ENDIF
+  ! 
   IF (lgamma) THEN
      nksq = nks
   ELSE

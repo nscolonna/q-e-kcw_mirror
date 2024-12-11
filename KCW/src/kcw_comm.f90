@@ -21,7 +21,6 @@ MODULE control_kcw
   COMPLEX (DP), ALLOCATABLE:: unimatrx_opt(:,:,:)       ! Optimal Unitary matrix from EMP disentanglement
   COMPLEX (DP), ALLOCATABLE:: evc0(:,:)                 ! Variational orbitals at agiven kpoint
   REAL(DP), ALLOCATABLE    :: alpha_final(:)            ! Value of the screening parameter
-  REAL(DP), ALLOCATABLE    :: alpha_final_full(:)       ! Value of the screening parameter in case the full hamiltonian is computed
   LOGICAL                  :: l_unique_manifold         ! IF true no occ/empty distinction from Wannier
   !
   LOGICAL :: kcw_at_ks                                   ! if TRUE calculate alphas for KS orbitals
@@ -46,7 +45,9 @@ MODULE control_kcw
   LOGICAL  :: use_ws_distance                           ! if TRUE uses Wannier centers in the interpolation
   LOGICAL  :: write_hr                                  ! if TRUE prints KC H(R) to file
   INTEGER,  ALLOCATABLE   :: map_ikq(:)                 ! map k+q -> p+G 
+  INTEGER,  ALLOCATABLE   :: map_ikq_minus(:)           ! map k-q -> p+G 
   REAL(DP), ALLOCATABLE :: shift_1bz(:,:)               ! the G to brings k+q inside the 1BZ
+  REAL(DP), ALLOCATABLE :: shift_1bz_minus(:,:)         ! the G to brings k-q inside the 1BZ
   INTEGER :: kcw_iverbosity                              ! set the verbosity 
   INTEGER :: spin_component                             ! which spin component to compute 
   INTEGER, ALLOCATABLE :: isq(:)                        ! the spin of the q point
@@ -56,6 +57,8 @@ MODULE control_kcw
   INTEGER :: iorb_start, iorb_end                       
   REAL (DP), ALLOCATABLE :: wq(:)                       ! weight of the point q
   INTEGER :: nqstot                                     ! total number of q points 
+  INTEGER :: nrho
+  INTEGER :: nkstot_eff
   !
   CHARACTER(len=256) :: calculation                     ! set which calculation (screen or ham)
   !
@@ -76,8 +79,6 @@ MODULE control_kcw
                           ! on the un-relaxed energy at N \pm 1
   LOGICAL, ALLOCATABLE :: alpha_corr_done(:) ! keep track wheter the correction to alpha was already conputed
   !
-  REAL(DP), ALLOCATABLE :: delta_alpha(:)
-  !
   REAL(DP), ALLOCATABLE :: centers(:,:)    ! Wannier centers
   !
   REAL(DP), ALLOCATABLE :: occ_mat(:,:,:)
@@ -95,6 +96,14 @@ MODULE control_kcw
   !
   LOGICAL, ALLOCATABLE :: lgamma_iq(:)
   !! if TRUE this q is gamma.
+  !
+  CHARACTER(256) :: h_diag_scheme
+  CHARACTER(256) :: which_odd
+  LOGICAL :: corr_pc
+  LOGICAL :: corr_sc
+  LOGICAL :: h_uniq
+  LOGICAL :: h_proj
+  LOGICAL :: io_sp, io_real_space
   !
 END MODULE control_kcw
 

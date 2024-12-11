@@ -1,0 +1,240 @@
+
+     =--------------------------------------------------------------------------------=
+                      :::    :::           ::::::::         :::       ::: 
+                     :+:   :+:           :+:    :+:        :+:       :+:  
+                    +:+  +:+            +:+               +:+       +:+   
+                   +#++:++             +#+               +#+  +:+  +#+    
+                  +#+  +#+            +#+               +#+ +#+#+ +#+     
+                 #+#   #+#           #+#    #+#         #+#+# #+#+#       
+                ###    ###           ########           ###   ###         
+
+       Koopmans functional implementation based on DFPT; please cite this program as
+
+        N.Colonna, R. De Gennaro, E. Linscott, and N. Marzari, JCTC 18, 5435 (2022) 
+
+                                                                                    
+
+       If you use the non-collinear mode (with/without spin-orbit coupling) please cite
+
+        A. Marrazzo and N. Colonna, Phys. Rev. Research 6, 033085 (2024)  
+     =--------------------------------------------------------------------------------=
+
+     Program KCW v.7.3.1 starts on 17Oct2024 at 10:50:24 
+        Git branch: HPROJinDEV
+        Last git commit: 831a4faf8b89b6f76944e15e7d8fcc3b5cf9be3f-dirty
+        Last git commit date: Thu Oct 17 10:19:37 2024 +0200
+        Last git commit subject: Uniform the notation in dH_ki_full
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     4 processors
+
+     MPI processes distributed on     1 nodes
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     1433 MiB available memory on the printing compute node when the environment starts
+
+
+     KCW INPUT SUMMARY 
+     ============================================
+
+      CONTROL 
+       # title               =KCW H2O KI hamilto
+       # out_dir             =/home/nicola/CODES
+       # prefix              =               h2o
+       # calculation         =               ham
+       # kcw_iverbosity      =                 1
+       # kcw_at_ks           =                 T
+       # MP grid             =     1     1     1
+       # spin_component      =                 1
+       # homo_only           =                 F
+       # read_unitary_matrix =                 F
+       # check_ks            =                 F
+       # l_vcut              =                 F
+       # assume_isolated     =                mt
+       # io_sp               =                 F
+       # io_real_space       =                 F
+
+      HAM 
+       # qp_symm             =                 F
+       # kipz_corr           =                 T
+       # MP grid             =     1     1     1
+       # do_bands            =                 F
+       # use_ws_distance     =                 F
+       # write_hr            =                 T
+       # l_alpha_corr        =                 F
+       # on_site_only        =                 F
+       # h_diag_scheme       =              wann
+       # which_odd           =             pkipz
+     ============================================
+
+     INFO: Reading pwscf data
+
+     Reading xml data from directory:
+
+     /home/nicola/CODES/q-e-kcw/tempdir/h2o.save/
+
+     IMPORTANT: XC functional enforced from input :
+     Exchange-correlation= PW
+                           (   1   4   0   0   0   0   0)
+     Any further DFT definition will be discarded
+     Please, verify this is what you really want
+
+
+     Parallelization info
+     --------------------
+     sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min         975     975    244                44983    44983    5620
+     Max         977     977    245                44984    44984    5623
+     Sum        3905    3905    979               179933   179933   22489
+
+     Using Slab Decomposition
+
+
+     Check: negative core charge=   -0.000035
+     Reading collected, re-writing distributed wavefunctions
+
+     INFO: total number of primitive cell    1
+
+     READING SCREENING PARAMETERS
+
+     INFO: alphas read from:/home/nicola/CODES/q-e-kcw/tempdir/kcw/h2o.alpha.dat                                                                                                                                                                                                            
+     iwann =     1   alpha =      0.63566336
+     iwann =     2   alpha =      0.70868990
+     iwann =     3   alpha =      0.64498744
+     iwann =     4   alpha =      0.63456449
+     iwann =     5   alpha =      0.94666509
+     iwann =     6   alpha =      0.88359513
+     iwann =     7   alpha =      0.90583634
+     iwann =     8   alpha =      1.01558008
+
+     INFO: MLWF read from file:  Reading collected, re-writing distributed wavefunctions
+
+     INFO: Coulomb kernel treated according to MT scheme
+
+     INFO: READING Wannier-orbital Densities ...
+
+        ==============================================================================
+        iq =     1
+        The  Wannier density at  q =    0.0000000   0.0000000   0.0000000  [Cart ]
+        The  Wannier density at  q =    0.0000000   0.0000000   0.0000000  [Cryst]
+        ==============================================================================
+
+     INFO: total number of wannier to compute    8 from     1 to     8
+     INFO: PREPARING THE KCW CALCULATION ... DONE
+
+
+
+     INFO: pKIPZ calcualtion ... 
+
+        INFO: Map k+q -> p in 1BZ DONE  
+
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.76908198   -9.52899993   -8.11277548   -1.48354159
+        Delta KI    -0.70176483    -0.44608619
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}     0.76908198    -0.71027502    -0.93754814
+        Delta PZ    -0.05880696    -0.03738143
+        orbital  1   spin  1     uKC_diag    -0.76057179 Ry   rKC_diag    -0.48346762 Ry   alpha=     0.63566336
+
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.66823847   -9.52899993   -8.29668378   -1.31689705
+        Delta KI    -0.58365756    -0.41363222
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}     0.66823847    -0.68978694    -0.91046414
+        Delta PZ     0.02154847     0.01527118
+        orbital  2   spin  1     uKC_diag    -0.56210910 Ry   rKC_diag    -0.39836104 Ry   alpha=     0.70868990
+
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71631749   -9.52899993   -8.28401451   -1.34273725
+        Delta KI    -0.61856566    -0.39896708
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}     0.71631749    -0.71642894    -0.94589612
+        Delta PZ     0.00011145     0.00007188
+        orbital  3   spin  1     uKC_diag    -0.61845421 Ry   rKC_diag    -0.39889520 Ry   alpha=     0.64498744
+
+        KI corr const term, sh[n_i], Exc[n], Exc[n-n_i], int{v_xc[n] n_i}     0.71295393   -9.52899993   -8.26927972   -1.35414840
+        Delta KI    -0.61852574    -0.39249447
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}     0.71295393    -0.72331287    -0.95502133
+        Delta PZ     0.01035894     0.00657342
+        orbital  4   spin  1     uKC_diag    -0.60816680 Ry   rKC_diag    -0.38592105 Ry   alpha=     0.63456449
+
+        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.16383639   -9.52899993   -9.78294489   -0.21817552
+        Delta KI     0.12806695     0.12123651
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}     0.16383639    -0.16252860    -0.21346878
+        Delta PZ    -0.00130779    -0.00123804
+        orbital  5   spin  1     uKC_diag     0.12675916 Ry   rKC_diag     0.11999848 Ry   alpha=     0.94666509
+
+        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.16194873   -9.52899993   -9.81560523   -0.23592217
+        Delta KI     0.11126560     0.09831374
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}     0.16194873    -0.18066519    -0.23735547
+        Delta PZ     0.01871645     0.01653777
+        orbital  6   spin  1     uKC_diag     0.12998205 Ry   rKC_diag     0.11485150 Ry   alpha=     0.88359513
+
+        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.15949731   -9.52899993   -9.76771161   -0.18623366
+        Delta KI     0.10701928     0.09694195
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}     0.15949731    -0.16993627    -0.22319979
+        Delta PZ     0.01043896     0.00945599
+        orbital  7   spin  1     uKC_diag     0.11745824 Ry   rKC_diag     0.10639795 Ry   alpha=     0.90583634
+
+        KI corr const term, sh[n_i], Exc[n], Exc[n+n_i], int{v_xc[n] n_i}     0.15737641   -9.52899993   -9.72224773   -0.12833218
+        Delta KI     0.09246079     0.09390133
+        PZ corr const term, sh[n_i], Exc[n_i], int{v_xc[n_i] n_i}     0.15737641    -0.16612767    -0.21815662
+        Delta PZ     0.00875126     0.00888760
+        orbital  8   spin  1     uKC_diag     0.10121204 Ry   rKC_diag     0.10278893 Ry   alpha=     1.01558008
+
+     INFO: pKIPZ calcualtion ... DONE
+
+
+     INFO: BUILD and DIAGONALIZE the KI HAMILTONIAN
+     INFO: Standar scheme: diagonalize on the variational orbitals basis
+
+          k = 0.0000 0.0000 0.0000     band energies (ev):
+
+          KS      -25.4754   -13.3483    -9.4516    -7.3908    -1.5378     0.0879     0.1858     0.6870
+          KI      -32.0675   -18.7683   -14.8646   -12.6416    -0.1086     1.6334     1.7422     2.1973
+          pKI     -32.0533   -18.7683   -14.8789   -12.6416     0.0948     1.6505     1.6334     2.0855
+          total cpu time spent up to now is        2.1 secs
+
+        KS  highest occupied, lowest unoccupied level (ev):    -7.3908   -1.5378
+        KI  highest occupied, lowest unoccupied level (ev):   -12.6416   -0.1086
+        pKI highest occupied, lowest unoccupied level (ev):   -12.6416    0.0948
+
+     Writing all to output data dir /home/nicola/CODES/q-e-kcw/tempdir/h2o_kcw.save/ :
+     XML data file, pseudopotentials, collected wavefunctions
+
+     KCW          :      2.06s CPU      2.18s WALL
+
+     INITIALIZATION: 
+     map          :      0.00s CPU      0.00s WALL (       1 calls)
+
+     init_vloc    :      0.02s CPU      0.02s WALL (       1 calls)
+     init_us_1    :      0.00s CPU      0.00s WALL (       1 calls)
+
+
+
+
+
+     h_psi        :      0.03s CPU      0.03s WALL (       1 calls)
+
+     h_psi        :      0.03s CPU      0.03s WALL (       1 calls)
+     add_vuspsi   :      0.00s CPU      0.00s WALL (       1 calls)
+
+
+
+      General routines
+     calbec       :      0.00s CPU      0.00s WALL (       1 calls)
+     fft          :      0.42s CPU      0.42s WALL (       6 calls)
+     ffts         :      0.20s CPU      0.20s WALL (      72 calls)
+     fftw         :      0.05s CPU      0.05s WALL (      36 calls)
+     davcio       :      0.00s CPU      0.02s WALL (      10 calls)
+
+
+     KCW          :      2.07s CPU      2.23s WALL
+
+
+   This run was terminated on:  10:50:26  17Oct2024            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=

@@ -35,6 +35,8 @@ subroutine input_pp_summary ( )
     WRITE(stdout, 47)  "# MP grid             =", mp1, mp2, mp3
     WRITE(stdout, 43)  "# use_ws_distance     =", use_ws_distance
     WRITE(stdout, 43)  "# have_empty          =", have_empty
+    WRITE(stdout, 43)  "# io_sp               =", io_sp
+    WRITE(stdout, 43)  "# io_real_space       =", io_real_space
     WRITE(stdout,'(5X, 42("="),/)')
     !
   ENDIF
@@ -42,9 +44,7 @@ subroutine input_pp_summary ( )
 41  FORMAT(5X, A23, A18)
 42  FORMAT(5X, A23, A18)
 43  FORMAT(5X, A23, L18)
-44  FORMAT(5X, A23, F12.8, 3x, " [Ry]")
 45  FORMAT(5X, A23, I18)
-46  FORMAT(5X, A23, E18.2)
 47  FORMAT(5X, A23, 3I6)
   !
   RETURN

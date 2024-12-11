@@ -19,6 +19,7 @@ set(src_kcw
     calculate_phase.f90
     structure_factor.f90
     rho_of_q.f90
+    rho_of_q_gamma.f90
     kcw_prepare_q.f90
     bare_pot.f90
     solve_linter_koop_mod.f90
@@ -40,13 +41,19 @@ set(src_kcw
     koopmans_ham.f90
     full_ham.f90
     self_hartree.f90
+    self_Hxc.f90
     group_orbitals.f90
     kcw_run_nscf.f90
     kcw_init_q.f90
     kcw_allocate_q.f90
     kcw_deallocate_q.f90
     setup_coulomb_exx.f90
-    coulomb.f90)
+    coulomb.f90
+    dH_ki_quadratic.f90
+    dH_ki_full.f90
+    dH_ki_full_qpoints.f90
+    koopmans_ham_proj.f90
+    koopmans_ham_uniq.f90)
 
 qe_add_library(qe_kcw ${src_kcw})
 target_link_libraries(

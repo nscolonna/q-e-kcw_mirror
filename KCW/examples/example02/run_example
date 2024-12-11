@@ -18,7 +18,7 @@ $ECHO "to calculate the KI electronic structure of the H2O molecule. "
 
 # required executables and pseudopotentials
 BIN_LIST="pw.x kcw.x"
-PSEUDO_LIST="H_ONCV_PBE-1.0.upf  O_ONCV_PBE-1.0.upf"
+PSEUDO_LIST="H.upf  O.upf"
 
 $ECHO
 $ECHO "  executables directory: $BIN_DIR"
@@ -55,7 +55,7 @@ done
 $ECHO " done"
 
 #Overwrite NETWORK_PSEUDO
-NETWORK_PSEUDO=http://www.quantum-simulation.org/potentials/sg15_oncv/upf/
+NETWORK_PSEUDO="https://raw.githubusercontent.com/epfl-theos/koopmans/master/src/koopmans/pseudopotentials/pseudo_dojo_standard_v0.4.1/lda"
 
 # check for pseudopotentials
 $ECHO "  checking that pseudopotentials files exist      ...\c"
@@ -103,7 +103,6 @@ cat > $PREFIX.scf.in << EOF
 &SYSTEM
   ecutwfc =   45.0
   ibrav = 0
-  input_dft = 'PBE'
   nat = 3
   nspin = 2
   ntyp = 2
@@ -118,8 +117,8 @@ cat > $PREFIX.scf.in << EOF
   conv_thr =  0.5d-12
 /
 ATOMIC_SPECIES
-H 1 H_ONCV_PBE-1.0.upf
-O 1 O_ONCV_PBE-1.0.upf
+H 1 H.upf
+O 1 O.upf
 
 ATOMIC_POSITIONS angstrom
 O 6.7571 6.0000 5.9023166667
@@ -185,7 +184,10 @@ $ECHO "  Running the screening parameter calculation for $PREFIX...\c"
 $KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-screen.in > $PREFIX.kcw-screen.out
 $ECHO " done"
 
-cat > $PREFIX.kcw-ham.in << EOF
+
+for which_odd in "qki" "ki" "pkipz"; do
+
+cat > $PREFIX.kcw-ham_${which_odd}.in << EOF
 KCW H2O KI hamiltonian
 &control
   prefix='$PREFIX'
@@ -205,10 +207,15 @@ KCW H2O KI hamiltonian
   do_bands = .false.
   use_ws_distance = .false.
   write_hr = .true.
-  l_alpha_corr = .true.
+  which_odd = '$which_odd'
 /
 EOF
 
-$ECHO "  Running the KI hamiltonian calculation for $PREFIX...\c"
-$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham.in > $PREFIX.kcw-ham.out
+$ECHO "  Running the $which_odd hamiltonian calculation  for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham_${which_odd}.in > $PREFIX.kcw-ham_${which_odd}.out
 $ECHO " done"
+
+done 
+
+
+
