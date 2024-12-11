@@ -610,7 +610,8 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
                  !
               ELSE
                 !
-                dH_wann(iwann, jwann) = dH_wann(iwann,jwann) + SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component)))*weight(iq)*omega
+                dH_wann(iwann, jwann) = dH_wann(iwann,jwann) + SUM((rho_g_nm(:,1))*CONJG(delta_vg(:,spin_component)))& 
+                        *weight(iq)*omega
                 !
               ENDIF
               !
@@ -625,7 +626,8 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
                  !
               ELSE
                  !
-                 dH_wann(iwann, jwann) = dH_wann(iwann, jwann) + SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))*weight(iq)*omega
+                 dH_wann(iwann, jwann) = dH_wann(iwann, jwann) + SUM(delta_vg(:,spin_component)*conjg(rho_g_nm(:,1)))& 
+                         *weight(iq)*omega
                  !
               ENDIF
               !
