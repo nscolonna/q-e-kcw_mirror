@@ -32,6 +32,8 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   USE klist,                ONLY : nelup, neldw, nelec, lgauss, ltetra
   USE start_k,              ONLY : reset_grid
   USE noncollin_module,     ONLY : domag, noncolin
+  USE lsda_mod,             ONLY : lsda
+  USE control_kcw,          ONLY : irr_bz
   !
   IMPLICIT NONE
   !
@@ -53,7 +55,7 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   !
   ! ... each q /= gamma is saved on a different directory
   !
-  IF (.NOT.lgamma .OR. (domag .AND. noncolin)) &
+  IF (.NOT.lgamma .OR. (domag .AND. noncolin) .OR. irr_bz) &
      tmp_dir_kcwq= TRIM (tmp_dir_kcw) // 'q' &
                    & // TRIM(int_to_char(iq))//'/'
   !
@@ -65,6 +67,7 @@ SUBROUTINE kcw_prepare_q(do_band, setup_pw, iq)
   !IF (nrot .gt. 1) newgrid = reset_grid ( 2, 2, 2, 0, 0, 0  )
   !modenum = 0
   setup_pw = (.NOT.lgamma)
+  IF(irr_bz) setup_pw = .TRUE.
   !
   IF (noncolin.AND.domag) setup_pw=.true. !! NsC need to check this is needed (see comment in PH/prepare_q.f90)
   !
