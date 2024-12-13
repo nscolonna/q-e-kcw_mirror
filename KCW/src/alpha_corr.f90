@@ -87,6 +87,7 @@ END SUBROUTINE alpha_corr
   USE kinds,                 ONLY : DP
   USE scf,                   ONLY : rho, rho_core, rhog_core
   USE fft_base,              ONLY : dffts
+  USE fft_wave,              ONLY : invfft_wave 
   USE fft_interfaces,        ONLY : fwfft
   USE lsda_mod,              ONLY : isk, lsda
   USE klist,                 ONLY : ngk, igk_k, nks
@@ -142,7 +143,7 @@ END SUBROUTINE alpha_corr
     !evc_g(:) =  evc(:,iwann)
     !
     evc_r(:,:) = ZERO
-    CALL invfft_wave (npw, igk_k (1,ik), evc_g , evc_r )
+    CALL invfft_wave (npwx, npw, igk_k (1,ik), evc_g , evc_r )
     !! The wfc in R-space at k
     IF (nspin_mag==2) THEN
         eig_k = REAL( sum ( vxc(:,spin_component) * evc_r(:,1) * CONJG(evc_r(:,1) ) ) ) !check the (:,->1)

@@ -342,6 +342,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
     USE kinds,                ONLY : DP
     USE fft_base,             ONLY : dffts
     USE fft_interfaces,       ONLY : fwfft, invfft
+    USE fft_wave,             ONLY : invfft_wave
     USE klist,                ONLY : igk_k, ngk
     USE mp,                   ONLY : mp_sum
     USE control_kcw,          ONLY : spin_component, num_wann, x_q, &
@@ -504,7 +505,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
            evc_k_r(dffts%nlm(igk_k(1:npw_k,ik)),1)  = CONJG(evc_k_g(1:npw_k))
            CALL invfft ('Wave', evc_k_r(:,1), dffts)
          ELSE
-           CALL invfft_wave (npw_k, igk_k (1,ik), evc_k_g , evc_k_r )
+           CALL invfft_wave (npwx, npw_k, igk_k (1,ik), evc_k_g , evc_k_r )
          ENDIF
          !! The wfc R=0 n=iwann in R-space at k
          !
@@ -534,7 +535,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
                 evc_kq_r(dffts%nlm(igk_k(1:npw_kq_m,ik)),1)  = CONJG(evc_kq_g(1:npw_kq_m))
                 CALL invfft ('Wave', evc_kq_r(:,1), dffts)
               ELSE
-                CALL invfft_wave (npw_kq_m, igk_k (1,ikq_m), evc_kq_g , evc_kq_r )
+                CALL invfft_wave (npwx, npw_kq_m, igk_k (1,ikq_m), evc_kq_g , evc_kq_r )
               ENDIF
             ELSE
               npw_kq = ngk(ikq)
@@ -543,7 +544,7 @@ SUBROUTINE dH_ki_quadratic (dH_wann, dH_wann_proj)
                 evc_kq_r(dffts%nlm(igk_k(1:npw_kq,ik)),1)  = CONJG(evc_kq_g(1:npw_kq))
                 CALL invfft ('Wave', evc_kq_r(:,1), dffts)
               ELSE
-                CALL invfft_wave (npw_kq, igk_k (1,ikq), evc_kq_g , evc_kq_r )
+                CALL invfft_wave (npwx, npw_kq, igk_k (1,ikq), evc_kq_g , evc_kq_r )
               ENDIF
             END IF
             !
