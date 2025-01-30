@@ -140,12 +140,97 @@ $ECHO "  Running the SCF calculation for $PREFIX...\c"
 $PW_COMMAND < $PREFIX.scf.in > $PREFIX.scf.out
 $ECHO " done"
 
-if [ ! -d wann ]; then mkdir wann; fi
-cd wann
+if [ ! -d wann_occ ]; then  mkdir wann_occ ; fi
+cd wann_occ
+cat > $SEEDNAME.win << EOF
+num_bands         =   4
+num_wann          =   4
+exclude_bands     = 5-20
+spin              = up
+use_ws_distance   = .true.
 
-cat > ${SEEDNAME}.win << EOF
-num_bands         =   20
-num_wann          =   8
+write_hr = .true.
+conv_window = 5
+conv_tol = 1D-10
+conv_noise_amp = 10000
+conv_noise_num = 5
+
+write_xyz = .true.
+write_u_matrices = .true.
+
+bands_plot              = .true.
+bands_num_points        = 40
+begin kpoint_path
+G 0.000 0.000 0.000  X 0.500 0.000 0.500
+X 0.500 0.000 0.500  U 0.625 0.250 0.625
+K 0.375 0.375 0.750  G 0.000 0.000 0.000
+G 0.000 0.000 0.000  L 0.500 0.500 0.500
+L 0.500 0.500 0.500  W 0.500 0.250 0.750
+W 0.500 0.250 0.750  U 0.500 0.000 0.500
+end kpoint_path
+
+num_iter          = 100
+num_print_cycles  = 10
+
+Begin Atoms_Frac
+ Si 0.00 0.00 0.00
+ Si 0.25 0.25 0.25
+End Atoms_Frac
+
+Begin Projections
+f = 0.0, 0.0, 0.0 : sp3
+End Projections
+
+begin unit_cell_cart
+bohr
+-5.1315510  0.00000 5.1315510
+ 0.00000  5.1315510 5.1315510
+-5.1315510  5.1315510 0.00000
+end unit_cell_cart
+
+mp_grid      = 2 2 2
+
+begin kpoints
+  0.00000000  0.00000000  0.00000000
+  0.00000000  0.00000000  0.50000000
+  0.00000000  0.50000000  0.00000000
+  0.00000000  0.50000000  0.50000000
+  0.50000000  0.00000000  0.00000000
+  0.50000000  0.00000000  0.50000000
+  0.50000000  0.50000000  0.00000000
+  0.50000000  0.50000000  0.50000000
+end kpoints
+EOF
+$ECHO "  Running W90 -pp for $PREFIX...\c"
+$W90_COMMAND -pp  $SEEDNAME.win
+$ECHO " done"
+
+cat > $PREFIX.pw2wann.in << EOF
+&inputpp
+  prefix='$PREFIX'
+  outdir='$TMP_DIR/'
+  seedname = '$SEEDNAME'
+  wan_mode   =  'standalone'
+  spin_component = 'up'
+/
+EOF
+$ECHO "  Running PW2W90 for $PREFIX...\c"
+$PW2W90_COMMAND < $PREFIX.pw2wann.in > $PREFIX.pw2wann.out
+$ECHO " done"
+
+$ECHO "  Running W90 for $PREFIX...\c"
+$W90_COMMAND  $SEEDNAME.win
+$ECHO " done"
+
+cd ../
+if [ ! -d wann_emp ]; then mkdir wann_emp; fi
+cd wann_emp
+
+################### EMPTY WANNIERIZATION
+cat > ${SEEDNAME}_emp.win << EOF
+num_bands         =   16
+num_wann          =   4
+exclude_bands     =  1-4
 spin              = up
 use_ws_distance   = .true.
 
@@ -181,7 +266,7 @@ Begin Atoms_Frac
 End Atoms_Frac
 
 Begin Projections
-Si : sp3
+f = 0.250, 0.250, 0.250 : sp3
 End Projections
 
 begin unit_cell_cart
@@ -205,34 +290,38 @@ begin kpoints
 end kpoints
 EOF
 $ECHO "  Running W90 -pp for $PREFIX EMPTY...\c"
-$W90_COMMAND -pp ${SEEDNAME}.win
+$W90_COMMAND -pp ${SEEDNAME}_emp.win
 $ECHO " done"
 
-cat > ${PREFIX}.pw2wann.in << EOF
+cat > ${PREFIX}_emp.pw2wann.in << EOF
 &inputpp
   prefix='$PREFIX'
   outdir='$TMP_DIR/'
-  seedname = '${SEEDNAME}'
+  seedname = '${SEEDNAME}_emp'
   wan_mode   =  'standalone'
   spin_component = 'up'
 /
 EOF
 $ECHO "  Running PW2W90 for $PREFIX EMPTY...\c"
-$PW2W90_COMMAND < ${PREFIX}.pw2wann.in > ${PREFIX}.pw2wann.out
+$PW2W90_COMMAND < ${PREFIX}_emp.pw2wann.in > ${PREFIX}_emp.pw2wann.out
 $ECHO " done"
 
 $ECHO "  Running W90 for $PREFIX EMPTY...\c"
-$W90_COMMAND  ${SEEDNAME}.win
+$W90_COMMAND  ${SEEDNAME}_emp.win
 $ECHO " done"
 
 cd ../
 
 rm -fr ${SEEDNAME}_u.mat
-rm -fr ${SEEDNAME}_u_dis.mat
+rm -fr ${SEEDNAME}_emp_u.mat
+rm -fr ${SEEDNAME}_emp_u_dis.mat
 rm -fr ${SEEDNAME}_centres.xyz
-ln -s wann/${SEEDNAME}_u.mat .
-ln -s wann/${SEEDNAME}_u_dis.mat .
-ln -s wann/${SEEDNAME}_centres.xyz .
+rm -fr ${SEEDNAME}_emp_centres.xyz
+ln -s wann_occ/${SEEDNAME}_u.mat .
+ln -s wann_emp/${SEEDNAME}_emp_u.mat .
+ln -s wann_emp/${SEEDNAME}_emp_u_dis.mat .
+ln -s wann_occ/${SEEDNAME}_centres.xyz .
+ln -s wann_emp/${SEEDNAME}_emp_centres.xyz .
 
 
 cat > $PREFIX.kcw-wann2kcw.in << EOF
@@ -255,10 +344,182 @@ W2K Silicon
   num_wann_emp = 4
   have_empty = .true.
   has_disentangle = .true.
-  unique_manifold = .true. 
 /
 EOF
 
 $ECHO "  Running the interface to KCW for $PREFIX...\c"
 $KCW_COMMAND -in $PREFIX.kcw-wann2kcw.in > $PREFIX.kcw-wann2kcw.out
 $ECHO " done"
+
+
+cat > file_alpharef.txt << EOF
+8
+1 0.30564463 0.27287945
+2 0.30564460 0.27287945
+3 0.30564455 0.27287945
+4 0.30564462 0.27287945
+5 0.23808869 0.09536557
+6 0.23808935 0.09536607
+7 0.23808821 0.09536534
+8 0.23808891 0.09536580
+EOF
+
+
+cat > $PREFIX.kcw-ham.in << EOF
+KI H2O
+&control
+  prefix='$PREFIX'
+  outdir='$TMP_DIR'
+  kcw_iverbosity = 1
+  kcw_at_ks=.false.
+  homo_only = .false.
+  read_unitary_matrix = .true.
+  calculation = 'ham'
+  lrpa =.false.
+  mp1 = 2
+  mp2 = 2
+  mp3 = 2
+/
+&wannier
+  seedname = 'Si'
+  check_ks = .true.
+  num_wann_occ = 4
+  num_wann_emp = 4
+  have_empty = .true.
+  has_disentangle = .true.
+/
+&ham
+  do_bands = .true.
+  use_ws_distance = .true.
+  write_hr = .true.
+  on_site_only = .true.
+/
+K_POINTS crystal_b
+8
+0.000     0.000     0.000 10 ! GAMMA
+0.500     0.000     0.500 10 ! X
+0.625     0.250     0.625 1  ! U
+0.375     0.375     0.750 10 ! K
+0.000     0.000     0.000 10 ! GAMMA
+0.500     0.500     0.500 10 ! L
+0.500     0.250     0.750 10 ! W
+0.500     0.000     0.500 1  ! U
+EOF
+
+$ECHO "  Running the KI hamiltonian calculation for $PREFIX...\c"
+$KCW_COMMAND_noPOSTFIX -in $PREFIX.kcw-ham.in > $PREFIX.kcw-ham.out
+$ECHO " done"
+
+
+## FRom here we do a unique wannierization 
+$ECHO 
+
+if [ ! -d wann_final ]; then  mkdir wann_final ; fi
+cd wann_final
+cat > $SEEDNAME.win << EOF
+num_bands         =   8
+num_wann          =   8
+spin              = up
+use_ws_distance   = .true.
+
+write_hr = .true.
+conv_window = 5
+conv_tol = 1D-10
+conv_noise_amp = 10000
+conv_noise_num = 5
+
+write_xyz = .true.
+write_u_matrices = .true.
+
+bands_plot              = .true.
+bands_num_points        = 40
+begin kpoint_path
+G 0.000 0.000 0.000  X 0.500 0.000 0.500
+X 0.500 0.000 0.500  U 0.625 0.250 0.625
+K 0.375 0.375 0.750  G 0.000 0.000 0.000
+G 0.000 0.000 0.000  L 0.500 0.500 0.500
+L 0.500 0.500 0.500  W 0.500 0.250 0.750
+W 0.500 0.250 0.750  U 0.500 0.000 0.500
+end kpoint_path
+
+num_iter          = 1000
+num_print_cycles  = 10
+
+Begin Atoms_Frac
+ Si 0.00 0.00 0.00
+ Si 0.25 0.25 0.25
+End Atoms_Frac
+
+Begin Projections
+random
+End Projections
+
+begin unit_cell_cart
+bohr
+-5.1315510  0.00000 5.1315510
+ 0.00000  5.1315510 5.1315510
+-5.1315510  5.1315510 0.00000
+end unit_cell_cart
+
+mp_grid      = 2 2 2
+
+begin kpoints
+  0.00000000  0.00000000  0.00000000
+  0.00000000  0.00000000  0.50000000
+  0.00000000  0.50000000  0.00000000
+  0.00000000  0.50000000  0.50000000
+  0.50000000  0.00000000  0.00000000
+  0.50000000  0.00000000  0.50000000
+  0.50000000  0.50000000  0.00000000
+  0.50000000  0.50000000  0.50000000
+end kpoints
+EOF
+$ECHO "  Running W90 -pp for $PREFIX...\c"
+$W90_COMMAND -pp  $SEEDNAME.win
+$ECHO " done"
+
+cat > $PREFIX.pw2wann.in << EOF
+&inputpp
+  prefix='${PREFIX}_kcw'
+  outdir='$TMP_DIR/'
+  seedname = '$SEEDNAME'
+  wan_mode   =  'standalone'
+  spin_component = 'up'
+/
+EOF
+$ECHO "  Running PW2W90 for $PREFIX...\c"
+$PW2W90_COMMAND < $PREFIX.pw2wann.in > $PREFIX.pw2wann.out
+$ECHO " done"
+
+$ECHO "  Running W90 for $PREFIX...\c"
+$W90_COMMAND  $SEEDNAME.win
+$ECHO " done"
+
+cat > $PREFIX.kcw-wann2kcw.in << EOF
+W2K Silicon
+&control
+  prefix='${PREFIX}_kcw'
+  outdir='$TMP_DIR/'
+  kcw_iverbosity = 2
+  kcw_at_ks=.false.
+  read_unitary_matrix = .true.
+  calculation = 'wann2kcw'
+  mp1 = 2
+  mp2 = 2
+  mp3 = 2
+/
+&wannier
+  seedname = 'Si'
+  check_ks = .true.
+  num_wann_occ = 4
+  num_wann_emp = 4
+  have_empty = .false.
+  has_disentangle = .false.
+  l_unique_manifold = .true. 
+/
+EOF
+
+$ECHO "  Running the interface to KCW for $PREFIX...\c"
+$KCW_COMMAND -in $PREFIX.kcw-wann2kcw.in > $PREFIX.kcw-wann2kcw.out
+$ECHO " done"
+
