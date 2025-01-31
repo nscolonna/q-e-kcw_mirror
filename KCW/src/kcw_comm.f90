@@ -102,5 +102,6 @@ MODULE control_kcw
   !
   LOGICAL :: io_sp, io_real_space
   !
+  COMPLEX(DP), ALLOCATABLE :: Vcoulomb(:,:,:,:), Wcoulomb(:,:,:,:)
 END MODULE control_kcw
 

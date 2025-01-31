@@ -21,7 +21,7 @@ SUBROUTINE screen_coeff ()
   USE control_kcw,          ONLY : kcw_iverbosity, spin_component, num_wann, iorb_start, l_do_alpha, &
                                    iorb_end, alpha_final, nqstot, eps_inf, l_vcut, l_unique_manifold, &  
                                    group_alpha, tmp_dir_kcw, iurho_wann, tmp_dir_kcwq, x_q, tmp_dir_save, &
-                                   i_orb, nrho
+                                   i_orb, nrho, Vcoulomb, Wcoulomb
   USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_mag, npol
   USE buffers,              ONLY : get_buffer, save_buffer
   USE io_global,            ONLY : stdout, ionode
@@ -144,6 +144,10 @@ SUBROUTINE screen_coeff ()
     IF (kcw_iverbosity .gt. -1 ) WRITE(stdout,'(8X, "INFO: kcw_q initialization DONE",/)') 
     !
     ALLOCATE ( rhog (ngms,nrho) , delta_vg(ngms,nspin_mag), vh_rhog(ngms), drhog_scf (ngms, nspin_mag), delta_vg_(ngms,nspin_mag) )
+    !IF(get_coulomb) THEN 
+      CALL kcw_R_points()
+      ALLOCATE ( Vcoulomb(num_wann, num_wann, nkstot/nspin, 2), Wcoulomb(num_wann, num_wann, nkstot/nspin, 2))
+    !END IF
     !
     IF ( lgamma .AND. .NOT. l_unique_manifold) CALL check_density (rhowann) 
     !! ... For q==0 the sum over k and v should give the density. If not something wrong...
@@ -210,6 +214,10 @@ SUBROUTINE screen_coeff ()
          CALL solve_linter_koop ( spin_ref, iwann, delta_vr_, drhog_scf, delta_vg_ )
          !
        ENDIF
+       !
+       !IF(get_coulomb) THEN 
+        CALL coulomb_me( iwann, iq, drhog_scf, rhowann, weight(iq))
+       !END IF
        !
        pi_q_relax    = ZERO
        pi_q_relax_rs = ZERO
@@ -286,6 +294,10 @@ SUBROUTINE screen_coeff ()
     WRITE(876,'(i5)') num_wann
   ENDIF
   !
+  !IF(get_coulomb) THEN 
+    DEALLOCATE ( Vcoulomb, Wcoulomb)
+  !END IF
+
   DO jwann = iorb_start, iorb_end
     !
     iwann = group_alpha(jwann)

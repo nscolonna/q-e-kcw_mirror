@@ -46,7 +46,8 @@ set(src_kcw
     kcw_allocate_q.f90
     kcw_deallocate_q.f90
     setup_coulomb_exx.f90
-    coulomb.f90)
+    coulomb.f90
+    get_coulomb.f90)
 
 qe_add_library(qe_kcw ${src_kcw})
 target_link_libraries(
