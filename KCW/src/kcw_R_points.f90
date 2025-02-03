@@ -16,6 +16,7 @@ SUBROUTINE kcw_R_points
   !
   USE cell_base,            ONLY : at
   USE control_kcw,          ONLY : Rvect, mp1, mp2 ,mp3, irvect, nkstot_eff
+  USE control_kcw,          ONLY : Rvect_shifted, irvect_shifted, get_coulomb
   USE klist,                ONLY : nkstot
   USE lsda_mod,             ONLY : nspin
   USE io_global,            ONLY : stdout
@@ -32,13 +33,20 @@ SUBROUTINE kcw_R_points
   !
   ALLOCATE (Rvect(3,num_R))
   ALLOCATE (iRvect(3,num_R))
+  IF( get_coulomb ) THEN 
+    ALLOCATE (Rvect_shifted(3,num_R))
+    ALLOCATE (iRvect_shifted(3,num_R))
+  END IF
   !
   WRITE(stdout,'(/,5X, "INFO: total number of primitive cell", i5)') num_R
   !
   IF ( nkstot == 1 ) THEN
     !
     Rvect(:,1) = 0.0d0
-    irvect(:,1) = (/0,0,0/)
+    IF ( get_coulomb ) THEN
+      irvect(:,1) = (/0,0,0/)
+      Rvect_shifted(:,1) = (/0,0,0/)
+    END IF
     !
   ELSE
     !
@@ -56,6 +64,12 @@ SUBROUTINE kcw_R_points
                             DBLE(j-1) * at(:,2) + &
                             DBLE(k-1) * at(:,3)
            irvect(:,icell) = (/i-1,j-1,k-1/)
+           IF( get_coulomb ) THEN
+             Rvect_shifted(:, icell)  = (/i-1-mp1/2,j-1-mp2/2,k-1-mp3/2/)
+             irvect_shifted(:, icell) =  Rvect_shifted(1, icell) * at(:,1) + &
+                                         Rvect_shifted(2, icell) * at(:,2) + &
+                                         Rvect_shifted(3, icell) * at(:,3) 
+           END IF
            !
         ENDDO
       ENDDO

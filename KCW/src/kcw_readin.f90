@@ -56,7 +56,7 @@ SUBROUTINE kcw_readin()
   NAMELIST / CONTROL /  outdir, prefix, read_unitary_matrix, kcw_at_ks, &
                         spread_thr, homo_only, kcw_iverbosity, calculation, &
                         l_vcut, assume_isolated, spin_component, & 
-                        mp1, mp2, mp3, lrpa, io_sp, io_real_space
+                        mp1, mp2, mp3, lrpa, io_sp, io_real_space, get_coulomb
   !
   NAMELIST / WANNIER /  num_wann_occ, num_wann_emp, have_empty, has_disentangle, &
                         seedname, check_ks, l_unique_manifold
@@ -81,6 +81,7 @@ SUBROUTINE kcw_readin()
   !! mp*             : Monhkost-Pack grid, need to be consistent with PW and W90
   !! lrpa            : If true the response of the system is evaluated at the RPA level (no xc contribution) 
   !! spread_thr      : the tollerance within which two orbital are considered to have the same spread 
+  !! get_coulomb     : TRUE triggers the calculation of the HXC kernel matrix elements. 
   !
   !### WANNIER 
   !! seedname        : seedname for the Wannier calculation
@@ -171,6 +172,7 @@ SUBROUTINE kcw_readin()
   mp1                 = -1
   mp2                 = -1
   mp3                 = -1
+  get_coulomb         = .FALSE.
   do_bands            = .FALSE.
   use_ws_distance     = .TRUE.
   write_hr            = .TRUE.

@@ -8,7 +8,7 @@ USE kinds,                ONLY : DP
 USE control_kcw,          ONLY : nqstot, tmp_dir_save, num_wann, nrho
 USE control_kcw,          ONLY : iurho_wann, x_q, Rvect
 USE control_kcw,          ONLY : Vcoulomb, Wcoulomb
-USE control_kcw,          ONLY : spin_component
+USE control_kcw,          ONLY : spin_component, get_coulomb
 USE buffers,              ONLY : get_buffer 
 USE io_files,             ONLY : tmp_dir
 USE fft_base,             ONLY : dffts

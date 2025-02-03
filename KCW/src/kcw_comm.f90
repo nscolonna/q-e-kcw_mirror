@@ -27,6 +27,8 @@ MODULE control_kcw
   LOGICAL :: kcw_at_ks                                   ! if TRUE calculate alphas for KS orbitals
   LOGICAL :: fix_orb                                    ! if TRUE freeze the response of the orbital we are looking at
   LOGICAL :: homo_only                                  ! if TRUE only screening parameter for HOMO eigenvalue is computed
+  LOGICAL :: get_coulomb                                ! if TRUE, the matrix elements of the HXC interaction over the wannier functions
+                                                        ! is computed, mainly for the interface with TD codes.
   ! 
   REAL(DP) :: spread_thr                                ! the tollerance within which two orbital are considered to have the same spread
   !
@@ -67,6 +69,8 @@ MODULE control_kcw
   LOGICAL :: on_site_only               ! On-site only: only R=0 and i=j
   REAL(DP), ALLOCATABLE :: rvect(:,:)   ! The R vector in the (virtual) supercell
   INTEGER, ALLOCATABLE :: irvect(:,:)   ! The R vector in the (virtual) supercell
+  REAL(DP), ALLOCATABLE :: rvect_shifted(:,:)   ! The R vector in the (virtual) supercell, shifted to have 0 in the middle 
+  INTEGER, ALLOCATABLE :: irvect_shifted(:,:)   ! The R vector in the (virtual) supercell, shifted to have 0 in the middle 
   INTEGER :: mp1, mp2, mp3              ! the MP grid 
   !
   COMPLEX(DP), ALLOCATABLE :: Hamlt(:,:,:)   ! the KC hamiltonian 
