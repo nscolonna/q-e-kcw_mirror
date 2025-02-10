@@ -54,15 +54,11 @@ set(src_kcw
     dH_ki_full_qpoints.f90
     koopmans_ham_proj.f90
     koopmans_ham_uniq.f90
-    kcw_set_symm.f90
-    rotate_evc.f90 
-    symmetries_of_wannier_function.f90 
+    find_IBZ_q.f90 
     kcw_kpoint_grid.f90 
     kcw_deallocate_symmetry_arrays.f90 
     write_qlist_ibz.f90 
     read_qlist_ibz.f90 
-    kcw_psymdvscf.f90 
-    kcw_symdvscf.f90 
     kcw_read_sym.f90 
     kcw_write_sym.f90 
     )
