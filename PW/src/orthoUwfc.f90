@@ -15,8 +15,6 @@ SUBROUTINE orthoUwfc(save_wfcatom)
   ! "iunhub_noS" but without S (this is then used for plotting Hubbard projector 
   ! functions or other post-processing operations). Atomic wavefunctions
   ! are orthogonalized if desired, depending upon the value of "Hubbard_projectors"
-  ! "swfcatom" must NOT be allocated on input.
-  !
   ! If save_wfcatom == .TRUE., also write atomic wavefunctions before
   ! applying S to buffer.
   !
@@ -25,7 +23,7 @@ SUBROUTINE orthoUwfc(save_wfcatom)
   USE io_global,  ONLY : stdout
   USE io_files,   ONLY : iunhub, iunhub_noS, nwordwfcU
   USE ions_base,  ONLY : nat
-  USE basis,      ONLY : natomwfc, swfcatom
+  USE basis,      ONLY : natomwfc
   USE klist,      ONLY : nks, xk, ngk, igk_k
   USE ldaU,       ONLY : Hubbard_projectors, wfcU, nwfcU, copy_U_wfc
   USE wvfct,      ONLY : npwx
@@ -46,7 +44,7 @@ SUBROUTINE orthoUwfc(save_wfcatom)
   ! ik: the k point under consideration
   ! ibnd: counter on bands
   LOGICAL :: orthogonalize_wfc, normalize_only, save_flag
-  COMPLEX(DP) , ALLOCATABLE :: wfcatom (:,:), wfcUaux (:,:)
+  COMPLEX(DP) , ALLOCATABLE :: wfcatom (:,:), swfcatom(:,:), wfcUaux (:,:)
   !
   IF ( Hubbard_projectors == "pseudo" ) THEN
      WRITE( stdout,'(/5x,a,/)') 'Beta functions used for Hubbard projectors'
@@ -103,8 +101,8 @@ SUBROUTINE orthoUwfc(save_wfcatom)
      ! (this is used during the self-consistent solution of Kohn-Sham equations)
      ! save to unit iunhub
      !
-     !$acc update host(swfcatom)
      CALL copy_U_wfc (swfcatom, noncolin)
+     !$acc update host(wfcU)
      IF ( nks > 1 ) CALL save_buffer (wfcU, nwordwfcU, iunhub, ik)
      !
      ! If save_wfcatom=.TRUE. copy the orthonormalized wfcatom to wfcU and save
@@ -120,12 +118,13 @@ SUBROUTINE orthoUwfc(save_wfcatom)
            ALLOCATE (wfcUaux(npwx*npol,nwfcU))
            wfcUaux = wfcU
         ENDIF
-        !$acc update host(wfcatom)
         CALL copy_U_wfc (wfcatom, noncolin)
+        !$acc update host(wfcU)
         ! Write wfcU = O^{-1/2} \phi (no ultrasoft S)
         CALL save_buffer (wfcU, nwordwfcU, iunhub_noS, ik)
         IF (nks==1) THEN
            wfcU = wfcUaux
+           !$acc update device(wfcU)
            DEALLOCATE (wfcUaux)
         ENDIF
      ENDIF
@@ -175,6 +174,7 @@ SUBROUTINE orthoUwfc_k (ik, lflag)
              l, lm, ltot, ntot, ipol, npw
   LOGICAL :: orthogonalize_wfc, normalize_only, save_flag
   COMPLEX(DP), ALLOCATABLE :: aux(:,:)
+  !$acc declare device_resident(aux)
 
   IF ( Hubbard_projectors == "pseudo" ) THEN
      CALL errore ("orthoUwfc_k","Hubbard_projectors=pseudo is not supported",1)
@@ -195,6 +195,7 @@ SUBROUTINE orthoUwfc_k (ik, lflag)
      CALL errore ("orthoUwfc_k"," this Hubbard_projectors type is not valid",1)
   END IF
   !
+  !$acc data present(wfcatom, swfcatom)
   ! Compute atomic wfc at this k (phi)
   IF (noncolin) THEN
      CALL atomic_wfc_nc_updown (ik, wfcatom)
@@ -205,13 +206,14 @@ SUBROUTINE orthoUwfc_k (ik, lflag)
   IF (Hubbard_projectors=="ortho-atomic") THEN
      ALLOCATE(aux(npwx*npol,natomwfc))
      ! Copy atomic wfcs (phi)
+     !$acc kernels
      aux(:,:) = wfcatom(:,:)
+     !$acc end kernels
   ENDIF
   !
   ! Number of plane waves at this k point
   npw = ngk(ik)
   !
-  !$acc data copy(wfcatom, swfcatom)
   IF (orthogonalize_wfc .OR. .NOT.lflag) THEN
      ! Allocate the array becp = <beta|wfcatom>
      CALL allocate_bec_type_acc (nkb,natomwfc, becp)
@@ -227,7 +229,6 @@ SUBROUTINE orthoUwfc_k (ik, lflag)
   IF (orthogonalize_wfc) THEN
      CALL ortho_swfc ( npw, normalize_only, natomwfc, wfcatom, swfcatom, lflag )
   END IF
-  !$acc end data
   !
   IF (lflag) THEN
      ! Copy (ortho-)atomic wavefunctions with Hubbard U term only
@@ -238,12 +239,16 @@ SUBROUTINE orthoUwfc_k (ik, lflag)
      ! in wfcU (with ultrasoft S): swfcatom = O^{-1/2} S\phi.
      CALL copy_U_wfc (swfcatom, noncolin)
   ENDIF
+  !$acc update host(wfcU)
   !
   IF (Hubbard_projectors=="ortho-atomic") THEN
      ! Copy atomic wfcs
+     !$acc kernels
      wfcatom(:,:) = aux(:,:)
+     !$acc end kernels
      DEALLOCATE(aux)
   ENDIF
+  !$acc end data
   !
   RETURN
   !   
@@ -377,7 +382,7 @@ SUBROUTINE ortho_swfc ( npw, normalize_only, m, wfc, swfc, lflag )
         !$acc end kernels
      ENDIF
      IF (allocated (overlap_inv)) THEN
-        !$acc kernels copyout(overlap_inv)
+        !$acc kernels 
         overlap_inv(:,:) = overlap(:,:)
         !$acc end kernels
      ENDIF
