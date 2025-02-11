@@ -321,9 +321,9 @@ SUBROUTINE kcw_readin()
     IF (xclib_dft_is('meta')) &
         call errore('kcw_readin', 'Non-collinear KCW calculation &
                      does not support MGGA', 1 )
-    IF (irr_bz) & 
-        call errore('kcw_readin', 'Non-collinear KCW calculation &
-                     does not support symmetries. Set irr_bz to .false.', 1 )
+    !IF (irr_bz) & 
+    !    call errore('kcw_readin', 'Non-collinear KCW calculation &
+    !                 does not support symmetries. Set irr_bz to .false.', 1 )
   END IF 
   !
   IF (.NOT. irr_bz .AND. use_wct) THEN

@@ -151,15 +151,19 @@ SUBROUTINE find_IBZ_q()
             rhowann_aux(:) = rhowann(:,iq, iwann,ip)
             CALL fwfft ('Rho', rhowann_aux(:), dffts)
             rhog_all(:,ip)  = rhowann_aux(dffts%nl(:))    
+!            WRITE(*,*) "BEFORE iq =",iq, "iwann =", iwann, "ip=", ip, "rhowann(10)=", rhog_all(10,ip)
           END DO
           CALL sym_rho(nrho, rhog_all, is_sym)
+
+
           DO ip = 1, nrho
+            rhowann_aux(:) = 0.
             rhowann_aux(dffts%nl(:)) = rhog_all(:,ip)  
             CALL invfft ('Rho', rhowann_aux(:), dffts)
             rho_rotated(:, ip) = rhowann_aux(:)
+!            WRITE(*,*) "AFTER  iq =",iq, "iwann =", iwann, "ip=", ip, "rhowann(10)=", rhog_all(10,ip)
           END DO
-  
-          x_q_cryst(:)=xk(:,iq)
+          x_q_cryst(:)=x_q(:,iq)
           CALL cryst_to_cart(1,x_q_cryst,at,-1)
           rho_rotated(:,:) = rho_rotated(:,:)*EXP(-IMAG*tpi*dot_product(x_q_cryst(:),ft(:,isym)))
           !
@@ -178,68 +182,67 @@ SUBROUTINE find_IBZ_q()
           CALL calculate_phase(Gvector, phase)
           !
           !
+          delta_rho = 0.
+          int_rho_Rq =0.
           DO ip = 1, nrho
-              rhowann_aux(:) = rho_rotated(:,ip) - phase(:)*rhowann(:,iRq,iwann,ip) 
+            rhowann_aux(:) = rho_rotated(:,ip) - phase(:)*rhowann(:,iRq,iwann,ip) 
             !
             ! integrate difference and normalize with respect to number of r points in the grid
             !delta_rho = SUM( ABS(rhowann_aux(:)) )/(dffts%nr1*dffts%nr2*dffts%nr3)
-            delta_rho = SUM( (rhowann_aux(:)) )/(dffts%nr1*dffts%nr2*dffts%nr3)
-            CALL mp_sum (delta_rho, intra_bgrp_comm)
-            !
-            int_rho_Rq = SUM( phase(:)*rhowann(:,iRq,iwann,ip)  ) / (dffts%nr1*dffts%nr2*dffts%nr3)
-            CALL mp_sum (int_rho_Rq, intra_bgrp_comm)
-            !
-            !
-            IF (use_wct .AND. ABS(delta_rho) .gt. 1D-02) THEN 
-              ! Try with the same Wannier in different cells:
-              ! Each q contribution to the self-Hxc or to the screened self-Hxc (i.e. the alpha coeff)
-              ! does not depend on the homecell of the Wannier density contribution at q. 
-              ! This means we can use also the symmetries that send 
-              ! \rho_q^{0n}(R^-1r -f) in \rho_Rq^{Ln}(r) = e^{-i(Rq).L}\rho_Rq^{0n}(r)
-              ! with L any lattice vector in the SC to reduce the number of q points. 
-              !
-              ! delta_rho_R = int [\rho_q^{0n}(R^-1r -f) - e^{-i(Rq).L}\rho_Rq^{0n}(r)] =
-              !             = int [\rho_q^{0n}(R^-1r -f) - \rho_Rq^{0n}(r)] + (1- e^{-i(Rq).L}) * \int [\rho_Rq^{0n}(r)]
-              ! 
-              ! NB: this is not true for the density response at q. For the symmetrization of the density response we must
-              ! use only the "real" symmetry of the wannier density.
-              ! sym_only_for_q store information of wheter the symmetry is a real one (FALSE) or if its an "extra" one to 
-              ! be used only for the reduction of the q points (TRUE)
-              !
-               DO ir = 1, nkstot/nspin
-                 eiRqR=EXP( -IMAG*tpi*DOT_PRODUCT(x_q(:,iRq),Rvect(:,ir)) )
-                 delta_rho_R = delta_rho + (CMPLX(1.D0,0.D0, kind=DP) - eiRqR)*int_rho_Rq
-                 !WRITE (stdout, *) "          ir  =", ir,  "Rvect  =", Rvect(1:3,ir)
-                 !WRITE (stdout, *) "          iRq =", iRq, "x(iRq) =", x_q(1:3,iRq)
-                 !WRITE (stdout, *) "          \int rho_Rq(r) dr = ", int_rho_Rq, "exp(-iRq*Rvec) =", eiRqR
-                 !WRITE (stdout,'(10X, "ir=", I5, 3X, "SUM =", 2F20.12)')&
-                 !    ir, delta_rho 
-                 !WRITE (stdout,'(10X, "ir=", I5, 3X, "SUM =", 2F20.12)')&
-                 !    ir, delta_rho_R
-                 !WRITE (stdout,*)
-                 IF (ABS(delta_rho_R) .lt. 1D-02) THEN 
-                    delta_rho = delta_rho_R
-                    sym_only_for_q(nsym_w_q(iwann) + 1, iwann) = .TRUE.
-                    EXIT 
-                 ENDIF 
-               ENDDO
-            ENDIF!use_wct
-            ! 
-            IF (kcw_iverbosity .gt. 2 ) & 
-               !WRITE(stdout,'(7X, "iq=", I5, 3X, "isym =", I5, 3X, "iwann =", I5, 3X, "SUM =", F20.12)')&
-               !   iq, isym, iwann, delta_rho
-               WRITE(stdout,'(7X, "iq=", I5, 3X, "isym =", I5, 3X, "iwann =", I5, 3X, "SUM =", 2F20.12, 3X, "(ir =", I5 " )")')&
-                     iq, isym, iwann, REAL(delta_rho), AIMAG(delta_rho), ir
-            !
-            IF ( ABS(REAL(delta_rho)) .gt. 1.D-02 .OR. ABS(AIMAG(delta_rho)) .gt. 1D-02)  THEN 
-               IF (kcw_iverbosity .gt. 2) WRITE(stdout, '(13X, "isym =", I5, 3X, "NOT RESPECTED, skipping")') isym
-               respected = .false.
-               EXIT
-            ENDIF
-            respected = .true.
-          END DO ! ip
+            delta_rho = delta_rho + SUM( (rhowann_aux(:)) )/(nrho*dffts%nr1*dffts%nr2*dffts%nr3)
+            int_rho_Rq = int_rho_Rq + SUM( phase(:)*rhowann(:,iRq,iwann,ip)  ) / (nrho*dffts%nr1*dffts%nr2*dffts%nr3)
+          END DO
+          CALL mp_sum (delta_rho, intra_bgrp_comm)
           !
-          IF  ( .not. respected ) EXIT 
+          CALL mp_sum (int_rho_Rq, intra_bgrp_comm)
+          !
+          !
+          IF (use_wct .AND. ABS(delta_rho) .gt. 1D-02) THEN 
+            ! Try with the same Wannier in different cells:
+            ! Each q contribution to the self-Hxc or to the screened self-Hxc (i.e. the alpha coeff)
+            ! does not depend on the homecell of the Wannier density contribution at q. 
+            ! This means we can use also the symmetries that send 
+            ! \rho_q^{0n}(R^-1r -f) in \rho_Rq^{Ln}(r) = e^{-i(Rq).L}\rho_Rq^{0n}(r)
+            ! with L any lattice vector in the SC to reduce the number of q points. 
+            !
+            ! delta_rho_R = int [\rho_q^{0n}(R^-1r -f) - e^{-i(Rq).L}\rho_Rq^{0n}(r)] =
+            !             = int [\rho_q^{0n}(R^-1r -f) - \rho_Rq^{0n}(r)] + (1- e^{-i(Rq).L}) * \int [\rho_Rq^{0n}(r)]
+            ! 
+            ! NB: this is not true for the density response at q. For the symmetrization of the density response we must
+            ! use only the "real" symmetry of the wannier density.
+            ! sym_only_for_q store information of wheter the symmetry is a real one (FALSE) or if its an "extra" one to 
+            ! be used only for the reduction of the q points (TRUE)
+            !
+            DO ir = 1, nkstot/nspin
+              eiRqR=EXP( -IMAG*tpi*DOT_PRODUCT(x_q(:,iRq),Rvect(:,ir)) )
+              delta_rho_R = delta_rho + (CMPLX(1.D0,0.D0, kind=DP) - eiRqR)*int_rho_Rq
+              !WRITE (stdout, *) "          ir  =", ir,  "Rvect  =", Rvect(1:3,ir)
+              !WRITE (stdout, *) "          iRq =", iRq, "x(iRq) =", x_q(1:3,iRq)
+              !WRITE (stdout, *) "          \int rho_Rq(r) dr = ", int_rho_Rq, "exp(-iRq*Rvec) =", eiRqR
+              !WRITE (stdout,'(10X, "ir=", I5, 3X, "SUM =", 2F20.12)')&
+              !    ir, delta_rho 
+              !WRITE (stdout,'(10X, "ir=", I5, 3X, "SUM =", 2F20.12)')&
+              !    ir, delta_rho_R
+              !WRITE (stdout,*)
+              IF (ABS(delta_rho_R) .lt. 1D-02) THEN 
+                 delta_rho = delta_rho_R
+                 sym_only_for_q(nsym_w_q(iwann) + 1, iwann) = .TRUE.
+                 EXIT 
+              ENDIF 
+            ENDDO
+          ENDIF!use_wct
+          ! 
+          IF (kcw_iverbosity .gt. 2 ) & 
+             !WRITE(stdout,'(7X, "iq=", I5, 3X, "isym =", I5, 3X, "iwann =", I5, 3X, "SUM =", F20.12)')&
+             !   iq, isym, iwann, delta_rho
+             WRITE(stdout,'(7X, "iq=", I5, 3X, "isym =", I5, 3X, "iwann =", I5, 3X, "SUM =", 2F20.12, 3X, "(ir =", I5 " )")')&
+                   iq, isym, iwann, REAL(delta_rho), AIMAG(delta_rho), ir
+          !
+          IF ( ABS(REAL(delta_rho)) .gt. 1.D-02 .OR. ABS(AIMAG(delta_rho)) .gt. 1D-02)  THEN 
+             IF (kcw_iverbosity .gt. 2) WRITE(stdout, '(13X, "isym =", I5, 3X, "NOT RESPECTED, skipping")') isym
+             EXIT
+          ENDIF
+          !
           IF( (iq .eq. nqstot) ) THEN
              IF(.NOT. sym_only_for_q(nsym_w_q(iwann) + 1, iwann) ) THEN
                nsym_w_k(iwann) = nsym_w_k(iwann) + 1
@@ -285,7 +288,6 @@ SUBROUTINE find_IBZ_q()
     USE io_global,             ONLY : stdout
     USE symm_base,             ONLY:  sr                !symmetry operation in cartesian coordinates
     USE symm_base,             ONLY:  invs              !index of inverse of symmetry op
-    USE klist,                 ONLY:  xk, nkstot        !k points in cartesian coordinates
     USE cell_base,             ONLY : at
     USE control_kcw,           ONLY : x_q
     !
@@ -318,10 +320,9 @@ SUBROUTINE find_IBZ_q()
   SUBROUTINE find_kpoint(xk_, ik_, Gvector, Gvector_cryst)
     USE kinds,                 ONLY : DP
     USE io_global,             ONLY : stdout
-    USE klist,                 ONLY:  xk, nkstot        !k points in cartesian coordinates
     USE cell_base,             ONLY : at
     USE lsda_mod,              ONLY : nspin
-    USE control_kcw,           ONLY : x_q
+    USE control_kcw,           ONLY : x_q, nqstot
     !
     IMPLICIT NONE
     !
@@ -343,7 +344,7 @@ SUBROUTINE find_IBZ_q()
     LOGICAL               :: isGvec
     !
     Gvector_cryst(:) = 0.5 ! Impossible condition. If not changed at the end of this routine, something wrong
-    DO ik = 1, nkstot/nspin
+    DO ik = 1, nqstot
       !
       !delta_xk in cartesian
       delta_xk(:) = xk_(:) - x_q(:, ik)
