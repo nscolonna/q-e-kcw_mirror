@@ -54,6 +54,8 @@ set(src_kcw
     read_qlist_ibz.f90 
     kcw_read_sym.f90 
     kcw_write_sym.f90 
+    kcw_set_symm.f90
+    rotate_rhowann_r.f90
     )
 
 qe_add_library(qe_kcw ${src_kcw})
