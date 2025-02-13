@@ -1,4 +1,54 @@
 
+SUBROUTINE write_coulomb()
+USE kinds,                ONLY : DP
+USE control_kcw,          ONLY : Vcoulomb, Wcoulomb
+USE control_kcw,          ONLY : spin_component, get_coulomb, rvect_shifted
+USE control_kcw,          ONLY : num_wann, nqstot
+!
+IMPLICIT NONE
+!
+INTEGER              ::    iun_coulomb
+CHARACTER(len=1024)  ::    filename  
+INTEGER              ::    iwann, jwann, ir, is
+INTEGER              ::    spin_index
+
+!
+!
+  filename = 'barecoulomb.txt'
+  iun_coulomb = 237 
+  OPEN (iun_coulomb, file = filename)
+
+  DO ir = 1, nqstot
+    WRITE(iun_coulomb, *) rvect_shifted(:, ir) 
+    DO iwann=1, num_wann
+      DO jwann=1, num_wann
+        DO is = 1, 2 !one for spin component, other for non spin component
+          WRITE(iun_coulomb, *) iwann, jwann, spin_index(is), Vcoulomb(ir, iwann, jwann, is) 
+        END DO!is
+      END DO!jwann
+    END DO!iwann
+  END DO!ir
+  WRITE (filename, *) 'barecoulomb.txt'
+  CLOSE(iun_coulomb)
+  !
+  iun_coulomb = 238 
+  filename = 'screencoulomb.txt'
+  OPEN (iun_coulomb, file = filename)
+  !
+  !
+  DO ir = 1, nqstot
+    WRITE(iun_coulomb, *) rvect_shifted(:, ir) 
+    DO iwann=1, num_wann
+      DO jwann=1, num_wann
+        DO is = 1, 2 !one for spin component, other for non spin component
+          WRITE(iun_coulomb, *) iwann, jwann, spin_index(is), Wcoulomb(ir, iwann, jwann, is) 
+        END DO!is
+      END DO!jwann
+    END DO!iwann
+  END DO!ir
+!
+END SUBROUTINE write_coulomb
+
 SUBROUTINE coulomb_me( iwann, iq, drhog_scf, rhowann, weight_q)
 
 !this function calculates the Coulomb interaction matrix element:
@@ -6,7 +56,7 @@ SUBROUTINE coulomb_me( iwann, iq, drhog_scf, rhowann, weight_q)
 !
 USE kinds,                ONLY : DP
 USE control_kcw,          ONLY : nqstot, tmp_dir_save, num_wann, nrho
-USE control_kcw,          ONLY : iurho_wann, x_q, Rvect
+USE control_kcw,          ONLY : iurho_wann, x_q, rvect_shifted
 USE control_kcw,          ONLY : Vcoulomb, Wcoulomb
 USE control_kcw,          ONLY : spin_component, get_coulomb
 USE buffers,              ONLY : get_buffer 
@@ -75,8 +125,8 @@ DO jwann = 1, num_wann
     !
     DO ir = 1, nkstot/nspin
       WRITE(*,*) x_q(:,iq)
-      WRITE(*,*) Rvect(:,ir)
-      rhor(:, ip) = rhor(:, ip) * EXP( IMAG*tpi*DOT_PRODUCT(x_q(:,iq),Rvect(:,ir)) )
+      WRITE(*,*) rvect_shifted(:,ir)
+      rhor(:, ip) = rhor(:, ip) * EXP( IMAG*tpi*DOT_PRODUCT(x_q(:,iq),rvect_shifted(:,ir)) )
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_) 
       !
       ! for now we only work with the density, i.e. ip = 1
