@@ -2,7 +2,7 @@
 SUBROUTINE write_coulomb()
 USE kinds,                ONLY : DP
 USE control_kcw,          ONLY : Vcoulomb, Wcoulomb
-USE control_kcw,          ONLY : spin_component, get_coulomb, rvect_shifted
+USE control_kcw,          ONLY : spin_component, get_coulomb, irvect_shifted
 USE control_kcw,          ONLY : num_wann, nqstot
 !
 IMPLICIT NONE
@@ -19,11 +19,12 @@ INTEGER              ::    spin_index
   OPEN (iun_coulomb, file = filename)
 
   DO ir = 1, nqstot
-    WRITE(iun_coulomb, *) rvect_shifted(:, ir) 
+    WRITE(iun_coulomb, *) irvect_shifted(:, ir) 
     DO iwann=1, num_wann
       DO jwann=1, num_wann
         DO is = 1, 2 !one for spin component, other for non spin component
-          WRITE(iun_coulomb, *) iwann, jwann, spin_index(is), Vcoulomb(ir, iwann, jwann, is) 
+          WRITE(iun_coulomb, *) iwann, jwann, spin_index(is), &
+               real(Vcoulomb(iwann, jwann, ir, is)), aimag(Vcoulomb(iwann, jwann, ir, is)) 
         END DO!is
       END DO!jwann
     END DO!iwann
@@ -37,11 +38,12 @@ INTEGER              ::    spin_index
   !
   !
   DO ir = 1, nqstot
-    WRITE(iun_coulomb, *) rvect_shifted(:, ir) 
+    WRITE(iun_coulomb, *) irvect_shifted(:, ir) 
     DO iwann=1, num_wann
       DO jwann=1, num_wann
         DO is = 1, 2 !one for spin component, other for non spin component
-          WRITE(iun_coulomb, *) iwann, jwann, spin_index(is), Wcoulomb(ir, iwann, jwann, is) 
+          WRITE(iun_coulomb, *) iwann, jwann, spin_index(is), &
+               real(Wcoulomb(iwann, jwann, ir, is)), aimag(Wcoulomb(iwann, jwann, ir, is)) 
         END DO!is
       END DO!jwann
     END DO!iwann
@@ -88,19 +90,19 @@ INTEGER                      :: ir
 !
 !quantities needed for computing bare_pot for jwann
 !
-COMPLEX(DP)                  :: rhog(ngms,nrho)
+COMPLEX(DP), ALLOCATABLE     :: rhog(:,:)
 ! ... periodic part of wannier density in G-space
-COMPLEX(DP)                  :: delta_vg(ngms,nspin_mag)
+COMPLEX(DP), ALLOCATABLE     :: delta_vg(:,:)
 ! ... perturbing potential [f_hxc(r,r') x wann(r')] in G-space
-COMPLEX(DP)                  :: delta_vg_(ngms,nspin_mag)
+COMPLEX(DP), ALLOCATABLE     :: delta_vg_(:,:)
 ! ... perturbing potential [f_hxc(r,r') x wann(r')] in G-space without g=0 contribution
-COMPLEX(DP)                  :: vh_rhog(ngms)
+COMPLEX(DP), ALLOCATABLE     :: vh_rhog(:)
 ! ... Hartree perturbing potential [f_hxc(r,r') x wann(r')] in G-space
-COMPLEX(DP)                  :: delta_vr(dffts%nnr,nspin_mag)
+COMPLEX(DP), ALLOCATABLE     :: delta_vr(:,:)
 ! ... perturbing potential [f_hxc(r,r') x wann(r')] in r-space
-COMPLEX(DP)                  :: delta_vr_(dffts%nnr,nspin_mag)
+COMPLEX(DP), ALLOCATABLE     :: delta_vr_(:,:)
 ! ... perturbing potential [f_hxc(r,r') x wann(r')] in r-space without g=0 contribution
-COMPLEX(DP)                  :: rhor(dffts%nnr,nrho)
+COMPLEX(DP), ALLOCATABLE     :: rhor(:,:)
 ! ... periodic part of wannier density in r-space
 INTEGER                      :: lrrho
 INTEGER                      :: is, is_, is1
@@ -110,6 +112,15 @@ INTEGER                      :: spin_index
 !
 COMPLEX(DP)                  :: pi_q_unrelax(2), pi_q_relax(2), pi_q_unrelax_(2)
 !
+!
+ALLOCATE(rhog(ngms,nrho))
+ALLOCATE(delta_vg(ngms,nspin_mag))
+ALLOCATE(delta_vg_(ngms,nspin_mag))
+ALLOCATE(vh_rhog(ngms))
+ALLOCATE(delta_vr(dffts%nnr,nspin_mag))
+ALLOCATE(delta_vr_(dffts%nnr,nspin_mag))
+ALLOCATE(rhor(dffts%nnr,nrho))
+
 IF (nrho==4) THEN
     CALL errore('output_coulomb', 'non-collinear not implemented &
       for coulomb matrix elements.', 1)
@@ -124,9 +135,7 @@ DO jwann = 1, num_wann
     rhor(:,ip) = rhowann(:,jwann,ip)
     !
     DO ir = 1, nkstot/nspin
-      WRITE(*,*) x_q(:,iq)
-      WRITE(*,*) rvect_shifted(:,ir)
-      rhor(:, ip) = rhor(:, ip) * EXP( IMAG*tpi*DOT_PRODUCT(x_q(:,iq),rvect_shifted(:,ir)) )
+      rhor(:, ip) = rhor(:, ip) * EXP( IMAG*DOT_PRODUCT(x_q(:,iq),rvect_shifted(:,ir)) )
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_) 
       !
       ! for now we only work with the density, i.e. ip = 1
@@ -140,14 +149,14 @@ DO jwann = 1, num_wann
       !
       ! screened potential
       ! < jwann, R| W | 0, iwann>
-      pi_q_relax(:) = (0.D0, 0.D0)
-      DO is =1, 2
-        DO is1 = 1, 2
-          pi_q_relax(spin_index(is)) = pi_q_relax(spin_index(is)) + &
-                                       sum (CONJG(drhog_scf (:,is1)) * delta_vg(:,is_(is1)))*weight_q*omega
-        END DO 
-      END DO
-      Wcoulomb(iwann, jwann, ir, :) = Wcoulomb(iwann, jwann, ir, :) + pi_q_unrelax_(:) + pi_q_relax(:)
+!      pi_q_relax(:) = (0.D0, 0.D0)
+!      DO is =1, 2
+!        DO is1 = 1, 2
+!          pi_q_relax(spin_index(is)) = pi_q_relax(spin_index(is)) + &
+!                                       sum (CONJG(drhog_scf (:,is1)) * delta_vg(:,is_(is1)))*weight_q*omega
+!        END DO 
+!      END DO
+!      Wcoulomb(iwann, jwann, ir, :) = Wcoulomb(iwann, jwann, ir, :) + pi_q_unrelax_(:) + pi_q_relax(:)
     END DO !ir
   END DO !ip
 END DO !jwann

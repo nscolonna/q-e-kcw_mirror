@@ -124,6 +124,11 @@ SUBROUTINE screen_coeff ()
   nsym_old = nsym
   !
   !IF(irr_bz) CALL read_qlist_ibz()
+  IF(get_coulomb) THEN 
+    CALL kcw_R_points()
+    ALLOCATE ( Vcoulomb(num_wann, num_wann, nkstot/nspin, 2), Wcoulomb(num_wann, num_wann, nkstot/nspin, 2))
+  END IF
+  !
   DO iq = iq_start, nqs
       !! For each q in the mesh 
     !
@@ -153,10 +158,6 @@ SUBROUTINE screen_coeff ()
     ENDIF
     !
     ALLOCATE ( rhog (ngms,nrho) , delta_vg(ngms,nspin_mag), vh_rhog(ngms), drhog_scf (ngms, nspin_mag), delta_vg_(ngms,nspin_mag) )
-    IF(get_coulomb) THEN 
-      CALL kcw_R_points()
-      ALLOCATE ( Vcoulomb(num_wann, num_wann, nkstot/nspin, 2), Wcoulomb(num_wann, num_wann, nkstot/nspin, 2))
-    END IF
     !
     IF ( lgamma .AND. .NOT. l_unique_manifold) CALL check_density (rhowann) 
     !
