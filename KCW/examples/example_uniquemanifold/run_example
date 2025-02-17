@@ -557,6 +557,7 @@ KCW Silicon screen
   mp1 = 2
   mp2 = 2
   mp3 = 2
+  get_coulomb = .true.
 /
 &wannier
   seedname = 'Si'

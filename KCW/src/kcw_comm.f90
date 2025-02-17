@@ -71,6 +71,7 @@ MODULE control_kcw
   INTEGER, ALLOCATABLE :: irvect(:,:)   ! The R vector in the (virtual) supercell
   REAL(DP), ALLOCATABLE :: rvect_shifted(:,:)   ! The R vector in the (virtual) supercell, shifted to have 0 in the middle 
   INTEGER, ALLOCATABLE :: irvect_shifted(:,:)   ! The R vector in the (virtual) supercell, shifted to have 0 in the middle 
+  INTEGER              :: num_R
   INTEGER :: mp1, mp2, mp3              ! the MP grid 
   !
   COMPLEX(DP), ALLOCATABLE :: Hamlt(:,:,:)   ! the KC hamiltonian 
@@ -107,7 +108,6 @@ MODULE control_kcw
   LOGICAL :: io_sp, io_real_space
   !
   COMPLEX(DP), ALLOCATABLE :: Vcoulomb(:,:,:,:), Wcoulomb(:,:,:,:)
-  !Giovanni Cistaro
   !
   REAL(DP),    ALLOCATABLE :: r(:,:)! position in the real grid
                                     ! defined by q-e

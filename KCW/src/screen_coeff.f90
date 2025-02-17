@@ -126,7 +126,9 @@ SUBROUTINE screen_coeff ()
   !IF(irr_bz) CALL read_qlist_ibz()
   IF(get_coulomb) THEN 
     CALL kcw_R_points()
-    ALLOCATE ( Vcoulomb(num_wann, num_wann, nkstot/nspin, 2), Wcoulomb(num_wann, num_wann, nkstot/nspin, 2))
+    ALLOCATE ( Vcoulomb(2, nkstot/nspin, num_wann, num_wann), Wcoulomb(2, nkstot/nspin, num_wann, num_wann))
+    Vcoulomb = 0.D0
+    Wcoulomb = 0.D0
   END IF
   !
   DO iq = iq_start, nqs
@@ -342,11 +344,6 @@ SUBROUTINE screen_coeff ()
     OPEN (876, file = TRIM(tmp_dir_kcw)//TRIM(prefix)//'.alpha.dat')
     WRITE(876,'(i5)') num_wann
   ENDIF
-  !
-  IF(get_coulomb) THEN 
-    CALL write_coulomb()
-    DEALLOCATE ( Vcoulomb, Wcoulomb)
-  END IF
 
   DO jwann = iorb_start, iorb_end
     !
@@ -368,6 +365,12 @@ SUBROUTINE screen_coeff ()
     IF (i_orb == -1) WRITE(876,'(i5, 2(3x, F16.12))') iwann, alpha, REAL(sh(iwann))
     !
   ENDDO
+    !
+  IF(get_coulomb) THEN 
+    CALL write_coulomb()
+    DEALLOCATE ( Vcoulomb, Wcoulomb)
+  END IF
+
   !
   WRITE(stdout, '(3/)')
   IF ( i_orb == -1 ) CLOSE (876)

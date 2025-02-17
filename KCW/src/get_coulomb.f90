@@ -3,7 +3,7 @@ SUBROUTINE write_coulomb()
 USE kinds,                ONLY : DP
 USE control_kcw,          ONLY : Vcoulomb, Wcoulomb
 USE control_kcw,          ONLY : spin_component, get_coulomb, irvect_shifted
-USE control_kcw,          ONLY : num_wann, nqstot
+USE control_kcw,          ONLY : num_wann, nqstot, num_R
 !
 IMPLICIT NONE
 !
@@ -18,36 +18,36 @@ INTEGER              ::    spin_index
   iun_coulomb = 237 
   OPEN (iun_coulomb, file = filename)
 
-  DO ir = 1, nqstot
+  DO ir = 1, num_R
     WRITE(iun_coulomb, *) irvect_shifted(:, ir) 
     DO iwann=1, num_wann
       DO jwann=1, num_wann
         DO is = 1, 2 !one for spin component, other for non spin component
           WRITE(iun_coulomb, *) iwann, jwann, spin_index(is), &
-               real(Vcoulomb(iwann, jwann, ir, is)), aimag(Vcoulomb(iwann, jwann, ir, is)) 
+          real(Wcoulomb(is, ir, jwann, iwann)), aimag(Wcoulomb(is, ir, jwann, iwann)) 
         END DO!is
       END DO!jwann
     END DO!iwann
   END DO!ir
-  WRITE (filename, *) 'barecoulomb.txt'
   CLOSE(iun_coulomb)
+  !
   !
   iun_coulomb = 238 
   filename = 'screencoulomb.txt'
   OPEN (iun_coulomb, file = filename)
   !
-  !
-  DO ir = 1, nqstot
+  DO ir = 1, num_R
     WRITE(iun_coulomb, *) irvect_shifted(:, ir) 
     DO iwann=1, num_wann
       DO jwann=1, num_wann
         DO is = 1, 2 !one for spin component, other for non spin component
           WRITE(iun_coulomb, *) iwann, jwann, spin_index(is), &
-               real(Wcoulomb(iwann, jwann, ir, is)), aimag(Wcoulomb(iwann, jwann, ir, is)) 
+               real(Wcoulomb(is, ir, jwann, iwann)), aimag(Wcoulomb(is, ir, jwann, iwann)) 
         END DO!is
       END DO!jwann
     END DO!iwann
   END DO!ir
+  CLOSE(iun_coulomb)
 !
 END SUBROUTINE write_coulomb
 
@@ -60,7 +60,7 @@ USE kinds,                ONLY : DP
 USE control_kcw,          ONLY : nqstot, tmp_dir_save, num_wann, nrho
 USE control_kcw,          ONLY : iurho_wann, x_q, rvect_shifted
 USE control_kcw,          ONLY : Vcoulomb, Wcoulomb
-USE control_kcw,          ONLY : spin_component, get_coulomb
+USE control_kcw,          ONLY : spin_component, get_coulomb, num_R
 USE buffers,              ONLY : get_buffer 
 USE io_files,             ONLY : tmp_dir
 USE fft_base,             ONLY : dffts
@@ -125,6 +125,9 @@ IF (nrho==4) THEN
     CALL errore('output_coulomb', 'non-collinear not implemented &
       for coulomb matrix elements.', 1)
 END IF
+
+WRITE(*,*) "nspin_mag: ", nspin_mag
+
 DO jwann = 1, num_wann
   !here rhowann is already filled with the wannier density in real space 
   !for fixed iq
@@ -132,9 +135,8 @@ DO jwann = 1, num_wann
   ! get rhog for jwann by fourier transforming rhor 
   !WARNING! WON'T WORK FOR NON_COLLINEAR
   DO ip = 1, nrho
-    rhor(:,ip) = rhowann(:,jwann,ip)
-    !
-    DO ir = 1, nkstot/nspin
+    DO ir = 1, num_R
+      rhor(:,ip) = rhowann(:,jwann,ip)
       rhor(:, ip) = rhor(:, ip) * EXP( IMAG*DOT_PRODUCT(x_q(:,iq),rvect_shifted(:,ir)) )
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_) 
       !
@@ -145,21 +147,31 @@ DO jwann = 1, num_wann
           pi_q_unrelax (spin_index(is)) = weight_q * omega * SUM( CONJG(delta_vg (:,is)) * rhog(:,1) )  
           pi_q_unrelax_(spin_index(is)) = weight_q * omega * SUM( CONJG(delta_vg_(:,is)) * rhog(:,1) )  
       END DO  
-      Vcoulomb(iwann, jwann, ir, :) = Vcoulomb(iwann, jwann, ir, :) + pi_q_unrelax(:)
+      Vcoulomb(:, ir, jwann, iwann) = Vcoulomb(:, ir, jwann, iwann) + pi_q_unrelax(:)
       !
       ! screened potential
       ! < jwann, R| W | 0, iwann>
-!      pi_q_relax(:) = (0.D0, 0.D0)
-!      DO is =1, 2
-!        DO is1 = 1, 2
-!          pi_q_relax(spin_index(is)) = pi_q_relax(spin_index(is)) + &
-!                                       sum (CONJG(drhog_scf (:,is1)) * delta_vg(:,is_(is1)))*weight_q*omega
-!        END DO 
-!      END DO
-!      Wcoulomb(iwann, jwann, ir, :) = Wcoulomb(iwann, jwann, ir, :) + pi_q_unrelax_(:) + pi_q_relax(:)
+      pi_q_relax(:) = (0.D0, 0.D0)
+      DO is =1, 2
+        DO is1 = 1, 2
+          pi_q_relax(spin_index(is)) = pi_q_relax(spin_index(is)) + &
+                                       sum (CONJG(drhog_scf (:,is1)) * delta_vg(:,is_(is1)))*weight_q*omega
+        END DO 
+      END DO! is
+      Wcoulomb(:, ir, jwann, iwann) = Wcoulomb(:, ir, jwann, iwann) + pi_q_relax(:) + pi_q_unrelax_(:)
     END DO !ir
   END DO !ip
 END DO !jwann
+!
+DEALLOCATE(rhog)
+DEALLOCATE(delta_vg)
+DEALLOCATE(delta_vg_)
+DEALLOCATE(vh_rhog)
+DEALLOCATE(delta_vr)
+DEALLOCATE(delta_vr_)
+DEALLOCATE(rhor)
+
+
 END SUBROUTINE
 
 

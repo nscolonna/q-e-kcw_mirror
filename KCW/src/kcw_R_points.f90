@@ -16,14 +16,14 @@ SUBROUTINE kcw_R_points
   !
   USE cell_base,            ONLY : at
   USE control_kcw,          ONLY : Rvect, mp1, mp2 ,mp3, irvect, nkstot_eff
-  USE control_kcw,          ONLY : Rvect_shifted, irvect_shifted, get_coulomb
+  USE control_kcw,          ONLY : Rvect_shifted, irvect_shifted, get_coulomb, num_R
   USE klist,                ONLY : nkstot
   USE lsda_mod,             ONLY : nspin
   USE io_global,            ONLY : stdout
   !
   IMPLICIT NONE
   !
-  INTEGER :: i, j, k, icell, num_R, mptot
+  INTEGER :: i, j, k, icell, mptot
   ! Number of unit cells ( = number of q points)
   !
   num_R = nkstot_eff
