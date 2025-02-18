@@ -531,13 +531,13 @@ $ECHO "  Running the interface to KCW for $PREFIX...\c"
 $KCW_COMMAND -in $PREFIX.kcw-wann2kcw.in > $PREFIX.kcw-wann2kcw.out
 $ECHO " done"
 
-# This is needed as kcw-wann2kcw and kcw-screen have to run with different prefix.
+# The following renaming is needed as kcw-wann2kcw and kcw-screen have to run with different prefix.
 # This is because we want the screening using DFT wfc (and for this we need to read the PW outdir, i.e we 
 # want to use the original PREFIX), while we want to use KCW wannier functions and hence kcw-wann2kcw
 # needs to read the KCW wfc (i.e. we want to run it with the kcw prefix=PREFIX_kcw) 
 
 $ECHO "  Renaming outdir $TMP_DIR/kcw/q*/${PREFIX}_kcw.save -> $TMP_DIR/kcw/q*/${PREFIX}.save ...\c" 
-for i in 2 3 4 5 6 7 8 ; do mv $TMP_DIR/kcw/q$i/${PREFIX}_kcw.save $TMP_DIR/kcw/q$i/$PREFIX.save; done
+for i in 1 2 3 4 5 6 7 8 ; do mv $TMP_DIR/kcw/q$i/${PREFIX}_kcw.save $TMP_DIR/kcw/q$i/$PREFIX.save; done
 $ECHO " done"
 
 cat > $PREFIX.kcw-screen.in << EOF
