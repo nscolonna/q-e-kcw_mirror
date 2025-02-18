@@ -120,24 +120,23 @@ ALLOCATE(vh_rhog(ngms))
 ALLOCATE(delta_vr(dffts%nnr,nspin_mag))
 ALLOCATE(delta_vr_(dffts%nnr,nspin_mag))
 ALLOCATE(rhor(dffts%nnr,nrho))
-
+!
 IF (nrho==4) THEN
     CALL errore('output_coulomb', 'non-collinear not implemented &
       for coulomb matrix elements.', 1)
 END IF
-
-WRITE(*,*) "nspin_mag: ", nspin_mag
-
+!
 DO jwann = 1, num_wann
   !here rhowann is already filled with the wannier density in real space 
   !for fixed iq
   !
   ! get rhog for jwann by fourier transforming rhor 
   !WARNING! WON'T WORK FOR NON_COLLINEAR
-  DO ip = 1, nrho
     DO ir = 1, num_R
+      ip=1
       rhor(:,ip) = rhowann(:,jwann,ip)
-      rhor(:, ip) = rhor(:, ip) * EXP( IMAG*DOT_PRODUCT(x_q(:,iq),rvect_shifted(:,ir)) )
+      ! rho_q(r-R) = rho_q(r) e^{-iqr}
+      rhor(:, ip) = rhor(:, ip) * EXP( -IMAG*DOT_PRODUCT(x_q(:,iq),rvect_shifted(:,ir)) )
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_) 
       !
       ! for now we only work with the density, i.e. ip = 1
@@ -155,12 +154,16 @@ DO jwann = 1, num_wann
       DO is =1, 2
         DO is1 = 1, 2
           pi_q_relax(spin_index(is)) = pi_q_relax(spin_index(is)) + &
-                                       sum (CONJG(drhog_scf (:,is1)) * delta_vg(:,is_(is1)))*weight_q*omega
+                                       sum (CONJG(drhog_scf (:,is1)) * delta_vg(:,is1))*weight_q*omega
         END DO 
       END DO! is
-      Wcoulomb(:, ir, jwann, iwann) = Wcoulomb(:, ir, jwann, iwann) + pi_q_relax(:) + pi_q_unrelax_(:)
+      pi_q_relax(:) = pi_q_relax(:) + pi_q_unrelax_(:)
+      Wcoulomb(:, ir, jwann, iwann) = Wcoulomb(:, ir, jwann, iwann) + pi_q_relax(:)
+      IF (jwann .eq. iwann .and. SUM(ABS(Rvect_shifted(:,ir))) .lt. 1.D-06 )&
+      WRITE(*,*) "(TO COMPARE with output) iq = ", iq, "rvect=", rvect_shifted(:, ir), "pi_q_unrelax=", pi_q_unrelax, &
+       "pi_q_relax = ", pi_q_relax
+  
     END DO !ir
-  END DO !ip
 END DO !jwann
 !
 DEALLOCATE(rhog)

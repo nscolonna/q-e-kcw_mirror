@@ -67,9 +67,9 @@ SUBROUTINE kcw_R_points
            irvect(:,icell) = (/i-1,j-1,k-1/)
            IF( get_coulomb ) THEN
              iRvect_shifted(:, icell)  = (/i-1-mp1/2,j-1-mp2/2,k-1-mp3/2/)
-             Rvect_shifted(:, icell) =  Rvect_shifted(1, icell) * at(:,1) + &
-                                         Rvect_shifted(2, icell) * at(:,2) + &
-                                         Rvect_shifted(3, icell) * at(:,3) 
+             Rvect_shifted(:, icell) =  iRvect_shifted(1, icell) * at(:,1) + &
+                                        iRvect_shifted(2, icell) * at(:,2) + &
+                                        iRvect_shifted(3, icell) * at(:,3) 
            END IF
            !
         ENDDO
