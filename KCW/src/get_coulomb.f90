@@ -58,7 +58,7 @@ SUBROUTINE coulomb_me( iwann, iq, drhog_scf, rhowann, weight_q)
 !
 USE kinds,                ONLY : DP
 USE control_kcw,          ONLY : nqstot, tmp_dir_save, num_wann, nrho
-USE control_kcw,          ONLY : iurho_wann, x_q, rvect_shifted
+USE control_kcw,          ONLY : iurho_wann, x_q, irvect_shifted
 USE control_kcw,          ONLY : Vcoulomb, Wcoulomb
 USE control_kcw,          ONLY : spin_component, get_coulomb, num_R
 USE buffers,              ONLY : get_buffer 
@@ -69,7 +69,7 @@ USE gvecs,                ONLY : ngms
 USE noncollin_module,     ONLY : nspin_mag
 USE constants,            ONLY : tpi
 USE lsda_mod,             ONLY : nspin
-USE cell_base,            ONLY : omega
+USE cell_base,            ONLY : omega, at
 !
 IMPLICIT NONE
 COMPLEX(DP)                  :: IMAG = (0.D0,1.D0)
@@ -111,6 +111,7 @@ INTEGER                      :: spin_index
 ! we are already inside loops over iq and iwann
 !
 COMPLEX(DP)                  :: pi_q_unrelax(2), pi_q_relax(2), pi_q_unrelax_(2)
+REAL(DP)                     ::x_q_cryst(3)
 !
 !
 ALLOCATE(rhog(ngms,nrho))
@@ -135,8 +136,10 @@ DO jwann = 1, num_wann
     DO ir = 1, num_R
       ip=1
       rhor(:,ip) = rhowann(:,jwann,ip)
-      ! rho_q(r-R) = rho_q(r) e^{-iqr}
-      rhor(:, ip) = rhor(:, ip) * EXP( -IMAG*DOT_PRODUCT(x_q(:,iq),rvect_shifted(:,ir)) )
+      ! rho_q(r-R) = rho_q(r) e^{-iqR}
+      x_q_cryst(:) = x_q(:,iq)
+      CALL cryst_to_cart(1,x_q_cryst,at,-1)
+      rhor(:, ip) = rhor(:, ip) * EXP( -IMAG*tpi*DOT_PRODUCT(x_q_cryst(:),irvect_shifted(:,ir)) )
       CALL bare_pot ( rhor, rhog, vh_rhog, delta_vr, delta_vg, iq, delta_vr_, delta_vg_) 
       !
       ! for now we only work with the density, i.e. ip = 1
@@ -159,8 +162,8 @@ DO jwann = 1, num_wann
       END DO! is
       pi_q_relax(:) = pi_q_relax(:) + pi_q_unrelax_(:)
       Wcoulomb(:, ir, jwann, iwann) = Wcoulomb(:, ir, jwann, iwann) + pi_q_relax(:)
-      IF (jwann .eq. iwann .and. SUM(ABS(Rvect_shifted(:,ir))) .lt. 1.D-06 )&
-      WRITE(*,*) "(TO COMPARE with output) iq = ", iq, "rvect=", rvect_shifted(:, ir), "pi_q_unrelax=", pi_q_unrelax, &
+      IF (jwann .eq. iwann .and. SUM(ABS(iRvect_shifted(:,ir))) .lt. 1.D-06 )&
+      WRITE(*,*) "(TO COMPARE with output) iq = ", iq, "rvect=", irvect_shifted(:, ir), "pi_q_unrelax=", pi_q_unrelax, &
        "pi_q_relax = ", pi_q_relax
   
     END DO !ir
@@ -191,21 +194,5 @@ FUNCTION spin_index(is)
     spin_index = 1
   ELSE 
     spin_index = 2 
-  END IF
-END FUNCTION
-
-FUNCTION is_(is)        
-  USE control_kcw,     ONLY : spin_component
-  IMPLICIT NONE
-  INTEGER    :: is 
-  INTEGER    :: is_
-  IF ( is .eq. spin_component ) THEN 
-    is_ = is
-  ELSE 
-    IF ( is .eq. 1 ) THEN 
-      is_ = 2
-    ELSE 
-      is_ = 1
-    END IF
   END IF
 END FUNCTION
