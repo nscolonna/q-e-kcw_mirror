@@ -262,3 +262,38 @@ EOF
 $ECHO "  Running the interface to KCW for $PREFIX...\c"
 $KCW_COMMAND -in $PREFIX.kcw-wann2kcw.in > $PREFIX.kcw-wann2kcw.out
 $ECHO " done"
+
+
+cat > $PREFIX.kcw-screen.in << EOF
+KCW Silicon screen
+&control
+  prefix='$PREFIX'
+  outdir='$TMP_DIR/'
+  kcw_iverbosity = 2
+  kcw_at_ks=.false.
+  read_unitary_matrix = .true.
+  calculation = 'screen'
+  lrpa =.false.
+  mp1 = 2
+  mp2 = 2
+  mp3 = 2
+/
+&wannier
+  seedname = 'Si'
+  check_ks = .true.
+  num_wann_occ = 4
+  num_wann_emp = 4
+  have_empty = .false.
+  has_disentangle = .false.
+  l_unique_manifold = .true.
+/
+&screen
+  tr2    =1.0d-18
+  nmix   = 4
+  niter  = 33
+ /
+EOF
+
+$ECHO "  Running the screening parameters calculation for $PREFIX...\c"
+$KCW_COMMAND -in $PREFIX.kcw-screen.in > $PREFIX.kcw-screen.out
+$ECHO " done"

@@ -451,7 +451,7 @@ Begin Atoms_Frac
 End Atoms_Frac
 
 Begin Projections
-random
+Si: sp3
 End Projections
 
 begin unit_cell_cart
