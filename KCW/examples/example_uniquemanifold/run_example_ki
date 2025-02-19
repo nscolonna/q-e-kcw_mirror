@@ -10,8 +10,14 @@ if test "`echo -e`" = "-e" ; then ECHO=echo ; else ECHO="echo -e" ; fi
 $ECHO
 $ECHO "$EXAMPLE_DIR : starting"
 $ECHO
-$ECHO "This example shows how to use pw.x, kcw.x"
-$ECHO "to calculate the KI electronic structure of FCC Silicon. "
+$ECHO "This example shows how to use pw.x, pw2wannier90, wannier90, and kcw.x"
+$ECHO "to calculate the on-site screened Coulomb interaction of Wannier functions"
+$ECHO "of FCC Silicon. The Wannier functions are obtained from a unique wannierization"
+$ECHO "of the KI band structure. "
+$ECHO "First a KI calculation is performed, using the separate wannierization scheme"
+$ECHO "Then the KI band structure is Wannierized again with a standard Wannierization"
+$ECHO "to define sp3 like Wannier functions spanning both occupied and empty manifold"
+$ECHO "and the screened-coulomb interaction is computed for this set of Wannier functions"
 
 # set the needed environment variables
 . ../../../environment_variables
@@ -36,12 +42,12 @@ for DIR in "$BIN_DIR" "$PSEUDO_DIR" ; do
         exit 1
     fi
 done
-for DIR in "$TMP_DIR" "$EXAMPLE_DIR/results" ; do
+for DIR in "$TMP_DIR" "$EXAMPLE_DIR/results_ki" ; do
     if test ! -d $DIR ; then
         mkdir $DIR
     fi
 done
-cd $EXAMPLE_DIR/results
+cd $EXAMPLE_DIR/results_ki
 
 # check for executables
 for FILE in $BIN_LIST ; do

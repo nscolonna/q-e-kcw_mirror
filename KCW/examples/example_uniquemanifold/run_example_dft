@@ -10,8 +10,9 @@ if test "`echo -e`" = "-e" ; then ECHO=echo ; else ECHO="echo -e" ; fi
 $ECHO
 $ECHO "$EXAMPLE_DIR : starting"
 $ECHO
-$ECHO "This example shows how to use pw.x, kcw.x"
-$ECHO "to calculate the KI electronic structure of FCC Silicon. "
+$ECHO "This example shows how to use pw.x, pw2wannier90, wannier90, and kcw.x"
+$ECHO "to calculate the on-site screened Coulomb interaction of Wannier functions"
+$ECHO "of FCC Silicon. The Wannier functions are obtained from a DFT band structure"
 
 # set the needed environment variables
 . ../../../environment_variables
